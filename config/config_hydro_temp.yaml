@@ -1,0 +1,71 @@
+##### This is an example .yaml file for how you should make your config file
+##### See below for what you need to have
+##### Make sure the paths are correct. They are individual to your machine
+
+randomseed: [0]   # None means random
+Action: ["Train", "Test"]   # Train: Do training,   Test: Do testing
+device: "cuda"
+nmul: 2
+NEARZERO: 1e-4
+# ------------------------------------------------
+###### Directories of forcings, attributes, and output
+forcing_path: "C:\\Users\\fzr5082\\Desktop\\dataset_20240826\\f1223_1023_daymet_20240826.npy"    #
+attr_path: "C:\\Users\\fzr5082\\Desktop\\dataset_20240826\\attr1223_1023_daymet_20240826.npy" #
+output_model: "L:\\Farshid\\model\\test" #\\PRMS_SNTEMP_415_208"
+
+# ------------------------------------------------
+###### neural network configuration
+NN_model_name: "LSTM"   # it can be "MLP", "LSTM" too.
+### you can choose different types of loss functions based on your need:
+   ###  1- "RmseLoss_flow_comb",            2- "RmseLoss_flow_temp",      3- "RmseLoss_flow_temp_BFI"
+   ###  4- "RmseLoss_flow_temp_BFI_PET",    5- "RmseLoss_BFI_temp"   ,    6- "NSEsqrtLoss_flow_temp"
+loss_function: "RmseLoss_flow_comb"      #
+loss_function_weights:
+    w1: 3      # w1: flow loss weight (11.0), for RmseLoss_BFI_temp(w1=5.0, w2=1.0, w3=0.05,)
+    w2: 1.0
+### choose your targets based on your loss function
+    ### "00060_Mean": streamflow observation,    "00010_Mean": stream temperature observations
+    ### "BFI_AVE": Baseflow index ratio,          "PET": Potential evapotranspiration
+target: ["00060_Mean"]
+tRange: [19800101, 20230101]
+t_train: [20180101, 20230101]   # there should be an overlap because of the warm_up
+t_test: [19990101, 20230101]    # the first year is for warm_up, if warm-up=365
+warm_up: 365
+rho: 365
+batch_size: 100
+EPOCHS: 1    # number of epochs to train
+EPOCH_testing: 1   # which epoch you want to pick to test?
+hidden_size: 256
+dropout: 0.5
+saveEpoch: 1
+no_basins: 25   # number of basins sampled in testing
+varT_NN: ['prcp(mm/day)', 'tmean(C)', "PET_hargreaves(mm/day)"]   # 'tmin(C)', 'vp(Pa)','srad(W/m2)',
+varC_NN: [
+  ############   for mswep inputs
+  'aridity', 'p_mean', 'ETPOT_Hargr', 'NDVI', 'FW', 'SLOPE_PCT', 'SoilGrids1km_sand',
+  'SoilGrids1km_clay', 'SoilGrids1km_silt', 'glaciers', 'HWSD_clay', 'HWSD_gravel',
+  'HWSD_sand', 'HWSD_silt', 'ELEV_MEAN_M_BASIN', 'meanTa', 'permafrost',
+  'permeability','seasonality_P', 'seasonality_PET', 'snow_fraction',
+  'snowfall_fraction','T_clay','T_gravel','T_sand', 'T_silt','Porosity',
+  "DRAIN_SQKM",
+]
+
+# ---------------------------------------------------------------------
+### process based streamflow model configurations
+# hydro_model_name options: 1-marrmot_PRMS; 2-marrmot_PRMS_refreeze; 3-marrmot_PRMS_gw0;
+#                           4-marrmot_PRMS_interflow; 5-HBV; 6-SACSMA; 7-SACSMA_with_snow; 8-None;
+#                           9-marrmot_PRMS_mod; 10-HBV_capillary
+hydro_model_name: "marrmot_PRMS"
+varT_hydro_model: ['prcp(mm/day)','tmean(C)', "PET_hargreaves(mm/day)"] #, "t_monthly(C)", 'dayl(s)', "dayofyear"]    # , "pet_nldas"
+varC_hydro_model: ['DRAIN_SQKM']    # "area_gages2"    DRAIN_SQKM   , "lat"
+dydrop: 0.0   # dynamic parameters dropout for some basins
+routing_hydro_model: True
+dyn_params_list_hydro: []#"parBETA", "parK0", "parUZL", "parBETAET"]  #["pctim", "smax", "parTT"]# ["parBETAET"]   #["scx", "cgw", "alpha", "tt"]   #
+
+# -----------------------------------------------------------
+### PET model configurations
+potet_module: "dataset" # "potet_hamon"  # "potet_hargreaves" , "dataset" -> Hamon is not ready beacause of lack of monthly coef
+potet_dataset_name: "PET_hargreaves(mm/day)"  #"PET_hargreaves(mm/day)" # if "potet_module" == "dataset"
+
+
+
