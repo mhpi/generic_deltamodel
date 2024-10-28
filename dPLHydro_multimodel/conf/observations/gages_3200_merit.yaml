@@ -1,0 +1,53 @@
+# Onlt available on Wukong.
+
+name: conus_3200_merit
+data_dir: /projects/mhpi/yxs275/Data/generate_for_CONUS_3200/gages/dataCONUS3200/
+gage_info_path: /projects/mhpi/data/MERIT/gage_information/formatted_gage_csvs/gages_9000_merit_info.csv
+attr_path: /projects/mhpi/yxs275/Data/attributes_haoyu/attributes_haoyu.csv
+shape_id_path: /projects/mhpi/yxs275/Data/generate_for_CONUS_3200/shapeID_str_lst.npy
+
+area_info_path: /projects/mhpi/yxs275/tools/extrect_merit_in_basin/area_info.json
+merit_path: /projects/mhpi/yxs275/Data/merit_data_in_gages_3000_merit_filled_train/CONUS2800
+merit_idx_path: /projects/mhpi/yxs275/Data/merit_data_in_gages_3000_merit_filled_train/merit_idx.json
+
+area_name: uparea
+
+var_t_nn: [
+  P,
+  Temp,
+  PET
+]
+var_c_nn: [
+  ETPOT_Hargr,
+  FW,
+  HWSD_clay,
+  HWSD_gravel,
+  HWSD_sand,
+  HWSD_silt, 
+  NDVI,
+  Porosity,
+  SoilGrids1km_clay,
+  SoilGrids1km_sand,
+  SoilGrids1km_silt,
+  T_clay,
+  T_gravel,
+  T_sand,
+  T_silt,
+  aridity,
+  glaciers,
+  meanP,
+  meanTa,
+  meanelevation,
+  meanslope,
+  permafrost,
+  permeability,
+  seasonality_P,
+  seasonality_PET,
+  snow_fraction,
+  snowfall_fraction,
+  uparea
+  ]
+
+water_loss_params: [
+  uparea
+]

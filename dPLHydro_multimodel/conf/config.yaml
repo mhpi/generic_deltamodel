@@ -1,0 +1,108 @@
+defaults:
+    - _self_
+    - hydra: settings
+    - observations: camels_531_yalan  # gages2_50, camels_671_yalan, camels_671_dp_2024, camels_671_dp_2023, conus_3200_merit, conus_5000_merit
+
+
+
+## General Config -------------------------------#
+mode: train   # train, test, train_test, train_wnn, train_conus
+ensemble_type: none    # none, frozen_pnn, free_pnn, avg, reg_max
+use_checkpoint: False    # See bottom
+
+random_seed: 111111
+device: cuda
+gpu_id: 0  # This is a list, each ind corresponds to gpu for a model. If only one ind, that gpu will be used for all models.
+
+train:
+    start_time: 1999/10/01
+    end_time: 2008/10/01
+    # start_time: 1980/10/01
+    # end_time: 1995/10/01
+test:
+    start_time: 1989/10/01
+    end_time: 1999/10/01
+    # start_time: 1995/10/01
+    # end_time: 2010/10/01
+
+
+name: hmm1.3-${observations.name}
+data_dir: /data/lgl5139/hydro_multimodel/dPLHydro_multimodel/runs 
+output_dir: ${data_dir}/${observations.name}/saved_models/
+
+
+
+## dPL Model Config -------------------------------#
+pnn_model: LSTM    # LSTM, MLP
+hydro_models: [HBV]    # HBV, HBV_capillary, HBV_waterLoss, marrmot_PRMS, SACSMA_with_snow
+
+dy_params:
+    # HBV: parBETA, parBETAET, parK0 | PRMS: alpha, scx, cgw, resmax, k1, k2 | SACSMA: pctim, smax, f1, f2, kuz, rexp, f3, f4, pfree, klzp, klzs
+    HBV: [parBETA, parBETAET]
+    HBV_capillary: [parBETA, parBETAET, parK0]
+    marrmot_PRMS: [alpha, scx, cgw, resmax, k1, k2]
+    SACSMA_with_snow: [pctim, smax, f1, f2, kuz, rexp, f3, f4, pfree, klzp, klzs]
+
+dy_drop: 0.0  # 0.0 always dynamic; 1.0 always static
+static_index: -1  # Which timestep to use for static params.
+routing_hydro_model: True
+pet_module: dataset    # dataset, potet_hamon, potet_hargreaves
+pet_dataset_name: PET_hargreaves(mm/day)
+target: ['00060_Mean']    # 00060_Mean, 00010_Mean, BFI_AVE, PET
+use_log_norm: ['prcp(mm/day)']  # For log normalization ('prcp(mm/day)' for HBV, [] otherwise)
+
+loss_function: RmseLossFlowComb  # RmseLossFlowComb, NseSqrtLossFlow, NseLossBatchFlow (for HBV1.1p)
+loss_function_weights:
+    w1: 11.0
+    w2: 1.0
+
+nmul: 16  # HBV1.0: 16 | HBV2.0: 4
+warm_up: 365
+rho: 365
+batch_size: 100
+epochs: 50
+dropout: 0.5
+hidden_size: 256  # HBV1.0: 256 | HBV2.0: 64
+learning_rate: 1.0
+nearzero: 1e-5
+
+save_epoch: 10
+test_batch: 25
+
+
+
+# dHBV2.0 Config -------------------------------#
+ann_opt:
+    nmul: 4
+    dropout: 0.5
+    hidden_size: 4096
+    n_features: 13
+merit_batch_max: 10590
+hbvcap_no_warm: False
+
+
+
+# Ensemble Weighting NN Config -------------------------------#
+weighting_nn:
+    dropout: 0.5
+    hidden_size: 256
+    learning_rate: 0.1
+    method: sigmoid
+    loss_function: RmseLossFlowComb
+    loss_function_weights:
+        w1: 11.0
+        w2: 1.0
+    loss_factor: 15
+    loss_lower_bound: 0.9
+    loss_upper_bound: 1.1
+
+
+
+## Model Checkpoints -------------------------------#
+checkpoint:
+    start_epoch: 11
+    # HBV: /data/lgl5139/hydro_multimodel/dPLHydro_multimodel/runs/camels_671_dp_2024/saved_models/train_1980_1995/3_forcing/no_ensemble/LSTM_E50_R365_B100_H256_n16_0/HBV_/RmseLossFlowComb_/dynamic_para/parBETA_parBETAET_/HBV_model_Ep50.pt
+    HBV_capillary: /data/lgl5139/hydro_multimodel/dPLHydro_multimodel/runs/camels_671_dp_2024/saved_models/train_1980_1995/4_forcing/no_ensemble/LSTM_E50_R365_B100_H256_n16_0/HBV_capillary_/NseLossBatchFlow_/dynamic_para/parBETA_parBETAET_parK0_/HBV_capillary_model_Ep50.pt
+    marrmot_PRMS: /data/lgl5139/hydro_multimodel/dPLHydro_multimodel/runs/camels_671_dp_2024/saved_models/train_1980_1995/4_forcing/no_ensemble/LSTM_E50_R365_B100_H256_n16_0/marrmot_PRMS_/NseLossBatchFlow_/dynamic_para/alpha_scx_cgw_resmax_k1_k2_/marrmot_PRMS_model_Ep50.pt
+    SACSMA_with_snow: /data/lgl5139/hydro_multimodel/dPLHydro_multimodel/runs/camels_671_dp_2024/saved_models/train_1980_1995/4_forcing/no_ensemble/LSTM_E50_R365_B100_H256_n16_0/SACSMA_with_snow_/NseLossBatchFlow_/dynamic_para/pctim_smax_f1_f2_kuz_rexp_f3_f4_pfree_klzp_klzs_/SACSMA_with_snow_model_Ep50.pt
+    weighting_nn: /data/lgl5139/hydro_multimodel/dPLHydro_multimodel/runs/camels_671_dp/saved_models/free_pnn/LSTM_E50_R365_B100_H256_n2_0/static_para/HBV_/wtNN_model_model_Ep10.pt

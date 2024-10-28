@@ -1,0 +1,61 @@
+name: gages2_50
+gage_info: None
+# forcing_path: ${data_dir}\PGML_STemp_Data\50_sites\forcing_50_20231113.feather
+# attr_path: ${data_dir}\PGML_STemp_Data\50_sites\attr50.feather
+forcing_path: /scratch/fzr5082/PGML_STemp_results/inputs/dataset_20240331/forcing_50_20240331.feather
+attr_path: /scratch/fzr5082/PGML_STemp_results/inputs/dataset_20240331/attr50.feather
+
+area_name: DRAIN_SQKM
+
+var_t_nn: [
+  prcp(mm/day),
+  tmean(C),
+  dayl(s),
+  PET_hargreaves(mm/day)
+]
+var_c_nn: [
+  ELEV_MEAN_M_BASIN,
+  ELEV_STD_M_BASIN,
+  SLOPE_PCT,
+  DRAIN_SQKM,
+  NDAMS_2009,
+  MAJ_NDAMS_2009,
+  FRAGUN_BASIN,
+  FORESTNLCD06,
+  AWCAVE,
+  PERMAVE,
+  BDAVE,
+  ROCKDEPAVE,
+  CLAYAVE,
+  SILTAVE,
+  SANDAVE,
+  HGA,
+  HGB,
+  HGC,
+  HGVAR,
+  HGD,
+  PPTAVG_BASIN,
+  SNOW_PCT_PRECIP,
+  PRECIP_SEAS_IND,
+  T_AVG_BASIN,
+  T_MAX_BASIN,
+  T_MAXSTD_BASIN,
+  RH_BASIN,
+  GEOL_REEDBUSH_DOM_PCT,
+  GEOL_REEDBUSH_DOM,
+  HIRES_LENTIC_PCT,
+  PERDUN,
+  PERHOR,
+  RIP100_FOREST
+]
+var_t_hydro_model: [
+  prcp(mm/day),
+  tmean(C),
+  tmax(C),
+  tmin(C),
+  PET_hargreaves(mm/day)
+]
+var_c_hydro_model: [
+  DRAIN_SQKM,
+  lat,
+]

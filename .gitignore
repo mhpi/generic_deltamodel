@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebook
+.ipynb_checkpoints
+scratch.ipynb
+
+# Distribution / packaging
+.Python
+build/
+dist/
+downloads/
+var/
+wheels/
+share/python-wheels/
+
+#VSCode
+.vscode/
+
+#PyCharm
+.idea/
+
+# Other Directories
+archive/
+runs/
+HBV_1.1p/
+ngen/
+# HBV2.0_yalan/
