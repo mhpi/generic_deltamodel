@@ -6,3 +6,7 @@ Following as a generalization of `hydroDL`, `generic_diffModel` (or `dMG`) aims
 to expand differentiable parameter learning capabilities beyond hydrology. Those
 wishing to run hydrologic tasks tied to MHPI's research can couple `dMG` with
 physics models and data processors from `hydroDL2.0`.
+
+
+---
+See [here](https://github.com/orgs/mhpi/projects/4) for a roadmap of planned additions and improvements.

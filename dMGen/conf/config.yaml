@@ -1,0 +1,71 @@
+defaults:
+    - _self_
+    - hydra: settings
+    - observations: camels_531  # camels_531, camels_671
+
+
+## General -------------------------------#
+mode: train  # train, test, train_test
+random_seed: 111111
+device: cuda
+gpu_id: 0
+
+main_dir: /data/lgl5139/hydroDL2-dev/generic_diffModel/dMGen/runs 
+output_path: ${main_dir}/${observations.name}/saved_models/
+
+
+## Training -------------------------------#
+training:
+    start_time: 1999/10/01
+    end_time: 2008/10/01
+    target: ['00060_Mean']
+    batch_size: 100
+    epochs: 50
+    save_epoch: 10
+    run_from_checkpoint: False
+
+
+## Testing -------------------------------#
+testing:
+    start_time: 1989/10/01
+    end_time: 1999/10/01
+    batch_size: 25
+    test_epoch: 50
+
+
+## dPL Model -------------------------------#
+dpl_model:
+    nmul: 16
+    nearzero: 1e-5
+    rho: 365
+    warm_up: 365
+    dy_drop: 0.0
+    
+physics_model:
+    model: [HBV]  # HBV, HBV_capillary (1.1p), marrmot_PRMS, SACSMA_with_snow
+    static_param_idx: -1
+    dynamic_params:
+        HBV: [parBETA, parBETAET]
+
+nn_model:
+    model: LSTM  # LSTM, MLP
+    dropout: 0.5
+    hidden_size: 256
+    learning_rate: 1.0
+
+loss_function:
+    loss_name: RmseLossFlowComb  # RmseLossFlowComb, NseLossBatchFlow
+    weights:
+        w1: 11.0
+        w2: 1.0
+
+
+
+## ------------------------------------------------#
+## Hydrology Config -------------------------------#
+routing_hydro_model: True
+pet_module: dataset
+pet_dataset_name: PET_hargreaves(mm/day)
+use_log_norm: ['prcp(mm/day)']  # For log normalization ('prcp(mm/day)' for HBV, [] otherwise)
+
+hbvcap_no_warm: False

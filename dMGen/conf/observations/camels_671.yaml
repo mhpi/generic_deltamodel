@@ -1,15 +1,13 @@
-name: camels_671_dp_2024
+name: camels_671
 gage_info: /data/yxs275/CAMELS/CAMELS_to_ICDS/gageid.npy
-forcing_path: /scratch/fzr5082/PGML_STemp_results/inputs/dataset_20240331/camels_671_dp_20240331.feather
-attr_path: /scratch/fzr5082/PGML_STemp_results/inputs/dataset_20240331/attr_camels_all_sep14_2023.feather
-subset_path: /data/lgl5139/data/camels/Sub531ID.txt
+train_path: /data/yxs275/CAMELS/training_file
+test_path: /data/yxs275/CAMELS/validation_file
 
 area_name: area_gages2
 
 var_t_nn: [
   prcp(mm/day),
   tmean(C),
-  # dayl(s),
   PET_hargreaves(mm/day)
 ]
 var_c_nn: [
@@ -52,8 +50,6 @@ var_c_nn: [
 var_t_hydro_model: [
   prcp(mm/day),
   tmean(C),
-  # tmax(C),
-  # tmin(C),
   PET_hargreaves(mm/day)
 ]
 var_c_hydro_model: [
