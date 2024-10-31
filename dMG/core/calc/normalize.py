@@ -158,13 +158,13 @@ def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarra
 
 
     # Target stats
-    for i, target_name in enumerate(config['target']):
+    for i, target_name in enumerate(config['train']['target']):
         if target_name == '00060_Mean':
-            stat_dict[config['target'][i]] = calc_stat_basinnorm(
+            stat_dict[config['train']['target'][i]] = calc_stat_basinnorm(
                 np.swapaxes(y[:, :, i:i+1], 1,0).copy(), basin_area, config
             )  ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
         else:
-            stat_dict[config['target'][i]] = calculate_statistics(
+            stat_dict[config['train']['target'][i]] = calculate_statistics(
                 np.swapaxes(y[:, :, i:i+1], 1,0)
             )  ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
 
@@ -182,7 +182,7 @@ def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarra
         stat_dict[var] = calculate_statistics(c[:, k])
 
     # Save all stats.
-    stat_file = os.path.join(config['output_dir'], 'statistics_basinnorm.json')
+    stat_file = os.path.join(config['output_path'], 'statistics_basinnorm.json')
     with open(stat_file, 'w') as f:
         json.dump(stat_dict, f, indent=4)
 
@@ -261,7 +261,7 @@ def trans_norm(config: Dict[str, Any], x: np.ndarray, var_lst: List[str], *, to_
     :return: Transformed data
     """
     # Load in the statistics for forcings.
-    stat_file = os.path.join(config['output_dir'], 'statistics_basinnorm.json')
+    stat_file = os.path.join(config['output_path'], 'statistics_basinnorm.json')
     with open(stat_file, 'r') as f:
         stat_dict = json.load(f)
 
@@ -316,7 +316,7 @@ def init_norm_stats(config: Dict[str, Any], x_NN: np.ndarray, c_NN: np.ndarray,
     :param c_NN: Attribute data
     :param y: Target data
     """
-    stats_directory = config['output_dir']
+    stats_directory = config['output_path']
     stat_file = os.path.join(stats_directory, 'statistics_basinnorm.json')
 
     if not os.path.isfile(stat_file):

@@ -1,9 +1,9 @@
 """
 Vanilla testing/validation for differentiable models & multimodel ensembles.
 """
-import logging
 import os
-from typing import Dict, List, Any
+import logging
+from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -13,7 +13,6 @@ import tqdm
 from conf.config import Config
 from core.calc.stat import stat_error
 from core.data import take_sample_test
-from core.data.dataset_loading import get_data_dict
 from core.utils import save_outputs
 from models.model_handler import ModelHandler
 

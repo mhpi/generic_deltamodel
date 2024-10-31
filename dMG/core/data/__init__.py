@@ -45,12 +45,12 @@ def n_iter_nt_ngrid(x: np.ndarray, t_range: Tuple[int, int],
         ngrid = x.shape[1]
 
     t = trange_to_array(t_range)
-    rho = min(t.shape[0], config['rho'])
+    rho = min(t.shape[0], config['dpl_model']['rho'])
     n_iter_ep = int(
         np.ceil(
             np.log(0.01)
-            / np.log(1 - config['batch_size'] * rho / ngrid
-                     / (nt - config['warm_up']))
+            / np.log(1 - config['train']['batch_size'] * rho / ngrid
+                     / (nt - config['dpl_model']['warm_up']))
         )
     )
     return ngrid, n_iter_ep, nt,
@@ -116,32 +116,32 @@ def take_sample_train(config: Dict,
     """
     Select random sample of data for training batch.
     """
-    subset_dims = (config['batch_size'], config['rho'])
+    subset_dims = (config['train']['batch_size'], config['dpl_model']['rho'])
 
-    i_grid, i_t = random_index(ngrid_train, nt, subset_dims, warm_up=config['warm_up'])
+    i_grid, i_t = random_index(ngrid_train, nt, subset_dims, warm_up=config['dpl_model']['warm_up'])
 
     # Remove warmup days for dHBV1.1p...
     flow_obs = select_subset(config, dataset_dict['obs'], i_grid, i_t,
-                             config['rho'], warm_up=config['warm_up'])
+                             config['dpl_model']['rho'], warm_up=config['dpl_model']['warm_up'])
     
-    if ('HBV_capillary' in config['physics_model']['models']) and \
+    if ('HBV_capillary' in config['phy_model']['models']) and \
     (config['hbvcap_no_warm']) and (config['ensemble_type'] == 'none'):
         pass
     else:
-        flow_obs = flow_obs[config['warm_up']:, :]
+        flow_obs = flow_obs[config['dpl_model']['warm_up']:, :]
     
     # Create dataset sample dict.
     dataset_sample = {
         'iGrid': i_grid,
         'inputs_nn_scaled': select_subset(
             config, dataset_dict['inputs_nn_scaled'], i_grid, i_t,
-            config['rho'], has_grad=False, warm_up=config['warm_up']
+            config['dpl_model']['rho'], has_grad=False, warm_up=config['dpl_model']['warm_up']
         ),
         'c_nn': torch.tensor(dataset_dict['c_nn'][i_grid],
                              device=config['device'], dtype=torch.float32),
         'obs': flow_obs,
         'x_hydro_model': select_subset(config, dataset_dict['x_hydro_model'],
-                                       i_grid, i_t, config['rho'], warm_up=config['warm_up']),
+                                       i_grid, i_t, config['dpl_model']['rho'], warm_up=config['dpl_model']['warm_up']),
         'c_hydro_model': torch.tensor(dataset_dict['c_hydro_model'][i_grid],
                                        device=config['device'], dtype=torch.float32)
     }
@@ -160,7 +160,7 @@ def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor],
             if key in ['x_hydro_model', 'inputs_nn_scaled']:
                 warm_up = 0
             else:
-                warm_up = config['warm_up']
+                warm_up = config['dpl_model']['warm_up']
             dataset_sample[key] = value[warm_up:, i_s:i_e, :].to(config['device'])
         elif value.ndim == 2:
             dataset_sample[key] = value[i_s:i_e, :].to(config['device'])
@@ -168,11 +168,11 @@ def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor],
             raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
 
     # Keep 'warmup' days for dHBV1.1p.
-    if ('hbv_capillary' in config['physics_model']['models']) and \
+    if ('hbv_capillary' in config['phy_model']['models']) and \
     (config['hbvcap_no_warm']) and (config['ensemble_type'] == 'none'):
         pass
     else:
-        dataset_sample['obs'] = dataset_sample['obs'][config['warm_up']:, :]
+        dataset_sample['obs'] = dataset_sample['obs'][config['dpl_model']['warm_up']:, :]
 
     return dataset_sample
 
@@ -189,9 +189,9 @@ def take_sample_train_merit(config: Dict,
 
     From hydroDL for handling GAGESII + MERIT basin data.
     """
-    subset_dims = (config['batch_size'], config['rho'])
+    subset_dims = (config['dpl_model']['batch_size'], config['dpl_model']['rho'])
     i_grid, i_t = random_index(ngrid_train, nt, subset_dims,
-                               warm_up=config['warm_up'])
+                               warm_up=config['dpl_model']['warm_up'])
         
     gage_key_batch = np.array(info_dict['gage_key'])[i_grid]
     area_info = info_dict['area_info']

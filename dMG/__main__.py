@@ -1,7 +1,4 @@
-"""
-Script to interface with model experiments (train/test) and manage configurations.
-"""
-
+""" Main script to run model experiments (train/test) and manage configurations. """
 import logging
 import time
 from typing import Any, Dict, Union, Tuple
@@ -30,29 +27,28 @@ def main(cfg: DictConfig) -> None:
         start_time = time.perf_counter()
 
         # Injest config yaml
-        # NOTE: Temporarily using config_dict for better readability, may rm config.
-        config, config_dict = initialize_config(cfg)
+        config = initialize_config(cfg)
 
         # Set device, dtype, output directories, and random seed.
-        randomseed_config(config.random_seed)
+        randomseed_config(config['random_seed'])
 
-        config.device, config.dtype = set_system_spec(config.gpu_id)
-        config_dict = create_output_dirs(config_dict)
+        config['device'], config['dtype'] = set_system_spec(config['gpu_id'])
+        config = create_output_dirs(config)
 
-        experiment_name = config.mode
-        log.info(f"RUNNING MODE: {config.mode}")
+        exp_name = config['mode']
+        log.info(f"RUNNING MODE: {exp_name}")
         show_args(config)
 
         # Execute experiment based on mode.
-        if config.mode == ModeEnum.train_test:
-           run_train_test(config, config_dict)
+        if config['mode'] == ModeEnum.train_test:
+            run_train_test(config)
         else:
-            run_experiment(config, config_dict)
+            run_experiment(config)
 
         # Clean up and log elapsed time.
         total_time = time.perf_counter() - start_time
         log.info(
-            f"| {experiment_name} completed | "
+            f"| {exp_name} completed | "
             f"Time Elapsed: {(total_time / 60):.6f} minutes"
         ) 
         torch.cuda.empty_cache()
@@ -62,41 +58,37 @@ def main(cfg: DictConfig) -> None:
         torch.cuda.empty_cache()
 
 
-def initialize_config(cfg: DictConfig) -> Tuple[Config, Dict[str, Any]]:
+def initialize_config(cfg: DictConfig) -> Dict[str, Any]:
     """
     Convert config into a dictionary and a Config object for validation.
     """
     try:
-        config_dict: Union[Dict[str, Any], Any] = OmegaConf.to_container(
-            cfg, resolve=True)
-        config = Config(**config_dict)
+        config = OmegaConf.to_container(cfg, resolve=True)
     except ValidationError as e:
         log.exception("Configuration validation error", exc_info=e)
         raise e
-    return config, config_dict
+    return config
 
 
-def run_train_test(config: Config, config_dict: Dict[str, Any]) -> None:
+def run_train_test(config_dict: Dict[str, Any]) -> None:
     """
     Run training and testing as one experiment.
     """
-    # Train phase
-    config.mode = ModeEnum.train
-    train_experiment_handler = build_handler(config, config_dict)
+    # Training
+    config_dict['mode'] = ModeEnum.train
+    train_experiment_handler = build_handler(config_dict)
     train_experiment_handler.run()
 
-    # Test phase
-    config.mode = ModeEnum.test
-    test_experiment_handler = build_handler(config, config_dict)            
+    # Testing
+    config_dict['mode'] = ModeEnum.test
+    test_experiment_handler = build_handler(config_dict)            
     test_experiment_handler.dplh_model_handler = train_experiment_handler.dplh_model_handler
-    if config_dict['ensemble_type'] != 'none':
-        test_experiment_handler.ensemble_lstm = train_experiment_handler.ensemble_lstm
     test_experiment_handler.run()
 
 
-def run_experiment(config: Config, config_dict: Dict[str, Any]) -> None:
+def run_experiment(config_dict: Dict[str, Any]) -> None:
     """ Run an experiment based on the mode specified in the configuration. """
-    experiment_handler = build_handler(config, config_dict)
+    experiment_handler = build_handler(config_dict)
     experiment_handler.run()
 
 

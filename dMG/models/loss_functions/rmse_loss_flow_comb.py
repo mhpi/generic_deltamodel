@@ -13,14 +13,14 @@ class RmseLossFlowComb(torch.nn.Module):
         self.beta = beta
 
     def forward(self, args, y_sim, y_obs, igrid):
-        varTar_NN = args["target"]
-        obs_flow = y_obs[:, :, varTar_NN.index("00060_Mean")]
+        varTar_NN = args['train']['target']
+        obs_flow = y_obs[:, :, varTar_NN.index('00060_Mean')]
 
         if not isinstance(y_sim, dict):
             # In case a tensor is passed instead of a dict.
             y_sim = {'flow_sim': y_sim}
 
-        sim_flow = y_sim["flow_sim"].squeeze()
+        sim_flow = y_sim['flow_sim'].squeeze()
         if len(obs_flow) > 0:
             mask_flow1 = obs_flow == obs_flow
             p = sim_flow[mask_flow1]

@@ -268,7 +268,7 @@ class Config(BaseModel):
 
     mode: ModeEnum = Field(default=ModeEnum.train_test)
     pnn_model: str
-    hydro_models: Union[List[str], str] = Field(default_factory=lambda: ['HBV'])
+    # hydro_models: Union[List[str], str] = Field(default_factory=lambda: ['HBV'])
     ensemble_type: EnsembleEnum = Field(default=EnsembleEnum.none)
     # dy_params: DynamicConfig = Field(default_factory=ExperimentConfig)
 
@@ -278,35 +278,33 @@ class Config(BaseModel):
     dtype: str = ''
 
     routing_hydro_model: bool = True
-    pet_module: str
-    pet_dataset_name: str
-    target: list
+    # target: list
 
-    loss_function: str
-    loss_function_weights: LossFunc
-    train: ExperimentConfig = Field(default_factory=ExperimentConfig)
-    test: ExperimentConfig = ExperimentConfig(batch_size=365)
-    params: Params = Field(default_factory=Params)
+    # loss_function: str
+    # loss_function_weights: LossFunc
+    # train: ExperimentConfig = Field(default_factory=ExperimentConfig)
+    # test: ExperimentConfig = ExperimentConfig(batch_size=365)
+    # params: Params = Field(default_factory=Params)
 
-    nmul: int = 1
-    warm_up: int
-    rho: int
-    batch_size: int
-    epochs: int
-    hidden_size: int
-    dropout: float
-    learning_rate: float = 0.1
-    nearzero: float
+    # nmul: int = 1
+    # warm_up: int
+    # rho: int
+    # batch_size: int
+    # epochs: int
+    # hidden_size: int
+    # dropout: float
+    # learning_rate: float = 0.1
+    # nearzero: float
 
-    weighting_nn: WeightingNNConfig
+    # weighting_nn: WeightingNNConfig
 
-    test_batch: int
-    save_epoch: int = 10
+    # test_batch: int
+    # save_epoch: int = 10
 
-    name: str
-    data_dir: str
-    output_dir: str
-    use_checkpoint: bool
+    # name: str
+    main_dir: str
+    output_path: str
+    # use_checkpoint: bool
     # checkpoint: Checkpoint
 
     # gage_info: str = "not_defined"
@@ -339,7 +337,7 @@ class Config(BaseModel):
     #         target_yaml_file.seek(0)
     #         yaml.dump(target_config, target_yaml_file)
 
-    @field_validator("data_dir")
+    @field_validator("main_dir")
     @classmethod
     def validate_dir(cls, v: str) -> Path:
         return check_path(v)

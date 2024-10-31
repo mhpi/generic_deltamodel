@@ -1,6 +1,4 @@
-"""
-Vanilla training for differentiable models & multimodel ensembles.
-"""
+""" Vanilla training for differentiable models. """
 import logging
 import time
 from typing import Dict, Any
@@ -48,16 +46,16 @@ class TrainModel:
         self.dplh_model_handler.init_loss_func(self.dataset_dict['obs'])
         optim = self.dplh_model_handler.optim
 
-        start_ep = self.config['checkpoint']['start_epoch'] if self.config['use_checkpoint'] else 1
+        start_ep = self.config['train']['start_epoch'] if self.config['train']['run_from_checkpoint'] else 1
 
         # Start of training.
-        for epoch in range(start_ep, self.config['epochs'] + 1):
+        for epoch in range(start_ep, self.config['train']['epochs'] + 1):
             start_time = time.perf_counter()
 
             self._train_epoch(epoch, minibatch_iter, ngrid_train, nt, optim)
             self._log_epoch_stats(epoch, self.ep_loss_dict, minibatch_iter, start_time)
 
-            if epoch % self.config['save_epoch'] == 0:
+            if epoch % self.config['train']['save_epoch'] == 0:
                 self.save_models(epoch)
 
     def _train_epoch(self, epoch: int, minibatch_iter: int, ngrid_train: Any,
@@ -67,9 +65,9 @@ class TrainModel:
         """
         # Initialize loss dictionary.
         # ep_loss_dict = dict.fromkeys(self.config['physics_model']['models'], 0)
-        ep_loss_dict = {key: 0 for key in self.config['physics_model']['models']}
+        ep_loss_dict = {key: 0 for key in self.config['phy_model']['models']}
 
-        prog_str = f"Epoch {epoch}/{self.config['epochs']}"
+        prog_str = f"Epoch {epoch}/{self.config['train']['epochs']}"
 
         # Iterate through minibatches.
         for i in tqdm.tqdm(range(1, minibatch_iter + 1), desc=prog_str,
@@ -101,6 +99,6 @@ class TrainModel:
 
     def save_models(self, epoch: int, frozen_pnn: bool = False) -> None:
         """ Save dPL hydrology models. """
-        for mod in self.config['physics_model']['models']:
+        for mod in self.config['phy_model']['models']:
             save_model(self.config, self.dplh_model_handler.model_dict[mod], mod, epoch)
                 

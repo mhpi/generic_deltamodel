@@ -28,11 +28,11 @@ def camel_to_snake(camel_str):
     return snake_str
 
 
-def get_loss_function(args, obs):
+def get_loss_function(config, obs):
     """
     Dynamically load the loss fn module from the specified file.
     """
-    loss_function = args['loss_function']
+    loss_function = config['loss_function']['model']
     file_name = camel_to_snake(loss_function)
     
     ## NOTE: for debugging `./dPLHydro_multimodel/models` must be specified. Can't figure out why.
@@ -43,12 +43,12 @@ def get_loss_function(args, obs):
     module = spec.loader.load_module()
 
     # Fetch the loss fn class.
-    loss_function_default = getattr(module, args['loss_function'])
+    loss_function_default = getattr(module, config['loss_function']['model'])
     
     # Initialize object.
     # NOTE: Any loss functions with specific settings should have them set here.
     if loss_function in ['NseLossBatchFlow','NseSqrtLossBatchFlow']:
-        std_obs_flow = np.nanstd(obs[:, :, args['target'].index('00060_Mean')], axis=0)
+        std_obs_flow = np.nanstd(obs[:, :, config['train']['target'].index('00060_Mean')], axis=0)
         loss_obj = loss_function_default(std_obs_flow)
     else:
         loss_obj = loss_function_default()

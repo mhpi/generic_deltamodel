@@ -228,15 +228,13 @@ class choose_class_to_read_dataset():
 
 
 def load_data(config, t_range=None, train=True):
-    """
-    Load data into dictionaries for pNN and hydro model.
-    """
+    """ Load data into dictionaries for pNN and hydro model. """
     if t_range == None:
         t_range = config['t_range']
 
     out_dict = dict()
 
-    if config['observations']['name'] in ['camels_671_yalan', 'camels_531_yalan']:
+    if config['observations']['name'] in ['camels_671', 'camels_531']:
         if train:
             with open(config['observations']['train_path'], 'rb') as f:
                 forcing, target, attr = pickle.load(f)
@@ -283,7 +281,7 @@ def load_data(config, t_range=None, train=True):
         # getting inputs for neural network:
         out_dict['x_nn'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['observations']['var_t_nn'])
         out_dict['c_nn'] = forcing_dataset_class.read_data.getDataConst(config, varLst=config['observations']['var_c_nn'])
-        out_dict['obs'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['target'])
+        out_dict['obs'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['train']['target'])
 
         out_dict['x_hydro_model'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['observations']['var_t_hydro_model'])
         out_dict['c_hydro_model'] = forcing_dataset_class.read_data.getDataConst(config, varLst=config['observations']['var_c_hydro_model'])
@@ -292,7 +290,7 @@ def load_data(config, t_range=None, train=True):
 
 
 def converting_flow_from_ft3_per_sec_to_mm_per_day(config, c_NN_sample, obs_sample):
-    varTar_NN = config['target']
+    varTar_NN = config['train']['target']
     if '00060_Mean' in varTar_NN:
         obs_flow_v = obs_sample[:, :, varTar_NN.index('00060_Mean')]
         varC_NN = config['observations']['var_c_nn']
@@ -312,8 +310,8 @@ def get_data_dict(config, train=False):
     train: bool, specifies whether data is for training.
     """
     # Get date range
-    config['train_t_range'] = Dates(config['training'], config['rho']).date_to_int()
-    config['test_t_range'] = Dates(config['test'], config['rho']).date_to_int()
+    config['train_t_range'] = Dates(config['train'], config['dpl_model']['rho']).date_to_int()
+    config['test_t_range'] = Dates(config['test'], config['dpl_model']['rho']).date_to_int()
     config['t_range'] = [config['train_t_range'][0], config['test_t_range'][1]]
 
     # Create stats for NN input normalizations.
@@ -339,7 +337,7 @@ def get_data_dict(config, train=False):
     
     # Streamflow unit conversion.
     #### MOVED FROM LOAD_DATA
-    if '00060_Mean' in config['target']:
+    if '00060_Mean' in config['train']['target']:
         dataset_dict['obs'] = converting_flow_from_ft3_per_sec_to_mm_per_day(
             config,
             dataset_dict['c_nn'],
@@ -354,9 +352,9 @@ def extract_data(config):
     Extract forcings and attributes from dataset feather files.
     """
     # Get date range.
-    config['train_t_range'] = Dates(config['training'], config['rho']).date_to_int()
-    config['test_t_range'] = Dates(config['test'], config['rho']).date_to_int()
-    config['t_range'] = [config['train_t_range'][0], config['test_t_range'][1]]
+    config['train_t_range'] = Dates(config['train'], config['dpl_model']['rho']).date_to_int()
+    config['test_t_range'] = Dates(config['test'], config['dpl_model']['rho']).date_to_int()
+    config['t_range'] = [config['train_t_range'][0], config['dpl_model']['test_t_range'][1]]
     
     # Lists of forcings and attributes for nn + physics model.
     forcing_list = list(

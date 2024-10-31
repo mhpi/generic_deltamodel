@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 
 
-def set_system_spec(cuda_devices: Optional[list] = None) -> Tuple[torch.device, torch.dtype]:
+def set_system_spec(cuda_devices: Optional[list] = None) -> Tuple[str, str]:
     """
     Sets appropriate torch device and dtype for current system.
     
@@ -50,7 +50,7 @@ def set_system_spec(cuda_devices: Optional[list] = None) -> Tuple[torch.device, 
         device = torch.device('cpu')
     
     dtype = torch.float32
-    return device.type, dtype
+    return str(device.type), str(dtype)
 
 
 def randomseed_config(seed=0) -> None:
@@ -84,7 +84,7 @@ def create_output_dirs(config) -> dict:
     Modified from dPL_Hydro_SNTEMP @ Farshid Rahmani.
     """
     # Add dir for train period:
-    train_period = 'train_' + str(config['training']['start_time'][:4]) + '_' + str(config['training']['end_time'][:4])
+    train_period = 'train_' + str(config['train']['start_time'][:4]) + '_' + str(config['train']['end_time'][:4])
 
     # Add dir for number of forcings:
     forcings = str(len(config['observations']['var_t_nn'])) + '_forcing'
@@ -102,10 +102,10 @@ def create_output_dirs(config) -> dict:
     mod_names = ''
     dy_params = ''
     loss_fns = ''
-    for mod in config['physics_model']['models']:
+    for mod in config['phy_model']['models']:
         mod_names += mod + "_"
 
-        for param in config['physics_model']['dy_params'][mod]:
+        for param in config['phy_model']['dy_params'][mod]:
             dy_params += param + '_'
         
         loss_fns += config['loss_function']['model'] + '_'
@@ -113,12 +113,12 @@ def create_output_dirs(config) -> dict:
 
 
     # Add dir with hyperparam spec.
-    out_folder = config['pnn_model'] + \
-             '_E' + str(config['epochs']) + \
-             '_R' + str(config['rho'])  + \
-             '_B' + str(config['batch_size']) + \
-             '_H' + str(config['hidden_size']) + \
-             '_n' + str(config['nmul']) + \
+    out_folder = config['pnn_model']['model'] + \
+             '_E' + str(config['train']['epochs']) + \
+             '_R' + str(config['dpl_model']['rho'])  + \
+             '_B' + str(config['train']['batch_size']) + \
+             '_H' + str(config['pnn_model']['hidden_size']) + \
+             '_n' + str(config['dpl_model']['nmul']) + \
              '_' + str(config['random_seed']) 
 
     # If any model in ensemble is dynamic, whole ensemble is dynamic.
@@ -126,7 +126,7 @@ def create_output_dirs(config) -> dict:
     
     # Add a dir for loss functions.
     # ---- Combine all dirs ---- #
-    output_dir = config['output_dir']
+    output_dir = config['output_path']
     full_path = os.path.join(output_dir, train_period, forcings, ensemble_state, out_folder, mod_names, loss_fns, dy_state)
 
     if dy_state == 'dynamic_para':
@@ -245,46 +245,46 @@ def load_model(config, model_name, epoch):
     # return model
 
 
-def show_args(config) -> None:
+def show_args(config: dict) -> None:
     """
     From Jiangtao Liu.
     Use to display critical configuration settings in a clean format.
     """
     print()
     print("\033[1m" + "Current Configuration" + "\033[0m")
-    print(f'  {"Experiment Mode:":<20}{config.mode:<20}')
-    print(f'  {"Ensemble Mode:":<20}{config.ensemble_type:<20}')
+    print(f"  {'Experiment Mode:':<20}{config['mode']:<20}")
+    print(f"  {'Ensemble Mode:':<20}{config['ensemble_type']:<20}")
 
-    for i, mod in enumerate(config.hydro_models):
-        print(f'  {f"Model {i+1}:":<20}{mod:<20}')
+    for i, mod in enumerate(config['phy_model']['models']):
+        print(f"  {f'Model {i+1}:':<20}{mod:<20}")
     print()
 
     print("\033[1m" + "Data Loader" + "\033[0m")
-    print(f'  {"Data Source:":<20}{config.observations.name:<20}')
-    if config.mode != 'test':
-        print(f'  {"Train Range :":<20}{config.train.start_time:<20}{config.train.end_time:<20}')
-    if config.mode != 'train':
-        print(f'  {"Test Range :":<20}{config.test.start_time:<20}{config.test.end_time:<20}')
-    if config.use_checkpoint == True:
-        print(f'  {"Resuming training from epoch:":<20}{config.checkpoint.start_epoch:<20}')
+    print(f"  {'Data Source:':<20}{config['observations']['name']:<20}")
+    if config['mode'] != 'test':
+        print(f"  {'Train Range :':<20}{config['train']['start_time']:<20}{config['train']['end_time']:<20}")
+    if config['mode'] != 'train':
+        print(f"  {'Test Range :':<20}{config['test']['start_time']:<20}{config['test']['end_time']:<20}")
+    if config['train']['run_from_checkpoint'] == True:
+        print(f"  {'Resuming training from epoch:':<20}{config['run_from_checkpoint']['start_epoch']:<20}")
     print()
 
     print("\033[1m" + "Model Parameters" + "\033[0m")
-    print(f'  {"Train Epochs:":<20}{config.epochs:<20}{"Batch Size:":<20}{config.batch_size:<20}')
-    print(f'  {"Dropout:":<20}{config.dropout:<20}{"Hidden Size:":<20}{config.hidden_size:<20}')
-    print(f'  {"Warmup:":<20}{config.warm_up:<20}{"Concurrent Models:":<20}{config.nmul:<20}')
-    print(f'  {"Optimizer:":<20}{config.loss_function:<20}')
+    print(f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}")
+    print(f"  {'Dropout:':<20}{config['pnn_model']['dropout']:<20}{'Hidden Size:':<20}{config['pnn_model']['hidden_size']:<20}")
+    print(f"  {'Warmup:':<20}{config['dpl_model']['warm_up']:<20}{'Concurrent Models:':<20}{config['dpl_model']['nmul']:<20}")
+    print(f"  {'Optimizer:':<20}{config['loss_function']['model']:<20}")
     print()
 
-    if 'pnn' in config.ensemble_type:
-        print("\033[1m" + "Weighting Network Parameters" + "\033[0m")
-        print(f'  {"Dropout:":<20}{config.weighting_nn.dropout:<20}{"Hidden Size:":<20}{config.weighting_nn.hidden_size:<20}')
-        print(f'  {"Method:":<20}{config.weighting_nn.method:<20}{"Loss Factor:":<20}{config.weighting_nn.loss_factor:<20}')
-        print(f'  {"Loss Lower Bound:":<20}{config.weighting_nn.loss_lower_bound:<20}{"Loss Upper Bound:":<20}{config.weighting_nn.loss_upper_bound:<20}')
-        print(f'  {"Optimizer:":<20}{config.weighting_nn.loss_function:<20}')
-        print()
+    # if 'pnn' in config['ensemble_type']:
+    #     print("\033[1m" + "Weighting Network Parameters" + "\033[0m")
+    #     print(f'  {"Dropout:":<20}{config.weighting_nn.dropout:<20}{"Hidden Size:":<20}{config.weighting_nn.hidden_size:<20}')
+    #     print(f'  {"Method:":<20}{config.weighting_nn.method:<20}{"Loss Factor:":<20}{config.weighting_nn.loss_factor:<20}')
+    #     print(f'  {"Loss Lower Bound:":<20}{config.weighting_nn.loss_lower_bound:<20}{"Loss Upper Bound:":<20}{config.weighting_nn.loss_upper_bound:<20}')
+    #     print(f'  {"Optimizer:":<20}{config.weighting_nn.loss_function:<20}')
+    #     print()
 
     print("\033[1m" + "Machine" + "\033[0m")
-    print(f'  {"Use Device:":<20}{str(config.device):<20}')
+    print(f"  {'Use Device:':<20}{str(config['device']):<20}")
     print()
     
