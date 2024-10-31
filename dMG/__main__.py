@@ -6,21 +6,15 @@ import logging
 import time
 from typing import Any, Dict, Union, Tuple
 
-import numpy as np
-import random
 import torch
-import os
-
 import hydra
-import torch
 from omegaconf import DictConfig, OmegaConf
 from pydantic import ValidationError
 
 from conf.config import Config, ModeEnum
 from core.utils import (create_output_dirs, randomseed_config, set_system_spec,
                         show_args)
-from experiment import build_handler
-from experiment.experiment_tracker import ExperimentTracker
+from trainers import build_handler
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +32,6 @@ def main(cfg: DictConfig) -> None:
         # Injest config yaml
         # NOTE: Temporarily using config_dict for better readability, may rm config.
         config, config_dict = initialize_config(cfg)
-        experiment_tracker = ExperimentTracker(cfg=config)
 
         # Set device, dtype, output directories, and random seed.
         randomseed_config(config.random_seed)
@@ -52,9 +45,9 @@ def main(cfg: DictConfig) -> None:
 
         # Execute experiment based on mode.
         if config.mode == ModeEnum.train_test:
-           run_train_test(config, config_dict, experiment_tracker)
+           run_train_test(config, config_dict)
         else:
-            run_experiment(config, config_dict, experiment_tracker)
+            run_experiment(config, config_dict)
 
         # Clean up and log elapsed time.
         total_time = time.perf_counter() - start_time
@@ -83,14 +76,14 @@ def initialize_config(cfg: DictConfig) -> Tuple[Config, Dict[str, Any]]:
     return config, config_dict
 
 
-def run_train_test(config: Config, config_dict: Dict[str, Any], experiment_tracker: ExperimentTracker) -> None:
+def run_train_test(config: Config, config_dict: Dict[str, Any]) -> None:
     """
     Run training and testing as one experiment.
     """
     # Train phase
     config.mode = ModeEnum.train
     train_experiment_handler = build_handler(config, config_dict)
-    train_experiment_handler.run(experiment_tracker=experiment_tracker)
+    train_experiment_handler.run()
 
     # Test phase
     config.mode = ModeEnum.test
@@ -98,15 +91,13 @@ def run_train_test(config: Config, config_dict: Dict[str, Any], experiment_track
     test_experiment_handler.dplh_model_handler = train_experiment_handler.dplh_model_handler
     if config_dict['ensemble_type'] != 'none':
         test_experiment_handler.ensemble_lstm = train_experiment_handler.ensemble_lstm
-    test_experiment_handler.run(experiment_tracker=experiment_tracker)
+    test_experiment_handler.run()
 
 
-def run_experiment(config: Config, config_dict: Dict[str, Any], experiment_tracker: ExperimentTracker) -> None:
-    """
-    Run an experiment based on the mode specified in the configuration.
-    """
+def run_experiment(config: Config, config_dict: Dict[str, Any]) -> None:
+    """ Run an experiment based on the mode specified in the configuration. """
     experiment_handler = build_handler(config, config_dict)
-    experiment_handler.run(experiment_tracker=experiment_tracker)
+    experiment_handler.run()
 
 
 

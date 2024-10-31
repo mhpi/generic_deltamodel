@@ -36,12 +36,12 @@ class ModelHandler(torch.nn.Module):
         """
         self.model_dict = {}
 
-        if (self.config['ensemble_type'] == 'none') and (len(self.config['hydro_models']) > 1):
+        if (self.config['ensemble_type'] == 'none') and (len(self.config['physics_model']['models']) > 1):
             raise ValueError("Multiple hydro models given, but ensemble type not specified. Check config.")
         
         elif self.config['mode'] == 'train_wnn':
             # Reinitialize trained models for wNN training.
-            for mod in self.config['hydro_models']:
+            for mod in self.config['physics_model']['models']:
                 load_path = self.config['checkpoint'][mod]
                 self.model_dict[mod] = torch.load(load_path).to(self.config['device'])
 
@@ -54,7 +54,7 @@ class ModelHandler(torch.nn.Module):
         elif self.config['use_checkpoint']:
             # Reinitialize trained model(s).
             self.all_model_params = []
-            for mod in self.config['hydro_models']:
+            for mod in self.config['physics_model']['models']:
                 load_path = self.config['checkpoint'][mod]
                 self.model_dict[mod] = torch.load(load_path).to(self.config['device'])
                 self.all_model_params += list(self.model_dict[mod].parameters())
@@ -64,13 +64,13 @@ class ModelHandler(torch.nn.Module):
             self.init_optimizer()
 
         elif self.config['mode'] in ['test', 'test_conus']:
-            for mod in self.config['hydro_models']:
+            for mod in self.config['physics_model']['models']:
                 self.load_model(mod)
 
         else:
             # Initialize differentiable hydrology model(s) and bulk optimizer.
             self.all_model_params = []
-            for mod in self.config['hydro_models']:
+            for mod in self.config['physics_model']['models']:
 
                 ### TODO: change which models are set to which devices here: ###
                 self.model_dict[mod] = dPLHydroModel(self.config, mod).to(self.config['device'])

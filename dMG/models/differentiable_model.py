@@ -1,15 +1,8 @@
 from ast import Dict
 import torch.nn
-from tqdm import trange
-from models.hydro_models.HBV.hbv import HBVMulTDET as HBV
-from models.hydro_models.HBV.hbv_capillary import HBVMulTDET as HBVcap
-from models.hydro_models.HBV.hbv_waterloss import HBVMulTDET_WaterLoss as HBV_WL
-from models.hydro_models.marrmot_PRMS.prms_marrmot import prms_marrmot
-from models.hydro_models.marrmot_PRMS_gw0.prms_marrmot_gw0 import \
-    prms_marrmot_gw0
-from models.hydro_models.SACSMA.SACSMAmul import SACSMAMul
-from models.hydro_models.SACSMA_with_snowpack.SACSMA_snow_mul import \
-    SACSMA_snow_Mul
+
+from hydroDL2 import load_model
+  
 from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
 from models.neural_networks.ann_models import AnnModel
@@ -33,19 +26,11 @@ class dPLHydroModel(torch.nn.Module):
         # Physics model init
         ## TODO: Set this up as dynamic module import instead.
         if self.model_name == 'HBV':
-            self.hydro_model = HBV(self.config)
-        elif self.model_name == 'HBV_capillary':
-            self.hydro_model = HBVcap()
-        elif self.model_name == 'HBV_waterLoss':
-            self.hydro_model = HBV_WL()
-        elif self.model_name == 'marrmot_PRMS':
-            self.hydro_model = prms_marrmot()
-        elif self.model_name == 'marrmot_PRMS_gw0':
-            self.hydro_model = prms_marrmot_gw0()
-        elif self.model_name == 'SACSMA':
-            self.hydro_model = SACSMAMul()
-        elif self.model_name == 'SACSMA_with_snow':
-            self.hydro_model = SACSMA_snow_Mul()
+            self.hydro_model = load_model('HBV')
+        if self.model_name == 'HBV_11p':
+            self.hydro_model = load_model('HBV_11p')
+        if self.model_name == 'PRMS':
+            self.hydro_model = load_model('PRMS')
         else:
             raise ValueError(self.model_name, "is not a valid hydrology model.")
 

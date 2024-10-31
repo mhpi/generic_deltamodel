@@ -124,7 +124,7 @@ def take_sample_train(config: Dict,
     flow_obs = select_subset(config, dataset_dict['obs'], i_grid, i_t,
                              config['rho'], warm_up=config['warm_up'])
     
-    if ('HBV_capillary' in config['hydro_models']) and \
+    if ('HBV_capillary' in config['physics_model']['models']) and \
     (config['hbvcap_no_warm']) and (config['ensemble_type'] == 'none'):
         pass
     else:
@@ -168,7 +168,7 @@ def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor],
             raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
 
     # Keep 'warmup' days for dHBV1.1p.
-    if ('hbv_capillary' in config['hydro_models']) and \
+    if ('hbv_capillary' in config['physics_model']['models']) and \
     (config['hbvcap_no_warm']) and (config['ensemble_type'] == 'none'):
         pass
     else:

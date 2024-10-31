@@ -312,7 +312,7 @@ def get_data_dict(config, train=False):
     train: bool, specifies whether data is for training.
     """
     # Get date range
-    config['train_t_range'] = Dates(config['train'], config['rho']).date_to_int()
+    config['train_t_range'] = Dates(config['training'], config['rho']).date_to_int()
     config['test_t_range'] = Dates(config['test'], config['rho']).date_to_int()
     config['t_range'] = [config['train_t_range'][0], config['test_t_range'][1]]
 
@@ -354,7 +354,7 @@ def extract_data(config):
     Extract forcings and attributes from dataset feather files.
     """
     # Get date range.
-    config['train_t_range'] = Dates(config['train'], config['rho']).date_to_int()
+    config['train_t_range'] = Dates(config['training'], config['rho']).date_to_int()
     config['test_t_range'] = Dates(config['test'], config['rho']).date_to_int()
     config['t_range'] = [config['train_t_range'][0], config['test_t_range'][1]]
     

@@ -16,8 +16,6 @@ from core.data import take_sample_test
 from core.data.dataset_loading import get_data_dict
 from core.utils import save_outputs
 from models.model_handler import ModelHandler
-from models.multimodels.ensemble_network import EnsembleWeights
-from models.multimodels.model_average import model_average
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +23,7 @@ log = logging.getLogger(__name__)
 
 class TestModel:
     """
-    High-level multimodel testing handler; retrieves and formats testing data,
+    High-level testing handler; retrieves and formats testing data,
     initializes all individual models, and tests a trained model.
     """
     def __init__(self, config: Config):
@@ -34,12 +32,8 @@ class TestModel:
 
         # Initializing collection of dPL hydrology models.
         self.dplh_model_handler = ModelHandler(self.config).to(self.config['device'])
-        
-        # Initialize weighting LSTM (wNN) if ensemble type is specified.
-        if self.config['ensemble_type'] in ['frozen_pnn', 'free_pnn']:
-            self.ensemble_lstm = EnsembleWeights(self.config).to(self.config['device'])
 
-    def run(self, experiment_tracker) -> None:
+    def run(self) -> None:
         log.info(f"Testing model: {self.config['name']} | Collecting testing data")
 
         # Get dataset dictionary.
@@ -56,24 +50,6 @@ class TestModel:
         # Calculate model result statistics.
         self.calc_metrics(batched_preds_list, y_obs)
 
-    def _get_data_dict(self) -> None:
-        """
-        Get dictionary of input data.
-
-        iS, iE: arrays of start and end pairs of basin indicies for batching.
-        """
-        dataset_dict, self.config = get_data_dict(self.config)
-
-        # NOTE: why is this only necessary for testing? Because conversion happens in dataset_dict_sample.
-        # Convert numpy arrays to torch tensors.
-        for key in dataset_dict.keys():
-            if type(dataset_dict[key]) == np.ndarray:
-                dataset_dict[key] = torch.from_numpy(dataset_dict[key]).float()
-        self.dataset_dict = dataset_dict
-
-        ngrid = dataset_dict['inputs_nn_scaled'].shape[1]
-        self.iS = np.arange(0, ngrid, self.config['test_batch'])
-        self.iE = np.append(self.iS[1:], ngrid)
 
     def _get_model_predictions(self) -> List[Dict[str, torch.Tensor]]:
         """
@@ -89,34 +65,14 @@ class TestModel:
             hydro_preds = self.dplh_model_handler(dataset_dict_sample, eval=True)
 
             # Compile predictions from each batch.
-            if self.config['ensemble_type'] in ['frozen_pnn', 'free_pnn']:
-                # For ensembles w/ wNN: Forward pass for wNN to get ensemble weights.
-                self.ensemble_lstm(dataset_dict_sample, eval=True)
-
-                # Ensemble hydrology models using learned weights.
-                ensemble_pred = self.ensemble_lstm.ensemble_models(hydro_preds)
-                batched_preds_list.append({key: tensor.cpu().detach() for key,
-                                           tensor in ensemble_pred.items()})
-            elif self.config['ensemble_type'] == 'avg':
-                # For 'average' type ensemble: Average model predictions at each
-                # basin for each day.
-                ensemble_pred = model_average(hydro_preds, self.config)
-                batched_preds_list.append({key: tensor.cpu().detach() for key,
-                                           tensor in ensemble_pred.items()})
-            else:
-                # For single hydrology model.
-                model_name = self.config['hydro_models'][0]
-                batched_preds_list.append({key: tensor.cpu().detach() for key,
-                                           tensor in hydro_preds[model_name].items()})
+            model_name = self.config['physics_model']['models'][0]
+            batched_preds_list.append({key: tensor.cpu().detach() for key,
+                                        tensor in hydro_preds[model_name].items()})
         return batched_preds_list
 
     def calc_metrics(self, batched_preds_list: List[Dict[str, torch.Tensor]],
                      y_obs: torch.Tensor) -> None:
-        """
-        Calculate test metrics and save to csv.
-
-        TODO: clean up.
-        """
+        """ Calculate test metrics and save to csv. """
         preds_list = []
         obs_list = []
         name_list = []
@@ -126,7 +82,7 @@ class TestModel:
         flow_obs = y_obs[:, :, self.config['target'].index('00060_Mean')]
 
         # Remove warmup days for dHBV1.1p.
-        if ('hbv_capillary' in self.config['hydro_models']) and \
+        if ('hbv_capillary' in self.config['physics_model']['models']) and \
         (self.config['hbvcap_no_warm']) and (self.config['ensemble_type'] == 'none'):
             pass
         else:

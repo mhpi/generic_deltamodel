@@ -50,7 +50,7 @@ def set_system_spec(cuda_devices: Optional[list] = None) -> Tuple[torch.device, 
         device = torch.device('cpu')
     
     dtype = torch.float32
-    return device, dtype
+    return device.type, dtype
 
 
 def randomseed_config(seed=0) -> None:
@@ -84,7 +84,7 @@ def create_output_dirs(config) -> dict:
     Modified from dPL_Hydro_SNTEMP @ Farshid Rahmani.
     """
     # Add dir for train period:
-    train_period = 'train_' + str(config['train']['start_time'][:4]) + '_' + str(config['train']['end_time'][:4])
+    train_period = 'train_' + str(config['training']['start_time'][:4]) + '_' + str(config['training']['end_time'][:4])
 
     # Add dir for number of forcings:
     forcings = str(len(config['observations']['var_t_nn'])) + '_forcing'
@@ -102,13 +102,13 @@ def create_output_dirs(config) -> dict:
     mod_names = ''
     dy_params = ''
     loss_fns = ''
-    for mod in config['hydro_models']:
+    for mod in config['physics_model']['models']:
         mod_names += mod + "_"
 
-        for param in config['dy_params'][mod]:
+        for param in config['physics_model']['dy_params'][mod]:
             dy_params += param + '_'
         
-        loss_fns += config['loss_function'] + '_'
+        loss_fns += config['loss_function']['model'] + '_'
 
 
 
@@ -140,7 +140,7 @@ def create_output_dirs(config) -> dict:
 
     if (config['mode'] == 'test') and (os.path.exists(config['output_dir']) == False):
         if config['ensemble_type'] in ['avg', 'frozen_pnn']:
-            for mod in config['hydro_models']:
+            for mod in config['physics_model']['models']:
                 # Check if individually trained models exist and use those.
                 check_path = os.path.join(output_dir,'no_ensemble', out_folder, dy_state, mod + "_")
                 if os.path.exists(check_path) == False:           
