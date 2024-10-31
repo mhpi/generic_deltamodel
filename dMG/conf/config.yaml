@@ -11,7 +11,7 @@ device: cuda
 gpu_id: 0
 
 name: dmg-1.0-${observations.name}
-main_dir: /data/lgl5139/hydroDL2-dev/generic_diffModel/runs 
+main_dir: /data/lgl5139/project_blue_eyes/generic_diffModel/runs 
 output_path: ${main_dir}/${observations.name}/saved_models/
 
 
