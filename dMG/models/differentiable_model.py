@@ -1,7 +1,4 @@
-from ast import Dict
-
 import torch.nn
-from models.neural_networks.ann_models import AnnModel
 from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
 
@@ -9,9 +6,20 @@ from hydroDL2 import load_model
 
 
 class dPLHydroModel(torch.nn.Module):
-    """
-    Default class for instantiating a differentiable hydrology model
-    (i.e., parameterization NN(s) + physics model)
+    """Default class for instantiating a differentiable model.
+    
+    Default modality: 
+        Parameterization NN (pNN) -> Physics Model (phy_model)
+
+        - pNN: LSTM or MLP
+            Learns parameters for the physics model.
+
+        - phy_model: e.g., HBV, HBV_11p, PRMS
+            Injests pNN-generated parameters and produces some target output.
+            The target output is compared to some observation to calculate loss
+            to train the pNN.
+
+    TODO: Generalize this class to allow for different physics models.
     """
     def __init__(self, config, model_name):
         super(dPLHydroModel, self).__init__()
@@ -20,9 +28,7 @@ class dPLHydroModel(torch.nn.Module):
         self._init_model()
 
     def _init_model(self):
-        """
-        Initialize a hydrology model and any parameterization networks.
-        """
+        """Initialize a physics model and a pNN."""
         # Physics model init
         ## TODO: Set this up as dynamic module import instead.
         if self.model_name == 'HBV':
@@ -35,7 +41,7 @@ class dPLHydroModel(torch.nn.Module):
             self.hydro_model = load_model('PRMS')
             self.hydro_model= self.hydro_model()
         else:
-            raise ValueError(self.model_name, "is not a valid hydrology model.")
+            raise ValueError(self.model_name, "is not a valid physics model.")
 
         # Get dims of pNN model(s).
         self.get_nn_model_dims()
@@ -58,7 +64,7 @@ class dPLHydroModel(torch.nn.Module):
             raise ValueError(self.config['pnn_model'], "is not a valid neural network type.")
         
     def get_nn_model_dims(self) -> None:
-        """ Return dimensions for pNNs. """
+        """Return dimensions for pNNs."""
         n_forc = len(self.config['observations']['nn_forcings'])
         n_attr = len(self.config['observations']['nn_attributes'])
         self.n_model_params = len(self.hydro_model.parameters_bound)
@@ -71,6 +77,7 @@ class dPLHydroModel(torch.nn.Module):
             self.ny += self.n_rout_params
 
     def breakdown_params(self, params_all) -> None:
+        """Extract physics model parameters from pNN output."""
         params_dict = dict()
         params_hydro_model = params_all[:, :, :self.ny]
 
@@ -89,6 +96,7 @@ class dPLHydroModel(torch.nn.Module):
         return params_dict
 
     def forward(self, dataset_dict_sample) -> None:
+        """Forward pass for the model."""
         # Parameterization + unpacking for physics model.
         params_all = self.NN_model(
             dataset_dict_sample['inputs_nn_scaled'],

@@ -5,7 +5,6 @@ from typing import Any, Dict
 
 import torch
 import tqdm
-from conf.config import Config
 from core.data import n_iter_nt_ngrid, take_sample_train
 from core.data.dataset_loading import get_data_dict
 from core.utils import save_model
@@ -16,20 +15,22 @@ log = logging.getLogger(__name__)
 
 
 class TrainModel:
+    """High-level training manager for differentiable models.
+    
+    Responsible for retrieving and formatting training data, initializing a 
+    dPL (differentiable Parameter Learning) model object, *setting the optimizer
+    and loss function, and running the training loop.
+
+    TODO*: migrate optimizer and loss function setup from ModelHandler to TrainModel.
     """
-    High-level multimodel training handler; retrieves and formats training data,
-    initializes all individual models, sets optimizer, and runs training.
-    """
-    def __init__(self, config: Config):
+    def __init__(self, config: Dict[str, Any]):
         self.config = config
 
         # Initialize collection of dPL hydrology models w/ optimizer.
         self.dplh_model_handler = ModelHandler(self.config).to(self.config['device'])
     
     def run(self) -> None:
-        """
-        High-level management of model training.
-        """
+        """High level training manager."""
         log.info(f"Training model: {self.config['name']} | Collecting training data")
         
         # Load forcings + attributes.
@@ -59,8 +60,20 @@ class TrainModel:
 
     def _train_epoch(self, epoch: int, minibatch_iter: int, ngrid_train: Any,
                      nt: int, optim: torch.optim.Optimizer) -> None:
-        """
-        Forward over a mini-batched epoch and get the loss.
+        """Forward over a batched epoch and compute the loss.
+        
+        Parameters
+        ----------
+        epoch : int
+            Current epoch.
+        minibatch_iter : int
+            Number of minibatches.
+        ngrid_train : Any
+            Training grid.
+        nt : int
+            Number of timesteps.
+        optim : torch.optim.Optimizer
+            Optimizer.
         """
         # Initialize loss dictionary.
         ep_loss_dict = {key: 0 for key in self.config['phy_model']['models']}
@@ -89,6 +102,19 @@ class TrainModel:
 
     def _log_epoch_stats(self, epoch: int, ep_loss_dict: Dict[str, float],
                          minibatch_iter: int, start_time: float) -> None:
+        """Log epoch statistics.
+        
+        Parameters
+        ----------
+        epoch : int
+            Current epoch.
+        ep_loss_dict : dict
+            Dictionary of model losses.
+        minibatch_iter : int
+            Number of minibatches.
+        start_time : float
+            Start time of epoch.
+        """
         ep_loss_dict = {key: value / minibatch_iter for key, value in ep_loss_dict.items()}
         loss_formated = ", ".join(f"{key}: {value:.6f}" for key, value in ep_loss_dict.items())
         elapsed = time.perf_counter() - start_time
@@ -96,7 +122,15 @@ class TrainModel:
         log.info(f"Model loss after epoch {epoch}: {loss_formated} \n~ Runtime {elapsed:.2f} sec,{mem_aloc} Mb reserved GPU memory")
 
     def save_models(self, epoch: int, frozen_pnn: bool = False) -> None:
-        """ Save dPL hydrology models. """
+        """Save trained model state dict.
+        
+        Parameters
+        ----------
+        epoch : int
+            Current epoch.
+        frozen_pnn : bool, optional
+            Flag to freeze the pNN model.
+        """
         for mod in self.config['phy_model']['models']:
             save_model(self.config, self.dplh_model_handler.model_dict[mod], mod, epoch)
                 

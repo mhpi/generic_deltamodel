@@ -2,6 +2,7 @@ import numpy as np
 import torch
 
 
+
 class NseLossBatchFlow(torch.nn.Module):
     """
     Same as Fredrick 2019, batch NSE loss.
