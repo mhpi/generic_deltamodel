@@ -4,7 +4,6 @@ Use saved model state dict to load states into model with different architecture
 import torch
 from models.differentiable_model import dPLHydroModel
 
-
 save_path = '/home/lglonzarich/projects/hydro_multimodel/dPLHydro_multimodel/runs/conus_3200_merit/debugging/train_1980_1995/3_forcing/no_ensemble/LSTM_E50_R365_B100_H64_n4_111111/HBV_waterLoss_/NseLossBatchFlow_/dynamic_para/parBETA_parBETAET_/'
 state_path = save_path + 'model_states_50.pt'
 state_dict = torch.load(state_path)

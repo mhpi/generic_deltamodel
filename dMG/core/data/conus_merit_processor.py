@@ -4,19 +4,15 @@ support is offered in the PMI.
 
 Adapted from Yalan Song 2024.
 """
-import numpy as np
-import pandas as pd
 import json
-import zarr
 import pickle
 
-from core.utils.Dates import Dates
-from core.data.dataset_loading import (
-    init_norm_stats,
-    trans_norm
-    )
+import numpy as np
+import pandas as pd
+import zarr
 from core.calc.normalize import basin_norm
-
+from core.data.dataset_loading import init_norm_stats, trans_norm
+from core.utils.Dates import Dates
 
 
 def load_gages_merit(config, t_range=None):

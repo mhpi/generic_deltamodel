@@ -3,15 +3,14 @@ import logging
 import time
 from typing import Any, Dict
 
-import torch
 import hydra
+import torch
+from conf.config import ModeEnum
+from core.utils import (create_output_dirs, print_config, set_randomseed,
+                        set_system_spec)
 from omegaconf import DictConfig, OmegaConf
 from pydantic import ValidationError
-
-from conf.config import ModeEnum
-from core.utils import (create_output_dirs, set_randomseed, set_system_spec,
-                        print_config)
-from trainers import run_train_test, run_experiment
+from trainers import run_experiment, run_train_test
 
 log = logging.getLogger(__name__)
 

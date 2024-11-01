@@ -1,15 +1,14 @@
 """
 Vanilla testing/validation for differentiable models & multimodel ensembles.
 """
-import os
 import logging
+import os
 from typing import Dict, List
 
 import numpy as np
 import pandas as pd
 import torch
 import tqdm
-
 from conf.config import Config
 from core.calc.stat import stat_error
 from core.data import take_sample_test

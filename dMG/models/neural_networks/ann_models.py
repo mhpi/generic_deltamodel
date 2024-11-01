@@ -1,7 +1,6 @@
 import torch
-from torch.nn import Linear, Dropout
 import torch.nn.functional as F
-
+from torch.nn import Dropout, Linear
 
 
 class AnnModel(torch.nn.Module):

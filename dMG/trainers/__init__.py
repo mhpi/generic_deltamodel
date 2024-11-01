@@ -1,10 +1,10 @@
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 from conf.config import ModeEnum
+from torch.nn import Module
 from trainers.test import TestModel
 from trainers.train import TrainModel
-from torch.nn import Module
 
 log = logging.getLogger(__name__)
 

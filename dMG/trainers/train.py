@@ -1,11 +1,10 @@
 """ Vanilla training for differentiable models. """
 import logging
 import time
-from typing import Dict, Any
+from typing import Any, Dict
 
 import torch
 import tqdm
-
 from conf.config import Config
 from core.data import n_iter_nt_ngrid, take_sample_train
 from core.data.dataset_loading import get_data_dict

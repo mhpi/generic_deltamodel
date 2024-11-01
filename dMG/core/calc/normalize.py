@@ -1,12 +1,11 @@
 import json
 import os
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 import numpy as np
 import torch
 import xarray as xr
 from tqdm import tqdm
-
 
 
 def calc_stat_basinnorm(x: np.ndarray, basin_area: np.ndarray, config: Dict[str, Any]) -> List[float]:

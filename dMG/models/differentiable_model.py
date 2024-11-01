@@ -1,11 +1,11 @@
 from ast import Dict
-import torch.nn
 
-from hydroDL2 import load_model
-  
+import torch.nn
+from models.neural_networks.ann_models import AnnModel
 from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
-from models.neural_networks.ann_models import AnnModel
+
+from hydroDL2 import load_model
 
 
 class dPLHydroModel(torch.nn.Module):
