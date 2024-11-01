@@ -260,7 +260,7 @@ def load_data(config, t_range=None, train=True):
         out_dict['obs'] = np.transpose(target[:,index_start:index_end], (1,0,2))  # Observation target
         
         ## For running a subset (531 basins) of CAMELS.
-        if config['observations']['name'] == 'camels_531_yalan':
+        if config['observations']['name'] == 'camels_531':
             gage_info = np.load(config['observations']['gage_info'])
 
             with open(config['observations']['subset_path'], 'r') as f:

@@ -64,7 +64,6 @@ class TrainModel:
         Forward over a mini-batched epoch and get the loss.
         """
         # Initialize loss dictionary.
-        # ep_loss_dict = dict.fromkeys(self.config['physics_model']['models'], 0)
         ep_loss_dict = {key: 0 for key in self.config['phy_model']['models']}
 
         prog_str = f"Epoch {epoch}/{self.config['train']['epochs']}"

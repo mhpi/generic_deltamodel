@@ -8,7 +8,7 @@ defaults:
 mode: train  # train, test, train_test
 random_seed: 111111
 device: cuda
-gpu_id: 0
+gpu_id: 7
 
 name: dmg-1.0-${observations.name}
 main_dir: /data/lgl5139/project_blue_eyes/generic_diffModel/runs 

@@ -10,12 +10,13 @@ random_seed: 111111
 device: cuda
 gpu_id: 0
 
-main_dir: /data/lgl5139/hydroDL2-dev/generic_diffModel/dMGen/runs 
+name: dmg-1.0-${observations.name}
+main_dir: /data/lgl5139/hydroDL2-dev/generic_diffModel/runs 
 output_path: ${main_dir}/${observations.name}/saved_models/
 
 
 ## Training -------------------------------#
-training:
+train:
     start_time: 1999/10/01
     end_time: 2008/10/01
     target: [00060_Mean]
@@ -23,10 +24,11 @@ training:
     epochs: 50
     save_epoch: 10
     run_from_checkpoint: False
+    start_epoch: 0
 
 
 ## Testing -------------------------------#
-testing:
+test:
     start_time: 1989/10/01
     end_time: 1999/10/01
     batch_size: 25
@@ -41,13 +43,13 @@ dpl_model:
     warm_up: 365
     dy_drop: 0.0
     
-physics_model:
+phy_model:
     models: [HBV]  # HBV, HBV_capillary (1.1p), marrmot_PRMS, SACSMA_with_snow
     stat_param_idx: -1
     dy_params:
         HBV: [parBETA, parBETAET]
 
-nn_model:
+pnn_model:
     model: LSTM  # LSTM, MLP
     dropout: 0.5
     hidden_size: 256

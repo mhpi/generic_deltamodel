@@ -78,8 +78,7 @@ def randomseed_config(seed=0) -> None:
     
 
 def create_output_dirs(config) -> dict:
-    """
-    Create a new directory for model files.
+    """ Create a new directory for model files.
 
     Modified from dPL_Hydro_SNTEMP @ Farshid Rahmani.
     """
@@ -132,11 +131,11 @@ def create_output_dirs(config) -> dict:
     if dy_state == 'dynamic_para':
         full_path = os.path.join(full_path, dy_params)
     
-    config['output_dir'] = full_path
+    config['output_path'] = full_path
 
     test_dir = 'test' + str(config['test']['start_time'][:4]) + '_' + str(config['test']['end_time'][:4])
-    test_path = os.path.join(config['output_dir'], test_dir)
-    config['testing_dir'] = test_path
+    test_path = os.path.join(config['output_path'], test_dir)
+    config['testing_path'] = test_path
 
     if (config['mode'] == 'test') and (os.path.exists(config['output_dir']) == False):
         if config['ensemble_type'] in ['avg', 'frozen_pnn']:
@@ -152,7 +151,7 @@ def create_output_dirs(config) -> dict:
     
     # Saving the config file in output directory.
     config_file = json.dumps(config)
-    config_path = os.path.join(config['output_dir'], 'config_file.json')
+    config_path = os.path.join(config['output_path'], 'config_file.json')
     if os.path.exists(config_path):
         os.remove(config_path)
     with open(config_path, 'w') as f:
