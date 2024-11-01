@@ -70,7 +70,7 @@ class ModelHandler(torch.nn.Module):
     
     def load_model(self, model) -> None:
         model_name = str(model) + '_model_Ep' + str(self.config['train']['epochs']) + '.pt'
-        model_path = os.path.join(self.config['output_path'], model_name)
+        model_path = os.path.join(self.config['out_path'], model_name)
         try:
             self.model_dict[model] = torch.load(model_path).to(self.config['device'])
 
@@ -125,9 +125,6 @@ class ModelHandler(torch.nn.Module):
 
             total_loss += loss
             loss_dict[mod] += loss.item()
-        
-        # total_loss.backward()
-        # self.optim.step()
 
         return total_loss, loss_dict
     

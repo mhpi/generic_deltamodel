@@ -231,10 +231,9 @@ class ObservationConfig:
     gage_info: str = "not_defined"
     forcing_path: str = "not_defined"
     attr_path: str = "not_defined"
-    var_t_NN: list = "not_defined"
-    var_c_NN: list = "not_defined"
-    var_t_hydro_model: list = "not_defined"
-    var_c_hydro_model: list = "not_defined"
+    nn_forcings: list = "not_defined"
+    nn_attributes: list = "not_defined"
+    phy_forcings_model: list = "not_defined"
 
     @field_validator('forcing_path', 'attr_path')
     @classmethod
@@ -250,10 +249,9 @@ class ObservationConfig:
 #     gage_info: str = "not_defined"
 #     attr_path: str = "not_defined"
 #     observations_path: str = "not_defined"
-#     var_t_NN: list = "not_defined"
-#     var_c_NN: list = "not_defined"
-#     var_t_hydro_model: list = "not_defined"
-#     var_c_hydro_model: list = "not_defined"
+#     nn_forcings: list = "not_defined"
+#     nn_attributes: list = "not_defined"
+#     phy_forcings: list = "not_defined"
 
 #     @field_validator("gage_info", "observations_path")
 #     @classmethod
@@ -302,18 +300,16 @@ class Config(BaseModel):
     # save_epoch: int = 10
 
     # name: str
-    main_dir: str
-    output_path: str
+    save_path: str
     # use_checkpoint: bool
     # checkpoint: Checkpoint
 
     # gage_info: str = "not_defined"
     # attr_path: str = "not_defined"
     # observations_path: str = "not_defined"
-    # var_t_NN: list = "not_defined"
-    # var_c_NN: list = "not_defined"
-    # var_t_hydro_model: list = "not_defined"
-    # var_c_hydro_model: list = "not_defined"
+    # nn_forcings: list = "not_defined"
+    # nn_attributes: list = "not_defined"
+    # phy_forcings_model: list = "not_defined"
 
     def __init__(self, **data):
         super(Config, self).__init__(**data)
@@ -337,7 +333,7 @@ class Config(BaseModel):
     #         target_yaml_file.seek(0)
     #         yaml.dump(target_config, target_yaml_file)
 
-    @field_validator("main_dir")
+    @field_validator('save_path')
     @classmethod
     def validate_dir(cls, v: str) -> Path:
         return check_path(v)

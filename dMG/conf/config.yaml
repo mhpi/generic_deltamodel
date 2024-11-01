@@ -11,8 +11,7 @@ device: cuda
 gpu_id: 7
 
 name: dmg-1.0-${observations.name}
-main_dir: /data/lgl5139/project_blue_eyes/generic_diffModel/runs 
-output_path: ${main_dir}/${observations.name}/saved_models/
+save_path: /data/lgl5139/project_blue_eyes/generic_diffModel/runs 
 
 
 ## Training -------------------------------#
@@ -37,16 +36,14 @@ test:
 
 ## dPL Model -------------------------------#
 dpl_model:
-    # TODO: move warm_up to dpl_model
     nmul: 16
     nearzero: 1e-5
     rho: 365
-    warm_up: 365
     dy_drop: 0.0
     
 phy_model:
-    # TODO: move rho to phy_model
     models: [HBV]  # HBV, HBV_capillary (1.1p), marrmot_PRMS, SACSMA_with_snow
+    warm_up: 365
     stat_param_idx: -1
     dy_params:
         HBV: [parBETA, parBETAET]
@@ -68,6 +65,6 @@ loss_function:
 ## ------------------------------------------------#
 ## Hydrology Config -------------------------------#
 routing_hydro_model: True
-use_log_norm: [prcp(mm/day)]  # For log normalization ('prcp(mm/day)' for HBV, [] otherwise)
+use_log_norm: [prcp]  # For log normalization ('prcp' for HBV, [] otherwise)
 hbvcap_no_warm: False
 ensemble_type: none

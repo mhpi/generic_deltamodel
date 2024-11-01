@@ -77,17 +77,17 @@ def load_gages_merit(config, t_range=None):
     root_zone = zarr.open_group(merit_save_path, mode = 'r')
     merit_all = root_zone['COMID'][:]
 
-    xTrain2 = np.full((len(merit_all),len(newTime),len(config['observations']['var_t_nn'])),np.nan)
-    attr2 = np.full((len(merit_all),len(config['observations']['var_c_nn'])),np.nan)
+    xTrain2 = np.full((len(merit_all),len(newTime),len(config['observations']['nn_forcings'])),np.nan)
+    attr2 = np.full((len(merit_all),len(config['observations']['nn_attributes'])),np.nan)
 
     merit_time = pd.date_range('1980-10-01',f'2010-09-30', freq='d')
     merit_start_idx = merit_time.get_loc(newTime[0])
     merit_end_idx = merit_time.get_loc(newTime[-1])+1
 
-    for fid, forcing_ in enumerate(config['observations']['var_t_nn']):
+    for fid, forcing_ in enumerate(config['observations']['nn_forcings']):
         xTrain2[:,:,fid] = root_zone[forcing_][:,merit_start_idx:merit_end_idx]
 
-    for aid, attribute_ in enumerate(config['observations']['var_c_nn']):
+    for aid, attribute_ in enumerate(config['observations']['nn_attributes']):
         attr2[:,aid] =  root_zone['attr'][attribute_][:]
 
 
@@ -108,7 +108,6 @@ def load_gages_merit(config, t_range=None):
     out_dict['area_info'] = area_info
 
     out_dict['x_hydro_model'] = out_dict['x_nn']
-    out_dict['c_hydro_model'] = out_dict['c_nn']  # just a placeholder.
 
     return out_dict
 
@@ -116,7 +115,7 @@ def load_gages_merit(config, t_range=None):
 def get_data_dict(config, train=False):
     """
     Create dictionary of datasets used by the models.
-    Contains 'c_nn', 'obs', 'x_hydro_model', 'c_hydro_model', 'inputs_nn_scaled'.
+    Contains 'c_nn', 'obs', 'x_hydro_model', 'inputs_nn_scaled'.
 
     train: bool, specifies whether data is for training.
     """
@@ -136,11 +135,11 @@ def get_data_dict(config, train=False):
     
     # Normalization
     x_nn_scaled = trans_norm(config, np.swapaxes(dataset_dict['x_nn'], 1, 0).copy(),
-                             var_lst=config['observations']['var_t_nn'], to_norm=True)
+                             var_lst=config['observations']['nn_forcings'], to_norm=True)
     x_nn_scaled[x_nn_scaled != x_nn_scaled] = 0  # Remove nans
 
     c_nn_scaled = trans_norm(config, dataset_dict['c_nn'],
-                             var_lst=config['observations']['var_c_nn'], to_norm=True) ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
+                             var_lst=config['observations']['nn_attributes'], to_norm=True) ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
     c_nn_scaled[c_nn_scaled != c_nn_scaled] = 0  # Remove nans
 
     all_attrs = dataset_dict['c_nn_all']

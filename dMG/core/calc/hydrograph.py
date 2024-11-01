@@ -51,7 +51,7 @@ def UH_conv(x, UH, viewmode=1):
 
 
 def source_flow_calculation(config, flow_out, c_NN, after_routing=True):
-    varC_NN = config['var_c_nn']
+    varC_NN = config['nn_attributes']
     if 'DRAIN_SQKM' in varC_NN:
         area_name = 'DRAIN_SQKM'
     elif 'area_gages2' in varC_NN:

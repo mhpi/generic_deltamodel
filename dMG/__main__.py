@@ -1,17 +1,17 @@
 """ Main script to run model experiments (train/test) and manage configurations. """
 import logging
 import time
-from typing import Any, Dict, Union, Tuple
+from typing import Any, Dict
 
 import torch
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from pydantic import ValidationError
 
-from conf.config import Config, ModeEnum
-from core.utils import (create_output_dirs, randomseed_config, set_system_spec,
-                        show_args)
-from trainers import build_handler
+from conf.config import ModeEnum
+from core.utils import (create_output_dirs, set_randomseed, set_system_spec,
+                        print_config)
+from trainers import run_train_test, run_experiment
 
 log = logging.getLogger(__name__)
 
@@ -22,24 +22,19 @@ log = logging.getLogger(__name__)
     config_path="conf/",
     config_name="config",
 )
-def main(cfg: DictConfig) -> None:
+def main(config: DictConfig) -> None:
     try:
         start_time = time.perf_counter()
 
-        # Injest config yaml
-        config = initialize_config(cfg)
+        # Convert yaml to dict and initialize configuration settings.
+        config = initialize_config(config)
 
-        # Set device, dtype, output directories, and random seed.
-        randomseed_config(config['random_seed'])
+        set_randomseed(config['random_seed'])
 
-        config['device'], config['dtype'] = set_system_spec(config['gpu_id'])
-        config = create_output_dirs(config)
+        log.info(f"RUNNING MODE: {config['mode']}")
+        print_config(config)
 
-        exp_name = config['mode']
-        log.info(f"RUNNING MODE: {exp_name}")
-        show_args(config)
-
-        # Execute experiment based on mode.
+        # Run Trainer based on mode.
         if config['mode'] == ModeEnum.train_test:
             run_train_test(config)
         else:
@@ -48,7 +43,7 @@ def main(cfg: DictConfig) -> None:
         # Clean up and log elapsed time.
         total_time = time.perf_counter() - start_time
         log.info(
-            f"| {exp_name} completed | "
+            f"| {config['mode']} completed | "
             f"Time Elapsed: {(total_time / 60):.6f} minutes"
         ) 
         torch.cuda.empty_cache()
@@ -58,39 +53,29 @@ def main(cfg: DictConfig) -> None:
         torch.cuda.empty_cache()
 
 
-def initialize_config(cfg: DictConfig) -> Dict[str, Any]:
-    """
-    Convert config into a dictionary and a Config object for validation.
+def initialize_config(config: DictConfig) -> Dict[str, Any]:
+    """Parse and initialize configuration settings.
+    
+    Parameters
+    ----------
+    config : DictConfig
+        Configuration settings from Hydra.
+        
+    Returns
+    -------
+    dict
+        Dictionary of configuration settings.
     """
     try:
-        config = OmegaConf.to_container(cfg, resolve=True)
+        config = OmegaConf.to_container(config, resolve=True)
     except ValidationError as e:
         log.exception("Configuration validation error", exc_info=e)
         raise e
+    
+    config['device'], config['dtype'] = set_system_spec(config['gpu_id'])
+    config = create_output_dirs(config)
+
     return config
-
-
-def run_train_test(config_dict: Dict[str, Any]) -> None:
-    """
-    Run training and testing as one experiment.
-    """
-    # Training
-    config_dict['mode'] = ModeEnum.train
-    train_experiment_handler = build_handler(config_dict)
-    train_experiment_handler.run()
-
-    # Testing
-    config_dict['mode'] = ModeEnum.test
-    test_experiment_handler = build_handler(config_dict)            
-    test_experiment_handler.dplh_model_handler = train_experiment_handler.dplh_model_handler
-    test_experiment_handler.run()
-
-
-def run_experiment(config_dict: Dict[str, Any]) -> None:
-    """ Run an experiment based on the mode specified in the configuration. """
-    experiment_handler = build_handler(config_dict)
-    experiment_handler.run()
-
 
 
 if __name__ == "__main__":

@@ -146,7 +146,7 @@ def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarra
 
     # Calculate basin area 
     # NOTE: should probably move to separate function.
-    attr_list = config['observations']['var_c_nn']
+    attr_list = config['observations']['nn_attributes']
 
     area_name = config['observations']['area_name']
     
@@ -169,7 +169,7 @@ def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarra
             )  ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
 
     # Forcing stats
-    var_list = config['observations']['var_t_nn']
+    var_list = config['observations']['nn_forcings']
     for k, var in enumerate(var_list):
         if var in config['use_log_norm']:
             stat_dict[var] = calculate_statistics_gamma(x[:, :, k])
@@ -177,12 +177,12 @@ def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarra
             stat_dict[var] = calculate_statistics(x[:, :, k])
 
     # Attribute stats
-    varList = config['observations']['var_c_nn']
+    varList = config['observations']['nn_attributes']
     for k, var in enumerate(varList):
         stat_dict[var] = calculate_statistics(c[:, k])
 
     # Save all stats.
-    stat_file = os.path.join(config['output_path'], 'statistics_basinnorm.json')
+    stat_file = os.path.join(config['out_path'], 'statistics_basinnorm.json')
     with open(stat_file, 'w') as f:
         json.dump(stat_dict, f, indent=4)
 
@@ -261,7 +261,7 @@ def trans_norm(config: Dict[str, Any], x: np.ndarray, var_lst: List[str], *, to_
     :return: Transformed data
     """
     # Load in the statistics for forcings.
-    stat_file = os.path.join(config['output_path'], 'statistics_basinnorm.json')
+    stat_file = os.path.join(config['out_path'], 'statistics_basinnorm.json')
     with open(stat_file, 'r') as f:
         stat_dict = json.load(f)
 
@@ -278,7 +278,7 @@ def trans_norm(config: Dict[str, Any], x: np.ndarray, var_lst: List[str], *, to_
 
         if to_norm:
             if len(x.shape) == 3:
-                if var in config['use_log_norm']: # 'prcp(mm/day)', '00060_Mean', 'combine_discharge
+                if var in config['use_log_norm']: # 'prcp', '00060_Mean', 'combine_discharge
                     x[:, :, k] = np.log10(np.sqrt(x[:, :, k]) + 0.1)
                 out[:, :, k] = (x[:, :, k] - stat[2]) / stat[3]
             elif len(x.shape) == 2:
@@ -316,7 +316,7 @@ def init_norm_stats(config: Dict[str, Any], x_NN: np.ndarray, c_NN: np.ndarray,
     :param c_NN: Attribute data
     :param y: Target data
     """
-    stats_directory = config['output_path']
+    stats_directory = config['out_path']
     stat_file = os.path.join(stats_directory, 'statistics_basinnorm.json')
 
     if not os.path.isfile(stat_file):

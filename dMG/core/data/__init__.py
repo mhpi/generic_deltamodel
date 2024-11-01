@@ -50,7 +50,7 @@ def n_iter_nt_ngrid(x: np.ndarray, t_range: Tuple[int, int],
         np.ceil(
             np.log(0.01)
             / np.log(1 - config['train']['batch_size'] * rho / ngrid
-                     / (nt - config['dpl_model']['warm_up']))
+                     / (nt - config['phy_model']['warm_up']))
         )
     )
     return ngrid, n_iter_ep, nt,
@@ -116,34 +116,33 @@ def take_sample_train(config: Dict,
     """
     Select random sample of data for training batch.
     """
+    warm_up = config['phy_model']['warm_up']
     subset_dims = (config['train']['batch_size'], config['dpl_model']['rho'])
 
-    i_grid, i_t = random_index(ngrid_train, nt, subset_dims, warm_up=config['dpl_model']['warm_up'])
+    i_grid, i_t = random_index(ngrid_train, nt, subset_dims, warm_up=warm_up)
 
     # Remove warmup days for dHBV1.1p...
     flow_obs = select_subset(config, dataset_dict['obs'], i_grid, i_t,
-                             config['dpl_model']['rho'], warm_up=config['dpl_model']['warm_up'])
+                             config['dpl_model']['rho'], warm_up=warm_up)
     
     if ('HBV_capillary' in config['phy_model']['models']) and \
     (config['hbvcap_no_warm']) and (config['ensemble_type'] == 'none'):
         pass
     else:
-        flow_obs = flow_obs[config['dpl_model']['warm_up']:, :]
+        flow_obs = flow_obs[warm_up:, :]
     
     # Create dataset sample dict.
     dataset_sample = {
         'iGrid': i_grid,
         'inputs_nn_scaled': select_subset(
             config, dataset_dict['inputs_nn_scaled'], i_grid, i_t,
-            config['dpl_model']['rho'], has_grad=False, warm_up=config['dpl_model']['warm_up']
-        ),
+            config['dpl_model']['rho'], has_grad=False, warm_up=warm_up),
         'c_nn': torch.tensor(dataset_dict['c_nn'][i_grid],
                              device=config['device'], dtype=torch.float32),
         'obs': flow_obs,
         'x_hydro_model': select_subset(config, dataset_dict['x_hydro_model'],
-                                       i_grid, i_t, config['dpl_model']['rho'], warm_up=config['dpl_model']['warm_up']),
-        'c_hydro_model': torch.tensor(dataset_dict['c_hydro_model'][i_grid],
-                                       device=config['device'], dtype=torch.float32)
+                                       i_grid, i_t, config['dpl_model']['rho'],
+                                       warm_up=warm_up),
     }
 
     return dataset_sample
@@ -160,7 +159,7 @@ def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor],
             if key in ['x_hydro_model', 'inputs_nn_scaled']:
                 warm_up = 0
             else:
-                warm_up = config['dpl_model']['warm_up']
+                warm_up = config['phy_model']['warm_up']
             dataset_sample[key] = value[warm_up:, i_s:i_e, :].to(config['device'])
         elif value.ndim == 2:
             dataset_sample[key] = value[i_s:i_e, :].to(config['device'])
@@ -172,7 +171,7 @@ def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor],
     (config['hbvcap_no_warm']) and (config['ensemble_type'] == 'none'):
         pass
     else:
-        dataset_sample['obs'] = dataset_sample['obs'][config['dpl_model']['warm_up']:, :]
+        dataset_sample['obs'] = dataset_sample['obs'][config['phy_model']['warm_up']:, :]
 
     return dataset_sample
 
@@ -191,7 +190,7 @@ def take_sample_train_merit(config: Dict,
     """
     subset_dims = (config['dpl_model']['batch_size'], config['dpl_model']['rho'])
     i_grid, i_t = random_index(ngrid_train, nt, subset_dims,
-                               warm_up=config['dpl_model']['warm_up'])
+                               warm_up=config['phy_model']['warm_up'])
         
     gage_key_batch = np.array(info_dict['gage_key'])[i_grid]
     area_info = info_dict['area_info']
@@ -223,7 +222,7 @@ def take_sample_train_merit(config: Dict,
     if(len(ai_batch)>maxNMerit): maxNMerit = len(ai_batch)
 
     rho = config['rho']
-    warm_up = config['warm_up'] 
+    warm_up = config['phy_model']['warm_up'] 
     
     # Init subsets
     x_hydro_sub =  np.full((rho + warm_up, len(ac_batch), dataset_dict['x_nn_scaled'].shape[-1]), np.nan)
@@ -257,7 +256,7 @@ def take_sample_train_merit(config: Dict,
         'c_nn': torch.from_numpy(c_nn_sub).to(config['device']),
         'x_hydro_model': torch.from_numpy(x_hydro_sub).to(config['device']),
         'obs': select_subset(config, dataset_dict['obs'], i_grid, i_t,
-                             config['rho'], warm_up=config['warm_up'])[config['warm_up']:],
+                             config['rho'], warm_up=warm_up)[warm_up:],
         'ai_batch': ai_batch,
         'ac_batch': ac_batch,
         'idx_matrix': idx_matrix
@@ -298,7 +297,7 @@ def take_sample_test_merit(config: Dict,
     x_nn_scaled_batch = dataset_dict['x_nn_scaled'][:, subidx_batch,:]
     c_nn_scaled_batch = dataset_dict['c_nn_scaled'][subidx_batch,:]
     
-    obs_batch = dataset_dict['obs'][config['warm_up']:, i_s:i_e]
+    obs_batch = dataset_dict['obs'][config['phy_model']['warm_up']:, i_s:i_e]
 
     ai_batch = dataset_dict['ai_all'][subidx_batch]
     ac_batch = dataset_dict['ac_all'][subidx_batch]

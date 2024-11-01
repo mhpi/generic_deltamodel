@@ -85,8 +85,7 @@ class TestModel:
         (self.config['hbvcap_no_warm']) and (self.config['ensemble_type'] == 'none'):
             pass
         else:
-            flow_obs = flow_obs[self.config['warm_up']:, :]
-        # flow_preds = flow_preds[self.config['warm_up']:, :, :]
+            flow_obs = flow_obs[self.config['phy_model']['warm_up']:, :]
 
         preds_list.append(flow_preds.numpy())
         obs_list.append(np.expand_dims(flow_obs, 2))

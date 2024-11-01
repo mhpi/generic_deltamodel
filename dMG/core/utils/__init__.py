@@ -20,14 +20,17 @@ log = logging.getLogger(__name__)
 
 
 def set_system_spec(cuda_devices: Optional[list] = None) -> Tuple[str, str]:
-    """
-    Sets appropriate torch device and dtype for current system.
-    
-    Args:
-        user_selected_cuda (Optional[int]): The user-specified CUDA device index. Defaults to None.
-    
-    Returns:
-        Tuple[torch.device, torch.dtype]: A tuple containing the device and dtype.
+    """Set the device and data type for the model on user's system.
+
+    Parameters
+    ----------
+    cuda_devices : list
+        List of CUDA devices to use. If None, the first available device is used.
+
+    Returns
+    -------
+    Tuple[str, str]
+        The device type and data type for the model.
     """
     if cuda_devices != []:
         # Set the first device as the active device.
@@ -53,10 +56,13 @@ def set_system_spec(cuda_devices: Optional[list] = None) -> Tuple[str, str]:
     return str(device.type), str(dtype)
 
 
-def randomseed_config(seed=0) -> None:
-    """
-    Fix the random seeds for reproducibility.
-    seed = None -> random.
+def set_randomseed(seed=0) -> None:
+    """Fix random seeds for reproducibility.
+
+    Parameters
+    ----------
+    seed : int, optional
+        Random seed to set. If None, a random seed is generated (default 0).
     """
     if seed == None:
         randomseed = int(np.random.uniform(low=0, high=1e6))
@@ -77,42 +83,49 @@ def randomseed_config(seed=0) -> None:
         pass
     
 
-def create_output_dirs(config) -> dict:
-    """ Create a new directory for model files.
+def create_output_dirs(config: Dict[str, Any]) -> dict:
+    """Create output directories for saving models and results.
 
-    Modified from dPL_Hydro_SNTEMP @ Farshid Rahmani.
+    Parameters
+    ----------
+    config : dict
+        Configuration dictionary with paths and model settings.
+    
+    Returns
+    -------
+    dict
+        The original config with path modifications.
     """
     # Add dir for train period:
-    train_period = 'train_' + str(config['train']['start_time'][:4]) + '_' + str(config['train']['end_time'][:4])
+    train_period = 'train_' + str(config['train']['start_time'][:4]) + '_' +  \
+        str(config['train']['end_time'][:4])
 
     # Add dir for number of forcings:
-    forcings = str(len(config['observations']['var_t_nn'])) + '_forcing'
+    forcings = str(len(config['observations']['nn_forcings'])) + '_forcing'
 
-    # Add dir for ensemble type.
+    # Add dir for ensemble type:
     if config['ensemble_type'] in ['none', '']:
         ensemble_state = 'no_ensemble'
     else:
         ensemble_state = config['ensemble_type']
     
-    # Add dir for
+    # Add dir for:
     #  1. model name(s)
     #  2. static or dynamic parametrization
     #  3. loss functions per model.
     mod_names = ''
     dy_params = ''
-    loss_fns = ''
+    loss_fn = ''
     for mod in config['phy_model']['models']:
-        mod_names += mod + "_"
+        mod_names += mod + '_'
 
         for param in config['phy_model']['dy_params'][mod]:
             dy_params += param + '_'
         
-        loss_fns += config['loss_function']['model'] + '_'
+        loss_fn += config['loss_function']['model'] + '_'
 
-
-
-    # Add dir with hyperparam spec.
-    out_folder = config['pnn_model']['model'] + \
+    # Add dir for hyperparam spec.
+    params = config['pnn_model']['model'] + \
              '_E' + str(config['train']['epochs']) + \
              '_R' + str(config['dpl_model']['rho'])  + \
              '_B' + str(config['train']['batch_size']) + \
@@ -123,40 +136,57 @@ def create_output_dirs(config) -> dict:
     # If any model in ensemble is dynamic, whole ensemble is dynamic.
     dy_state = 'static_para' if dy_params.replace('_','') == '' else 'dynamic_para'
     
-    # Add a dir for loss functions.
     # ---- Combine all dirs ---- #
-    output_dir = config['output_path']
-    full_path = os.path.join(output_dir, train_period, forcings, ensemble_state, out_folder, mod_names, loss_fns, dy_state)
+    model_path = os.path.join(config['save_path'],
+                              config['observations']['name'],
+                              train_period,
+                              forcings,
+                              ensemble_state,
+                              params,
+                              mod_names,
+                              loss_fn,
+                              dy_state)
 
     if dy_state == 'dynamic_para':
-        full_path = os.path.join(full_path, dy_params)
-    
-    config['output_path'] = full_path
+        model_path = os.path.join(model_path, dy_params)
 
-    test_dir = 'test' + str(config['test']['start_time'][:4]) + '_' + str(config['test']['end_time'][:4])
-    test_path = os.path.join(config['output_path'], test_dir)
-    config['testing_path'] = test_path
+    test_period = 'test' + str(config['test']['start_time'][:4]) + '_' + \
+        str(config['test']['end_time'][:4])
+    test_path = os.path.join(model_path, test_period)
 
-    if (config['mode'] == 'test') and (os.path.exists(config['output_dir']) == False):
+    # Create the directories.
+    if (config['mode'] == 'test') and (os.path.exists(model_path) == False):
         if config['ensemble_type'] in ['avg', 'frozen_pnn']:
-            for mod in config['physics_model']['models']:
+            for mod in config['phy_model']['models']:
                 # Check if individually trained models exist and use those.
-                check_path = os.path.join(output_dir,'no_ensemble', out_folder, dy_state, mod + "_")
+                check_path = os.path.join(config['save_path'],
+                                          config['observations']['name'],
+                                          train_period,
+                                          forcings,
+                                          'no_ensemble',
+                                          params,
+                                          dy_state,
+                                          mod + '_')
                 if os.path.exists(check_path) == False:           
-                    raise FileNotFoundError(f"Attempted to identify individually trained models but could not find {check_path}. Check configurations or train models before testing.")
+                    raise FileNotFoundError(f"Attempted to test with individually trained models but {check_path} not found. Check config or train models before testing.")
         else:
-            raise FileNotFoundError(f"Model directory {config['output_dir']} was not found. Check configurations or train models before testing.")
+            raise FileNotFoundError(f"Model directory {model_path} not found. Check config or train models before testing.")
 
+    # Create the directories if they don't exist.
     os.makedirs(test_path, exist_ok=True)
     
-    # Saving the config file in output directory.
+    # Saving the config file to output path (overwrite if exists).
     config_file = json.dumps(config)
-    config_path = os.path.join(config['output_path'], 'config_file.json')
+    config_path = os.path.join(model_path, 'config_file.json')
     if os.path.exists(config_path):
         os.remove(config_path)
     with open(config_path, 'w') as f:
         f.write(config_file)
 
+    # Append the output directories to the config.
+    config['out_path'] = model_path
+    config['testing_path'] = test_path
+    
     return config
 
 
@@ -205,8 +235,7 @@ def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
 
 
 def load_model(config, model_name, epoch):
-    """
-    Load trained pytorch models.
+    """Load trained PyTorch models.
     
     Args:
         config (dict): Configuration dictionary with paths and model settings.
@@ -244,10 +273,15 @@ def load_model(config, model_name, epoch):
     # return model
 
 
-def show_args(config: dict) -> None:
-    """
-    From Jiangtao Liu.
-    Use to display critical configuration settings in a clean format.
+def print_config(config: Dict[str, Any]) -> None:
+    """Print the current configuration settings.
+
+    Parameters
+    ----------
+    config : dict
+        Dictionary of configuration settings.
+
+    Adapted from: Jiangtao Liu
     """
     print()
     print("\033[1m" + "Current Configuration" + "\033[0m")
@@ -271,7 +305,7 @@ def show_args(config: dict) -> None:
     print("\033[1m" + "Model Parameters" + "\033[0m")
     print(f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}")
     print(f"  {'Dropout:':<20}{config['pnn_model']['dropout']:<20}{'Hidden Size:':<20}{config['pnn_model']['hidden_size']:<20}")
-    print(f"  {'Warmup:':<20}{config['dpl_model']['warm_up']:<20}{'Concurrent Models:':<20}{config['dpl_model']['nmul']:<20}")
+    print(f"  {'Warmup:':<20}{config['phy_model']['warm_up']:<20}{'Concurrent Models:':<20}{config['dpl_model']['nmul']:<20}")
     print(f"  {'Optimizer:':<20}{config['loss_function']['model']:<20}")
     print()
 
