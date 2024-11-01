@@ -1,0 +1,20 @@
+help:
+    app_name: hydro-multimodel
+    header: == ${hydra.help.app_name} ==
+    template: |-
+        ${hydra.help.header}
+
+        Generic Differentiable Model framework developed by MHPI.
+
+        ${hydra.help.footer}
+    footer: |-
+        Powered by Hydra (https://hydra.cc)
+        Use --hydra-help to view Hydra specific help
+job:
+    name: ${name}
+    chdir: False # Changes working dir to 'run' dir.
+run:
+    dir: ../runs/logs/${hydra.job.name}/${now:%Y-%m-%d_%H-%M-%S}
+sweep:
+    dir: multirun
+    subdir: ${hydra.job.override_dirname}
