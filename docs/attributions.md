@@ -1,33 +1,44 @@
-## General Contributions From...
-- Dr. Chaopeng Shen
-- Tadd Bindas
+## General Contributions and Source Code From...
 - Farshid Rahmani
+- Tadd Bindas
+- Yalan Song
 - Jiangtao Liu
 - Kamlesh Sawadekar
-- MHPI
+- Dapeng Feng
+- *MHPI*
+
+Supervisor: Dr. Chaopeng Shen
+
+---
 
 ## Specific Use:
 - Farshid Rahmani (from `dPL_Hydro_STEMP`)
-    - Hydro models
+    - Hydrology models
     - Loss functions
 
 - Tadd Bindas (from `dMC-dev`)
-    - Configuration handling
+    - `__main__.py`
+    - Hydra, OmegaConf, Pydantic configuration file handling 
     - Type-checking
-    - Unit testing
-    - Training/testing handlers
+    - Trainers
+
+- Yalan Song (from `hydroDL`)
+    - Hydrology models 
+    - dPL model structure
 
 - Kamlesh Sawadekar (from `dPLHBV_fusion`)
     - LSTM weighting network
 
 - Jiangtao Liu 
     - Utility functions
+    - Model handler
 
-- Dr. Chaopeng Shen
+- Chaopeng Shen
     - Dynamic attribute/parameter/variable handling
     - Functional interfaces
 
-- MHPI
+- MHPI & Dapeng Feng (from `hydroDL`)
     - Utility functions
     - Data handling
+    - Neural Networks
     

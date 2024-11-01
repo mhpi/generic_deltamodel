@@ -1,16 +1,17 @@
-name: camels_671
+name: camels_531
 gage_info: /data/yxs275/CAMELS/CAMELS_to_ICDS/gageid.npy
 train_path: /data/yxs275/CAMELS/training_file
 test_path: /data/yxs275/CAMELS/validation_file
+subset_path: /data/lgl5139/data/camels/Sub531ID.txt
 
 area_name: area_gages2
 
-var_t_nn: [
-  prcp(mm/day),
-  tmean(C),
-  PET_hargreaves(mm/day)
+nn_forcings: [
+  prcp,
+  tmean,
+  pet
 ]
-var_c_nn: [
+nn_attributes: [
   p_mean,
   pet_mean,
   p_seasonality,
@@ -47,12 +48,8 @@ var_c_nn: [
   geol_porosity,
   geol_permeability
 ]
-var_t_hydro_model: [
-  prcp(mm/day),
-  tmean(C),
-  PET_hargreaves(mm/day)
-]
-var_c_hydro_model: [
-  # area_gages2,
-  lat
+phy_forcings: [
+  prcp,
+  tmean,
+  pet
 ]

@@ -1,17 +1,15 @@
+# *WIP*
 
-# How to use configuration files with this framework.
+## How to Use Configuration Files.
 
-## 2 Types:
+### 2 Types:
 - config
 
 - observations
 
 
-### Config.yaml
+### config.yaml
 - Contains settings for your models and sets root directory for data loading/saving.
-
-#### Parameter defintions:
-- [Enter here]
 
 
 
@@ -24,6 +22,5 @@
 
 #### Parameter defintions:
 - [Enter here]
-----
 
 

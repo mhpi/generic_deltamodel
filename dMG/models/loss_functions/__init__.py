@@ -36,7 +36,7 @@ def get_loss_function(config, obs):
     file_name = camel_to_snake(loss_function)
     
     ## NOTE: for debugging `./dMG/models` must be specified. Can't figure out why.
-    file_path = os.path.join('./models', 'loss_functions', f"{file_name}.py")
+    file_path = os.path.join('./dMG/models', 'loss_functions', f"{file_name}.py")
 
     # Load the module dynamically.
     spec = importlib.util.spec_from_file_location(loss_function, os.path.abspath(file_path))

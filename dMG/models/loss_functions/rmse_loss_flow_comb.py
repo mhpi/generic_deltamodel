@@ -12,8 +12,8 @@ class RmseLossFlowComb(torch.nn.Module):
         self.alpha = alpha  # weights of log-sqrt RMSE
         self.beta = beta
 
-    def forward(self, args, y_sim, y_obs, igrid):
-        varTar_NN = args['train']['target']
+    def forward(self, config, y_sim, y_obs, igrid):
+        varTar_NN = config['train']['target']
         obs_flow = y_obs[:, :, varTar_NN.index('00060_Mean')]
 
         if not isinstance(y_sim, dict):

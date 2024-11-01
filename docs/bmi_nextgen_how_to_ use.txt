@@ -1,6 +1,8 @@
 Adapted from S.D. Peckham
+Co-author Leo Lonzarich
 August 30, 2024
 
+### Note: dMG is not yet compatible with BMI. BMI support will be ported over from the PMI interface.
 
 -------------------------------------------
  Steps to run the LSTM Package in NextGen

@@ -13,13 +13,13 @@ log = logging.getLogger(__name__)
 class Initialization(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super(Initialization, self).__init__()
-        self.cfg = kwargs["cfg"]
+        self.config = kwargs["config"]
 
     def kaiming_normal_initializer(self, x) -> None:
-        nn.init.kaiming_normal_(x, mode=self.cfg.fan, nonlinearity="sigmoid")
+        nn.init.kaiming_normal_(x, mode=self.config.fan, nonlinearity="sigmoid")
 
     def xavier_normal_initializer(self, x) -> None:
-        nn.init.xavier_normal_(x, gain=self.cfg.gain)
+        nn.init.xavier_normal_(x, gain=self.config.gain)
 
     @staticmethod
     def sparse_initializer(x) -> None:
@@ -32,7 +32,7 @@ class Initialization(nn.Module):
         nn.init.uniform_(x, a=-stdv, b=stdv)
 
     def forward(self, *args, **kwargs) -> Callable[[torch.Tensor], None]:
-        init = self.cfg.initialization
+        init = self.config.initialization
         log.debug(f"Initializing weight states using the {init} function")
         if init == InitalizationEnum.kaiming_normal:
             func = self.kaiming_normal_initializer
@@ -57,8 +57,8 @@ class Initialization(nn.Module):
 class NeuralNetwork(ABC, torch.nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super(NeuralNetwork, self).__init__()
-        self.cfg = kwargs["cfg"]
-        self.Initialization = Initialization(cfg=self.cfg)
+        self.config = kwargs["config"]
+        self.Initialization = Initialization(config=self.config)
 
     def forward(self, *args, **kwargs) -> Dict[str, torch.Tensor]:
         raise NotImplementedError("The forward function must be implemented")

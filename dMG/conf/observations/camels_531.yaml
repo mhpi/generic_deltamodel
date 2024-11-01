@@ -46,7 +46,7 @@ nn_attributes: [
   glim_2nd_class_frac,
   carbonate_rocks_frac,
   geol_porosity,
-  geol_permeability
+  geol_permeability,
 ]
 phy_forcings: [
   prcp,

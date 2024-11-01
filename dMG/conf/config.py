@@ -320,7 +320,7 @@ class Config(BaseModel):
                 log.info(
                     "HydraConfig is not set. If using a jupyter notebook"
                     "You must manually set your save_path: \n"
-                    "cfg.params.save_path = Path(__file__) "
+                    "cf.save_path = Path(__file__) "
                 )
 
     # def merge_yaml_configs(source_file, target_file):

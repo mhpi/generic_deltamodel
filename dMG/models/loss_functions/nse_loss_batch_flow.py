@@ -15,15 +15,15 @@ class NseLossBatchFlow(torch.nn.Module):
         self.std = stdarray
         self.eps = eps
 
-    def forward(self, args, y_sim, y_obs, igrid):
-        varTar_NN = args["target"]
+    def forward(self, config, y_sim, y_obs, igrid):
+        varTar_NN = config["target"]
         sim_flow = y_sim["flow_sim"].squeeze()
         obs_flow = y_obs[:, :, varTar_NN.index("00060_Mean")]
 
         if len(obs_flow) > 0:
             nt = obs_flow.shape[0]
             stdse = np.tile(self.std[igrid].T, (nt, 1))
-            stdbatch = torch.tensor(stdse, requires_grad=False).float().to(args["device"])  #.cuda
+            stdbatch = torch.tensor(stdse, requires_grad=False).float().to(config["device"])  #.cuda
             
             mask = obs_flow == obs_flow
             p = sim_flow[mask]

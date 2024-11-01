@@ -139,7 +139,7 @@ def get_attributes(attributes: zarr.Group, cfg: Config, zone: str, idx) -> torch
 
     Parameters:
     - attributes (zarr.Group): The zarr group containing the attributes.
-    - cfg (Config): The configuration object.
+    - config (Config): The configuration object.
     - zone (str): The zone for which to retrieve attributes.
     - idx: The index of the attributes to retrieve.
 
@@ -149,9 +149,9 @@ def get_attributes(attributes: zarr.Group, cfg: Config, zone: str, idx) -> torch
     """
     merit_zone = attributes[str(zone)]
     _attributes = torch.zeros(
-        (len(idx), len(cfg.params.attributes)), dtype=torch.float64
+        (len(idx), len(config.params.attributes)), dtype=torch.float64
     )
-    for _idx, attribute in enumerate(cfg.params.attributes):
+    for _idx, attribute in enumerate(config.params.attributes):
         _attributes[:, _idx] = torch.tensor(
             merit_zone[attribute][idx], dtype=torch.float64
         )
@@ -159,7 +159,7 @@ def get_attributes(attributes: zarr.Group, cfg: Config, zone: str, idx) -> torch
 
 
 # def create_hydrofabric_attributes(
-#     cfg: Config,
+#     config: Config,
 #     attributes: zarr.Group,
 #     network: Union[FullZoneNetwork, Network],
 #     names: List[str] = ["all_attributes"],
@@ -170,7 +170,7 @@ def get_attributes(attributes: zarr.Group, cfg: Config, zone: str, idx) -> torch
 #     This function takes in a configuration object, a zarr group containing attribute data, and a network object (either a FullZoneNetwork or Network). It returns a torch tensor containing the hydrofabric attributes.
 
 #     Parameters:
-#         cfg (Config): The configuration object.
+#         config (Config): The configuration object.
 #         attributes (zarr.Group): The zarr group containing attribute data.
 #         network (Union[FullZoneNetwork, Network]): The network object.
 #         names (List[str]): THE names of the attributes to retrieve. Defaults to ["all_attributes"].
@@ -183,7 +183,7 @@ def get_attributes(attributes: zarr.Group, cfg: Config, zone: str, idx) -> torch
 #     global_indices = network.edge_order
 #     for idx, attribute in enumerate(
 #         tqdm(
-#             cfg.params.attributes,
+#             config.params.attributes,
 #             desc="\rReading attribute data",
 #             ncols=140,
 #             ascii=True,
@@ -192,7 +192,7 @@ def get_attributes(attributes: zarr.Group, cfg: Config, zone: str, idx) -> torch
 #         # TODO make this check clearer. A little hacky
 #         if attribute in names or names == ["all_attributes"]:
 #             attr = get_attribute(attributes, attribute)
-#             nan_free_attr = filter_nan(attr, idx, cfg)
+#             nan_free_attr = filter_nan(attr, idx, config)
 #             all_attr.append(nan_free_attr)
 #     data = torch.stack(all_attr, dim=1)
 #     subset_data = data[global_indices]
@@ -200,12 +200,12 @@ def get_attributes(attributes: zarr.Group, cfg: Config, zone: str, idx) -> torch
     return attributes_
 
 
-def filter_nan(attr: torch.Tensor, idx: int, cfg: Config):
+def filter_nan(attr: torch.Tensor, idx: int, config: Config):
     nan_idx = torch.nonzero(input=torch.isnan(attr), as_tuple=True)
     if nan_idx[0].shape[0] > 0:
         # Masking NaN values with the default value from config.py
         try:
-            default = cfg.params.attribute_defaults[idx]
+            default = config.params.attribute_defaults[idx]
         except IndexError:
             msg = (
                 "Index of attribute defaults is out of range. Check your Config.py file"
@@ -236,7 +236,7 @@ def filter_nan(attr: torch.Tensor, idx: int, cfg: Config):
 
 #     """
 #     log.info("Reading Observations")
-#     if network.cfg.observations.name != "grdc":
+#     if network.config.observations.name != "grdc":
 #         gage_ids = [
 #             pad_gage_id(gage_dict["STAID"][x])
 #             for x in network.gage_information["gage_dict_idx"]
@@ -250,19 +250,19 @@ def filter_nan(attr: torch.Tensor, idx: int, cfg: Config):
 #     return ds_interpolated
 
 
-def determine_proc_zone(cfg: Config, data: List[Tuple[int, str, str]]) -> Config:
+def determine_proc_zone(config: Config, data: List[Tuple[int, str, str]]) -> Config:
     """
     Setting the Zone that each rank is responsible for testing on.
 
     Parameters:
-        cfg (Config): The configuration object containing the path to the data sources.
+        config (Config): The configuration object containing the path to the data sources.
         data (List[Tuple[int, str, str]]): The formatted data for the torch Dataset.
 
     Returns:
         Config: The configuration object containing the zone that each rank is responsible for testing on.
     """
-    rank = cfg.local_rank
-    world_size = cfg.world_size
+    rank = config.local_rank
+    world_size = config.world_size
 
     zone_counts = defaultdict(int)
     for _, _, zone in data:
@@ -279,18 +279,18 @@ def determine_proc_zone(cfg: Config, data: List[Tuple[int, str, str]]) -> Config
 
     if isinstance(rank_zones, int):
         rank_zones = [rank_zones]
-    cfg.test.zone = rank_zones
-    return cfg
+    config.test.zone = rank_zones
+    return config
 
 
 def format_gage_data(
-    cfg: Config, gage_dict: Dict[str, Any]
+    config: Config, gage_dict: Dict[str, Any]
 ) -> List[Tuple[int, str, str]]:
     """
     Formatting data from the gage dictionary into usable input for the torch Dataset
 
     Parameters:
-        cfg (Config): The configuration object containing the path to the data sources.
+        config (Config): The configuration object containing the path to the data sources.
         gage_dict (Dict[str, Any]): The dictionary containing gage information.
 
     Returns:
@@ -299,7 +299,7 @@ def format_gage_data(
         format similar to how the torch Dataset generates it in GeneralDataset.
 
     """
-    if cfg.observations.name.lower() != "grdc":
+    if config.observations.name.lower() != "grdc":
         padded_gage_ids = [pad_gage_id(_id) for _id in gage_dict["STAID"]]
     else:
         padded_gage_ids = [_id for _id in gage_dict["STAID"]]
@@ -309,18 +309,18 @@ def format_gage_data(
     return data
 
 
-def set_attributes(cfg: Config) -> zarr.Group:
+def set_attributes(config: Config) -> zarr.Group:
     """
     Set the attributes of a zarr group.
 
     Parameters:
-        cfg (Config): The configuration object containing the path to the data sources.
+        config (Config): The configuration object containing the path to the data sources.
 
     Returns:
         zarr.Group: The zarr group containing the attributes for all zones.
 
     """
-    attributes = zarr.open_group(Path(cfg.data_sources.edges), mode="r")
+    attributes = zarr.open_group(Path(config.data_sources.edges), mode="r")
     return attributes
 
 
@@ -372,13 +372,13 @@ def set_global_indexing(
 
 
 # def set_min_max_scaler(
-#     cfg: Config, attributes: zarr.Group
+#     config: Config, attributes: zarr.Group
 # ) -> preprocessing.MinMaxScaler:
 #     """
 #     Set up and return a MinMaxScaler object for scaling attributes.
 
 #     Parameters:
-#         cfg (Config): The configuration object containing parameters.
+#         config (Config): The configuration object containing parameters.
 #         attributes (zarr.Group): The zarr group containing attribute data.
 
 #     Returns:
@@ -388,10 +388,10 @@ def set_global_indexing(
 #     scaler = preprocessing.MinMaxScaler()
 #     all_attr = []
 #     for idx, attribute in enumerate(
-#         tqdm(cfg.params.attributes, desc="\rFitting scaler", ncols=140, ascii=True)
+#         tqdm(config.params.attributes, desc="\rFitting scaler", ncols=140, ascii=True)
 #     ):
 #         attr = get_attribute(attributes, attribute)
-#         nan_free_attr = filter_nan(attr, idx, cfg)
+#         nan_free_attr = filter_nan(attr, idx, configfig)
 #         all_attr.append(nan_free_attr)
 #     try:
 #         data = torch.stack(all_attr, dim=1).numpy()
@@ -404,14 +404,14 @@ def set_global_indexing(
 
 
 def set_min_max_statistics(
-    cfg: Config,
+    config: Config,
     attributes: zarr.Group,
 ) -> pl.DataFrame:
     attribute_name = []
     all_attr = []
-    for idx, attribute in enumerate(cfg.params.attributes):
+    for idx, attribute in enumerate(config.params.attributes):
         attr = get_attribute(attributes, attribute)
-        nan_free_attr = filter_nan(attr, idx, cfg)
+        nan_free_attr = filter_nan(attr, idx, config)
         attribute_name.append(attribute)
         all_attr.append(nan_free_attr)
     try:

@@ -16,25 +16,25 @@ from core.calc.normalize import init_norm_stats, trans_norm
 
 class Data_Reader(ABC):
     @abstractmethod
-    def getDataTs(self, args, varLst, doNorm=True, rmNan=True):
+    def getDataTs(self, config, varLst, doNorm=True, rmNan=True):
         raise NotImplementedError
 
     @abstractmethod
-    def getDataConst(self, args, varLst, doNorm=True, rmNan=True):
+    def getDataConst(self, config, varLst, doNorm=True, rmNan=True):
         raise NotImplementedError
 
 
 class DataFrame_dataset(Data_Reader):
-    def __init__(self, args, tRange, data_path, attr_path=None):
+    def __init__(self, config, tRange, data_path, attr_path=None):
         self.time = trange_to_array(tRange)
-        self.args = args
+        self.config = config
         self.inputfile = data_path
         if attr_path == None:
-            self.inputfile_attr = os.path.join(os.path.realpath(self.args['observations']['attr_path']))  # the static data
+            self.inputfile_attr = os.path.join(os.path.realpath(self.config['observations']['attr_path']))  # the static data
         else:
             self.inputfile_attr = os.path.join(os.path.realpath(attr_path))  # the static data
 
-    def getDataTs(self, args, varLst, doNorm=True, rmNan=True):
+    def getDataTs(self, config, varLst, doNorm=True, rmNan=True):
         if type(varLst) is str:
             varLst = [varLst]
 
@@ -48,8 +48,8 @@ class DataFrame_dataset(Data_Reader):
             print("data type is not supported")
             exit()
         sites = dfMain['site_no'].unique()
-        tLst = trange_to_array(args['t_range'])
-        tLstobs = trange_to_array(args['t_range'])
+        tLst = trange_to_array(config['t_range'])
+        tLstobs = trange_to_array(config['t_range'])
         # nt = len(tLst)
         ntobs = len(tLstobs)
         nNodes = len(sites)
@@ -81,7 +81,7 @@ class DataFrame_dataset(Data_Reader):
         data = data[:, ind2, :]
         return np.swapaxes(data, 1, 0)
 
-    def getDataConst(self, args, varLst, doNorm=True, rmNan=True):
+    def getDataConst(self, config, varLst, doNorm=True, rmNan=True):
         if type(varLst) is str:
             varLst = [varLst]
         
@@ -89,7 +89,7 @@ class DataFrame_dataset(Data_Reader):
             # correct typo
             varLst[varLst.index('geol_porosity')] = 'geol_porostiy'
 
-        inputfile = os.path.join(os.path.realpath(args['observations']['forcing_path']))
+        inputfile = os.path.join(os.path.realpath(config['observations']['forcing_path']))
         if self.inputfile_attr.endswith('.csv'):
             dfMain = pd.read_csv(self.inputfile)
             dfC = pd.read_csv(self.inputfile_attr)
@@ -121,12 +121,12 @@ class DataFrame_dataset(Data_Reader):
 
 
 class numpy_dataset(Data_Reader):
-    def __init__(self, args, tRange, data_path, attr_path=None):
+    def __init__(self, config, tRange, data_path, attr_path=None):
         self.time = trange_to_array(tRange)
-        self.args = args
+        self.config = config
         self.inputfile = data_path   # the dynamic data
         if attr_path == None:
-            self.inputfile_attr = os.path.join(os.path.realpath(self.args['observations']['attr_path']))  # the static data
+            self.inputfile_attr = os.path.join(os.path.realpath(self.config['observations']['attr_path']))  # the static data
         else:
             self.inputfile_attr = os.path.join(os.path.realpath(attr_path))  # the static data
         # These are default forcings and attributes that are read from the dataset
@@ -141,7 +141,7 @@ class numpy_dataset(Data_Reader):
                              'snowfall_fraction','T_clay','T_gravel','T_sand', 'T_silt','Porosity',
                              'DRAIN_SQKM', 'lat', 'site_no_int', 'stream_length_square', 'lon']
 
-    def getDataTs(self, args, varLst, doNorm=True, rmNan=True):
+    def getDataTs(self, config, varLst, doNorm=True, rmNan=True):
         if type(varLst) is str:
             varLst = [varLst]
        # TODO: looking for a way to read different types of attr + forcings together
@@ -179,15 +179,15 @@ class numpy_dataset(Data_Reader):
             x = np.concatenate((x, xattr), axis=2)
 
         data = x
-        tLst = trange_to_array(args["tRange"])
+        tLst = trange_to_array(config["tRange"])
         C, ind1, ind2 = np.intersect1d(self.time, tLst, return_indices=True)
         data = data[:, ind2, :]
         return np.swapaxes(data, 1, 0)
 
-    def getDataConst(self, args, varLst, doNorm=True, rmNan=True):
+    def getDataConst(self, config, varLst, doNorm=True, rmNan=True):
         if type(varLst) is str:
             varLst = [varLst]
-        # inputfile = os.path.join(os.path.realpath(args['attr_path']))
+        # inputfile = os.path.join(os.path.realpath(config['attr_path']))
         if self.inputfile_attr.endswith('.npy'):
             dfC = np.load(self.inputfile_attr)
         elif self.inputfile_attr.endswith('.pt'):
@@ -214,17 +214,17 @@ class numpy_dataset(Data_Reader):
 
 
 class choose_class_to_read_dataset():
-    def __init__(self, args, trange, data_path):
-        self.args = args
+    def __init__(self, config, trange, data_path):
+        self.config = config
         self.trange = trange
         self.data_path = data_path
         self._get_dataset_class()
         
     def _get_dataset_class(self) -> None:
         if self.data_path.endswith(".feather") or self.data_path.endswith(".csv"):
-            self.read_data = DataFrame_dataset(args=self.args, tRange=self.trange, data_path=self.data_path)
+            self.read_data = DataFrame_dataset(config=self.config, tRange=self.trange, data_path=self.data_path)
         elif self.data_path.endswith(".npy") or self.data_path.endswith(".pt"):
-            self.read_data = numpy_dataset(args=self.args, tRange=self.trange, data_path=self.data_path)
+            self.read_data = numpy_dataset(config=self.config, tRange=self.trange, data_path=self.data_path)
 
 
 def load_data(config, t_range=None, train=True):
