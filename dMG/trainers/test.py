@@ -80,7 +80,7 @@ class TestModel:
         flow_obs = y_obs[:, :, self.config['target'].index('00060_Mean')]
 
         # Remove warmup days for dHBV1.1p.
-        if ('hbv_capillary' in self.config['physics_model']['models']) and \
+        if ('hbv_11p' in self.config['physics_model']['models']) and \
         (self.config['hbvcap_no_warm']) and (self.config['ensemble_type'] == 'none'):
             pass
         else:

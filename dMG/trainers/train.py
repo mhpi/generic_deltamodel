@@ -95,7 +95,7 @@ class TrainModel:
             optim.step()
             optim.zero_grad()
 
-            print("Batch loss: ", total_loss.item())
+            # print("Batch loss: ", total_loss.item())
             # print("loss dict", ep_loss_dict)
 
         self.ep_loss_dict = ep_loss_dict

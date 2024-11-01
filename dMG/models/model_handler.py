@@ -110,7 +110,7 @@ class ModelHandler(torch.nn.Module):
     def calc_loss(self, loss_dict) -> None:
         total_loss = 0
         for mod in self.model_dict:
-            # if self.flow_out_dict[mod] == 'HBV_capillary':
+            # if self.flow_out_dict[mod] == 'hbv_11p':
             #     # Capillary HBV requires all sample observations without warm-up trimmed.
             #     obs = self.dataset_dict_sample['obs']
             # else:
