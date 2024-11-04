@@ -1,6 +1,6 @@
 import torch.nn
 from hydroDL2 import load_model
-from models.neural_networks.lstm_dp_models import CudnnLstmModel
+from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
 
 
@@ -13,7 +13,7 @@ class dPLHydroModel(torch.nn.Module):
         - pNN: LSTM or MLP
             Learns parameters for the physics model.
 
-        - phy_model: e.g., HBV, HBV_v1.1p, PRMS
+        - phy_model: e.g., HBV, hbv_v1_1p, PRMS
             Injests pNN-generated parameters and produces some target output.
             The target output is compared to some observation to calculate loss
             to train the pNN.
@@ -33,8 +33,8 @@ class dPLHydroModel(torch.nn.Module):
         if self.model_name == 'HBV':
             self.hydro_model = load_model('HBV')
             self.hydro_model= self.hydro_model(self.config)
-        elif self.model_name == 'HBV_v1.1p':
-            self.hydro_model = load_model('HBV_v1.1p')
+        elif self.model_name == 'HBV_v1_1p':
+            self.hydro_model = load_model('HBV_v1_1p')
             self.hydro_model= self.hydro_model()
         elif self.model_name == 'PRMS':
             self.hydro_model = load_model('PRMS')
