@@ -29,7 +29,7 @@ def camel_to_snake(camel_str):
     return snake_str
 
 
-def get_loss_function(config, obs):
+def get_loss_fn(config, obs):
     """
     Dynamically load the loss fn module from the specified file.
     """
@@ -55,4 +55,5 @@ def get_loss_function(config, obs):
     else:
         loss_obj = loss_function_default()
     
-    return loss_obj
+    return loss_obj.to(config['device'])
+

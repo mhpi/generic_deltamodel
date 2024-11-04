@@ -10,13 +10,13 @@ log = logging.getLogger(__name__)
 
 
 
-def build_handler(config: Dict[str, Any]) -> Module:
-    """Build a handler based on the mode specified in the configuration.
+def build_handler(config: Dict[str, Any], model) -> Module:
+    """Build a trainer based on the mode specified in the config.
     
     Parameters
     ----------
     config : dict
-        Dictionary of configuration settings.
+        Model and experiment configuration settings.
     
     Returns
     -------
@@ -24,40 +24,40 @@ def build_handler(config: Dict[str, Any]) -> Module:
         Trainer object for the experiment.
     """
     if config['mode'] == ModeEnum.train:
-        return TrainModel(config)
+        return TrainModel(config, model)
     elif config['mode'] == ModeEnum.test:
-        return TestModel(config)
+        return TestModel(config, model)
     else:
         raise ValueError(f"Unsupported mode: {config['mode']}")
 
 
-def run_train_test(config: Dict[str, Any]) -> None:
+def run_train_test(config: Dict[str, Any], model: Module) -> None:
     """Run a training and testing experiment.
 
     Parameters
     ----------
     config : dict
-        Dictionary of configuration settings.
+        Model and experiment configuration settings.
     """
     # Training
     config['mode'] = ModeEnum.train
-    train_experiment_handler = build_handler(config)
+    train_experiment_handler = build_handler(config, model)
     train_experiment_handler.run()
 
     # Testing
     config['mode'] = ModeEnum.test
-    test_experiment_handler = build_handler(config)            
-    test_experiment_handler.dplh_model_handler = train_experiment_handler.dplh_model_handler
+    test_experiment_handler = build_handler(config, model)            
+    test_experiment_handler.model = train_experiment_handler.model
     test_experiment_handler.run()
 
 
-def run_experiment(config: Dict[str, Any]) -> None:
+def run_experiment(config: Dict[str, Any], model: Module) -> None:
     """Run a single experiment.
     
     Parameters
     ----------
-    config_dict : Dict[str, Any]
-        Dictionary of configuration settings.
+    config : dict
+        Model and experiment configuration settings.
     """
-    experiment_handler = build_handler(config)
+    experiment_handler = build_handler(config, model)
     experiment_handler.run()

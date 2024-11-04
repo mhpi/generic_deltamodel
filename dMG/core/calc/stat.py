@@ -1,4 +1,5 @@
 # TODO: Depreciate and replace with `metrics.py` from Tadd Bindas.
+# TODO: Move to hydroDL2.
 import warnings
 
 import numpy as np

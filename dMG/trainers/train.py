@@ -1,65 +1,87 @@
-""" Vanilla training for differentiable models. """
 import logging
 import time
 from typing import Any, Dict
 
 import torch
 import tqdm
-from core.data import n_iter_nt_ngrid, take_sample_train
-from core.data.dataset_loading import get_data_dict
-from core.utils import save_model
+from core.data import calc_training_params, take_sample_train
+from core.data.dataset_loading import get_dataset_dict
+from models.loss_functions import get_loss_fn
 from models.model_handler import ModelHandler
+from torch.nn import Module
 
 log = logging.getLogger(__name__)
 
 
 
 class TrainModel:
-    """High-level training manager for differentiable models.
+    """Generic trainer for differentiable models.
     
-    Responsible for retrieving and formatting training data, initializing a 
-    dPL (differentiable Parameter Learning) model object, *setting the optimizer
-    and loss function, and running the training loop.
+    Retrieves and formats training data, initializes optimizer and loss function,
+    and runs the training loop.
 
-    TODO*: migrate optimizer and loss function setup from ModelHandler to TrainModel.
+    Parameters
+    ----------
+    config : dict
+        Configuration settings for the model and experiment.
+    model : Module, optional
+        dPL (differentiable parameter learning) model object.
+    dataset : dict, optional
+        Dataset dictionary containing forcings and attributes
     """
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], model: Module = None,
+                 dataset: dict = None) -> None:
         self.config = config
-
-        # Initialize collection of dPL hydrology models w/ optimizer.
-        self.dplh_model_handler = ModelHandler(self.config).to(self.config['device'])
-    
-    def run(self) -> None:
-        """High level training manager."""
-        log.info(f"Training model: {self.config['name']} | Collecting training data")
         
-        # Load forcings + attributes.
-        self.dataset_dict, self.config = get_data_dict(self.config, train=True)
+        if model is None:
+            self.model = ModelHandler(config)
+        else:
+            self.model = model
 
-        # Setup training grid.
-        ngrid_train, minibatch_iter, nt = n_iter_nt_ngrid(
-            self.dataset_dict['inputs_nn_scaled'], self.config['train_t_range'], self.config
+        if dataset is None:
+            log.info(f"Loading training data")
+            self.dataset = get_dataset_dict(config, train=True)
+        else:
+            self.dataset = dataset
+
+    def run(self) -> None:
+        """Run training loop."""
+        log.info(f"Training model: {self.config['name']}")
+        
+        # Setup training grid
+        n_grid, n_minibatch, nt = calc_training_params(
+            self.dataset['inputs_nn_scaled'],
+            self.config['train_t_range'],
+            self.config
             )
 
-        # Initialize loss function(s) and optimizer.
-        log.info(f"Initializing loss function, optimizer")
-        self.dplh_model_handler.init_loss_func(self.dataset_dict['obs'])
-        optim = self.dplh_model_handler.optim
+        # Initialize loss function and optimizer
+        log.info(f"Initializing loss function and optimizer")
+        self.loss_fn = get_loss_fn(self.config, self.dataset['obs'])
+        self.model.loss_fn = self.loss_fn
+        self.optim = torch.optim.Adadelta(
+            self.model.parameters,
+            lr=self.config['pnn_model']['learning_rate']
+            )
 
-        start_ep = self.config['train']['start_epoch'] if self.config['train']['run_from_checkpoint'] else 1
+        if self.config['train']['run_from_checkpoint']:
+            start_ep = self.config['train']['start_epoch']
+        else:
+            start_ep = 1
 
-        # Start of training.
+        # Training loop
         for epoch in range(start_ep, self.config['train']['epochs'] + 1):
             start_time = time.perf_counter()
+            self.model.epoch = epoch
 
-            self._train_epoch(epoch, minibatch_iter, ngrid_train, nt, optim)
-            self._log_epoch_stats(epoch, self.ep_loss_dict, minibatch_iter, start_time)
+            self._train_epoch(epoch, n_minibatch, n_grid, nt)
+            self._log_epoch_stats(epoch, self.model.loss_dict, n_minibatch, start_time)
 
             if epoch % self.config['train']['save_epoch'] == 0:
-                self.save_models(epoch)
+                self.model.save_model(epoch)
 
-    def _train_epoch(self, epoch: int, minibatch_iter: int, ngrid_train: Any,
-                     nt: int, optim: torch.optim.Optimizer) -> None:
+    def _train_epoch(self, epoch: int, n_minibatch: int, n_grid: Any,
+                     nt: int) -> None:
         """Forward over a batched epoch and compute the loss.
         
         Parameters
@@ -72,36 +94,32 @@ class TrainModel:
             Training grid.
         nt : int
             Number of timesteps.
-        optim : torch.optim.Optimizer
-            Optimizer.
         """
-        # Initialize loss dictionary.
-        ep_loss_dict = {key: 0 for key in self.config['phy_model']['models']}
+        total_loss = 0.0
 
         prog_str = f"Epoch {epoch}/{self.config['train']['epochs']}"
 
-        # Iterate through minibatches.
-        for i in tqdm.tqdm(range(1, minibatch_iter + 1), desc=prog_str,
+        # Iterate through minibatches
+        for i in tqdm.tqdm(range(1, n_minibatch + 1), desc=prog_str,
                            leave=False, dynamic_ncols=True):
-            dataset_dict_sample = take_sample_train(self.config, self.dataset_dict,
-                                                    ngrid_train, nt)
+            self.model.minibatch = i
+            dataset_sample = take_sample_train(self.config, self.dataset,
+                                               n_grid, nt)
 
             # Forward pass for hydrology models.
-            model_preds = self.dplh_model_handler(dataset_dict_sample)
-            hydro_loss, ep_loss_dict = self.dplh_model_handler.calc_loss(ep_loss_dict)
+            preds = self.model(dataset_sample)
+            loss = self.model.calc_loss(dataset_sample)
             
-            total_loss = hydro_loss
-            total_loss.backward()
-            optim.step()
-            optim.zero_grad()
+            loss.backward()
+            self.optim.step()
+            self.optim.zero_grad()
 
-            # print("Batch loss: ", total_loss.item())
-            # print("loss dict", ep_loss_dict)
+            total_loss += loss.item()
 
-        self.ep_loss_dict = ep_loss_dict
+            # print("Batch loss: ", loss.item())
 
-    def _log_epoch_stats(self, epoch: int, ep_loss_dict: Dict[str, float],
-                         minibatch_iter: int, start_time: float) -> None:
+    def _log_epoch_stats(self, epoch: int, loss_dict: Dict[str, float],
+                         n_minibatch: int, start_time: float) -> None:
         """Log epoch statistics.
         
         Parameters
@@ -115,22 +133,9 @@ class TrainModel:
         start_time : float
             Start time of epoch.
         """
-        ep_loss_dict = {key: value / minibatch_iter for key, value in ep_loss_dict.items()}
-        loss_formated = ", ".join(f"{key}: {value:.6f}" for key, value in ep_loss_dict.items())
+        avg_loss_dict = {key: value / n_minibatch + 1 for key, value in loss_dict.items()}
+        loss_formated = ", ".join(f"{key}: {value:.6f}" for key, value in avg_loss_dict.items())
         elapsed = time.perf_counter() - start_time
         mem_aloc = int(torch.cuda.memory_reserved(device=self.config['device']) * 0.000001)
         log.info(f"Model loss after epoch {epoch}: {loss_formated} \n~ Runtime {elapsed:.2f} sec,{mem_aloc} Mb reserved GPU memory")
-
-    def save_models(self, epoch: int, frozen_pnn: bool = False) -> None:
-        """Save trained model state dict.
-        
-        Parameters
-        ----------
-        epoch : int
-            Current epoch.
-        frozen_pnn : bool, optional
-            Flag to freeze the pNN model.
-        """
-        for mod in self.config['phy_model']['models']:
-            save_model(self.config, self.dplh_model_handler.model_dict[mod], mod, epoch)
                 

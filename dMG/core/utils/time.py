@@ -1,6 +1,5 @@
 # Adapted from dPL_Hydro_SNTEMP @ Farshid Rahmani.
 import datetime as dt
-
 import numpy as np
 
 
@@ -18,7 +17,7 @@ def time_to_date(t, hr=False):
         tOut = t.date() if hr is False else t
 
     if tOut is None:
-        raise Exception("hydroDL.utils.t2dt failed")
+        raise Exception("Failed to change time to date.")
     return tOut
 
 

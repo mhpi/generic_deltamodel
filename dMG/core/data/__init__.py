@@ -1,33 +1,12 @@
 import logging
-from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import torch
-import torch.nn as nn
 from core.utils.time import trange_to_array
 
 log = logging.getLogger(__name__)
 
-
-
-class BaseDataset(ABC, torch.utils.data.Dataset):
-    @abstractmethod
-    def __len__(self) -> int:
-        raise NotImplementedError
-
-    @abstractmethod
-    def __getitem__(self, idx: int) -> torch.Tensor:
-        raise NotImplementedError
-
-    @abstractmethod
-    def collate_fn(self, *args, **kwargs): #-> 'Hydrofabric'
-        """
-        Collate function with a flexible signature to allow for different inputs
-        in subclasses. Implement this method in subclasses to handle specific
-        data collation logic.
-        """
-        raise NotImplementedError
 
 
 def random_index(ngrid: int, nt: int, dim_subset: Tuple[int, int],
@@ -38,8 +17,9 @@ def random_index(ngrid: int, nt: int, dim_subset: Tuple[int, int],
     return i_grid, i_t
 
 
-def n_iter_nt_ngrid(x: np.ndarray, t_range: Tuple[int, int],
-                    config: Dict, ngrid=None) -> Tuple[int, int, int]:
+def calc_training_params(x: np.ndarray, t_range: Tuple[int, int],
+                         config: dict, ngrid=None) -> Tuple[int, int, int]:
+    """Calculate number of iterations, time steps, and grid points for training."""
     nt = x.shape[0]
     if ngrid is None:
         ngrid = x.shape[1]
@@ -113,9 +93,7 @@ def take_sample_train(config: Dict,
                       ngrid_train: int,
                       nt: int,
                       ) -> Dict[str, torch.Tensor]:
-    """
-    Select random sample of data for training batch.
-    """
+    """Select random sample of data for training batch."""
     warm_up = config['phy_model']['warm_up']
     subset_dims = (config['train']['batch_size'], config['dpl_model']['rho'])
 
@@ -125,7 +103,7 @@ def take_sample_train(config: Dict,
     flow_obs = select_subset(config, dataset_dict['obs'], i_grid, i_t,
                              config['dpl_model']['rho'], warm_up=warm_up)
     
-    if ('hbv_11p' in config['phy_model']['models']) and \
+    if ('hbv_v1.1p' in config['phy_model']['models']) and \
     (config['hbvcap_no_warm']) and (config['ensemble_type'] == 'none'):
         pass
     else:
@@ -167,7 +145,7 @@ def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor],
             raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
 
     # Keep 'warmup' days for dHBV1.1p.
-    if ('hbv_11p' in config['phy_model']['models']) and \
+    if ('hbv_v1.1p' in config['phy_model']['models']) and \
     (config['hbvcap_no_warm']) and (config['ensemble_type'] == 'none'):
         pass
     else:

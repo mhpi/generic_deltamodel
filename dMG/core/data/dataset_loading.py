@@ -6,9 +6,8 @@ from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
 import torch
-import zarr
 from core.calc.normalize import init_norm_stats, trans_norm
-from core.utils.Dates import Dates
+from core.utils.dates import Dates
 from core.utils.time import trange_to_array
 
 
@@ -298,17 +297,13 @@ def converting_flow_from_ft3_per_sec_to_mm_per_day(config, c_NN_sample, obs_samp
     return obs_sample
 
 
-def get_data_dict(config, train=False):
+def get_dataset_dict(config, train=False):
     """
     Create dictionary of datasets used by the models.
     Contains 'c_nn', 'obs', 'x_hydro_model', 'inputs_nn_scaled'.
 
     train: bool, specifies whether data is for training.
     """
-    # Get date range
-    config['train_t_range'] = Dates(config['train'], config['dpl_model']['rho']).date_to_int()
-    config['test_t_range'] = Dates(config['test'], config['dpl_model']['rho']).date_to_int()
-    config['t_range'] = [config['train_t_range'][0], config['test_t_range'][1]]
 
     # Create stats for NN input normalizations.
     if train: 
@@ -340,7 +335,7 @@ def get_data_dict(config, train=False):
             dataset_dict['obs']
         )
 
-    return dataset_dict, config
+    return dataset_dict
 
 
 def extract_data(config):

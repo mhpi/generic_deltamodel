@@ -10,10 +10,10 @@ log = logging.getLogger(__name__)
 
 class RangeBoundLoss(nn.Module):
     """
-    From dMCdev @ Tadd Bindas;
-
     Calculate a loss value based on the distance of inputs from the
     upper and lower bounds of a pre-defined range.
+
+    Adapted from: Tadd Bindas
     """
     def __init__(self, config: Config):
         super(RangeBoundLoss, self).__init__()
