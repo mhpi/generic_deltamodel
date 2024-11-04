@@ -18,8 +18,8 @@ log = logging.getLogger(__name__)
 class TrainModel:
     """Generic trainer for differentiable models.
     
-    Responsible for retrieving and formatting training data, *setting the optimizer
-    and loss function, and running the training loop.
+    Retrieves and formats training data, initializes optimizer and loss function,
+    and runs the training loop.
 
     Parameters
     ----------
