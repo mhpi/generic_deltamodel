@@ -21,9 +21,6 @@ class ModelHandler(torch.nn.Module):
     NOTE: In addition to interfacing with experiments, this handler is a plugin
     for BMI. All PMI-interfaced models must ultimately use this handler if they
     are to be BMI compatible.
-
-    NOTE: Optimizer must be initialized within handler, not externally, so that
-    it can be wrapped by the BMI (NextGen compatibility).
     """
     def __init__(self, config):
         super(ModelHandler, self).__init__()

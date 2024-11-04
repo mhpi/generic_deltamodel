@@ -62,7 +62,7 @@ def set_system_spec(cuda_devices: Optional[list] = None) -> Tuple[str, str]:
     return str(device.type), str(dtype)
 
 
-def initialize_config(config: DictConfig) -> Dict[str, Any]:
+def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
     """Parse and initialize configuration settings.
     
     Parameters
@@ -75,11 +75,13 @@ def initialize_config(config: DictConfig) -> Dict[str, Any]:
     dict
         Formatted configuration settings.
     """
-    try:
-        config = OmegaConf.to_container(config, resolve=True)
-    except ValidationError as e:
-        log.exception("Configuration validation error", exc_info=e)
-        raise e
+    if type(config) == DictConfig:
+        try:
+            config = OmegaConf.to_container(config, resolve=True)
+        except ValidationError as e:
+            log.exception("Configuration validation error", exc_info=e)
+            raise e
+    
     
     config['device'], config['dtype'] = set_system_spec(config['gpu_id'])
 

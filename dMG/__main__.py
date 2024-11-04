@@ -6,7 +6,7 @@ import hydra
 import torch
 from conf.config import ModeEnum
 from core.utils import initialize_config, print_config, set_randomseed
-from models.model_handler import ModelHandler
+from models.model_handler import ModelHandler as dModel
 from omegaconf import DictConfig
 from trainers import run_experiment, run_train_test
 
@@ -32,7 +32,7 @@ def main(config: DictConfig) -> None:
         print_config(config)
 
         # Initializing a dPL model object.
-        model = ModelHandler(config).to(config['device'])
+        model = dModel(config).to(config['device'])
 
         # Run Trainer based on mode.
         if config['mode'] == ModeEnum.train_test:

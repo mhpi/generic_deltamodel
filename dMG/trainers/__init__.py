@@ -47,7 +47,7 @@ def run_train_test(config: Dict[str, Any], model: Module) -> None:
     # Testing
     config['mode'] = ModeEnum.test
     test_experiment_handler = build_handler(config, model)            
-    test_experiment_handler.model_handler = train_experiment_handler.model_handler
+    test_experiment_handler.model = train_experiment_handler.model
     test_experiment_handler.run()
 
 
