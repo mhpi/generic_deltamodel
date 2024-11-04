@@ -12,9 +12,10 @@ import torch
 import xarray as xr
 import zarr
 from conf.config import Config
-from core.utils.Dates import Dates
 # from data.utils.Network import FullZoneNetwork, Network
 from tqdm import tqdm
+
+from dMG.core.utils.dates import Dates
 
 log = logging.getLogger(__name__)
 

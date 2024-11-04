@@ -12,7 +12,8 @@ import pandas as pd
 import zarr
 from core.calc.normalize import basin_norm
 from core.data.dataset_loading import init_norm_stats, trans_norm
-from core.utils.Dates import Dates
+
+from dMG.core.utils.dates import Dates
 
 
 def load_gages_merit(config, t_range=None):

@@ -1,8 +1,10 @@
 import os
+from math import comb
+from typing import Dict
 
 import torch.nn
 from models.differentiable_model import dPLHydroModel
-from models.loss_functions import get_loss_function
+from core.utils import save_model
 
 
 class ModelHandler(torch.nn.Module):
@@ -28,6 +30,8 @@ class ModelHandler(torch.nn.Module):
         self.config = config
         self.name = 'Differentiable Model Handler'
         self._init_models()
+        self.loss_dict = {key: 0 for key in self.config['phy_model']['models']}
+
         
     def _init_models(self):
         """
@@ -41,11 +45,11 @@ class ModelHandler(torch.nn.Module):
         
         elif self.config['train']['run_from_checkpoint']:
             # Reinitialize trained model(s).
-            self.all_model_params = []
+            self.parameters = []
             for mod in self.config['phy_model']['models']:
                 load_path = self.config['checkpoint'][mod]
                 self.model_dict[mod] = torch.load(load_path).to(self.config['device'])
-                self.all_model_params += list(self.model_dict[mod].parameters())
+                self.parameters += list(self.model_dict[mod].parameters())
 
                 self.model_dict[mod].zero_grad()
                 self.model_dict[mod].train()
@@ -57,16 +61,15 @@ class ModelHandler(torch.nn.Module):
 
         else:
             # Initialize differentiable hydrology model(s) and bulk optimizer.
-            self.all_model_params = []
+            self.parameters = []
             for mod in self.config['phy_model']['models']:
 
                 ### TODO: change which models are set to which devices here: ###
                 self.model_dict[mod] = dPLHydroModel(self.config, mod).to(self.config['device'])
-                self.all_model_params += list(self.model_dict[mod].parameters())
+                self.parameters += list(self.model_dict[mod].parameters())
 
                 self.model_dict[mod].zero_grad()
                 self.model_dict[mod].train()
-            self.init_optimizer()
     
     def load_model(self, model) -> None:
         model_name = str(model) + '_model_Ep' + str(self.config['train']['epochs']) + '.pt'
@@ -79,14 +82,7 @@ class ModelHandler(torch.nn.Module):
                 self.model_dict[model].config = self.config
         except:
             raise FileNotFoundError(f"Model file {model_path} was not found. Check configurations.")
-
-    def init_loss_func(self, obs) -> None:
-        self.loss_func = get_loss_function(self.config, obs)
-        self.loss_func = self.loss_func.to(self.config['device'])
-
-    def init_optimizer(self) -> None:
-        self.optim = torch.optim.Adadelta(self.all_model_params, lr=self.config['pnn_model']['learning_rate'])
-
+        
     def forward(self, dataset_dict_sample, eval=False):        
         """
         Batch forward one or more differentiable hydrology models.
@@ -107,24 +103,25 @@ class ModelHandler(torch.nn.Module):
                 self.flow_out_dict[mod] = self.model_dict[mod](dataset_dict_sample)
         return self.flow_out_dict
 
-    def calc_loss(self, loss_dict) -> None:
-        total_loss = 0
+    def calc_loss(self, dataset: Dict[str, torch.Tensor]) -> torch.Tensor:
+        comb_loss = 0.0
         for mod in self.model_dict:
-            # if self.flow_out_dict[mod] == 'hbv_11p':
-            #     # Capillary HBV requires all sample observations without warm-up trimmed.
-            #     obs = self.dataset_dict_sample['obs']
-            # else:
-            #     obs = self.dataset_dict_sample['obs'][config['warm_up']:]
+            loss = self.loss_fn(self.config,
+                           self.flow_out_dict[mod],
+                           dataset['obs'],
+                           igrid=dataset['iGrid']
+                           )
+            comb_loss += loss
+            self.loss_dict[mod] += loss.item()
+        return comb_loss
 
-            loss = self.loss_func(self.config,
-                                  self.flow_out_dict[mod],
-                                  self.dataset_dict_sample['obs'],
-                                  igrid=self.dataset_dict_sample['iGrid']
-                                  )
-            # self.model_dict[mod].zero_grad()
-
-            total_loss += loss
-            loss_dict[mod] += loss.item()
-
-        return total_loss, loss_dict
-    
+    def save_model(self, epoch: int) -> None:
+        """Save trained model/ensemble model state dict.
+        
+        Parameters
+        ----------
+        epoch : int
+            Current epoch.
+        """
+        for mod in self.config['phy_model']['models']:
+            save_model(self.config, self.model.model_dict[mod], mod, epoch)

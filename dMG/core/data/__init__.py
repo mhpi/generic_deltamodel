@@ -38,8 +38,9 @@ def random_index(ngrid: int, nt: int, dim_subset: Tuple[int, int],
     return i_grid, i_t
 
 
-def n_iter_nt_ngrid(x: np.ndarray, t_range: Tuple[int, int],
-                    config: Dict, ngrid=None) -> Tuple[int, int, int]:
+def calc_training_params(x: np.ndarray, t_range: Tuple[int, int],
+                         config: dict, ngrid=None) -> Tuple[int, int, int]:
+    """Calculate number of iterations, time steps, and grid points for training."""
     nt = x.shape[0]
     if ngrid is None:
         ngrid = x.shape[1]
@@ -113,9 +114,7 @@ def take_sample_train(config: Dict,
                       ngrid_train: int,
                       nt: int,
                       ) -> Dict[str, torch.Tensor]:
-    """
-    Select random sample of data for training batch.
-    """
+    """Select random sample of data for training batch."""
     warm_up = config['phy_model']['warm_up']
     subset_dims = (config['train']['batch_size'], config['dpl_model']['rho'])
 

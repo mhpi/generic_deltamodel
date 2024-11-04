@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import random
+import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -13,7 +14,12 @@ import torch
 import xarray as xr
 import zarr
 from conf.config import Config
+from omegaconf import DictConfig, OmegaConf
+from pydantic import ValidationError
 from tqdm import tqdm
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from dates import Dates
 
 log = logging.getLogger(__name__)
 
@@ -54,6 +60,38 @@ def set_system_spec(cuda_devices: Optional[list] = None) -> Tuple[str, str]:
     
     dtype = torch.float32
     return str(device.type), str(dtype)
+
+
+def initialize_config(config: DictConfig) -> Dict[str, Any]:
+    """Parse and initialize configuration settings.
+    
+    Parameters
+    ----------
+    config : DictConfig
+        Configuration settings from Hydra.
+        
+    Returns
+    -------
+    dict
+        Formatted configuration settings.
+    """
+    try:
+        config = OmegaConf.to_container(config, resolve=True)
+    except ValidationError as e:
+        log.exception("Configuration validation error", exc_info=e)
+        raise e
+    
+    config['device'], config['dtype'] = set_system_spec(config['gpu_id'])
+
+    # Convert date ranges to integer values.
+    config['train_t_range'] = Dates(config['train'], config['dpl_model']['rho']).date_to_int()
+    config['test_t_range'] = Dates(config['test'], config['dpl_model']['rho']).date_to_int()
+    config['total_t_range'] = [config['train_t_range'][0], config['test_t_range'][1]]
+    
+    # Create output directories.
+    config = create_output_dirs(config)
+
+    return config
 
 
 def set_randomseed(seed=0) -> None:
