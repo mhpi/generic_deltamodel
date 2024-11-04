@@ -12,6 +12,10 @@ log = logging.getLogger(__name__)
 
 
 class Dates(BaseModel):
+    """Class to handle time-related operations and configurations.
+
+    Created by Tadd Bindas.
+    """
     model_config = ConfigDict(arbitrary_types_allowed=True)
     daily_format: str = "%Y/%m/%d"
     hourly_format: str = "%Y/%m/%d %H:%M:%S"

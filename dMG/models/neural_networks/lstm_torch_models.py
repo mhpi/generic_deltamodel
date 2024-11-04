@@ -1,10 +1,12 @@
-"""Recharacterization of Dapeng MHPI LSTM model with conditional dropout, using
+"""
+Recharacterization of original hydroDL LSTM model with conditional dropout, using
 torch.nn.LSTM as a base class. This adds pytorch support and inheritence, as well
 as better readability and maintainability.
 
-Model structure adapted from: Dapeng Feng
-"""
+Model structure adapted from: Dapeng Feng, MHPI
 
+TODO: debug and test against original.
+"""
 import torch
 import torch.nn.functional as F
 from torch.nn import Parameter

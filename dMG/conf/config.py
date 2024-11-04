@@ -1,3 +1,6 @@
+# TODO: setup for the general config file with most fundamental parameters.
+
+
 import dataclasses
 import logging
 from enum import Enum
@@ -78,22 +81,6 @@ class AttributeMinimums:
     q_prime: int = 0
     slope: float = 1e-4
     velocity: float = 0.3
-
-
-# @dataclass
-# class DataSources:
-#     edges: str
-#     gage_coo_indices: str
-#     HUC_TM: Optional[str]
-#     MERIT_TM: str
-#     streamflow: str
-
-#     @field_validator(
-#         "edges", "gage_coo_indices", "HUC_TM", "MERIT_TM", "streamflow", "statistics"
-#     )
-#     @classmethod
-#     def validate_data_dir(cls, v: str) -> Path:
-#         return check_path(v)
 
 
 @dataclass

@@ -1,5 +1,8 @@
 """
 Use saved model state dict to load states into model with different architecture.
+
+TODO: This should really be it's own function, or exist in an example that anyone
+can adapt and use in their own case.
 """
 import torch
 from models.differentiable_model import dPLHydroModel

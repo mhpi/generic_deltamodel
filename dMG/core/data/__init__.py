@@ -1,33 +1,12 @@
 import logging
-from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import torch
-import torch.nn as nn
 from core.utils.time import trange_to_array
 
 log = logging.getLogger(__name__)
 
-
-
-class BaseDataset(ABC, torch.utils.data.Dataset):
-    @abstractmethod
-    def __len__(self) -> int:
-        raise NotImplementedError
-
-    @abstractmethod
-    def __getitem__(self, idx: int) -> torch.Tensor:
-        raise NotImplementedError
-
-    @abstractmethod
-    def collate_fn(self, *args, **kwargs): #-> 'Hydrofabric'
-        """
-        Collate function with a flexible signature to allow for different inputs
-        in subclasses. Implement this method in subclasses to handle specific
-        data collation logic.
-        """
-        raise NotImplementedError
 
 
 def random_index(ngrid: int, nt: int, dim_subset: Tuple[int, int],
