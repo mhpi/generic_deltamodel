@@ -1,4 +1,4 @@
-name: hydrodl2
+name: deltamod
 channels:
   - defaults
   - pytorch
