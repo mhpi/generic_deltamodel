@@ -133,7 +133,7 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
         str(config['train']['end_time'][:4])
 
     # Add dir for number of forcings:
-    forcings = str(len(config['observations']['nn_forcings'])) + '_forcing'
+    forcings = str(len(config['nn_forcings'])) + '_forcing'
 
     # Add dir for ensemble type:
     if config['ensemble_type'] in ['none', '']:

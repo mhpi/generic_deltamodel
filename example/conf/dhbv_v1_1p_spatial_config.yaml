@@ -16,8 +16,8 @@ save_path: /data/lgl5139/project_blue_eyes/generic_diffModel/runs
 
 ## Training -------------------------------#
 train:
-    start_time: 1999/10/01
-    end_time: 2008/10/01
+    start_time: 1989/10/01
+    end_time: 1999/10/01
     target: [00060_Mean]
     batch_size: 100
     epochs: 50
@@ -42,11 +42,11 @@ dpl_model:
     dy_drop: 0.0
     
 phy_model:
-    models: [HBV_11p]  # HBV, HBV_11p, PRMS, SACSMA_with_snow
+    models: [HBV_v1_1p]  # HBV, HBV_v1_1p, PRMS, SACSMA_with_snow
     warm_up: 365
     stat_param_idx: -1
     dy_params:
-        HBV_11p: [parBETA, parBETAET, parK0]
+        HBV_v1_1p: [parBETA, parBETAET, parK0]
 
 pnn_model:
     model: LSTM  # LSTM, MLP
@@ -62,9 +62,77 @@ loss_function:
 
 
 
+
 ## ------------------------------------------------#
 ## Hydrology Config -------------------------------#
 routing_hydro_model: True
 use_log_norm: []  # For log normalization ('prcp' for HBV, [] otherwise)
 hbvcap_no_warm: False
 ensemble_type: none
+
+
+## ------------------------------------------------#
+## Subset of Attributes + Forcings ----------------#
+nn_forcings: [
+  prcp,
+  tmean,
+  pet
+]
+nn_attributes: [
+  p_mean,
+  pet_mean,
+  p_seasonality,
+  frac_snow,
+  aridity,
+  high_prec_freq,
+  high_prec_dur,
+  low_prec_freq,
+  low_prec_dur,
+  elev_mean,
+  slope_mean,
+  area_gages2,
+  frac_forest,
+  lai_max,
+  lai_diff,
+  gvf_max,
+  gvf_diff,
+  dom_land_cover_frac,
+  dom_land_cover,
+  root_depth_50,
+  soil_depth_pelletier,
+  soil_depth_statsgo,
+  soil_porosity,
+  soil_conductivity,
+  max_water_content,
+  sand_frac,
+  silt_frac,
+  clay_frac,
+  geol_1st_class,
+  glim_1st_class_frac,
+  geol_2nd_class,
+  glim_2nd_class_frac,
+  carbonate_rocks_frac,
+  geol_porosity,
+  geol_permeability
+]
+phy_forcings: [
+  prcp,
+  tmean,
+  pet
+]
+
+
+## ------------------------------------------------#
+## PUR/PUB Testing --------------------------------#
+test_fold_idx: 1
+subset_regions: [
+    [1,2],
+    [3,6],
+    [4,5,7],
+    [9,10], 
+    [8,11,12,13],
+    [14,15,16,18],
+    [17]
+    ]
+
+

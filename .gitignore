@@ -22,8 +22,14 @@ share/python-wheels/
 #PyCharm
 .idea/
 
+# Scratch, testing, and other temporary files
+scratch.py
+scratch/
+temp/
+tmp/
+*.tmp
+
 # Other Directories
 archive/
 runs/
-HBV_1.1p/
 ngen/

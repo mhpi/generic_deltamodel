@@ -64,8 +64,8 @@ class dPLHydroModel(torch.nn.Module):
         
     def get_nn_model_dims(self) -> None:
         """Return dimensions for pNNs."""
-        n_forc = len(self.config['observations']['nn_forcings'])
-        n_attr = len(self.config['observations']['nn_attributes'])
+        n_forc = len(self.config['nn_forcings'])
+        n_attr = len(self.config['nn_attributes'])
         self.n_model_params = len(self.hydro_model.parameters_bound)
         self.n_rout_params = len(self.hydro_model.conv_routing_hydro_model_bound)
         

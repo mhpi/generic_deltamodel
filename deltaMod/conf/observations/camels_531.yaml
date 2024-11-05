@@ -6,12 +6,15 @@ subset_path: /data/lgl5139/data/camels/Sub531ID.txt
 
 area_name: area_gages2
 
-nn_forcings: [
+start_time: 1985/10/01
+end_time: 2010/10/01
+
+forcings_all: [
   prcp,
   tmean,
   pet
 ]
-nn_attributes: [
+attributes_all: [
   p_mean,
   pet_mean,
   p_seasonality,

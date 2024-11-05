@@ -73,14 +73,14 @@ def load_gages_merit(config, t_range=None):
     root_zone = zarr.open_group(merit_save_path, mode = 'r')
     merit_all = root_zone['COMID'][:]
 
-    xTrain2 = np.full((len(merit_all),len(newTime),len(config['observations']['nn_forcings'])),np.nan)
+    xTrain2 = np.full((len(merit_all),len(newTime),len(config['nn_forcings'])),np.nan)
     attr2 = np.full((len(merit_all),len(config['observations']['nn_attributes'])),np.nan)
 
     merit_time = pd.date_range('1980-10-01',f'2010-09-30', freq='d')
     merit_start_idx = merit_time.get_loc(newTime[0])
     merit_end_idx = merit_time.get_loc(newTime[-1])+1
 
-    for fid, forcing_ in enumerate(config['observations']['nn_forcings']):
+    for fid, forcing_ in enumerate(config['nn_forcings']):
         xTrain2[:,:,fid] = root_zone[forcing_][:,merit_start_idx:merit_end_idx]
 
     for aid, attribute_ in enumerate(config['observations']['nn_attributes']):
@@ -131,7 +131,7 @@ def get_data_dict(config, train=False):
     
     # Normalization
     x_nn_scaled = trans_norm(config, np.swapaxes(dataset_dict['x_nn'], 1, 0).copy(),
-                             var_lst=config['observations']['nn_forcings'], to_norm=True)
+                             var_lst=config['nn_forcings'], to_norm=True)
     x_nn_scaled[x_nn_scaled != x_nn_scaled] = 0  # Remove nans
 
     c_nn_scaled = trans_norm(config, dataset_dict['c_nn'],

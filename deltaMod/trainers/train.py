@@ -43,7 +43,7 @@ class TrainModel:
             self.dataset = get_dataset_dict(config, train=True)
         else:
             self.dataset = dataset
-
+            
     def run(self) -> None:
         """Run training loop."""
         log.info(f"Training model: {self.config['name']}")
@@ -116,7 +116,7 @@ class TrainModel:
 
             total_loss += loss.item()
 
-            # print("Batch loss: ", loss.item())
+            print("Batch loss: ", loss.item())
 
     def _log_epoch_stats(self, epoch: int, loss_dict: Dict[str, float],
                          n_minibatch: int, start_time: float) -> None:

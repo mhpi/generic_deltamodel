@@ -1,5 +1,6 @@
 # *WIP*
-
+---
+<!-- 
 ## How to Use Configuration Files.
 
 ### 2 Types:
@@ -21,6 +22,6 @@
 - One observation yaml should exist per dataset.
 
 #### Parameter defintions:
-- [Enter here]
+- [Enter here] -->
 
 

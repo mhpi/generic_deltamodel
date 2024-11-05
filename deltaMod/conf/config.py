@@ -214,8 +214,8 @@ class ObservationConfig:
     gage_info: str = "not_defined"
     forcing_path: str = "not_defined"
     attr_path: str = "not_defined"
-    nn_forcings: list = "not_defined"
-    nn_attributes: list = "not_defined"
+    forcings_all: list = "not_defined"
+    attributes_all: list = "not_defined"
     phy_forcings_model: list = "not_defined"
 
     @field_validator('forcing_path', 'attr_path')
@@ -233,7 +233,7 @@ class ObservationConfig:
 #     attr_path: str = "not_defined"
 #     observations_path: str = "not_defined"
 #     nn_forcings: list = "not_defined"
-#     nn_attributes: list = "not_defined"
+#     attributes_all: list = "not_defined"
 #     phy_forcings: list = "not_defined"
 
 #     @field_validator("gage_info", "observations_path")
@@ -291,7 +291,7 @@ class Config(BaseModel):
     # attr_path: str = "not_defined"
     # observations_path: str = "not_defined"
     # nn_forcings: list = "not_defined"
-    # nn_attributes: list = "not_defined"
+    # attributes_all: list = "not_defined"
     # phy_forcings_model: list = "not_defined"
 
     def __init__(self, **data):

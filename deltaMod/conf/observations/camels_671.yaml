@@ -1,17 +1,19 @@
-name: camels_531
+name: camels_671
 gage_info: /data/yxs275/CAMELS/CAMELS_to_ICDS/gageid.npy
 train_path: /data/yxs275/CAMELS/training_file
 test_path: /data/yxs275/CAMELS/validation_file
-subset_path: /data/lgl5139/data/camels/Sub531ID.txt
 
 area_name: area_gages2
+
+start_time: 1985/10/01
+end_time: 2010/10/01
 
 nn_forcings: [
   prcp,
   tmean,
   pet
 ]
-nn_attributes: [
+attributes_all: [
   p_mean,
   pet_mean,
   p_seasonality,
