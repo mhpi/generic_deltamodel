@@ -30,23 +30,24 @@ We ask all changes to this repo be made through a fork and PR.
 
 ### Repository Structure:
 
-├───deltaMod/
-│   │   __main__.py
-│   ├───conf/
-│   │   │   config.py
-│   │   │   config.yaml
-│   │   ├───hydra/
-│   │   └───observations/
-│   ├───core/
-│   │   ├───calc/
-│   │   ├───data/
-│   │   └───utils/
-│   ├───models/
-│   │   │   differentiable_model.py
-│   │   │   model_handler.py
-│   │   ├───loss_functions/
-│   │   └───neural_networks/
-│   └───trainers/
-├───docs/
-├───envs/
-└───example/
+    .
+    ├───deltaMod/
+    │   │   __main__.py
+    │   ├───conf/
+    │   │   │   config.py
+    │   │   │   config.yaml
+    │   │   ├───hydra/
+    │   │   └───observations/
+    │   ├───core/
+    │   │   ├───calc/
+    │   │   ├───data/
+    │   │   └───utils/
+    │   ├───models/
+    │   │   │   differentiable_model.py
+    │   │   │   model_handler.py
+    │   │   ├───loss_functions/
+    │   │   └───neural_networks/
+    │   └───trainers/
+    ├───docs/
+    ├───envs/
+    └───example/
