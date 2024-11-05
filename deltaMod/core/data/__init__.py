@@ -103,7 +103,7 @@ def take_sample_train(config: Dict,
     flow_obs = select_subset(config, dataset_dict['obs'], i_grid, i_t,
                              config['dpl_model']['rho'], warm_up=warm_up)
     
-    if ('hbv_v1.1p' in config['phy_model']['models']) and \
+    if ('HBV_v1_1p' in config['phy_model']['models']) and \
     (config['hbvcap_no_warm']) and (config['ensemble_type'] == 'none'):
         pass
     else:

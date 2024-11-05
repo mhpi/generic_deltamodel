@@ -237,18 +237,18 @@ def load_data(config, t_range=None, train=True):
             with open(config['observations']['train_path'], 'rb') as f:
                 forcing, target, attributes = pickle.load(f)
             
-            startYear = str(config['train_t_range'][0])[:4]
-            endYear = str(config['train_t_range'][1])[:4]
+            startdate =config['train']['start_time']
+            enddate = config['train']['end_time']
             
         else:
             with open(config['observations']['train_path'], 'rb') as f:
                 forcing, target, attributes = pickle.load(f)
             
-            startYear = str(config['test_t_range'][0])[:4]
-            endYear = str(config['test_t_range'][1])[:4]
-        
-        AllTime = pd.date_range('1980-10-01', f'2014-09-30', freq='d')
-        newTime = pd.date_range(f'{startYear}-10-01', f'{endYear}-09-30', freq='d')
+            startdate =config['train']['start_time']
+            enddate = config['train']['end_time']
+            
+        AllTime = pd.date_range(config['observations']['start_date_all'], config['observations']['end_date_all'], freq='d')
+        newTime = pd.date_range(startdate, enddate, freq='d')
         
         index_start = AllTime.get_loc(newTime[0])
         index_end = AllTime.get_loc(newTime[-1]) + 1
