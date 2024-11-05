@@ -21,6 +21,7 @@ Supervisor: Dr. Chaopeng Shen
     - Hydra, OmegaConf, Pydantic configuration file handling 
     - Type-checking
     - Trainers
+    - PyTests and linting
 
 - Yalan Song (from `hydroDL`)
     - Hydrology models 

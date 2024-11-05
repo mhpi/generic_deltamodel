@@ -42,11 +42,11 @@ dpl_model:
     dy_drop: 0.0
     
 phy_model:
-    models: [HBV]  # HBV, hbv_v1_1p (1.1p), marrmot_PRMS, SACSMA_with_snow
+    models: [HBV_v1_1p]  # HBV, HBV_v1_1p, PRMS, SACSMA_with_snow
     warm_up: 365
     stat_param_idx: -1
     dy_params:
-        HBV: [parBETA, parBETAET]
+        HBV_v1_1p: [parBETA, parBETAET, parK0]
 
 pnn_model:
     model: LSTM  # LSTM, MLP
@@ -65,6 +65,6 @@ loss_function:
 ## ------------------------------------------------#
 ## Hydrology Config -------------------------------#
 routing_hydro_model: True
-use_log_norm: [prcp]  # For log normalization ('prcp' for HBV, [] otherwise)
+use_log_norm: []  # For log normalization ('prcp' for HBV, [] otherwise)
 hbvcap_no_warm: False
 ensemble_type: none
