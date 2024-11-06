@@ -17,7 +17,7 @@ class NseLossBatchFlow(torch.nn.Module):
         self.eps = eps
 
     def forward(self, config, y_sim, y_obs, igrid):
-        varTar_NN = config["target"]
+        varTar_NN = config['train']["target"]
         sim_flow = y_sim["flow_sim"].squeeze()
         obs_flow = y_obs[:, :, varTar_NN.index("00060_Mean")]
 

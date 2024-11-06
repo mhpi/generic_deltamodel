@@ -6,6 +6,9 @@ subset_path: /data/lgl5139/data/camels/Sub531ID.txt
 
 area_name: area_gages2
 
+start_date_all: 1980/10/01
+end_date_all: 2014/09/30
+
 forcings_all: [
   prcp,
   tmean,
