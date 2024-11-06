@@ -145,7 +145,7 @@ def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor],
             raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
 
     # Keep 'warmup' days for dHBV1.1p.
-    if ('hbv_v1.1p' in config['phy_model']['models']) and \
+    if ('HBV_v1_1p' in config['phy_model']['models']) and \
     (config['hbvcap_no_warm']) and (config['ensemble_type'] == 'none'):
         pass
     else:

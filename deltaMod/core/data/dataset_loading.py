@@ -243,7 +243,7 @@ def load_data(config, t_range=None, train=True):
         else:
             with open(config['observations']['train_path'], 'rb') as f:
                 forcing, target, attributes = pickle.load(f)
-            
+        
             startdate =config['train']['start_time']
             enddate = config['train']['end_time']
             

@@ -6,8 +6,8 @@ subset_path: /projects/mhpi/yxs275/model/dPLHBV_version1/Forcing_PickleFiles/Sub
 
 area_name: area_gages2
 
-start_date_all: 1980-10-01
-end_date_all: 2014-09-30
+start_date_all: 1980/10/01
+end_date_all: 2014/09/30
 
 forcings_all: [
   prcp,
@@ -57,3 +57,4 @@ phy_forcings: [
   tmean,
   pet
 ]
+

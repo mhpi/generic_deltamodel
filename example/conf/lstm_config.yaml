@@ -5,7 +5,8 @@ defaults:
 
 
 ## General -------------------------------#
-mode: train  # train, test, train_test
+mode: train # train, test, train_test
+trainer: adjTrainer
 random_seed: 111111
 device: cuda
 gpu_id: 7

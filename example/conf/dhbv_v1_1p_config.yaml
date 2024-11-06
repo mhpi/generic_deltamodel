@@ -11,13 +11,13 @@ device: cuda
 gpu_id: 7
 
 name: dmg-1.0-${observations.name}
-save_path: /projects/mhpi/yxs275/model/generic_diffModel_results
+save_path: /data/lgl5139/project_blue_eyes/generic_diffModel/runs 
 
 
 ## Training -------------------------------#
 train:
     start_time: 1999/10/01
-    end_time: 2008/09/30
+    end_time: 2008/10/01
     target: [00060_Mean]
     batch_size: 100
     epochs: 50
@@ -28,8 +28,8 @@ train:
 
 ## Testing -------------------------------#
 test:
-    start_time:  1999/10/01
-    end_time: 2008/09/30
+    start_time: 1989/10/01
+    end_time: 1999/10/01
     batch_size: 25
     test_epoch: 50
 
@@ -66,10 +66,8 @@ loss_function:
 ## Hydrology Config -------------------------------#
 routing_hydro_model: True
 use_log_norm: []  # For log normalization ('prcp' for HBV, [] otherwise)
-hbvcap_no_warm: True
+hbvcap_no_warm: False
 ensemble_type: none
-
-
 
 
 ## ------------------------------------------------#
