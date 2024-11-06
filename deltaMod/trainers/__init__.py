@@ -27,7 +27,6 @@ def build_handler(config: Dict[str, Any], model) -> Module:
         return TrainModel(config, model)
     elif config['mode'] == ModeEnum.test:
         return TestModel(config, model)
-    elif
     else:
         raise ValueError(f"Unsupported mode: {config['mode']}")
 
