@@ -61,8 +61,6 @@ loss_function:
         w2: 1.0
 
 
-
-
 ## ------------------------------------------------#
 ## Hydrology Config -------------------------------#
 routing_hydro_model: True

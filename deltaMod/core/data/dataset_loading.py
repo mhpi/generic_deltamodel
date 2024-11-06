@@ -238,12 +238,15 @@ def load_data(config, t_range=None, train=True):
                 forcing, target, attributes = pickle.load(f)
             
             startYear = str(config['train_t_range'][0])[:4]
+
             endYear = str(config['train_t_range'][1])[:4]
             
         else:
             with open(config['observations']['train_path'], 'rb') as f:
                 forcing, target, attributes = pickle.load(f)
             
+            startYear = str(config['test_t_range'][0])[:4]
+            endYear = str(config['test_t_range'][1])[:4]
             startYear = str(config['test_t_range'][0])[:4]
             endYear = str(config['test_t_range'][1])[:4]
         
