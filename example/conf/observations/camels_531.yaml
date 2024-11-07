@@ -1,8 +1,8 @@
 name: camels_531
-gage_info: /projects/mhpi/yxs275/model/dPLHBV_version1/Forcing_PickleFiles/gageid.npy
-train_path: /projects/mhpi/yxs275/model/dPLHBV_version1/Forcing_PickleFiles/training_file_camels_daymetv2
-test_path: /projects/mhpi/yxs275/model/dPLHBV_version1/Forcing_PickleFiles/training_file_camels_daymetv2
-subset_path: /projects/mhpi/yxs275/model/dPLHBV_version1/Forcing_PickleFiles/Sub531ID.txt
+gage_info: /data/yxs275/CAMELS/CAMELS_to_ICDS/gageid.npy
+train_path: /data/yxs275/CAMELS/training_file
+test_path: /data/yxs275/CAMELS/validation_file
+subset_path: /data/lgl5139/data/camels/Sub531ID.txt
 
 area_name: area_gages2
 
@@ -51,10 +51,3 @@ attributes_all: [
   geol_porosity,
   geol_permeability
 ]
-
-phy_forcings: [
-  prcp,
-  tmean,
-  pet
-]
-

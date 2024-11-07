@@ -9,6 +9,7 @@ from hydroDL2.models.hbv.hbv import HBVMulTDET as hbv
 from deltaMod.models.neural_networks import init_nn_model
 from deltaMod.core.data.dataset_loading import get_dataset_dict # Eventually a hydroData import
 from deltaMod.models.differentiable_model import DeltaModel as dHBV
+from deltaMod.core.data import take_sample
 
 
 
@@ -20,8 +21,9 @@ config = load_config(CONFIG_PATH)
 #
 
 # Setup a dataset dictionary of NN and physics model inputs.
+# Take a sample to reduce size on GPU.
 dataset = get_dataset_dict(config, train=True)
-# dataset_sample = 
+dataset_sample = take_sample(config, dataset, days=730, basins=100)
 
 # Initialize physical model and neural network
 phy_model = hbv(config['dpl_model'])
@@ -34,4 +36,6 @@ dpl_model = dHBV(phy_model, nn)
 # Now dpl_model can be run or trained as any torch.nn.Module model in a standard training loop.
 
 # For example, to forward:
-output = dpl_model.forward(dataset)
+output = dpl_model.forward(dataset_sample)
+
+print(output)

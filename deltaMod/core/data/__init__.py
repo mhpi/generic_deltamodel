@@ -163,23 +163,24 @@ def take_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
             if key in ['x_hydro_model', 'inputs_nn_scaled']:
                 warm_up = 0
             else:
-                warm_up = config['phy_model']['warm_up']
-            dataset_sample[key] = value[warm_up:, i_s:i_e, :].to(config['device'])
+                warm_up = config['dpl_model']['phy_model']['warm_up']
+            dataset_sample[key] = torch.tensor(value[warm_up:days,:basins, :], dtype=torch.float32).to(config['device'])
         elif value.ndim == 2:
-            dataset_sample[key] = value[i_s:i_e, :].to(config['device'])
+            dataset_sample[key] = torch.tensor(value[:basins, :], dtype=torch.float32).to(config['device'])
         else:
             raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
 
     # Keep 'warmup' days for dHBV1.1p.
-    if ('HBV_v1_1p' in config['phy_model']['model']) and \
-    (config['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
+    if ('HBV_v1_1p' in config['dpl_model']['phy_model']['model']) and \
+    (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
         pass
     else:
-        dataset_sample['obs'] = dataset_sample['obs'][config['phy_model']['warm_up']:, :]
-
+        dataset_sample['obs'] = dataset_sample['obs'][config['dpl_model']['phy_model']['warm_up']:days, :basins]
     return dataset_sample
 
-def numpy_to_torch_dict(data_dict: Dict[str, np.ndarray], device: str) -> Dict[str, torch.Tensor]:
+
+def numpy_to_torch_dict(data_dict: Dict[str, 
+np.ndarray], device: str) -> Dict[str, torch.Tensor]:
     """Convert numpy data dictionary to torch tensor dictionary.
 
     Parameters

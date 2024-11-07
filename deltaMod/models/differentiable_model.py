@@ -60,6 +60,7 @@ class DeltaModel(torch.nn.Module):
             self.ny = self.nn_model.ny
 
         self.param_bounds = self.phy_model.parameter_bounds
+        self.warm_up_mode = self.phy_model.warm_up_mode
         self.phy_model.to(self.device)
         self.phy_model.device = self.device
         self.nn_model.to(self.device)
@@ -162,20 +163,20 @@ class DeltaModel(torch.nn.Module):
         params_dict = self.breakdown_params(params_all)
         
         # Physics model
-        flow_out = self.phy_model(
+        predictions = self.phy_model(
             data_dict['x_hydro_model'],
             params_dict['hydro_params_raw'],
             routing_parameters = params_dict['conv_params_hydro'],
-            warm_up_mode = True
+            warm_up_mode = self.warm_up_mode
         )
 
         # Baseflow index percentage; (from Farshid)
         # Using two deep groundwater buckets: gwflow & bas_shallow
-        if 'bas_shallow' in flow_out.keys():
-            baseflow = flow_out['gwflow'] + flow_out['bas_shallow']
+        if 'bas_shallow' in predictions.keys():
+            baseflow = predictions['gwflow'] + predictions['bas_shallow']
         else:
-            baseflow = flow_out['gwflow']
-        flow_out['BFI_sim'] = 100 * (torch.sum(baseflow, dim=0) / (
-                torch.sum(flow_out['flow_sim'], dim=0) + 0.00001))[:, 0]
+            baseflow = predictions['gwflow']
+        predictions['BFI_sim'] = 100 * (torch.sum(baseflow, dim=0) / (
+                torch.sum(predictions['flow_sim'], dim=0) + 0.00001))[:, 0]
 
-        return flow_out
+        return predictions
