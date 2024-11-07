@@ -7,6 +7,9 @@ import torch
 import torch.nn as nn
 from conf.config import InitalizationEnum
 
+from models.neural_networks.lstm_models import CudnnLstmModel
+from models.neural_networks.mlp_models import MLPmul
+
 log = logging.getLogger(__name__)
 
 
@@ -62,3 +65,49 @@ class NeuralNetwork(ABC, torch.nn.Module):
 
     def forward(self, *args, **kwargs) -> Dict[str, torch.Tensor]:
         raise NotImplementedError("The forward function must be implemented")
+    
+
+def init_nn_model(phy_model, config):
+    """Initialize the pNN model.
+    
+    Parameters
+    ----------
+    phy_model : torch.nn.Module
+        The physics model.
+    config : dict
+        The configuration dictionary.
+    
+    Returns
+    -------
+    torch.nn.Module
+        The initialized neural network.
+    """
+    n_forc = len(config['nn_model']['forcings'])
+    n_attr = len(config['nn_model']['attributes'])
+    n_model_params = len(phy_model.parameter_bounds)
+    n_rout_params = len(phy_model.conv_routing_hydro_model_bound)
+    
+    nx = n_forc + n_attr
+    ny = config['nmul'] * n_model_params
+
+    if config['phy_model']['routing'] == True:
+        ny += n_rout_params
+    
+    if config['nn_model']['model'] == 'LSTM':
+        nn_model = CudnnLstmModel(
+            nx=nx,
+            ny=ny,
+            hiddenSize=config['nn_model']['hidden_size'],
+            dr=config['nn_model']['dropout']
+        )
+    elif config['nn_model']['model'] == 'MLP':
+        nn_model = MLPmul(
+            config,
+            nx=nx,
+            ny=ny
+        )
+    else:
+        raise ValueError(config['nn_model'], " not supported.")
+    
+    return nn_model
+    

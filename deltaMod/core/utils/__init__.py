@@ -51,7 +51,7 @@ def set_system_spec(cuda_devices: Optional[list] = None) -> Tuple[str, str]:
         device = torch.device('cpu')
     
     dtype = torch.float32
-    return str(device.type), str(dtype)
+    return str(device), str(dtype)
 
 
 def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
@@ -74,7 +74,9 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
             log.exception("Configuration validation error", exc_info=e)
             raise e
     
-    
+    # if len(config['phy_model']['model']) == 1:
+    #     config['phy_model']['model'] = config['phy_model']['model']
+
     config['device'], config['dtype'] = set_system_spec(config['gpu_id'])
 
     # Convert date ranges to integer values.
@@ -133,7 +135,7 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
         str(config['train']['end_time'][:4])
 
     # Add dir for number of forcings:
-    forcings = str(len(config['nn_forcings'])) + '_forcing'
+    forcings = str(len(config['dpl_model']['nn_model']['forcings'])) + '_forcing'
 
     # Add dir for ensemble type:
     if config['ensemble_type'] in ['none', '']:
@@ -148,20 +150,20 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
     mod_names = ''
     dy_params = ''
     loss_fn = ''
-    for mod in config['phy_model']['models']:
+    for mod in config['dpl_model']['phy_model']['model']:
         mod_names += mod + '_'
 
-        for param in config['phy_model']['dy_params'][mod]:
+        for param in config['dpl_model']['phy_model']['dy_params'][mod]:
             dy_params += param + '_'
         
         loss_fn += config['loss_function']['model'] + '_'
 
     # Add dir for hyperparam spec.
-    params = config['pnn_model']['model'] + \
+    params = config['dpl_model']['nn_model']['model'] + \
              '_E' + str(config['train']['epochs']) + \
              '_R' + str(config['dpl_model']['rho'])  + \
              '_B' + str(config['train']['batch_size']) + \
-             '_H' + str(config['pnn_model']['hidden_size']) + \
+             '_H' + str(config['dpl_model']['nn_model']['hidden_size']) + \
              '_n' + str(config['dpl_model']['nmul']) + \
              '_' + str(config['random_seed']) 
 
@@ -189,7 +191,7 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
     # Create the directories.
     if (config['mode'] == 'test') and (os.path.exists(model_path) == False):
         if config['ensemble_type'] in ['avg', 'frozen_pnn']:
-            for mod in config['phy_model']['models']:
+            for mod in config['dpl_model']['phy_model']['model']:
                 # Check if individually trained models exist and use those.
                 check_path = os.path.join(config['save_path'],
                                           config['observations']['name'],
@@ -320,7 +322,7 @@ def print_config(config: Dict[str, Any]) -> None:
     print(f"  {'Experiment Mode:':<20}{config['mode']:<20}")
     print(f"  {'Ensemble Mode:':<20}{config['ensemble_type']:<20}")
 
-    for i, mod in enumerate(config['phy_model']['models']):
+    for i, mod in enumerate(config['phy_model']['model']):
         print(f"  {f'Model {i+1}:':<20}{mod:<20}")
     print()
 
@@ -336,7 +338,7 @@ def print_config(config: Dict[str, Any]) -> None:
 
     print("\033[1m" + "Model Parameters" + "\033[0m")
     print(f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}")
-    print(f"  {'Dropout:':<20}{config['pnn_model']['dropout']:<20}{'Hidden Size:':<20}{config['pnn_model']['hidden_size']:<20}")
+    print(f"  {'Dropout:':<20}{config['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['nn_model']['hidden_size']:<20}")
     print(f"  {'Warmup:':<20}{config['phy_model']['warm_up']:<20}{'Concurrent Models:':<20}{config['dpl_model']['nmul']:<20}")
     print(f"  {'Optimizer:':<20}{config['loss_function']['model']:<20}")
     print()

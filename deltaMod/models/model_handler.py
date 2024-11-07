@@ -26,7 +26,7 @@ class ModelHandler(torch.nn.Module):
         self.config = config
         self.name = 'Differentiable Model Handler'
         self._init_models()
-        self.loss_dict = {key: 0 for key in self.config['phy_model']['models']}
+        self.loss_dict = {key: 0 for key in self.config['phy_model']['model']}
 
         
     def _init_models(self):
@@ -36,13 +36,13 @@ class ModelHandler(torch.nn.Module):
         """
         self.model_dict = {}
 
-        if (self.config['ensemble_type'] == 'none') and (len(self.config['phy_model']['models']) > 1):
+        if (self.config['ensemble_type'] == 'none') and (len(self.config['phy_model']['model']) > 1):
             raise ValueError("Multiple hydro models given, but ensemble type not specified. Check config.")
         
         elif self.config['train']['run_from_checkpoint']:
             # Reinitialize trained model(s).
             self.parameters = []
-            for mod in self.config['phy_model']['models']:
+            for mod in self.config['phy_model']['model']:
                 load_path = self.config['checkpoint'][mod]
                 self.model_dict[mod] = torch.load(load_path).to(self.config['device'])
                 self.parameters += list(self.model_dict[mod].parameters())
@@ -52,13 +52,13 @@ class ModelHandler(torch.nn.Module):
             self.init_optimizer()
 
         elif self.config['mode'] in ['test']:
-            for mod in self.config['phy_model']['models']:
+            for mod in self.config['phy_model']['model']:
                 self.load_model(mod)
 
         else:
             # Initialize differentiable hydrology model(s) and bulk optimizer.
             self.parameters = []
-            for mod in self.config['phy_model']['models']:
+            for mod in self.config['phy_model']['model']:
 
                 ### TODO: change which models are set to which devices here: ###
                 self.model_dict[mod] = dPLHydroModel(self.config, mod).to(self.config['device'])
@@ -119,5 +119,5 @@ class ModelHandler(torch.nn.Module):
         epoch : int
             Current epoch.
         """
-        for mod in self.config['phy_model']['models']:
+        for mod in self.config['phy_model']['model']:
             save_model(self.config, self.model.model_dict[mod], mod, epoch)

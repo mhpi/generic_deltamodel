@@ -77,7 +77,7 @@ class TestModel:
             prediction = self.model(dataset_sample, eval=True)
 
             # Compile predictions from each batch.
-            model_name = self.config['phy_model']['models'][0]
+            model_name = self.config['phy_model']['model'][0]
             prediction_list.append({key: tensor.cpu().detach() for key,
                                         tensor in prediction[model_name].items()})
         return prediction_list
@@ -102,8 +102,8 @@ class TestModel:
         flow_obs = observations[:, :, self.config['target'].index('00060_Mean')]
 
         # Remove warmup days for dHBV1.1p.
-        if ('hbv_v1_1p' in self.config['phy_model']['models']) and \
-        (self.config['hbvcap_no_warm']) and (self.config['ensemble_type'] == 'none'):
+        if ('hbv_v1_1p' in self.config['phy_model']['model']) and \
+        (self.config['phy_model']['use_warmup_mode']) and (self.config['ensemble_type'] == 'none'):
             pass
         else:
             flow_obs = flow_obs[self.config['phy_model']['warm_up']:, :]

@@ -103,8 +103,8 @@ def take_sample_train(config: Dict,
     flow_obs = select_subset(config, dataset_dict['obs'], i_grid, i_t,
                              config['dpl_model']['rho'], warm_up=warm_up)
     
-    if ('HBV_v1_1p' in config['phy_model']['models']) and \
-    (config['hbvcap_no_warm']) and (config['ensemble_type'] == 'none'):
+    if ('HBV_v1_1p' in config['phy_model']['model']) and \
+    (config['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
         pass
     else:
         flow_obs = flow_obs[warm_up:, :]
@@ -145,8 +145,8 @@ def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor],
             raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
 
     # Keep 'warmup' days for dHBV1.1p.
-    if ('HBV_v1_1p' in config['phy_model']['models']) and \
-    (config['hbvcap_no_warm']) and (config['ensemble_type'] == 'none'):
+    if ('HBV_v1_1p' in config['phy_model']['model']) and \
+    (config['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
         pass
     else:
         dataset_sample['obs'] = dataset_sample['obs'][config['phy_model']['warm_up']:, :]
@@ -154,156 +154,44 @@ def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor],
     return dataset_sample
 
 
-def take_sample_train_merit(config: Dict,
-                    dataset_dict: Dict[str, np.ndarray],
-                    info_dict: Dict[str, np.ndarray],
-                    ngrid_train: int,
-                    nt: int,
-                    maxNMerit: int
-                    ) -> Dict[str, torch.Tensor]:
-    """
-    Select random sample of data for training batch.
+def take_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
+                basins=100) -> Dict[str, torch.Tensor]:
+    """Take sample of data."""
+    dataset_sample = {}
+    for key, value in dataset_dict.items():
+        if value.ndim == 3:
+            if key in ['x_hydro_model', 'inputs_nn_scaled']:
+                warm_up = 0
+            else:
+                warm_up = config['phy_model']['warm_up']
+            dataset_sample[key] = value[warm_up:, i_s:i_e, :].to(config['device'])
+        elif value.ndim == 2:
+            dataset_sample[key] = value[i_s:i_e, :].to(config['device'])
+        else:
+            raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
 
-    From hydroDL for handling GAGESII + MERIT basin data.
-    """
-    subset_dims = (config['dpl_model']['batch_size'], config['dpl_model']['rho'])
-    i_grid, i_t = random_index(ngrid_train, nt, subset_dims,
-                               warm_up=config['phy_model']['warm_up'])
-        
-    gage_key_batch = np.array(info_dict['gage_key'])[i_grid]
-    area_info = info_dict['area_info']
-    merit_idx = dataset_dict['merit_idx']
-
-    ai_batch = []
-    ac_batch = []
-    id_list = []
-    start_id = 0
-
-    for gage_idx, gage in enumerate(gage_key_batch):
-        if(start_id+len(area_info[gage]['unitarea'])) > config['merit_batch_max']:
-            print("Minibatch will be shrunk to ",gage_idx," since it has nmerit of ", start_id+len(area_info[gage]['unitarea']))
-
-            iGrid=iGrid[:gage_idx]
-            i_t = i_t[:gage_idx]
-            gage_key_batch = gage_key_batch[:gage_idx]
-            
-            break
-        
-        unitarea = area_info[gage]['unitarea'] / np.array(area_info[gage]['unitarea']).sum()
-        uparea = area_info[gage]['uparea']
-        ai_batch.extend(unitarea)
-        ac_batch.extend(uparea)
-        id_list.append(range(start_id, start_id + len(unitarea)))
-        
-        start_id += len(unitarea)
-
-    if(len(ai_batch)>maxNMerit): maxNMerit = len(ai_batch)
-
-    rho = config['rho']
-    warm_up = config['phy_model']['warm_up'] 
-    
-    # Init subsets
-    x_hydro_sub =  np.full((rho + warm_up, len(ac_batch), dataset_dict['x_nn_scaled'].shape[-1]), np.nan)
-    x_nn_sub = x_hydro_sub.copy()
-    c_nn_sub = np.full((len(ac_batch), dataset_dict['c_nn_scaled'].shape[-1]),np.nan)
-    
-    idx_matrix = np.zeros((len(ai_batch),len(gage_key_batch)))
-    for gage_idx , gage in enumerate(gage_key_batch):
-        st_gage = np.array(id_list[gage_idx])
-        st_merit = np.array(merit_idx[gage]).astype(int)
-        
-        idx_matrix[st_gage, gage_idx] = 1
-        
-        x_hydro_sub[:, st_gage, :] = dataset_dict['x_hydro_model'][
-            i_t[gage_idx] - warm_up:i_t[gage_idx] + rho, st_merit, :
-        ]
-        x_nn_sub[:, st_gage, :] = dataset_dict['x_nn_scaled'][
-            i_t[gage_idx] - warm_up:i_t[gage_idx] + rho, st_merit, :
-        ]
-        c_nn_sub[st_gage, :] = dataset_dict['c_nn_scaled'][st_merit, :]
-    
-    # Combine scaled (see above) pNN inputs.
-    inputs_nn_scaled = np.concatenate((
-        x_nn_sub, 
-        np.repeat(np.expand_dims(c_nn_sub, 0), x_nn_sub.shape[0], axis=0)), axis=2
-        )
-     
-    dataset_sample = {
-        'iGrid': i_grid,
-        'inputs_nn_scaled': torch.from_numpy(inputs_nn_scaled).to(config['device']),
-        'c_nn': torch.from_numpy(c_nn_sub).to(config['device']),
-        'x_hydro_model': torch.from_numpy(x_hydro_sub).to(config['device']),
-        'obs': select_subset(config, dataset_dict['obs'], i_grid, i_t,
-                             config['rho'], warm_up=warm_up)[warm_up:],
-        'ai_batch': ai_batch,
-        'ac_batch': ac_batch,
-        'idx_matrix': idx_matrix
-    }
+    # Keep 'warmup' days for dHBV1.1p.
+    if ('HBV_v1_1p' in config['phy_model']['model']) and \
+    (config['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
+        pass
+    else:
+        dataset_sample['obs'] = dataset_sample['obs'][config['phy_model']['warm_up']:, :]
 
     return dataset_sample
 
+def numpy_to_torch_dict(data_dict: Dict[str, np.ndarray], device: str) -> Dict[str, torch.Tensor]:
+    """Convert numpy data dictionary to torch tensor dictionary.
 
-def take_sample_test_merit(config: Dict,
-                           dataset_dict: Dict[str, np.ndarray],
-                           i_s: int,
-                           i_e: int) -> Dict[str, torch.Tensor]:
+    Parameters
+    ----------
+    data_dict : Dict[str, np.ndarray]
+        The numpy data dictionary.
+    device : str
+        The device to move the data to.
     """
-    Select random sample of data for training batch.
-
-    From hydroDL for handling GAGESII + MERIT basin data.
-    """
-    COMID_batch = []
-    gage_area_batch = []
-    gage_key_batch = np.array(dataset_dict['gage_key'])[i_s:i_e]
-    area_info = dataset_dict['area_info']
-
-
-    for gage in gage_key_batch:
-        gage_area_batch.append(np.array(area_info[gage]['unitarea']).sum())
-        COMIDs = area_info[gage]['COMID']
-        COMID_batch.extend(COMIDs)
-
-    COMID_batch_unique = list(set(COMID_batch))
-    COMID_batch_unique.sort()
-
-    
-    [_, idx_batch, subidx_batch] = np.intersect1d(COMID_batch_unique,
-                                                  dataset_dict['merit_all'],
-                                                  return_indices=True)  
-
-    x_hydro_batch = dataset_dict['x_hydro_model'][:, subidx_batch,:]
-    x_nn_scaled_batch = dataset_dict['x_nn_scaled'][:, subidx_batch,:]
-    c_nn_scaled_batch = dataset_dict['c_nn_scaled'][subidx_batch,:]
-    
-    obs_batch = dataset_dict['obs'][config['phy_model']['warm_up']:, i_s:i_e]
-
-    ai_batch = dataset_dict['ai_all'][subidx_batch]
-    ac_batch = dataset_dict['ac_all'][subidx_batch]
-
-    idx_matrix = np.zeros((len(ai_batch),len(gage_key_batch)))
-    for i, gage in enumerate(gage_key_batch):
-        COMIDs = area_info[gage]['COMID']                        
-        [_, _,  subidx] = np.intersect1d(COMIDs,
-                                         np.array(COMID_batch_unique)[idx_batch],
-                                         return_indices=True)
-        idx_matrix[subidx, i] = 1/gage_area_batch[i]
-
-    # Combine pNN inputs
-    inputs_nn_scaled = np.concatenate((
-        x_nn_scaled_batch, 
-        np.repeat(np.expand_dims(c_nn_scaled_batch, 0), x_nn_scaled_batch.shape[0], axis=0)), axis=2
-        )
-     
-    dataset_sample = {
-        'inputs_nn_scaled': torch.from_numpy(inputs_nn_scaled).to(config['device']),
-        'c_nn': torch.from_numpy(c_nn_scaled_batch).to(config['device']),
-        'x_hydro_model': torch.from_numpy(x_hydro_batch).to(config['device']),
-        'obs': torch.from_numpy(obs_batch).to(config['device']),
-        'ai_batch': ai_batch,
-        'ac_batch': ac_batch,
-        'idx_matrix': idx_matrix
-    }
-
-    del x_nn_scaled_batch, c_nn_scaled_batch
-
-    return dataset_sample
+    for key, value in data_dict.items():
+        if type(value) != torch.Tensor:
+            data_dict[key] = torch.tensor(
+                value,
+                dtype=torch.float32).to(device)
+    return data_dict

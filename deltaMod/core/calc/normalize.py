@@ -166,7 +166,7 @@ def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarra
             )  ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
 
     # Forcing stats
-    var_list = config['nn_forcings']
+    var_list = config['nn_model']['forcings']
     for k, var in enumerate(var_list):
         if var in config['use_log_norm']:
             stat_dict[var] = calculate_statistics_gamma(x[:, :, k])
@@ -275,11 +275,11 @@ def trans_norm(config: Dict[str, Any], x: np.ndarray, var_lst: List[str], *, to_
 
         if to_norm:
             if len(x.shape) == 3:
-                if var in config['use_log_norm']: # 'prcp', '00060_Mean', 'combine_discharge
+                if var in config['dpl_model']['phy_model']['use_log_norm']: # 'prcp', '00060_Mean', 'combine_discharge
                     x[:, :, k] = np.log10(np.sqrt(x[:, :, k]) + 0.1)
                 out[:, :, k] = (x[:, :, k] - stat[2]) / stat[3]
             elif len(x.shape) == 2:
-                if var in config['use_log_norm']:
+                if var in config['dpl_model']['phy_model']['use_log_norm']:
                     x[:, k] = np.log10(np.sqrt(x[:, k]) + 0.1)
                 out[:, k] = (x[:, k] - stat[2]) / stat[3]
             else:
@@ -288,11 +288,11 @@ def trans_norm(config: Dict[str, Any], x: np.ndarray, var_lst: List[str], *, to_
         else:
             if len(x.shape) == 3:
                 out[:, :, k] = x[:, :, k] * stat[3] + stat[2]
-                if var in config['use_log_norm']:
+                if var in config['dpl_model']['phy_model']['use_log_norm']:
                     out[:, :, k] = (np.power(10, out[:, :, k]) - 0.1) ** 2
             elif len(x.shape) == 2:
                 out[:, k] = x[:, k] * stat[3] + stat[2]
-                if var in config['use_log_norm']:
+                if var in config['dpl_model']['phy_model']['use_log_norm']:
                     out[:, k] = (np.power(10, out[:, k]) - 0.1) ** 2
             else:
                 raise ValueError("Incorrect input dimensions. x array must have 2 or 3 dimensions.")

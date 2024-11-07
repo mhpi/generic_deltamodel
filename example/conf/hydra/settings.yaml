@@ -1,5 +1,5 @@
 help:
-    app_name: hydro-multimodel
+    app_name: generic_delaModel
     header: == ${hydra.help.app_name} ==
     template: |-
         ${hydra.help.header}

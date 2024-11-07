@@ -2,9 +2,10 @@ import torch.nn
 from hydroDL2 import load_model
 from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
+from typing import Dict
+from core.data import numpy_to_torch_dict
 
-
-class dPLHydroModel(torch.nn.Module):
+class DeltaModel(torch.nn.Module):
     """Default class for instantiating a differentiable model.
     
     Default modality: 
@@ -18,102 +19,154 @@ class dPLHydroModel(torch.nn.Module):
             The target output is compared to some observation to calculate loss
             to train the pNN.
 
-    TODO: Generalize this class to allow for different physics models.
-    """
-    def __init__(self, config, model_name):
-        super(dPLHydroModel, self).__init__()
-        self.config = config
-        self.model_name = model_name 
-        self._init_model()
+    TODO: Needs more generalization.
 
-    def _init_model(self):
-        """Initialize a physics model and a pNN."""
-        # Physics model init
-        ## TODO: Set this up as dynamic module import instead.
-        if self.model_name == 'HBV':
+    Parameters
+    ----------
+    phy_model : torch.nn.Module, optional
+        The physics model. The default is None.
+    nn_model : torch.nn.Module, optional
+        The neural network model. The default is None.
+    config : dict, optional
+        The configuration dictionary. The default is None.
+    """
+    def __init__(self, phy_model=None, nn_model=None, config=None):
+        super(DeltaModel, self).__init__()
+        self.phy_model = phy_model
+        self.nn_model = nn_model
+        self.config = config
+        self.nmul = 16
+        self.routing = True
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        if config is not None:
+            self.nmul = config['dpl_model']['nmul']
+            self.routing = config['dpl_model']['model']['routing']
+            self.device = config['device']
+        
+        if phy_model is None:
+            if config is not None:
+                self.phy_model = self._init_phy_model()
+            else:
+                raise ValueError("A physics model or configuration dictionary is required.")
+            
+        if nn_model is None:
+            if config is not None:
+                self.nn_model = self._init_nn_model()
+            else:
+                raise ValueError("A neural network or configuration dictionary is required.")
+        else:
+            self.nx = self.nn_model.nx
+            self.ny = self.nn_model.ny
+
+        self.param_bounds = self.phy_model.parameter_bounds
+        self.phy_model.to(self.device)
+        self.phy_model.device = self.device
+        self.nn_model.to(self.device)
+        self.initialized = True
+
+    def _init_phy_model(self):
+        """Initialize a physics model.
+        
+        TODO: Set this up as dynamic module import instead.
+        """
+        model_name = self. config['dpl_model']['phy_model']['model']
+
+        if model_name == 'HBV':
             self.hydro_model = load_model('HBV')
-            self.hydro_model= self.hydro_model(self.config)
-        elif self.model_name == 'HBV_v1_1p':
+            self.phy_model= self.hydro_model(self.config)
+        elif model_name == 'HBV_v1_1p':
             self.hydro_model = load_model('HBV_v1_1p')
-            self.hydro_model= self.hydro_model()
-        elif self.model_name == 'PRMS':
+            self.phy_model= self.hydro_model()
+        elif model_name == 'PRMS':
             self.hydro_model = load_model('PRMS')
-            self.hydro_model= self.hydro_model()
+            self.phy_model= self.hydro_model()
         else:
             raise ValueError(self.model_name, "is not a valid physics model.")
 
-        # Get dims of pNN model(s).
-        self.get_nn_model_dims()
+    def _init_nn_model(self):
+        """Initialize a pNN model.
         
-        # Parameterization NN (pNN) init.
-        if self.config['pnn_model']['model'] == 'LSTM':
-            self.NN_model = CudnnLstmModel(
+        TODO: Set this up as dynamic module import instead.
+        """
+        # Get input/output dimensions for nn.
+        self._get_nn_dims()
+        
+        model_name = self.config['nn_model']['model']
+
+        # Initialize the nn
+        if model_name == 'LSTM':
+            self.nn_model = CudnnLstmModel(
                 nx=self.nx,
                 ny=self.ny,
-                hiddenSize=self.config['pnn_model']['hidden_size'],
-                dr=self.config['pnn_model']['dropout']
+                hiddenSize=self.config['nn_model']['hidden_size'],
+                dr=self.config['nn_model']['dropout']
             )
-        elif self.config['pnn_model']['model'] == 'MLP':
-            self.NN_model = MLPmul(
+        elif model_name == 'MLP':
+            self.nn_model = MLPmul(
                 self.config,
                 nx=self.nx,
                 ny=self.ny
             )
         else:
-            raise ValueError(self.config['pnn_model'], "is not a valid neural network type.")
-        
-    def get_nn_model_dims(self) -> None:
-        """Return dimensions for pNNs."""
-        n_forc = len(self.config['nn_forcings'])
-        n_attr = len(self.config['nn_attributes'])
-        self.n_model_params = len(self.hydro_model.parameters_bound)
-        self.n_rout_params = len(self.hydro_model.conv_routing_hydro_model_bound)
-        
-        self.nx = n_forc + n_attr
-        self.ny = self.config['dpl_model']['nmul'] * self.n_model_params
+            raise ValueError(self.config['nn_model'], "is not a valid neural network type.")
+        return None
 
-        if self.config['routing_hydro_model'] == True:
-            self.ny += self.n_rout_params
+    def _get_nn_dims(self) -> None:
+        """Return dimensions for pNNs."""
+        # Number of variables
+        n_forcings = len(self.config['dpl_model']['nn_model']['forcings'])
+        n_attributes = len(self.config['dpl_model']['nn_model']['attributes'])
+        
+        # Number of parameters
+        n_params = len(self.param_bounds) * self.nmul
+        n_routing_params = len(self.phy_model.conv_routing_hydro_model_bound)
+        
+        # Total number of inputs and outputs for nn.
+        self.nx = n_forcings + n_attributes
+        self.ny = self.nmul * n_params
+        if self.routing == True:
+            # Add routing parameters
+            self.ny += n_routing_params
 
     def breakdown_params(self, params_all) -> None:
         """Extract physics model parameters from pNN output."""
         params_dict = dict()
-        params_hydro_model = params_all[:, :, :self.ny]
+        learned_params = params_all[:, :, :self.ny]
 
         # Hydro params
         params_dict['hydro_params_raw'] = torch.sigmoid(
-            params_hydro_model[:, :, :len(self.hydro_model.parameters_bound) * self.config['dpl_model']['nmul']]).view(
-            params_hydro_model.shape[0], params_hydro_model.shape[1], len(self.hydro_model.parameters_bound),
-            self.config['dpl_model']['nmul'])
+            learned_params[:, :, :len(self.param_bounds) * self.nmul]).view(
+                learned_params.shape[0],
+                learned_params.shape[1],
+                len(self.param_bounds),
+                self.nmul)
         
         # Routing params
-        if self.config['routing_hydro_model'] == True:
+        if self.routing == True:
             params_dict['conv_params_hydro'] = torch.sigmoid(
-                params_hydro_model[-1, :, len(self.hydro_model.parameters_bound) * self.config['dpl_model']['nmul']:])
+                learned_params[-1, :, len(self.param_bounds) * self.nmul:])
         else:
             params_dict['conv_params_hydro'] = None
         return params_dict
 
-    def forward(self, dataset_dict_sample) -> None:
+    def forward(self, data_dict: Dict[str, torch.Tensor]) -> None:
         """Forward pass for the model."""
+        # Convert numpy data to torch tensors.
+        data_dict = numpy_to_torch_dict(data_dict, self.device)
+        
         # Parameterization + unpacking for physics model.
-        params_all = self.NN_model(
-            dataset_dict_sample['inputs_nn_scaled'],
-            # tRange=t_range,
-            # seqMode=True)
+        params_all = self.nn_model(
+            data_dict['inputs_nn_scaled']
             )
         params_dict = self.breakdown_params(params_all)
         
         # Physics model
-        # NOTE: conv_params_hydro == rtwts or routpara in hydroDL
-        flow_out = self.hydro_model(
-            dataset_dict_sample['x_hydro_model'],
+        flow_out = self.phy_model(
+            data_dict['x_hydro_model'],
             params_dict['hydro_params_raw'],
-            self.config,
-            static_idx=self.config['phy_model']['stat_param_idx'],
-            warm_up=self.config['phy_model']['warm_up'],
-            routing=self.config['routing_hydro_model'],
-            conv_params_hydro=params_dict['conv_params_hydro']
+            routing_parameters = params_dict['conv_params_hydro'],
+            warm_up_mode = True
         )
 
         # Baseflow index percentage; (from Farshid)

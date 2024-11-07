@@ -254,14 +254,14 @@ def load_data(config, t_range=None, train=True):
         index_end = AllTime.get_loc(newTime[-1]) + 1
 
         attr_subset_idx = []
-        for attr in config['nn_attributes']:
+        for attr in config['dpl_model']['nn_model']['attributes']:
             if attr not in config['observations']['attributes_all']:
                 raise ValueError(f"Attribute {attr} not in the list of all attributes.")
             attr_subset_idx.append(config['observations']['attributes_all'].index(attr))
 
         forcings = np.transpose(forcing[:,index_start:index_end], (1,0,2))
         forcing_subset_idx = []
-        for forc in config['nn_forcings']:
+        for forc in config['dpl_model']['nn_model']['forcings']:
             if forc not in config['observations']['forcings_all']:
                 raise ValueError(f"Forcing {forc} not in the list of all focings.")
             forcing_subset_idx.append(config['observations']['forcings_all'].index(forc))
@@ -289,8 +289,8 @@ def load_data(config, t_range=None, train=True):
         # Original data handling for Farshid's extractions.
         forcing_dataset_class = choose_class_to_read_dataset(config, t_range, config['observations']['forcing_path'])
         # getting inputs for neural network:
-        out_dict['x_nn'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['nn_forcings'])
-        out_dict['c_nn'] = forcing_dataset_class.read_data.getDataConst(config, varLst=config['nn_attributes'])
+        out_dict['x_nn'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['dpl_model']['nn_model']['forcings'])
+        out_dict['c_nn'] = forcing_dataset_class.read_data.getDataConst(config, varLst=config['dpl_model']['nn_model']['attributes'])
         out_dict['obs'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['train']['target'])
 
         out_dict['x_hydro_model'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['phy_forcings'])
@@ -302,7 +302,7 @@ def converting_flow_from_ft3_per_sec_to_mm_per_day(config, c_NN_sample, obs_samp
     varTar_NN = config['train']['target']
     if '00060_Mean' in varTar_NN:
         obs_flow_v = obs_sample[:, :, varTar_NN.index('00060_Mean')]
-        varC_NN = config['nn_attributes']
+        varC_NN = config['dpl_model']['nn_model']['attributes']
         area_name = config['observations']['area_name']
         
         c_area = c_NN_sample[:, varC_NN.index(area_name)]
@@ -329,11 +329,11 @@ def get_dataset_dict(config, train=False):
 
     # Normalization
     x_nn_scaled = trans_norm(config, np.swapaxes(dataset_dict['x_nn'], 1, 0).copy(),
-                             var_lst=config['nn_forcings'], to_norm=True)
+                             var_lst=config['dpl_model']['nn_model']['forcings'], to_norm=True)
     x_nn_scaled[x_nn_scaled != x_nn_scaled] = 0  # Remove nans
 
     c_nn_scaled = trans_norm(config, dataset_dict['c_nn'],
-                             var_lst=config['nn_attributes'], to_norm=True) ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
+                             var_lst=config['dpl_model']['nn_model']['attributes'], to_norm=True) ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
     c_nn_scaled[c_nn_scaled != c_nn_scaled] = 0  # Remove nans
     c_nn_scaled = np.repeat(np.expand_dims(c_nn_scaled, 0), x_nn_scaled.shape[0], axis=0)
 
@@ -363,10 +363,10 @@ def extract_data(config):
     
     # Lists of forcings and attributes for nn + physics model.
     forcing_list = list(
-        dict.fromkeys(config['nn_forcings'] + config['phy_forcings'])
+        dict.fromkeys(config['nn_model']['forcings'] + config['phy_model']['forcings'])
         )
     attribute_list = list(
-        dict.fromkeys(config['nn_attributes'])
+        dict.fromkeys(config['nn_model']['attributes'])
         )
      
     out_dict = {}

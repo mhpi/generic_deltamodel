@@ -6,9 +6,10 @@ defaults:
 
 ## General -------------------------------#
 mode: train  # train, test, train_test
+ensemble_type: none
 random_seed: 111111
 device: cuda
-gpu_id: 7
+gpu_id: 0
 
 name: dmg-1.0-${observations.name}
 save_path: /data/lgl5139/project_blue_eyes/generic_diffModel/runs 
@@ -25,6 +26,12 @@ train:
     run_from_checkpoint: False
     start_epoch: 0
 
+loss_function:
+    model: RmseLossFlowComb  # RmseLossFlowComb, NseLossBatchFlow
+    weights:
+        w1: 11.0
+        w2: 1.0
+
 
 ## Testing -------------------------------#
 test:
@@ -37,34 +44,73 @@ test:
 ## dPL Model -------------------------------#
 dpl_model:
     nmul: 16
-    nearzero: 1e-5
     rho: 365
     dy_drop: 0.0
     
-phy_model:
-    models: [HBV]  # HBV, hbv_v1_1p (1.1p), marrmot_PRMS, SACSMA_with_snow
-    warm_up: 365
-    stat_param_idx: -1
-    dy_params:
-        HBV: [parBETA, parBETAET]
+    phy_model:
+        model: [HBV]  # HBV, hbv_v1_1p (1.1p), marrmot_PRMS, SACSMA_with_snow
+        warm_up: 365
+        warm_up_mode: False
+        stat_param_idx: -1
+        dy_drop: 0.0
+        dy_params:
+            HBV: [parBETA, parBETAET]
 
-pnn_model:
-    model: LSTM  # LSTM, MLP
-    dropout: 0.5
-    hidden_size: 256
-    learning_rate: 1.0
+        routing: True
+        use_log_norm: [prcp]
+        nearzero: 1e-5
 
-loss_function:
-    model: RmseLossFlowComb  # RmseLossFlowComb, NseLossBatchFlow
-    weights:
-        w1: 11.0
-        w2: 1.0
+        forcings: [
+        prcp,
+        tmean,
+        pet
+        ]
 
+    nn_model:
+        model: LSTM  # LSTM, MLP
+        dropout: 0.5
+        hidden_size: 256
+        learning_rate: 1.0
 
-
-## ------------------------------------------------#
-## Hydrology Config -------------------------------#
-routing_hydro_model: True
-use_log_norm: [prcp]  # For log normalization ('prcp' for HBV, [] otherwise)
-hbvcap_no_warm: False
-ensemble_type: none
+        forcings: [
+        prcp,
+        tmean,
+        pet
+        ]
+        attributes: [
+        p_mean,
+        pet_mean,
+        p_seasonality,
+        frac_snow,
+        aridity,
+        high_prec_freq,
+        high_prec_dur,
+        low_prec_freq,
+        low_prec_dur,
+        elev_mean,
+        slope_mean,
+        area_gages2,
+        frac_forest,
+        lai_max,
+        lai_diff,
+        gvf_max,
+        gvf_diff,
+        dom_land_cover_frac,
+        dom_land_cover,
+        root_depth_50,
+        soil_depth_pelletier,
+        soil_depth_statsgo,
+        soil_porosity,
+        soil_conductivity,
+        max_water_content,
+        sand_frac,
+        silt_frac,
+        clay_frac,
+        geol_1st_class,
+        glim_1st_class_frac,
+        geol_2nd_class,
+        glim_2nd_class_frac,
+        carbonate_rocks_frac,
+        geol_porosity,
+        geol_permeability
+        ]

@@ -6,8 +6,6 @@
 [![Actions status](https://github.com/astral-sh/ruff/workflows/CI/badge.svg)](https://github.com/astral-sh/ruff/actions)
 
 
-#### Backbone for *HydroDL2.0* w/ hydrology models (1.0 [here](https://github.com/mhpi/hydroDL))
-
 A domain-agnostic, PyTorch-based framework for developing trainable differentiable models that merge neural networks with process-based equations.
 Following as a generalization of *HydroDL*, `generic_deltaModel` (or *DeltaModel*) aims
 to expand differentiable modeling and learning capabilities to a wide variety of domains where prior equations can bring in benefits. Closely synergizes with deep learning tools and the scale advantage of PyTorch.
@@ -33,7 +31,7 @@ Explore the project's [roadmap](https://github.com/orgs/mhpi/projects/4) for pla
 ---
 
 
-### Quick Start Example: Differentiable HBV ($\delta$HBV) Model
+### Quick Start Example: Differentiable HBV ($`\delta`$HBV) Model
 
 Here’s a basic example of configuring and training a differentiable model, dHBV, which combines a neural network with a physics-based hydrological model.
 ```python
@@ -43,13 +41,13 @@ config = load_config(CONFIG_PATH)
 # Setup a dataset dictionary of NN and physics model inputs.
 dataset = get_dataset_dict(config, train=True)
 
-# Initialize physical model and neural network
+# Initialize physical model and neural network.
 phy_model = load_model(config['phy_model']['model'])
-pnn = init_pnn_model(config['pnn_model'], phy_model)
+nn = init_nn_model(phy_model, config['nn_model'])
 
 # Create the differentiable model dHBV: 
 # a torch.nn.Module that describes how nn is linked to the physical model.
-dpl_model = dHBV(phy_model, pnn)
+dpl_model = dHBV(phy_model, nn)
 
 
 # Now dpl_model can be run or trained as any torch.nn.Module model in a standard training loop.
