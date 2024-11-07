@@ -5,7 +5,7 @@ import hydra
 
 from omegaconf import DictConfig, OmegaConf
 
-sys.path.append('../../deltaMod') # Add the root directory of dMG to the path
+# sys.path.append('../../deltaModel') # Add the root directory of dMG to the path
 from core.utils import initialize_config
 
 log = logging.getLogger(__name__)

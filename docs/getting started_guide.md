@@ -1,6 +1,6 @@
 # Getting Started with *DeltaMod*
 
-Guide for users who want to begin development with *DeltaMod* (`generic_diffmodel`).
+Guide for users who want to begin development with *DeltaModel* (`generic_deltamodel`).
 
 ## 1. System Requirements
 
@@ -44,3 +44,4 @@ For a functioning build,
 - If CUDA is not available, uninstall PyTorch from the env and reinstall according to your system specifications [here](https://pytorch.org/get-started/locally/).
 
 ---
+

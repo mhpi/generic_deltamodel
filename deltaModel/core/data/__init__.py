@@ -30,7 +30,7 @@ def calc_training_params(x: np.ndarray, t_range: Tuple[int, int],
         np.ceil(
             np.log(0.01)
             / np.log(1 - config['train']['batch_size'] * rho / ngrid
-                     / (nt - config['phy_model']['warm_up']))
+                     / (nt - config['dpl_model']['phy_model']['warm_up']))
         )
     )
     return ngrid, n_iter_ep, nt,
