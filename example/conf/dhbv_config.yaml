@@ -9,7 +9,7 @@ mode: train  # train, test, train_test
 ensemble_type: none
 random_seed: 111111
 device: cuda
-gpu_id: 0
+gpu_id: 7
 
 name: dmg-1.0-${observations.name}
 save_path: /data/lgl5139/project_blue_eyes/generic_diffModel/results 
@@ -18,7 +18,7 @@ save_path: /data/lgl5139/project_blue_eyes/generic_diffModel/results
 ## Training -------------------------------#
 train:
     start_time: 1999/10/01
-    end_time: 2008/10/01
+    end_time: 2008/09/30
     target: [00060_Mean]
     batch_size: 100
     epochs: 50
@@ -36,7 +36,7 @@ loss_function:
 ## Testing -------------------------------#
 test:
     start_time: 1989/10/01
-    end_time: 1999/10/01
+    end_time: 1999/09/30
     batch_size: 25
     test_epoch: 50
 
@@ -50,7 +50,7 @@ dpl_model:
     phy_model:
         model: [HBV]  # HBV, hbv_v1_1p (1.1p), marrmot_PRMS, SACSMA_with_snow
         warm_up: 365
-        warm_up_mode: False
+        warm_up_mode: True
         stat_param_idx: -1
         dy_drop: 0.0
         dy_params:
@@ -65,6 +65,7 @@ dpl_model:
         tmean,
         pet
         ]
+        
 
     nn_model:
         model: LSTM  # LSTM, MLP

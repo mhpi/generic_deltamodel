@@ -2,8 +2,8 @@ import os
 from typing import Dict
 
 import torch.nn
-from models.differentiable_model import DeltaModel
 from core.utils import save_model
+from models.differentiable_model import DeltaModel
 
 
 class ModelHandler(torch.nn.Module):

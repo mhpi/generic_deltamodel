@@ -1,9 +1,13 @@
+from typing import Dict
+
 import torch.nn
 from hydroDL2 import load_model
-from models.neural_networks.lstm_models import CudnnLstmModel
-from models.neural_networks.mlp_models import MLPmul
-from typing import Dict
-from core.data import numpy_to_torch_dict
+
+from deltaModel.core.data import numpy_to_torch_dict
+from deltaModel.models.neural_networks.lstm_models import CudnnLstmModel
+from deltaModel.models.neural_networks.mlp_models import MLPmul
+
+
 
 class DeltaModel(torch.nn.Module):
     """Default class for instantiating a differentiable model.

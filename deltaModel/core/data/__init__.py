@@ -3,7 +3,8 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 import torch
-from core.utils.time import trange_to_array
+
+from deltaModel.core.utils.time import trange_to_array
 
 log = logging.getLogger(__name__)
 

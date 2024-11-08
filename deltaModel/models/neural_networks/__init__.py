@@ -5,10 +5,10 @@ from typing import Callable, Dict
 
 import torch
 import torch.nn as nn
-from conf.config import InitalizationEnum
 
-from models.neural_networks.lstm_models import CudnnLstmModel
-from models.neural_networks.mlp_models import MLPmul
+from deltaModel.conf.config import InitalizationEnum
+from deltaModel.models.neural_networks.lstm_models import CudnnLstmModel
+from deltaModel.models.neural_networks.mlp_models import MLPmul
 
 log = logging.getLogger(__name__)
 

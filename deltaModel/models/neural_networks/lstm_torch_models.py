@@ -9,10 +9,8 @@ TODO: debug and test against original.
 """
 import torch
 import torch.nn.functional as F
-from torch.nn import Parameter
-
 from models.neural_networks.dropout import DropMask, createMask
-
+from torch.nn import Parameter
 
 
 class CudnnLstm(torch.nn.LSTM):

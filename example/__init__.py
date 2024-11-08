@@ -1,12 +1,12 @@
 import logging
 import os
 import sys
-import hydra
 
+import hydra
 from omegaconf import DictConfig, OmegaConf
 
 # sys.path.append('../../deltaModel') # Add the root directory of dMG to the path
-from core.utils import initialize_config
+from deltaModel.core.utils import initialize_config
 
 log = logging.getLogger(__name__)
 

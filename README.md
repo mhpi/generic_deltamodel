@@ -1,4 +1,4 @@
-## Generic, Scalable Differentiable Modeling Framework
+# Generic, Scalable Differentiable Modeling Framework
 
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![image](https://img.shields.io/pypi/l/ruff.svg)](https://github.com/astral-sh/ruff/blob/main/LICENSE)
@@ -8,8 +8,11 @@
 
 A domain-agnostic, PyTorch-based framework for developing trainable differentiable models that merge neural networks with process-based equations.
 Following as a generalization of *HydroDL*, `generic_deltaModel` (or *DeltaModel*) aims
-to expand differentiable modeling and learning capabilities to a wide variety of domains where prior equations can bring in benefits. Closely synergizes with deep learning tools and the scale advantage of PyTorch.
+to expand differentiable modeling and learning capabilities to a wide variety of domains where prior equations can bring in benefits.
 
+Closely synergizes with deep learning tools and the scale advantage of PyTorch.
+
+<br>
 
 ### Key Features
 - **Hybrid Modeling**: Combines neural networks with physical process equations for enhanced interpretability and generalizability.
@@ -18,22 +21,24 @@ to expand differentiable modeling and learning capabilities to a wide variety of
 
 - **Domain-agnostic Flexibility**: While originally designed for hydrology, DeltaModel extends to other fields where physics-guided learning can add value.
 
+<br>
 
 ### Ecosystem Integration
 For differentiable hydrology models used in MHPI research, DeltaModel seamlessly integrates with:
 
-- **HydroDL2.0 ([`hydroDL2`](https://github.com/mhpi/hydroDL2))**: Home to MHPI's suite of physics-based hydrology models, and differentiable model augmentations (think variational data assimilation, model coupling, and additional physics-based hydrology tools).
-- **HydroData ([`hydro_data_dev`](https://github.com/mhpi/hydro_data_dev))**: Data extraction, processing, and management tools optimized for hydrology applications.
+- **HydroDL2.0 ([`hydroDL2`](https://github.com/mhpi/hydroDL2))**: Home to MHPI's suite of physics-based hydrology models, and differentiable model augmentations (think variational data
+      assimilation, model coupling, and additional physics-based hydrology tools).
+- **HydroData ([`hydro_data_dev`](https://github.com/mhpi/hydro_data_dev))**: Data extraction, processing, and management tools optimized for hydrology applications. [*In development*]
 
 
 Explore the project's [roadmap](https://github.com/orgs/mhpi/projects/4) for planned features and future improvements.
 
----
+<br>
 
+## Quick Start: Buidling a Differentiable HBV ($\delta$ HBV) Model
 
-### Quick Start Example: Differentiable HBV ($`\delta`$HBV) Model
-
-Here’s a basic example of configuring and training a differentiable model, dHBV, which combines a neural network with a physics-based hydrological model.
+Here’s an example of how you can build a differentiable model, coupling a physics-based model with a neural network to intelligently learn model parameters. In this instance, we use an
+LSTM with the [HBV](https://en.wikipedia.org/wiki/HBV_hydrology_model) hydrology model.
 ```python
 # Load configuration dictionary of model parameters and options
 config = load_config(CONFIG_PATH)
