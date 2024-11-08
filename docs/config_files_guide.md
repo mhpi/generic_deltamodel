@@ -25,3 +25,6 @@
 - [Enter here] -->
 
 
+
+<!-- 2. Either run `python dMG/__main__.py` in your terminal, or (recommended) run the contents of `__main__.py` in the cells below.
+    - This will parse your config into a dictionary, load the HBV1.1p hydrology model, and begin training or testing. -->

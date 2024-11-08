@@ -32,4 +32,5 @@ tmp/
 # Other Directories
 archive/
 runs/
+results/
 ngen/

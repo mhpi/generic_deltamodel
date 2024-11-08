@@ -1,6 +1,7 @@
-# Getting Started with *DeltaMod*
+# Getting Started with *HydroDL2*
 
-Guide for users who want to begin development with *DeltaModel* (`generic_deltamodel`).
+Guide for beginning development with differentiable hydrology models in *DeltaMod* (`generic_deltamodel`).
+
 
 ## 1. System Requirements
 
@@ -11,19 +12,22 @@ Guide for users who want to begin development with *DeltaModel* (`generic_deltam
 
 ## 2. Steps for Setup
 
-For a functioning build, 
+For a functioning *DeltaMod* + *HydroDL2* build, 
 
-### Clone the Repository
-- Open a terminal on your system, navigate to the directory where *DeltaMod* will be stored, and clone:
+
+### Clone the Repositories
+- Open a terminal on your system, navigate to the directory where *DeltaMod* and *HydroDL2* will be stored, and clone:
   
     ```shell
     git clone https://github.com/mhpi/generic_diffModel.git
+    git clone https://github.com/mhpi/hydroDL2.git
     ```
 - Your install directory should now look like:
 
     .
     ├── generic_deltaModel/
     └── hydroDL2/ 
+
 
 ### Install the ENV
 - A minimal package list is included with *DeltaMod* for getting started with differentiable models: `generic_deltaModel/envs/deltamod_env.yaml`.
@@ -41,7 +45,24 @@ For a functioning build,
      import torch
      print(torch.cuda.is_available())
      ```
-- If CUDA is not available, uninstall PyTorch from the env and reinstall according to your system specifications [here](https://pytorch.org/get-started/locally/).
+- If CUDA is not available, uninstall PyTorch from the env and reinstall according to your system specifications [here](https://pytorch.org/get-started/locally/). E.g.,
+     ```shell
+     conda uninstall pytorch
+     conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+     ```
+
+
+### Install *HydroDL2*
+- To have the *HydroDL2* package accessible within *DeltaMod*, install with pip like so (optionally, include the `-e` flag to install with (hatch's) developer mode):
+     ```shell
+     cd hydroDL2
+     pip install .
+     ```
+     or
+  
+     ```shell
+     cd hydroDL2
+     pip install -e .
+     ```
 
 ---
-
