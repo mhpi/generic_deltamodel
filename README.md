@@ -10,7 +10,7 @@ A domain-agnostic, PyTorch-based framework for developing trainable differentiab
 Following as a generalization of *HydroDL*, `generic_deltaModel` (or *DeltaModel*) aims
 to expand differentiable modeling and learning capabilities to a wide variety of domains where prior equations can bring in benefits.
 
-Closely synergizes with deep learning tools and the scale advantage of PyTorch.
+Closely synergizes with deep learning tools and the scale advantage of PyTorch. Maintained by ([`MHPI group`](https://mhpi.info/)) advised by Dr. Chaopeng Shen.
 
 <br>
 
@@ -36,10 +36,19 @@ Explore the project's [roadmap](https://github.com/orgs/mhpi/projects/4) for pla
 <br>
 
 ### The overall idea
-We define a "differentiable model" class which describes how neural networks and the process-based model are coupled. This class holds NNs and process-based models as attributes and can be trained and forwarded just as any other PyTorch model (nn.Module). We define classes to handle datasets (dataset class), various train/test experiments (trainer), multimodel handling and multi-GPU training (model handler), data assimilation and streaming in a uniform and modular way. All training and simulations can be specified by a config file to be adapted to custom applications.
+We define a "differentiable model" (dModel) class which describes how neural networks and the process-based model are coupled. "Differentiable" means that gradient calculations can be achieved efficiently at large scale throughout the model, so process-based equations can be trained together with NNs on big data, on GPU. dModel holds NNs and process-based models as attributes and can be trained and forwarded just as any other PyTorch model (nn.Module). We define classes to handle datasets (dataset class), various train/test experiments (trainer), multimodel handling and multi-GPU training (model handler), data assimilation and streaming in a uniform and modular way. All training and simulations can be specified by a config file to be adapted to custom applications. it is in our roadmap to incorporate an interface to 3rd party differentiable numerical solvers like torchode and torchdiffeq.
+
+According to the schema, we define these core classes, from bottom up:
+
+- **NN**: Neural networks that can provide either parameters, missing process representations, corrections or other forms of enhancements to process-based models.
+- **phy_model**: The physical model written in PyTorch (or potentially other interoperable differentiable platform).
+- **dModel**: Holds (one or multiple) NNs and (one or multiple) phy_model and describe how they are coupled; connection to ODE packages.
+- **model_handler**: Manages ensemble model, multi-GPU compute, and data assimilation or streaming. Can contain its own optimizers. Interface to BMI or other interfaces.
+- **Trainer**: Manages the train and test of models and connects data to model.
+- **dataset**: Manages data ingestion in a unified format; support multiple file formats.
 
 <br>
-## Quick Start: Building a Differentiable HBV ($\delta$ HBV) Model
+### Quick Start: Building a Differentiable HBV ($\delta$ HBV) Model
 
 Here’s an example of how you can build a differentiable model, coupling a physics-based model with a neural network to intelligently learn model parameters. In this instance, we use an
 LSTM with the [HBV](https://en.wikipedia.org/wiki/HBV_hydrology_model) hydrology model.
@@ -65,6 +74,9 @@ dpl_model = dHBV(phy_model, nn)
 output = dpl_model.forward(dataset, config['dpl_model'])
 ```
 
+### Use cases
+This package powers the global- and  ([`national-scale water model`](https://doi.org/10.22541/essoar.172736277.74497104/v1)) that provide high-quality seamless hydrologic simulations over US. and the world.
+It also hosts ([`global-scale photosynthesis learning and simulations`]([https://doi.org/10.22541/essoar.172736277.74497104/v1](https://doi.org/10.22541/au.173101418.87755465/v1))) 
 
 ### Contributing:
 We welcome contributions! Please submit changes via a fork and pull request. For more details, refer to docs/CONTRIBUTING.md.
