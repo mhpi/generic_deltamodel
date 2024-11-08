@@ -1,12 +1,10 @@
 from typing import Dict
 
 import torch.nn
+from core.data import numpy_to_torch_dict
 from hydroDL2 import load_model
-
-from deltaModel.core.data import numpy_to_torch_dict
-from deltaModel.models.neural_networks.lstm_models import CudnnLstmModel
-from deltaModel.models.neural_networks.mlp_models import MLPmul
-
+from models.neural_networks.lstm_models import CudnnLstmModel
+from models.neural_networks.mlp_models import MLPmul
 
 
 class DeltaModel(torch.nn.Module):
@@ -80,15 +78,14 @@ class DeltaModel(torch.nn.Module):
         """
         if self.phy_model_name == 'HBV':
             self.hydro_model = load_model('HBV')
-            self.phy_model= self.hydro_model(self.config)
         elif self.phy_model_name == 'HBV_v1_1p':
             self.hydro_model = load_model('HBV_v1_1p')
-            self.phy_model= self.hydro_model()
         elif self.phy_model_name == 'PRMS':
             self.hydro_model = load_model('PRMS')
-            self.phy_model= self.hydro_model()
         else:
             raise ValueError(self.model_name, "is not a valid physics model.")
+        
+        self.phy_model= self.hydro_model(self.config)
 
     def _init_nn_model(self):
         """Initialize a pNN model.

@@ -3,8 +3,7 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 import torch
-
-from deltaModel.core.utils.time import trange_to_array
+from core.utils.time import trange_to_array
 
 log = logging.getLogger(__name__)
 
@@ -104,11 +103,11 @@ def take_sample_train(config: Dict,
     flow_obs = select_subset(config, dataset_dict['obs'], i_grid, i_t,
                              config['dpl_model']['rho'], warm_up=warm_up)
     
-    if ('HBV_v1_1p' in config['dpl_model']['phy_model']['model']) and \
-    (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
-        pass
-    else:
-        flow_obs = flow_obs[warm_up:, :]
+    # if ('HBV_v1_1p' in config['dpl_model']['phy_model']['model']) and \
+    # (config['dpl_model']['phy_model']['warm_up_states']) and (config['ensemble_type'] == 'none'):
+    #     pass
+    # else:
+    flow_obs = flow_obs[warm_up:, :]
     
     # Create dataset sample dict.
     dataset_sample = {
@@ -194,6 +193,6 @@ np.ndarray], device: str) -> Dict[str, torch.Tensor]:
     for key, value in data_dict.items():
         if type(value) != torch.Tensor:
             data_dict[key] = torch.tensor(
-                value,
+                value.copy(),  #
                 dtype=torch.float32).to(device)
     return data_dict

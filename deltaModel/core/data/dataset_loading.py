@@ -6,10 +6,9 @@ from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
 import torch
-
-from deltaModel.core.calc.normalize import init_norm_stats, trans_norm
-from deltaModel.core.utils.dates import Dates
-from deltaModel.core.utils.time import trange_to_array
+from core.calc.normalize import init_norm_stats, trans_norm
+from core.utils.dates import Dates
+from core.utils.time import trange_to_array
 
 
 class Data_Reader(ABC):

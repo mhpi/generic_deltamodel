@@ -1,4 +1,4 @@
-import numpy as np
+fuimport numpy as np
 import torch
 
 
@@ -20,7 +20,7 @@ class NseLossBatchFlow(torch.nn.Module):
         varTar_NN = config['train']["target"]
         sim_flow = y_sim["flow_sim"].squeeze()
         obs_flow = y_obs[:, :, varTar_NN.index("00060_Mean")]
-
+        igrid = igrid.cpu().detach().numpy().astype(int)
         if len(obs_flow) > 0:
             nt = obs_flow.shape[0]
             stdse = np.tile(self.std[igrid].T, (nt, 1))
