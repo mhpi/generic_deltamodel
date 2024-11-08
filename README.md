@@ -6,7 +6,7 @@
 [![Actions status](https://github.com/astral-sh/ruff/workflows/CI/badge.svg)](https://github.com/astral-sh/ruff/actions)
 
 
-A domain-agnostic, PyTorch-based framework for developing trainable differentiable models that merge neural networks with process-based equations.
+A domain-agnostic, PyTorch-based framework for developing trainable differentiable models that merge neural networks with process-based equations. "Differentiable" means that gradient calculations can be achieved efficiently at large scale throughout the model, so process-based equations can be trained together with NNs on big data, on GPU. 
 Following as a generalization of *HydroDL*, `generic_deltaModel` (or *DeltaModel*) aims
 to expand differentiable modeling and learning capabilities to a wide variety of domains where prior equations can bring in benefits.
 
@@ -17,7 +17,7 @@ Closely synergizes with deep learning tools and the scale advantage of PyTorch. 
 ### Key Features
 - **Hybrid Modeling**: Combines neural networks with physical process equations for enhanced interpretability and generalizability.
 
-- **PyTorch Integration**: Easily scales with PyTorch, enabling efficient training and compatibility with modern deep learning tools.
+- **PyTorch Integration**: Easily scales with PyTorch, enabling efficient training and compatibility with modern deep learning tools, trained foundation models, differentiable numerical solvers.
 
 - **Domain-agnostic Flexibility**: While originally designed for hydrology, DeltaModel extends to other fields where physics-guided learning can add value.
 
@@ -36,7 +36,7 @@ Explore the project's [roadmap](https://github.com/orgs/mhpi/projects/4) for pla
 <br>
 
 ### The overall idea
-We define a "differentiable model" (dModel) class which describes how neural networks and the process-based model are coupled. "Differentiable" means that gradient calculations can be achieved efficiently at large scale throughout the model, so process-based equations can be trained together with NNs on big data, on GPU. dModel holds NNs and process-based models as attributes and can be trained and forwarded just as any other PyTorch model (nn.Module). We define classes to handle datasets (dataset class), various train/test experiments (trainer), multimodel handling and multi-GPU training (model handler), data assimilation and streaming in a uniform and modular way. All training and simulations can be specified by a config file to be adapted to custom applications. it is in our roadmap to incorporate an interface to 3rd party differentiable numerical solvers like torchode and torchdiffeq.
+We define a "differentiable model" (dModel) class which describes how neural networks and the process-based model are coupled. dModel holds NNs and process-based models as attributes and can be trained and forwarded just as any other PyTorch model (nn.Module). We define classes to handle datasets (dataset class), various train/test experiments (trainer), multimodel handling and multi-GPU training (model handler), data assimilation and streaming in a uniform and modular way. All training and simulations can be specified by a config file to be adapted to custom applications. it is in our roadmap to incorporate an interface to 3rd party differentiable numerical solvers like torchode and torchdiffeq.
 
 According to the schema, we define these core classes, from bottom up:
 
@@ -75,8 +75,8 @@ output = dpl_model.forward(dataset, config['dpl_model'])
 ```
 
 ### Use cases
-This package powers the global- and  ([`national-scale water model`](https://doi.org/10.22541/essoar.172736277.74497104/v1)) that provide high-quality seamless hydrologic simulations over US. and the world.
-It also hosts ([`global-scale photosynthesis learning and simulations`]([https://doi.org/10.22541/essoar.172736277.74497104/v1](https://doi.org/10.22541/au.173101418.87755465/v1))) 
+This package powers the global- and  ([`national-scale water model`](https://doi.org/10.22541/essoar.172736277.74497104/v1)) that provide high-quality seamless hydrologic simulations over US and the world.
+It also hosts ([`global-scale photosynthesis `](https://doi.org/10.22541/au.173101418.87755465/v1)) learning and simulations
 
 ### Contributing:
 We welcome contributions! Please submit changes via a fork and pull request. For more details, refer to docs/CONTRIBUTING.md.
