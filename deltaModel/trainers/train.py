@@ -61,7 +61,7 @@ class TrainModel:
         self.model.loss_fn = self.loss_fn
         self.optim = torch.optim.Adadelta(
             self.model.parameters,
-            lr=self.config['nn_model']['learning_rate']
+            lr=self.config['dpl_model']['nn_model']['learning_rate']
             )
 
         if self.config['train']['run_from_checkpoint']:

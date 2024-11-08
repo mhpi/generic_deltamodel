@@ -1,38 +1,40 @@
-from code import interact
-import json
 import os
-import pickle
 from abc import ABC, abstractmethod
 
 import numpy as np
 import pandas as pd
 import torch
-from core.calc.normalize import init_norm_stats, trans_norm
-from core.utils.dates import Dates
+import pickle
+import zarr
+import json
+
+from core.utils.Dates import Dates
 from core.utils.time import trange_to_array
+from core.calc.normalize import init_norm_stats, trans_norm
+
 
 
 class Data_Reader(ABC):
     @abstractmethod
-    def getDataTs(self, config, varLst, doNorm=True, rmNan=True):
+    def getDataTs(self, args, varLst, doNorm=True, rmNan=True):
         raise NotImplementedError
 
     @abstractmethod
-    def getDataConst(self, config, varLst, doNorm=True, rmNan=True):
+    def getDataConst(self, args, varLst, doNorm=True, rmNan=True):
         raise NotImplementedError
 
 
 class DataFrame_dataset(Data_Reader):
-    def __init__(self, config, tRange, data_path, attr_path=None):
+    def __init__(self, args, tRange, data_path, attr_path=None):
         self.time = trange_to_array(tRange)
-        self.config = config
+        self.args = args
         self.inputfile = data_path
         if attr_path == None:
-            self.inputfile_attr = os.path.join(os.path.realpath(self.config['observations']['attr_path']))  # the static data
+            self.inputfile_attr = os.path.join(os.path.realpath(self.args['observations']['attr_path']))  # the static data
         else:
             self.inputfile_attr = os.path.join(os.path.realpath(attr_path))  # the static data
 
-    def getDataTs(self, config, varLst, doNorm=True, rmNan=True):
+    def getDataTs(self, args, varLst, doNorm=True, rmNan=True):
         if type(varLst) is str:
             varLst = [varLst]
 
@@ -46,8 +48,8 @@ class DataFrame_dataset(Data_Reader):
             print("data type is not supported")
             exit()
         sites = dfMain['site_no'].unique()
-        tLst = trange_to_array(config['t_range'])
-        tLstobs = trange_to_array(config['t_range'])
+        tLst = trange_to_array(args['t_range'])
+        tLstobs = trange_to_array(args['t_range'])
         # nt = len(tLst)
         ntobs = len(tLstobs)
         nNodes = len(sites)
@@ -79,7 +81,7 @@ class DataFrame_dataset(Data_Reader):
         data = data[:, ind2, :]
         return np.swapaxes(data, 1, 0)
 
-    def getDataConst(self, config, varLst, doNorm=True, rmNan=True):
+    def getDataConst(self, args, varLst, doNorm=True, rmNan=True):
         if type(varLst) is str:
             varLst = [varLst]
         
@@ -87,7 +89,7 @@ class DataFrame_dataset(Data_Reader):
             # correct typo
             varLst[varLst.index('geol_porosity')] = 'geol_porostiy'
 
-        inputfile = os.path.join(os.path.realpath(config['observations']['forcing_path']))
+        inputfile = os.path.join(os.path.realpath(args['observations']['forcing_path']))
         if self.inputfile_attr.endswith('.csv'):
             dfMain = pd.read_csv(self.inputfile)
             dfC = pd.read_csv(self.inputfile_attr)
@@ -119,16 +121,16 @@ class DataFrame_dataset(Data_Reader):
 
 
 class numpy_dataset(Data_Reader):
-    def __init__(self, config, tRange, data_path, attr_path=None):
+    def __init__(self, args, tRange, data_path, attr_path=None):
         self.time = trange_to_array(tRange)
-        self.config = config
+        self.args = args
         self.inputfile = data_path   # the dynamic data
         if attr_path == None:
-            self.inputfile_attr = os.path.join(os.path.realpath(self.config['observations']['attr_path']))  # the static data
+            self.inputfile_attr = os.path.join(os.path.realpath(self.args['observations']['attr_path']))  # the static data
         else:
             self.inputfile_attr = os.path.join(os.path.realpath(attr_path))  # the static data
         # These are default forcings and attributes that are read from the dataset
-        self.all_forcings_name = ['prcp', 'tmean', 'pet', 'Lwd', 'PET_hargreaves(mm/day)', 'prcp(mm/day)'
+        self.all_forcings_name = ['Lwd', 'PET_hargreaves(mm/day)', 'prcp(mm/day)',
                                 'Pres', 'RelHum', 'SpecHum', 'srad(W/m2)',
                                 'tmean(C)', 'tmax(C)', 'tmin(C)', 'Wind', 'ccov',
                                 'vp(Pa)', '00060_Mean', '00010_Mean','dayl(s)']  #
@@ -139,7 +141,7 @@ class numpy_dataset(Data_Reader):
                              'snowfall_fraction','T_clay','T_gravel','T_sand', 'T_silt','Porosity',
                              'DRAIN_SQKM', 'lat', 'site_no_int', 'stream_length_square', 'lon']
 
-    def getDataTs(self, config, varLst, doNorm=True, rmNan=True):
+    def getDataTs(self, args, varLst, doNorm=True, rmNan=True):
         if type(varLst) is str:
             varLst = [varLst]
        # TODO: looking for a way to read different types of attr + forcings together
@@ -177,15 +179,15 @@ class numpy_dataset(Data_Reader):
             x = np.concatenate((x, xattr), axis=2)
 
         data = x
-        tLst = trange_to_array(config["tRange"])
+        tLst = trange_to_array(args["tRange"])
         C, ind1, ind2 = np.intersect1d(self.time, tLst, return_indices=True)
         data = data[:, ind2, :]
         return np.swapaxes(data, 1, 0)
 
-    def getDataConst(self, config, varLst, doNorm=True, rmNan=True):
+    def getDataConst(self, args, varLst, doNorm=True, rmNan=True):
         if type(varLst) is str:
             varLst = [varLst]
-        # inputfile = os.path.join(os.path.realpath(config['attr_path']))
+        # inputfile = os.path.join(os.path.realpath(args['attr_path']))
         if self.inputfile_attr.endswith('.npy'):
             dfC = np.load(self.inputfile_attr)
         elif self.inputfile_attr.endswith('.pt'):
@@ -212,74 +214,55 @@ class numpy_dataset(Data_Reader):
 
 
 class choose_class_to_read_dataset():
-    def __init__(self, config, trange, data_path):
-        self.config = config
+    def __init__(self, args, trange, data_path):
+        self.args = args
         self.trange = trange
         self.data_path = data_path
         self._get_dataset_class()
         
     def _get_dataset_class(self) -> None:
         if self.data_path.endswith(".feather") or self.data_path.endswith(".csv"):
-            self.read_data = DataFrame_dataset(config=self.config, tRange=self.trange, data_path=self.data_path)
+            self.read_data = DataFrame_dataset(args=self.args, tRange=self.trange, data_path=self.data_path)
         elif self.data_path.endswith(".npy") or self.data_path.endswith(".pt"):
-            self.read_data = numpy_dataset(config=self.config, tRange=self.trange, data_path=self.data_path)
+            self.read_data = numpy_dataset(args=self.args, tRange=self.trange, data_path=self.data_path)
 
 
 def load_data(config, t_range=None, train=True):
-    """ Load data into dictionaries for pNN and hydro model. """
+    """
+    Load data into dictionaries for pNN and hydro model.
+    """
     if t_range == None:
         t_range = config['t_range']
 
     out_dict = dict()
 
-    if config['observations']['name'] in ['camels_671', 'camels_531']:
+    if config['observations']['name'] in ['camels_671_yalan', 'camels_531_yalan']:
         if train:
             with open(config['observations']['train_path'], 'rb') as f:
-                forcing, target, attributes = pickle.load(f)
+                forcing, target, attr = pickle.load(f)
             
-            startdate =config['train']['start_time']
-            enddate = config['train']['end_time']
+            startYear = str(config['train_t_range'][0])[:4]
+            endYear = str(config['train_t_range'][1])[:4]
             
         else:
             with open(config['observations']['train_path'], 'rb') as f:
-                forcing, target, attributes = pickle.load(f)
-        
-            startdate =config['test']['start_time']
-            enddate = config['test']['end_time']
+                forcing, target, attr = pickle.load(f)
             
-        all_time = pd.date_range(config['observations']['start_date_all'], config['observations']['end_date_all'], freq='d')
-        new_time = pd.date_range(startdate, enddate, freq='d')
+            startYear = str(config['test_t_range'][0])[:4]
+            endYear = str(config['test_t_range'][1])[:4]
         
-        index_start = all_time.get_loc(new_time[0])
-        index_end = all_time.get_loc(new_time[-1]) + 1
-
-        # Subset forcings and attributes.
-        attr_subset_idx = []
-        for attr in config['dpl_model']['nn_model']['attributes']:
-            if attr not in config['observations']['attributes_all']:
-                raise ValueError(f"Attribute {attr} not in the list of all attributes.")
-            attr_subset_idx.append(config['observations']['attributes_all'].index(attr))
-
-        forcings = np.transpose(forcing[:,index_start:index_end], (1,0,2))
-        forcing_subset_idx = []
-        for forc in config['dpl_model']['nn_model']['forcings']:
-            if forc not in config['observations']['forcings_all']:
-                raise ValueError(f"Forcing {forc} not in the list of all forcings.")
-            forcing_subset_idx.append(config['observations']['forcings_all'].index(forc))
+        AllTime = pd.date_range('1980-10-01', f'2014-09-30', freq='d')
+        newTime = pd.date_range(f'{startYear}-10-01', f'{endYear}-09-30', freq='d')
         
-        forcing_phy_subset_idx = []
-        for forc in config['dpl_model']['phy_model']['forcings']:
-            if forc not in config['observations']['forcings_all']:
-                raise ValueError(f"Forcing {forc} not in the list of all forcings.")
-            forcing_phy_subset_idx.append(config['observations']['forcings_all'].index(forc))
+        index_start = AllTime.get_loc(newTime[0])
+        index_end = AllTime.get_loc(newTime[-1]) + 1
 
-        out_dict['x_nn'] = forcings[:,:, forcing_subset_idx]  # Forcings for neural network (note, slight error from indexing)
-        out_dict['x_phy'] = forcings[:,:, forcing_phy_subset_idx]  # Forcings for physics model
-        out_dict['c_nn'] = attributes[:, attr_subset_idx] # Attributes
+        out_dict['x_nn'] = np.transpose(forcing[:,index_start:index_end], (1,0,2))  # Forcings
+        out_dict['c_nn'] = attr # Attributes
         out_dict['obs'] = np.transpose(target[:,index_start:index_end], (1,0,2))  # Observation target
         
         ## For running a subset (531 basins) of CAMELS.
-        if config['observations']['name'] == 'camels_531':
+        if config['observations']['name'] == 'camels_531_yalan':
             gage_info = np.load(config['observations']['gage_info'])
 
             with open(config['observations']['subset_path'], 'r') as f:
@@ -288,30 +271,31 @@ def load_data(config, t_range=None, train=True):
             [C, Ind, subset_idx] = np.intersect1d(selected_camels, gage_info, return_indices=True)
 
             out_dict['x_nn'] = out_dict['x_nn'][:, subset_idx, :]
-            out_dict['x_phy'] = out_dict['x_phy'][:, subset_idx, :]
             out_dict['c_nn'] = out_dict['c_nn'][subset_idx, :]
             out_dict['obs'] = out_dict['obs'][:, subset_idx, :]
             
-        out_dict['x_hydro_model'] = out_dict['x_phy']
+        out_dict['x_hydro_model'] = out_dict['x_nn']
+        out_dict['c_hydro_model'] = out_dict['c_nn']  # just a placeholder.
 
     else:
         # Original data handling for Farshid's extractions.
         forcing_dataset_class = choose_class_to_read_dataset(config, t_range, config['observations']['forcing_path'])
         # getting inputs for neural network:
-        out_dict['x_nn'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['dpl_model']['nn_model']['forcings'])
-        out_dict['c_nn'] = forcing_dataset_class.read_data.getDataConst(config, varLst=config['dpl_model']['nn_model']['attributes'])
-        out_dict['obs'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['train']['target'])
+        out_dict['x_nn'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['observations']['var_t_nn'])
+        out_dict['c_nn'] = forcing_dataset_class.read_data.getDataConst(config, varLst=config['observations']['var_c_nn'])
+        out_dict['obs'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['target'])
 
-        out_dict['x_hydro_model'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['phy_forcings'])
+        out_dict['x_hydro_model'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['observations']['var_t_hydro_model'])
+        out_dict['c_hydro_model'] = forcing_dataset_class.read_data.getDataConst(config, varLst=config['observations']['var_c_hydro_model'])
     
     return out_dict
 
 
 def converting_flow_from_ft3_per_sec_to_mm_per_day(config, c_NN_sample, obs_sample):
-    varTar_NN = config['train']['target']
+    varTar_NN = config['target']
     if '00060_Mean' in varTar_NN:
         obs_flow_v = obs_sample[:, :, varTar_NN.index('00060_Mean')]
-        varC_NN = config['dpl_model']['nn_model']['attributes']
+        varC_NN = config['observations']['var_c_nn']
         area_name = config['observations']['area_name']
         
         c_area = c_NN_sample[:, varC_NN.index(area_name)]
@@ -320,13 +304,17 @@ def converting_flow_from_ft3_per_sec_to_mm_per_day(config, c_NN_sample, obs_samp
     return obs_sample
 
 
-def get_dataset_dict(config, train=False):
+def get_data_dict(config, train=False):
     """
     Create dictionary of datasets used by the models.
-    Contains 'c_nn', 'obs', 'x_hydro_model', 'inputs_nn_scaled'.
+    Contains 'c_nn', 'obs', 'x_hydro_model', 'c_hydro_model', 'inputs_nn_scaled'.
 
     train: bool, specifies whether data is for training.
     """
+    # Get date range
+    config['train_t_range'] = Dates(config['train'], config['rho']).date_to_int()
+    config['test_t_range'] = Dates(config['test'], config['rho']).date_to_int()
+    config['t_range'] = [config['train_t_range'][0], config['test_t_range'][1]]
 
     # Create stats for NN input normalizations.
     if train: 
@@ -338,11 +326,11 @@ def get_dataset_dict(config, train=False):
 
     # Normalization
     x_nn_scaled = trans_norm(config, np.swapaxes(dataset_dict['x_nn'], 1, 0).copy(),
-                             var_lst=config['dpl_model']['nn_model']['forcings'], to_norm=True)
+                             var_lst=config['observations']['var_t_nn'], to_norm=True)
     x_nn_scaled[x_nn_scaled != x_nn_scaled] = 0  # Remove nans
 
     c_nn_scaled = trans_norm(config, dataset_dict['c_nn'],
-                             var_lst=config['dpl_model']['nn_model']['attributes'], to_norm=True) ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
+                             var_lst=config['observations']['var_c_nn'], to_norm=True) ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
     c_nn_scaled[c_nn_scaled != c_nn_scaled] = 0  # Remove nans
     c_nn_scaled = np.repeat(np.expand_dims(c_nn_scaled, 0), x_nn_scaled.shape[0], axis=0)
 
@@ -351,14 +339,14 @@ def get_dataset_dict(config, train=False):
     
     # Streamflow unit conversion.
     #### MOVED FROM LOAD_DATA
-    if '00060_Mean' in config['train']['target']:
+    if '00060_Mean' in config['target']:
         dataset_dict['obs'] = converting_flow_from_ft3_per_sec_to_mm_per_day(
             config,
             dataset_dict['c_nn'],
             dataset_dict['obs']
         )
 
-    return dataset_dict
+    return dataset_dict, config
 
 
 def extract_data(config):
@@ -366,16 +354,16 @@ def extract_data(config):
     Extract forcings and attributes from dataset feather files.
     """
     # Get date range.
-    config['train_t_range'] = Dates(config['train'], config['dpl_model']['rho']).date_to_int()
-    config['test_t_range'] = Dates(config['test'], config['dpl_model']['rho']).date_to_int()
-    config['t_range'] = [config['train_t_range'][0], config['dpl_model']['test_t_range'][1]]
+    config['train_t_range'] = Dates(config['train'], config['rho']).date_to_int()
+    config['test_t_range'] = Dates(config['test'], config['rho']).date_to_int()
+    config['t_range'] = [config['train_t_range'][0], config['test_t_range'][1]]
     
     # Lists of forcings and attributes for nn + physics model.
     forcing_list = list(
-        dict.fromkeys(config['nn_model']['forcings'] + config['phy_model']['forcings'])
+        dict.fromkeys(config['observations']['var_t_nn'] + config['observations']['var_t_hydro_model'])
         )
     attribute_list = list(
-        dict.fromkeys(config['nn_model']['attributes'])
+        dict.fromkeys(config['observations']['var_c_nn'] + config['observations']['var_c_hydro_model'])
         )
      
     out_dict = {}

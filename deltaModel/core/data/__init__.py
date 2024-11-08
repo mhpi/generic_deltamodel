@@ -94,7 +94,7 @@ def take_sample_train(config: Dict,
                       nt: int,
                       ) -> Dict[str, torch.Tensor]:
     """Select random sample of data for training batch."""
-    warm_up = config['phy_model']['warm_up']
+    warm_up = config['dpl_model']['phy_model']['warm_up']
     subset_dims = (config['train']['batch_size'], config['dpl_model']['rho'])
 
     i_grid, i_t = random_index(ngrid_train, nt, subset_dims, warm_up=warm_up)
@@ -103,8 +103,8 @@ def take_sample_train(config: Dict,
     flow_obs = select_subset(config, dataset_dict['obs'], i_grid, i_t,
                              config['dpl_model']['rho'], warm_up=warm_up)
     
-    if ('HBV_v1_1p' in config['phy_model']['model']) and \
-    (config['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
+    if ('HBV_v1_1p' in config['dpl_model']['phy_model']['model']) and \
+    (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
         pass
     else:
         flow_obs = flow_obs[warm_up:, :]
@@ -137,7 +137,7 @@ def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor],
             if key in ['x_hydro_model', 'inputs_nn_scaled']:
                 warm_up = 0
             else:
-                warm_up = config['phy_model']['warm_up']
+                warm_up = config['dpl_model']['phy_model']['warm_up']
             dataset_sample[key] = value[warm_up:, i_s:i_e, :].to(config['device'])
         elif value.ndim == 2:
             dataset_sample[key] = value[i_s:i_e, :].to(config['device'])
@@ -145,11 +145,11 @@ def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor],
             raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
 
     # Keep 'warmup' days for dHBV1.1p.
-    if ('HBV_v1_1p' in config['phy_model']['model']) and \
-    (config['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
+    if ('HBV_v1_1p' in config['dpl_model']['phy_model']['model']) and \
+    (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
         pass
     else:
-        dataset_sample['obs'] = dataset_sample['obs'][config['phy_model']['warm_up']:, :]
+        dataset_sample['obs'] = dataset_sample['obs'][config['dpl_model']['phy_model']['warm_up']:, :]
 
     return dataset_sample
 

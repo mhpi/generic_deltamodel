@@ -30,37 +30,40 @@ class DeltaModel(torch.nn.Module):
     config : dict, optional
         The configuration dictionary. The default is None.
     """
-    def __init__(self, phy_model=None, nn_model=None, config=None):
+    def __init__(self, phy_model=None, nn_model=None, phy_model_name=None,config=None, device=None):
         super(DeltaModel, self).__init__()
         self.phy_model = phy_model
         self.nn_model = nn_model
+        self.phy_model_name = phy_model_name
         self.config = config
         self.nmul = 16
         self.routing = True
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        if device is not None:
+            self.device = device
+        else:
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         if config is not None:
-            self.nmul = config['dpl_model']['nmul']
-            self.routing = config['dpl_model']['model']['routing']
-            self.device = config['device']
+            self.nmul = config['nmul']
+            self.routing = config['phy_model']['routing']
         
         if phy_model is None:
             if config is not None:
-                self.phy_model = self._init_phy_model()
+                self._init_phy_model()
             else:
                 raise ValueError("A physics model or configuration dictionary is required.")
             
+        self.param_bounds = self.phy_model.parameter_bounds
+
         if nn_model is None:
             if config is not None:
-                self.nn_model = self._init_nn_model()
+                self._init_nn_model()
             else:
                 raise ValueError("A neural network or configuration dictionary is required.")
         else:
             self.nx = self.nn_model.nx
             self.ny = self.nn_model.ny
 
-        self.param_bounds = self.phy_model.parameter_bounds
-        self.warm_up_mode = self.phy_model.warm_up_mode
         self.phy_model.to(self.device)
         self.phy_model.device = self.device
         self.nn_model.to(self.device)
@@ -71,15 +74,13 @@ class DeltaModel(torch.nn.Module):
         
         TODO: Set this up as dynamic module import instead.
         """
-        model_name = self. config['dpl_model']['phy_model']['model']
-
-        if model_name == 'HBV':
+        if self.phy_model_name == 'HBV':
             self.hydro_model = load_model('HBV')
             self.phy_model= self.hydro_model(self.config)
-        elif model_name == 'HBV_v1_1p':
+        elif self.phy_model_name == 'HBV_v1_1p':
             self.hydro_model = load_model('HBV_v1_1p')
             self.phy_model= self.hydro_model()
-        elif model_name == 'PRMS':
+        elif self.phy_model_name == 'PRMS':
             self.hydro_model = load_model('PRMS')
             self.phy_model= self.hydro_model()
         else:
@@ -111,16 +112,15 @@ class DeltaModel(torch.nn.Module):
             )
         else:
             raise ValueError(self.config['nn_model'], "is not a valid neural network type.")
-        return None
 
     def _get_nn_dims(self) -> None:
         """Return dimensions for pNNs."""
         # Number of variables
-        n_forcings = len(self.config['dpl_model']['nn_model']['forcings'])
-        n_attributes = len(self.config['dpl_model']['nn_model']['attributes'])
+        n_forcings = len(self.config['nn_model']['forcings'])
+        n_attributes = len(self.config['nn_model']['attributes'])
         
         # Number of parameters
-        n_params = len(self.param_bounds) * self.nmul
+        n_params = len(self.param_bounds)
         n_routing_params = len(self.phy_model.conv_routing_hydro_model_bound)
         
         # Total number of inputs and outputs for nn.
@@ -167,7 +167,6 @@ class DeltaModel(torch.nn.Module):
             data_dict['x_hydro_model'],
             params_dict['hydro_params_raw'],
             routing_parameters = params_dict['conv_params_hydro'],
-            warm_up_mode = self.warm_up_mode
         )
 
         # Baseflow index percentage; (from Farshid)

@@ -143,7 +143,7 @@ def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarra
 
     # Calculate basin area 
     # NOTE: should probably move to separate function.
-    attr_list = config['nn_attributes']
+    attr_list = config['dpl_model']['nn_model']['attributes']
 
     area_name = config['observations']['area_name']
     
@@ -166,15 +166,15 @@ def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarra
             )  ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
 
     # Forcing stats
-    var_list = config['nn_model']['forcings']
+    var_list = config['dpl_model']['nn_model']['forcings']
     for k, var in enumerate(var_list):
-        if var in config['use_log_norm']:
+        if var in config['dpl_model']['phy_model']['use_log_norm']:
             stat_dict[var] = calculate_statistics_gamma(x[:, :, k])
         else:
             stat_dict[var] = calculate_statistics(x[:, :, k])
 
     # Attribute stats
-    varList = config['nn_attributes']
+    varList = config['dpl_model']['nn_model']['attributes']
     for k, var in enumerate(varList):
         stat_dict[var] = calculate_statistics(c[:, k])
 

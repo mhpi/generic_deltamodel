@@ -6,8 +6,8 @@ subset_path: /data/lgl5139/data/camels/Sub531ID.txt
 
 area_name: area_gages2
 
-start_time: 1985/10/01
-end_time: 2010/10/01
+start_date_all: 1980/10/01
+end_date_all: 2014/09/30
 
 forcings_all: [
   prcp,
@@ -49,10 +49,5 @@ attributes_all: [
   glim_2nd_class_frac,
   carbonate_rocks_frac,
   geol_porosity,
-  geol_permeability,
-]
-phy_forcings: [
-  prcp,
-  tmean,
-  pet
+  geol_permeability
 ]

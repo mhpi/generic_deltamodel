@@ -322,7 +322,7 @@ def print_config(config: Dict[str, Any]) -> None:
     print(f"  {'Experiment Mode:':<20}{config['mode']:<20}")
     print(f"  {'Ensemble Mode:':<20}{config['ensemble_type']:<20}")
 
-    for i, mod in enumerate(config['phy_model']['model']):
+    for i, mod in enumerate(config['dpl_model']['phy_model']['model']):
         print(f"  {f'Model {i+1}:':<20}{mod:<20}")
     print()
 
@@ -338,8 +338,8 @@ def print_config(config: Dict[str, Any]) -> None:
 
     print("\033[1m" + "Model Parameters" + "\033[0m")
     print(f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}")
-    print(f"  {'Dropout:':<20}{config['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['nn_model']['hidden_size']:<20}")
-    print(f"  {'Warmup:':<20}{config['phy_model']['warm_up']:<20}{'Concurrent Models:':<20}{config['dpl_model']['nmul']:<20}")
+    print(f"  {'Dropout:':<20}{config['dpl_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['dpl_model']['nn_model']['hidden_size']:<20}")
+    print(f"  {'Warmup:':<20}{config['dpl_model']['phy_model']['warm_up']:<20}{'Concurrent Models:':<20}{config['dpl_model']['nmul']:<20}")
     print(f"  {'Optimizer:':<20}{config['loss_function']['model']:<20}")
     print()
 

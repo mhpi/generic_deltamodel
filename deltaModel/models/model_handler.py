@@ -2,7 +2,7 @@ import os
 from typing import Dict
 
 import torch.nn
-from models.differentiable_model import dPLHydroModel
+from models.differentiable_model import DeltaModel
 from core.utils import save_model
 
 
@@ -26,7 +26,7 @@ class ModelHandler(torch.nn.Module):
         self.config = config
         self.name = 'Differentiable Model Handler'
         self._init_models()
-        self.loss_dict = {key: 0 for key in self.config['phy_model']['model']}
+        self.loss_dict = {key: 0 for key in self.config['dpl_model']['phy_model']['model']}
 
         
     def _init_models(self):
@@ -36,7 +36,7 @@ class ModelHandler(torch.nn.Module):
         """
         self.model_dict = {}
 
-        if (self.config['ensemble_type'] == 'none') and (len(self.config['phy_model']['model']) > 1):
+        if (self.config['ensemble_type'] == 'none') and (len(self.config['dpl_model']['phy_model']['model']) > 1):
             raise ValueError("Multiple hydro models given, but ensemble type not specified. Check config.")
         
         elif self.config['train']['run_from_checkpoint']:
@@ -58,10 +58,13 @@ class ModelHandler(torch.nn.Module):
         else:
             # Initialize differentiable hydrology model(s) and bulk optimizer.
             self.parameters = []
-            for mod in self.config['phy_model']['model']:
+            for mod in self.config['dpl_model']['phy_model']['model']:
 
                 ### TODO: change which models are set to which devices here: ###
-                self.model_dict[mod] = dPLHydroModel(self.config, mod).to(self.config['device'])
+                self.model_dict[mod] = DeltaModel(
+                    phy_model_name=mod,
+                    config=self.config['dpl_model']
+                    ).to(self.config['device'])
                 self.parameters += list(self.model_dict[mod].parameters())
 
                 self.model_dict[mod].zero_grad()
@@ -80,9 +83,7 @@ class ModelHandler(torch.nn.Module):
             raise FileNotFoundError(f"Model file {model_path} was not found. Check configurations.")
         
     def forward(self, dataset_dict_sample, eval=False):        
-        """
-        Batch forward one or more differentiable hydrology models.
-        """
+        """Batch forward one or more differentiable hydrology models."""
         self.flow_out_dict = dict()
         self.dataset_dict_sample = dataset_dict_sample
 

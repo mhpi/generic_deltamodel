@@ -11,7 +11,7 @@ device: cuda
 gpu_id: 7
 
 name: dmg-1.0-${observations.name}
-save_path: /data/lgl5139/project_blue_eyes/generic_diffModel/runs 
+save_path: /data/lgl5139/project_blue_eyes/generic_diffModel/results 
 
 
 ## Training -------------------------------#
