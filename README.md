@@ -1,4 +1,4 @@
-# Generic, Scalable Differentiable Modeling Framework
+# Generic, Scalable Differentiable Modeling Framework on PyTorch
 
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![image](https://img.shields.io/pypi/l/ruff.svg)](https://github.com/astral-sh/ruff/blob/main/LICENSE)
@@ -35,7 +35,11 @@ Explore the project's [roadmap](https://github.com/orgs/mhpi/projects/4) for pla
 
 <br>
 
-## Quick Start: Buidling a Differentiable HBV ($\delta$ HBV) Model
+### The overall idea
+We define a "differentiable model" class which describes how neural networks and the process-based model are coupled. This class holds NNs and process-based models as attributes and can be trained and forwarded just as any other PyTorch model (nn.Module). We define classes to handle datasets (dataset class), various train/test experiments (trainer), multimodel handling and multi-GPU training (model handler), data assimilation and streaming in a uniform and modular way. All training and simulations can be specified by a config file to be adapted to custom applications.
+
+<br>
+## Quick Start: Building a Differentiable HBV ($\delta$ HBV) Model
 
 Here’s an example of how you can build a differentiable model, coupling a physics-based model with a neural network to intelligently learn model parameters. In this instance, we use an
 LSTM with the [HBV](https://en.wikipedia.org/wiki/HBV_hydrology_model) hydrology model.
