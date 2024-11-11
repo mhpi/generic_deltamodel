@@ -31,13 +31,13 @@ For differentiable hydrology models used in MHPI research, DeltaModel seamlessly
 - **HydroData ([`hydro_data_dev`](https://github.com/mhpi/hydro_data_dev))**: Data extraction, processing, and management tools optimized for hydrology applications. [*In development*]
 
 
-Explore the project's [roadmap](https://github.com/orgs/mhpi/projects/4) for planned features and future improvements.
+Explore the project's [roadmap](https://github.com/orgs/mhpi/projects/4) for planned features and future improvements. It is in our roadmap to interface with differentiable numerical packages like torchode and torchdiffeq.
+
 
 <br>
 
 ### The overall idea
-We define a "differentiable model" (dModel) class which describes how neural networks and the process-based model are coupled. dModel holds NNs and process-based models as attributes and can be trained and forwarded just as any other PyTorch model (nn.Module). We define classes to handle datasets (dataset class), various train/test experiments (trainer), multimodel handling and multi-GPU training (model handler), data assimilation and streaming in a uniform and modular way. All training and simulations can be specified by a config file to be adapted to custom applications. it is in our roadmap to incorporate an interface to 3rd party differentiable numerical solvers like torchode and torchdiffeq.
-
+We define a "differentiable model" (dModel) class which describes how neural networks and the process-based model are coupled. dModel holds NNs and process-based models as attributes and can be trained and forwarded just as any other PyTorch model (nn.Module). We define classes to handle datasets (dataset class), various train/test experiments (trainer), multimodel handling and multi-GPU training (model handler), data assimilation and streaming in a uniform and modular way. All training and simulations can be specified by a config file to be adapted to custom applications. 
 According to the schema, we define these core classes, from bottom up:
 
 - **NN**: Neural networks that can provide either parameters, missing process representations, corrections or other forms of enhancements to process-based models.
@@ -47,7 +47,9 @@ According to the schema, we define these core classes, from bottom up:
 - **Trainer**: Manages the train and test of models and connects data to model.
 - **dataset**: Manages data ingestion in a unified format; support multiple file formats.
 
+
 <br>
+
 ### Quick Start: Building a Differentiable HBV ($\delta$ HBV) Model
 
 Here’s an example of how you can build a differentiable model, coupling a physics-based model with a neural network to intelligently learn model parameters. In this instance, we use an
@@ -72,6 +74,8 @@ dpl_model = dHBV(phy_model, nn)
 
 # For example, to forward:
 output = dpl_model.forward(dataset, config['dpl_model'])
+
+# Let's unpack dHBV
 ```
 
 ### Use cases
