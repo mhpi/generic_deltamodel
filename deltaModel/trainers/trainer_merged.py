@@ -1,0 +1,178 @@
+import logging
+import time
+from typing import Any, Dict, List
+
+import torch
+import tqdm
+import numpy as np
+import pandas as pd
+from core.data import calc_training_params, take_sample_train, take_sample_test
+from core.data.dataset_loading import get_dataset_dict
+from core.utils import save_outputs
+from models.loss_functions import get_loss_fn
+from models.model_handler import ModelHandler
+from core.calc.stat import stat_error
+from torch.nn import Module
+from typing import Optional
+import os
+
+log = logging.getLogger(__name__)
+
+
+
+# dataset = get_dataset_dict(config, train=True)
+# test_dataset = get_dataset_dict(config, train=False)
+
+# # Setup training grid (number of samples, minimbatches, timesteps)
+# n_grid, n_minibatch, nt = calc_training_params(
+#     self.dataset['inputs_nn_scaled'],
+#     self.config['train_t_range'],
+#     self.config
+# )
+
+
+class Trainer:
+    """Generic, unified Trainer for differentiable models.
+    
+    Retrieves and formats data, initializes optimizer and loss function,
+    and runs training and testing loops as specified.
+    
+    Parameters
+    ----------
+    config : dict
+        Configuration settings for the model and experiment.
+    model : Module, optional
+        dPL (differentiable parameter learning) model object.
+    dataset : dict, optional
+        Dataset dictionary containing forcings and attributes
+    verbose : bool, optional
+        Whether to print verbose output. The default is False.
+    """
+    def __init__(self, config: Dict[str, Any], dataset: dict,
+                 model: Module = None, verbose:Optional[bool]=False) -> None:        
+        self.config = config
+        self.model = model if model else ModelHandler(config)
+        self.dataset = dataset
+        self.verbose = verbose
+
+        ### NOTE: Moved data loading to main script ###
+
+        # Initialize optimizer and loss function only for training
+        if config.get("train"):
+            log.info(f"Initializing loss function and optimizer")
+            
+            self.loss_fn = get_loss_fn(config, self.dataset['obs'])
+            self.model.loss_fn = self.loss_fn
+            self.optim = torch.optim.Adadelta(
+                self.model.parameters(),
+                lr=self.config['dpl_model']['nn_model']['learning_rate']
+            )
+            
+            if self.config['train']['run_from_checkpoint']:
+                self.start_ep = self.config['train']['start_epoch']
+            else:
+                self.start_ep = 1
+
+    def train(self, n_grid: int, nt: int, n_minibatch: Optional[int]=100) -> None:
+        """Run training loop.
+        
+        Parameters
+        ----------
+        n_grid : int
+            Number of samples to train on.
+        nt : int
+            Number of timesteps in each sample.
+        n_minibatch : int, optional
+            Number of minibatches to train on. The default is 100.
+        
+        TODO: Training grid needs improved handling.
+        """
+        log.info(f"Training model: {self.config['name']}")
+
+        ### NOTE: Moved training grid calculation to main script ###
+
+        # Training loop
+        log.info(f"Training for {self.config['train']['n_epochs']} epochs")
+        for epoch in range(self.start_ep, self.config['train']['epochs'] + 1):
+            start_time = time.perf_counter()
+
+            total_loss = 0.0
+            prog_str = f"Epoch {epoch}/{self.config['train']['epochs']}"
+
+            # Iterate through minibatches
+            for i in tqdm.tqdm(range(1, n_minibatch + 1), desc=prog_str,
+                            leave=False, dynamic_ncols=True):
+                
+                dataset_sample = take_sample_train(self.dataset, n_grid, nt,
+                                                   self.config)
+            
+                # Forward pass through model.
+                prediction = self.model(dataset_sample)
+                loss = self.model.calc_loss(dataset_sample)
+
+                loss.backward()
+                self.optim.step()
+                self.optim.zero_grad()
+
+                total_loss += loss.item()
+
+                if self.verbose:
+                    log.info(f"Epoch {epoch} minibatch {i} loss: {loss.item()}")
+
+            self._log_epoch_stats(epoch, self.model.loss_dict, n_minibatch, start_time)
+
+            if epoch % self.config['train']['save_epoch'] == 0:
+                self.model.save_model(epoch)
+
+        log.info(f"Training complete.")
+
+    def test(self) -> None:
+        """Run testing loop."""
+        log.info(f"Testing model: {self.config['name']}")
+
+        batch_predictions = self._get_batch_predictions()
+        observations = self.test_dataset['obs'][:, :, :]
+
+        log.info("Saving model results.")
+        save_outputs(self.config, batch_predictions, observations)
+        self._calc_metrics(batch_predictions, observations)
+
+    def _get_batch_predictions(self) -> List[Dict[str, torch.Tensor]]:
+        """Generate predictions for each batch during testing."""
+        prediction_list = []
+        for i in tqdm.tqdm(range(len(self.iS)), leave=False, dynamic_ncols=True):
+            dataset_sample = take_sample_test(self.config, self.test_dataset, self.iS[i], self.iE[i])
+            prediction = self.model(dataset_sample, eval=True)
+            model_name = self.config['phy_model']['model'][0]
+            prediction_list.append({key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()})
+        return prediction_list
+
+    def _calc_metrics(self, batch_predictions: List[Dict[str, torch.Tensor]], observations: torch.Tensor) -> None:
+        """Calculate and save test metrics."""
+        preds_list, obs_list, name_list = [], [], []
+        flow_preds = torch.cat([d['flow_sim'] for d in batch_predictions], dim=1)
+        flow_obs = observations[:, :, self.config['target'].index('00060_Mean')]
+        
+        if 'hbv_v1_1p' not in self.config['phy_model']['model']:
+            flow_obs = flow_obs[self.config['phy_model']['warm_up']:, :]
+        
+        preds_list.append(flow_preds.numpy())
+        obs_list.append(np.expand_dims(flow_obs, 2))
+        name_list.append('flow')
+        
+        statDictLst = [stat_error(np.swapaxes(x.squeeze(), 1, 0), np.swapaxes(y.squeeze(), 1, 0)) for (x, y) in zip(preds_list, obs_list)]
+
+        for stat, name in zip(statDictLst, name_list):
+            mdstd = pd.DataFrame(
+                [[np.nanmedian(stat[key]), np.nanstd(stat[key]), np.nanmean(stat[key])] for key in stat.keys()],
+                index=stat.keys(), columns=['median', 'STD', 'mean']
+            )
+            mdstd.to_csv(os.path.join(self.config['testing_dir'], f'mdstd_{name}.csv'))
+
+    def _log_epoch_stats(self, epoch: int, loss_dict: Dict[str, float], n_minibatch: int, start_time: float) -> None:
+        """Log statistics after each epoch."""
+        avg_loss_dict = {key: value / n_minibatch + 1 for key, value in loss_dict.items()}
+        loss_formated = ", ".join(f"{key}: {value:.6f}" for key, value in avg_loss_dict.items())
+        elapsed = time.perf_counter() - start_time
+        mem_aloc = int(torch.cuda.memory_reserved(device=self.config['device']) * 0.000001)
+        log.info(f"Model loss after epoch {epoch}: {loss_formated} \n~ Runtime {elapsed:.2f} sec, {mem_aloc} Mb reserved GPU memory")

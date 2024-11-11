@@ -72,7 +72,6 @@ class TrainModel:
         # Training loop
         for epoch in range(start_ep, self.config['train']['epochs'] + 1):
             start_time = time.perf_counter()
-            self.model.epoch = epoch
 
             self._train_epoch(epoch, n_minibatch, n_grid, nt)
             self._log_epoch_stats(epoch, self.model.loss_dict, n_minibatch, start_time)
@@ -102,7 +101,6 @@ class TrainModel:
         # Iterate through minibatches
         for i in tqdm.tqdm(range(1, n_minibatch + 1), desc=prog_str,
                            leave=False, dynamic_ncols=True):
-            self.model.minibatch = i
             dataset_sample = take_sample_train(self.config, self.dataset,
                                                n_grid, nt)
 
@@ -126,7 +124,7 @@ class TrainModel:
         ----------
         epoch : int
             Current epoch.
-        ep_loss_dict : dict
+        ep_loss_dict : dictg
             Dictionary of model losses.
         minibatch_iter : int
             Number of minibatches.

@@ -1,9 +1,7 @@
 # Generic, Scalable Differentiable Modeling Framework on PyTorch
 
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![image](https://img.shields.io/pypi/l/ruff.svg)](https://github.com/astral-sh/ruff/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11-blue)]()
-[![Actions status](https://github.com/astral-sh/ruff/workflows/CI/badge.svg)](https://github.com/astral-sh/ruff/actions)
 
 
 A domain-agnostic, PyTorch-based framework for developing trainable differentiable models that merge neural networks with process-based equations. "Differentiable" means that gradient calculations can be achieved efficiently at large scale throughout the model, so process-based equations can be trained together with NNs on big data, on GPU. 
@@ -35,7 +33,7 @@ Explore the project's [roadmap](https://github.com/orgs/mhpi/projects/4) for pla
 
 <br>
 
-### The overall idea
+### The Overall Idea
 We define a "differentiable model" (dModel) class which describes how neural networks and the process-based model are coupled. dModel holds NNs and process-based models as attributes and can be trained and forwarded just as any other PyTorch model (nn.Module). We define classes to handle datasets (dataset class), various train/test experiments (trainer), multimodel handling and multi-GPU training (model handler), data assimilation and streaming in a uniform and modular way. All training and simulations can be specified by a config file to be adapted to custom applications. it is in our roadmap to incorporate an interface to 3rd party differentiable numerical solvers like torchode and torchdiffeq.
 
 According to the schema, we define these core classes, from bottom up:
@@ -48,6 +46,7 @@ According to the schema, we define these core classes, from bottom up:
 - **dataset**: Manages data ingestion in a unified format; support multiple file formats.
 
 <br>
+
 ### Quick Start: Building a Differentiable HBV ($\delta$ HBV) Model
 
 Here’s an example of how you can build a differentiable model, coupling a physics-based model with a neural network to intelligently learn model parameters. In this instance, we use an
