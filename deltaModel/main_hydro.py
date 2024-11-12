@@ -6,9 +6,12 @@ import hydra
 import torch
 from conf.config import ModeEnum
 from core.utils import initialize_config, print_config, set_randomseed
+from core.data.dataset_loading import get_dataset_dict
+
 from models.model_handler import ModelHandler as dModel
 from omegaconf import DictConfig
 from trainers import run_experiment, run_train_test
+from trainers.trainer_merged import Trainer
 
 log = logging.getLogger(__name__)
 
@@ -33,11 +36,12 @@ def main(config: DictConfig) -> None:
         # Initializing a dPL model and trainer objects.
         model = dModel(config) #.to(config['device'])
 
-        # Run Trainer based on mode.
-        if config['mode'] == ModeEnum.train_test:
-            run_train_test(config, model)
-        else:
-            run_experiment(config, model)
+        log.info("Processing datasets...")
+        train_dataset = get_dataset_dict(config, train=True)
+        eval_dataset = get_dataset_dict(config, train=False)
+
+        trainer = Trainer(config, model)
+
 
         # Clean up and log elapsed time.
         total_time = time.perf_counter() - start_time

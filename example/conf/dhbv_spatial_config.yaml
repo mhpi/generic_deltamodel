@@ -22,7 +22,7 @@ train:
     batch_size: 100
     epochs: 50
     save_epoch: 10
-    run_from_checkpoint: False
+    resume_from_checkpoint: False
     start_epoch: 0
 
 
@@ -42,11 +42,11 @@ dpl_model:
     dy_drop: 0.0
     
 phy_model:
-    models: [HBV_v1_1p]  # HBV, HBV_v1_1p, PRMS, SACSMA_with_snow
+    models: [HBV1_1p]  # HBV, HBV1_1p, PRMS, SACSMA_with_snow
     warm_up: 365
     stat_param_idx: -1
     dy_params:
-        HBV_v1_1p: [parBETA, parBETAET, parK0]
+        HBV1_1p: [parBETA, parBETAET, parK0]
 
 pnn_model:
     model: LSTM  # LSTM, MLP

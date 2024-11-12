@@ -332,8 +332,8 @@ def print_config(config: Dict[str, Any]) -> None:
         print(f"  {'Train Range :':<20}{config['train']['start_time']:<20}{config['train']['end_time']:<20}")
     if config['mode'] != 'train':
         print(f"  {'Test Range :':<20}{config['test']['start_time']:<20}{config['test']['end_time']:<20}")
-    if config['train']['run_from_checkpoint'] == True:
-        print(f"  {'Resuming training from epoch:':<20}{config['run_from_checkpoint']['start_epoch']:<20}")
+    if config['train']['resume_from_checkpoint'] == True:
+        print(f"  {'Resuming training from epoch:':<20}{config['resume_from_checkpoint']['start_epoch']:<20}")
     print()
 
     print("\033[1m" + "Model Parameters" + "\033[0m")

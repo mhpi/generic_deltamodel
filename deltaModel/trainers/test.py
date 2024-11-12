@@ -101,7 +101,7 @@ class TestModel:
         flow_obs = observations[:, :, self.config['target'].index('00060_Mean')]
 
         # Remove warmup days for dHBV1.1p.
-        if ('hbv_v1_1p' in self.config['phy_model']['model']) and \
+        if ('HBV1_1p' in self.config['phy_model']['model']) and \
         (self.config['phy_model']['use_warmup_mode']) and (self.config['ensemble_type'] == 'none'):
             pass
         else:

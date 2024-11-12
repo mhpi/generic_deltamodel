@@ -18,7 +18,7 @@ class DeltaModel(torch.nn.Module):
         - pNN: LSTM or MLP
             Learns parameters for the physics model.
 
-        - phy_model: e.g., HBV, hbv_v1_1p, PRMS
+        - phy_model: e.g., HBV, HBV1_1p, PRMS
             Injests pNN-generated parameters and produces some target output.
             The target output is compared to some observation to calculate loss
             to train the pNN.
@@ -102,8 +102,8 @@ class DeltaModel(torch.nn.Module):
         """
         if self.phy_model_name == 'HBV':
             self.hydro_model = load_model('HBV')
-        elif self.phy_model_name == 'HBV_v1_1p':
-            self.hydro_model = load_model('HBV_v1_1p')
+        elif self.phy_model_name == 'HBV1_1p':
+            self.hydro_model = load_model('HBV1_1p')
         elif self.phy_model_name == 'PRMS':
             self.hydro_model = load_model('PRMS')
         else:

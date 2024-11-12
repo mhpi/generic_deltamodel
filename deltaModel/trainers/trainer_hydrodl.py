@@ -84,7 +84,6 @@ class Trainer:
 
     def train(
         self,
-        batchsize: Optional[int] = 1,
         dataset_sampler: Optional[Callable] = None
     ) -> None:
         """Entry point for training loop.
@@ -102,7 +101,8 @@ class Trainer:
         """
         log.info(f"Training model: {self.config['name']}")
         self.is_in_train = True
-        self.train_batchsize = batchsize
+
+
 
         # Training loop
         log.info(f"Training for {self.config['train']['n_epochs']} epochs")
@@ -114,7 +114,7 @@ class Trainer:
             prog_str = f"Epoch {epoch}/{self.config['train']['epochs']}"
 
             # Iterate through minibatches
-            for i in tqdm.tqdm(range(1, batchsize), desc=prog_str,
+            for i in tqdm.tqdm(range(1, n_minibatch + 1), desc=prog_str,
                             leave=False, dynamic_ncols=True):
                 
                 dataset_sample = take_sample_train(self.dataset, n_grid, nt,

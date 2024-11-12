@@ -23,7 +23,7 @@ train:
     batch_size: 100
     epochs: 50
     save_epoch: 10
-    run_from_checkpoint: False
+    resume_from_checkpoint: False
     start_epoch: 0
 
 loss_function:
@@ -48,14 +48,14 @@ dpl_model:
     dy_drop: 0.0
     
     phy_model:
-        model: [HBV_v1_1p]  # HBV, HBV_v1_1p (1.1p), marrmot_PRMS, SACSMA_with_snow
+        model: [HBV1_1p]  # HBV, HBV1_1p (1.1p), marrmot_PRMS, SACSMA_with_snow
         warm_up: 365
         warm_up_states: True
         stat_param_idx: -1
         dy_drop: 0.0
         dy_params:
             HBV: [parBETA, parBETAET]
-            HBV_v1_1p: [parBETA, parBETAET, parK0]
+            HBV1_1p: [parBETA, parBETAET, parK0]
 
         routing: True
         use_log_norm: []

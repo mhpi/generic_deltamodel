@@ -64,7 +64,7 @@ class TrainModel:
             lr=self.config['dpl_model']['nn_model']['learning_rate']
             )
 
-        if self.config['train']['run_from_checkpoint']:
+        if self.config['train']['resume_from_checkpoint']:
             start_ep = self.config['train']['start_epoch']
         else:
             start_ep = 1

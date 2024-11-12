@@ -39,7 +39,7 @@ class ModelHandler(torch.nn.Module):
         if (self.config['ensemble_type'] == 'none') and (len(self.config['dpl_model']['phy_model']['model']) > 1):
             raise ValueError("Multiple hydro models given, but ensemble type not specified. Check config.")
         
-        elif self.config['train']['run_from_checkpoint']:
+        elif self.config['train']['resume_from_checkpoint']:
             # Reinitialize trained model(s).
             self.parameters = []
             for mod in self.config['phy_model']['model']:

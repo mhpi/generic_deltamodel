@@ -23,7 +23,7 @@ train:
     batch_size: 100
     epochs: 50
     save_epoch: 10
-    run_from_checkpoint: False
+    resume_from_checkpoint: False
     start_epoch: 0
 
 
@@ -43,7 +43,7 @@ dpl_model:
     dy_drop: 0.0
     
 phy_model:
-    models: [HBV]  # HBV, hbv_v1_1p (1.1p), marrmot_PRMS, SACSMA_with_snow
+    models: [HBV]  # HBV, HBV1_1p (1.1p), marrmot_PRMS, SACSMA_with_snow
     warm_up: 365
     stat_param_idx: -1
     dy_params:
