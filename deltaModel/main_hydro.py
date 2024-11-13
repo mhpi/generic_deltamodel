@@ -11,7 +11,7 @@ from core.data.dataset_loading import get_dataset_dict
 from models.model_handler import ModelHandler as dModel
 from omegaconf import DictConfig
 from trainers import run_experiment, run_train_test
-from trainers.trainer_merged import Trainer
+from deltaModel.trainers.trainer import Trainer
 
 log = logging.getLogger(__name__)
 
