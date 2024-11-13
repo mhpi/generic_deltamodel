@@ -29,27 +29,49 @@ def camel_to_snake(camel_str):
     return snake_str
 
 
-def get_loss_fn(config, obs):
+def get_loss_func(config, obs):
+    """Dynamically load a loss function module from the specified file.
+
+    Parameters
+    ----------
+    config : dict
+        The configuration dictionary.
+        obs : np.ndarray
+            The observed data.
     """
-    Dynamically load the loss fn module from the specified file.
-    """
-    loss_function = config['loss_function']['model']
-    file_name = camel_to_snake(loss_function)
+    loss_func = config['loss_function']['model']
+    file_name = camel_to_snake(loss_func)
     source_dir = os.path.dirname(os.path.abspath(__file__))
     
-    ## NOTE: for debugging `./dMG/models` must be specified. Can't figure out why.
-    file_path = os.path.join(source_dir, f"{file_name}.py")
+    # Debugging Note: The directory './deltaModel/models' should be included
+    # to find the correct loss function.
+    # file_path = os.path.join(source_dir, f"{file_name}.py")
+    file_path = os.path.join(source_dir, "deltaModel", "models", f"{file_name}.py")
 
-    # Load the module dynamically.
-    spec = importlib.util.spec_from_file_location(loss_function, os.path.abspath(file_path))
-    module = spec.loader.load_module()
+   # Load the module dynamically.
+    try:
+        spec = importlib.util.spec_from_file_location(loss_func, os.path.abspath(file_path))
+        if spec and spec.loader:
+            # module = spec.loader.load_module()
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+        else:
+            raise ImportError(f"Module {file_name} could not be loaded from {file_path}.")
+    except (FileNotFoundError, ImportError) as e:
+        raise ImportError(f"Error loading module '{file_name}': {e}")
 
-    # Fetch the loss fn class.
-    loss_function_default = getattr(module, config['loss_function']['model'])
-    
+    # # Fetch the loss fn class.
+    # loss_function_default = getattr(module, config['loss_function']['model'])
+
+     # Fetch the loss function class and initialize it.
+    try:
+        loss_class = getattr(module, loss_func)
+    except AttributeError:
+        raise AttributeError(f"Class '{loss_func}' not found in module '{file_name}'.")
+
     # Initialize object.
     # NOTE: Any loss functions with specific settings should have them set here.
-    if loss_function in ['NseLossBatchFlow','NseSqrtLossBatchFlow']:
+    if loss_func in ['NseLossBatchFlow','NseSqrtLossBatchFlow']:
         std_obs_flow = np.nanstd(obs[:, :, config['train']['target'].index('00060_Mean')], axis=0)
         loss_obj = loss_function_default(std_obs_flow)
     else:
