@@ -31,7 +31,7 @@ def main(config: DictConfig) -> None:
         print_config(config)
 
         # Initializing a dPL model and trainer objects.
-        model = dModel(config) #.to(config['device'])
+        model = dModel(config).to(config['device'])
 
         # Run Trainer based on mode.
         if config['mode'] == ModeEnum.train_test:

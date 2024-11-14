@@ -4,9 +4,20 @@ from typing import Dict, Optional, Tuple
 import numpy as np
 import torch
 from core.utils.time import trange_to_array
+from abc import ABC, abstractmethod
 
 log = logging.getLogger(__name__)
 
+
+
+class BaseDataset(ABC, torch.utils.data.Dataset):
+    @abstractmethod
+    def getDataTs(self, config, varLst):
+        raise NotImplementedError
+
+    @abstractmethod
+    def getDataConst(self, config, varLst):
+        raise NotImplementedError
 
 
 def random_index(ngrid: int, nt: int, dim_subset: Tuple[int, int],

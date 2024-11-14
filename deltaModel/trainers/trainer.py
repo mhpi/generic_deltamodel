@@ -9,7 +9,7 @@ import pandas as pd
 from core.data import calc_training_params, take_sample_train, take_sample_test
 from core.data.dataset_loading import get_dataset_dict
 from core.utils import save_outputs
-from models.loss_functions import get_loss_fn
+from models.loss_functions import get_loss_func
 from models.model_handler import ModelHandler
 from core.calc.stat import stat_error
 from torch.nn import Module

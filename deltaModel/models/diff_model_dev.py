@@ -194,6 +194,7 @@ class DeltaModel(torch.nn.Module):
             routing_parameters = params_dict['conv_params_hydro'],
         )
 
+        ##### REMOVE AS SEPERATE MODULE IN TRAINER
         # Baseflow index percentage; (from Farshid)
         # Using two deep groundwater buckets: gwflow & bas_shallow
         if 'bas_shallow' in predictions.keys():

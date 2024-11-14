@@ -78,8 +78,8 @@ class DeltaModel(torch.nn.Module):
         """
         if self.phy_model_name == 'HBV':
             self.hydro_model = load_model('HBV')
-        elif self.phy_model_name == 'HBV1_1p':
-            self.hydro_model = load_model('HBV1_1p')
+        elif self.phy_model_name == 'HBV_1_1p':
+            self.hydro_model = load_model('HBV_1_1p')
         elif self.phy_model_name == 'PRMS':
             self.hydro_model = load_model('PRMS')
         else:

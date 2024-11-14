@@ -6,7 +6,7 @@ import torch
 import tqdm
 from core.data import calc_training_params, take_sample_train
 from core.data.dataset_loading import get_dataset_dict
-from models.loss_functions import get_loss_fn
+from models.loss_functions import get_loss_func
 from models.model_handler import ModelHandler
 from torch.nn import Module
 
