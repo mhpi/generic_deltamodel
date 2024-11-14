@@ -105,7 +105,7 @@ class ModelHandler(torch.nn.Module):
         for mod in self.model_dict:
             loss = self.loss_fn(self.config,
                            self.flow_out_dict[mod],
-                           dataset['obs'],
+                           dataset['target'],
                            igrid=dataset['iGrid']
                            )
             comb_loss += loss

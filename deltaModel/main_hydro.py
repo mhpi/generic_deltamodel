@@ -40,15 +40,16 @@ def main(config: DictConfig) -> None:
         train_dataset = get_dataset_dict(config, train=True)
         eval_dataset = get_dataset_dict(config, train=False)
 
-        
+        ### Create Trainer object ###
+        trainer = Trainer(model, config, train_dataset, eval_dataset)
+
+
         exit()
         ######################################
         ######################################
 
 
 
-        ### Create Trainer object ###
-        trainer = Trainer(config, model)
 
     except KeyboardInterrupt:
         print("Keyboard interrupt received")     

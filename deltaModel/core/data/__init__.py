@@ -111,7 +111,7 @@ def take_sample_train(config: Dict,
     i_grid, i_t = random_index(ngrid_train, nt, subset_dims, warm_up=warm_up)
 
     # Remove warmup days for dHBV1.1p...
-    flow_obs = select_subset(config, dataset_dict['obs'], i_grid, i_t,
+    flow_obs = select_subset(config, dataset_dict['target'], i_grid, i_t,
                              config['dpl_model']['rho'], warm_up=warm_up)
     
     # if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
@@ -128,8 +128,8 @@ def take_sample_train(config: Dict,
             config['dpl_model']['rho'], has_grad=False, warm_up=warm_up),
         'c_nn': torch.tensor(dataset_dict['c_nn'][i_grid],
                              device=config['device'], dtype=torch.float32),
-        'obs': flow_obs,
-        'x_hydro_model': select_subset(config, dataset_dict['x_hydro_model'],
+        'target': flow_obs,
+        'x_phy': select_subset(config, dataset_dict['x_phy'],
                                        i_grid, i_t, config['dpl_model']['rho'],
                                        warm_up=warm_up),
     }
@@ -145,7 +145,7 @@ def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor],
     dataset_sample = {}
     for key, value in dataset_dict.items():
         if value.ndim == 3:
-            if key in ['x_hydro_model', 'inputs_nn_scaled']:
+            if key in ['x_phy', 'inputs_nn_scaled']:
                 warm_up = 0
             else:
                 warm_up = config['dpl_model']['phy_model']['warm_up']
@@ -160,7 +160,7 @@ def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor],
     (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
         pass
     else:
-        dataset_sample['obs'] = dataset_sample['obs'][config['dpl_model']['phy_model']['warm_up']:, :]
+        dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:, :]
 
     return dataset_sample
 
@@ -171,7 +171,7 @@ def take_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
     dataset_sample = {}
     for key, value in dataset_dict.items():
         if value.ndim == 3:
-            if key in ['x_hydro_model', 'inputs_nn_scaled']:
+            if key in ['x_phy', 'inputs_nn_scaled']:
                 warm_up = 0
             else:
                 warm_up = config['dpl_model']['phy_model']['warm_up']
@@ -186,7 +186,7 @@ def take_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
     (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
         pass
     else:
-        dataset_sample['obs'] = dataset_sample['obs'][config['dpl_model']['phy_model']['warm_up']:days, :basins]
+        dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:days, :basins]
     return dataset_sample
 
 

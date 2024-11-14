@@ -113,7 +113,7 @@ class EnsembleWeights(torch.nn.Module):
         # Loss on streamflow preds.
         loss_sf = self.loss_func(self.config,
                                  self.ensemble_pred['flow_sim'],
-                                 self.dataset_dict_sample['obs'],
+                                 self.dataset_dict_sample['target'],
                                  igrid=self.dataset_dict_sample['iGrid']
                                  )
     

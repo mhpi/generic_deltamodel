@@ -1,13 +1,9 @@
 import json
-import os
 import pickle
-from abc import ABC, abstractmethod
 
 import numpy as np
 import pandas as pd
-import torch
 from core.calc.normalize import init_norm_stats, trans_norm
-from core.utils.dates import Dates
 from core.data.dataframe_dataset import DataFrameDataset
 from core.data.array_dataset import ArrayDataset
 
@@ -77,7 +73,7 @@ def load_data(config, t_range=None, train=True):
         out_dict['x_nn'] = forcings[:,:, forcing_subset_idx]  # Forcings for neural network (note, slight error from indexing)
         out_dict['x_phy'] = forcings[:,:, forcing_phy_subset_idx]  # Forcings for physics model
         out_dict['c_nn'] = attributes[:, attr_subset_idx] # Attributes
-        out_dict['obs'] = np.transpose(target[:,index_start:index_end], (1,0,2))  # Observation target
+        out_dict['target'] = np.transpose(target[:,index_start:index_end], (1,0,2))  # Observation target
         
         ## For running a subset (531 basins) of CAMELS.
         if config['observations']['name'] == 'camels_531':
@@ -91,19 +87,15 @@ def load_data(config, t_range=None, train=True):
             out_dict['x_nn'] = out_dict['x_nn'][:, subset_idx, :]
             out_dict['x_phy'] = out_dict['x_phy'][:, subset_idx, :]
             out_dict['c_nn'] = out_dict['c_nn'][subset_idx, :]
-            out_dict['obs'] = out_dict['obs'][:, subset_idx, :]
+            out_dict['target'] = out_dict['target'][:, subset_idx, :]
             
-        out_dict['x_hydro_model'] = out_dict['x_phy']
-
     else:
-        # Original data handling for Farshid's extractions.
+        # Farshid data extractions
         forcing_dataset_class = choose_class_to_read_dataset(config, t_range, config['observations']['forcing_path'])
-        # getting inputs for neural network:
         out_dict['x_nn'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['dpl_model']['nn_model']['forcings'])
+        out_dict['x_phy'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['phy_forcings'])
         out_dict['c_nn'] = forcing_dataset_class.read_data.getDataConst(config, varLst=config['dpl_model']['nn_model']['attributes'])
-        out_dict['obs'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['train']['target'])
-
-        out_dict['x_hydro_model'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['phy_forcings'])
+        out_dict['target'] = forcing_dataset_class.read_data.getDataTs(config, varLst=config['train']['target'])
     
     return out_dict
 
@@ -124,7 +116,7 @@ def converting_flow_from_ft3_per_sec_to_mm_per_day(config, c_NN_sample, obs_samp
 def get_dataset_dict(config, train=False):
     """
     Create dictionary of datasets used by the models.
-    Contains 'c_nn', 'obs', 'x_hydro_model', 'inputs_nn_scaled'.
+    Contains 'c_nn', 'target', 'x_phy', 'inputs_nn_scaled'.
 
     train: bool, specifies whether data is for training.
     """
@@ -133,7 +125,7 @@ def get_dataset_dict(config, train=False):
     if train: 
         dataset_dict = load_data(config, config['train_t_range'])
         init_norm_stats(config, dataset_dict['x_nn'], dataset_dict['c_nn'],
-                              dataset_dict['obs'])
+                              dataset_dict['target'])
     else:
         dataset_dict = load_data(config, config['test_t_range'], train=False)
 
@@ -153,10 +145,10 @@ def get_dataset_dict(config, train=False):
     # Streamflow unit conversion.
     #### MOVED FROM LOAD_DATA
     if '00060_Mean' in config['train']['target']:
-        dataset_dict['obs'] = converting_flow_from_ft3_per_sec_to_mm_per_day(
+        dataset_dict['target'] = converting_flow_from_ft3_per_sec_to_mm_per_day(
             config,
             dataset_dict['c_nn'],
-            dataset_dict['obs']
+            dataset_dict['target']
         )
 
     return dataset_dict

@@ -12,16 +12,17 @@ from core.utils import save_outputs
 from models.loss_functions import get_loss_func
 from models.model_handler import ModelHandler
 from core.calc.stat import stat_error
-from torch.nn import Module
+from torch import nn
 from typing import Optional, Callable
 import os
+from typing import Union
 
 log = logging.getLogger(__name__)
 
 
+#         batchsize: Optional[int] = 1,
 
-# dataset = get_dataset_dict(config, train=True)
-# test_dataset = get_dataset_dict(config, train=False)
+
 
 # # Setup training grid (number of samples, minimbatches, timesteps)
 # n_grid, n_minibatch, nt = calc_training_params(
@@ -50,12 +51,12 @@ class Trainer:
     """
     def __init__(
         self,
-        config: Dict[str, Any],
+        model: nn.Module = None,
+        config: Dict[str, Any] = None,
         train_dataset: Optional[dict] = None,
         eval_dataset: Optional[dict] = None,
-        loss_func: Optional[torch.nn.Module] = None,
-        optimizer: Optional[torch.nn.Module] = None,
-        model: Module = None,
+        loss_func: Optional[nn.Module] = None,
+        optimizer: Optional[nn.Module] = None,
         verbose: Optional[bool]=False
     ) -> None:        
         self.config = config
@@ -70,7 +71,7 @@ class Trainer:
             # Optimizer and loss function
             log.info(f"Initializing loss function and optimizer")
             
-            self.loss_fn = get_loss_fn(config, self.dataset['obs'])
+            self.loss_fn = get_loss_func(config, self.dataset['target'])
             self.model.loss_fn = self.loss_fn
             self.optim = torch.optim.Adadelta(
                 self.model.parameters(),
@@ -84,7 +85,7 @@ class Trainer:
 
     def train(
         self,
-        batchsize: Optional[int] = 1,
+        resume_from_checkpoint: Optional[Union[str,bool]] = None,
         dataset_sampler: Optional[Callable] = None
     ) -> None:
         """Entry point for training loop.
@@ -145,7 +146,7 @@ class Trainer:
         log.info(f"Testing model: {self.config['name']}")
 
         batch_predictions = self._get_batch_predictions()
-        observations = self.test_dataset['obs'][:, :, :]
+        observations = self.test_dataset['target'][:, :, :]
 
         log.info("Saving model results.")
         save_outputs(self.config, batch_predictions, observations)

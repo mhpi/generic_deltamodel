@@ -189,7 +189,7 @@ class DeltaModel(torch.nn.Module):
         
         # Physics model
         predictions = self.phy_model(
-            data_dict['x_hydro_model'],
+            data_dict['x_phy'],
             params_dict['hydro_params_raw'],
             routing_parameters = params_dict['conv_params_hydro'],
         )

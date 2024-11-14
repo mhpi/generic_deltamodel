@@ -124,13 +124,13 @@ class ModelHandler(torch.nn.Module):
         for mod in self.model_dict:
             # if self.flow_out_dict[mod] == 'HBV_capillary':
             #     # Capillary HBV requires all sample observations without warm-up trimmed.
-            #     obs = self.dataset_dict_sample['obs']
+            #     obs = self.dataset_dict_sample['target']
             # else:
-            #     obs = self.dataset_dict_sample['obs'][config['warm_up']:]
+            #     obs = self.dataset_dict_sample['target'][config['warm_up']:]
 
             loss = self.loss_func(self.config,
                                   self.flow_out_dict[mod],
-                                  self.dataset_dict_sample['obs'],
+                                  self.dataset_dict_sample['target'],
                                   igrid=self.dataset_dict_sample['iGrid']
                                   )
             # self.model_dict[mod].zero_grad()

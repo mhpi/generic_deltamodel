@@ -57,7 +57,7 @@ class TrainModel:
 
         # Initialize loss function and optimizer
         log.info(f"Initializing loss function and optimizer")
-        self.loss_fn = get_loss_fn(self.config, self.dataset['obs'])
+        self.loss_fn = get_loss_fn(self.config, self.dataset['target'])
         self.model.loss_fn = self.loss_fn
         self.optim = torch.optim.Adadelta(
             self.model.parameters,

@@ -56,7 +56,7 @@ class TestModel:
         # Get model predictions and observation data.
         log.info(f"Testing on batches of {self.config['test_batch']} basins...")
         batch_predictions = self._get_batch_predictions()
-        observations = self.dataset_dict['obs'][:, :, :]
+        observations = self.dataset_dict['target'][:, :, :]
 
         log.info(f"Saving model results.")
         save_outputs(self.config, batch_predictions, observations)
