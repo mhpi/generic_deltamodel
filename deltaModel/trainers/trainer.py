@@ -51,38 +51,80 @@ class Trainer:
     """
     def __init__(
         self,
+        config: Dict[str, Any],
         model: nn.Module = None,
-        config: Dict[str, Any] = None,
         train_dataset: Optional[dict] = None,
         eval_dataset: Optional[dict] = None,
         loss_func: Optional[nn.Module] = None,
         optimizer: Optional[nn.Module] = None,
-        verbose: Optional[bool]=False
-    ) -> None:        
+        verbose: Optional[bool] = False
+    ) -> None:
         self.config = config
         self.model = model or ModelHandler(config)
         self.train_dataset = train_dataset or get_dataset_dict(config, train=True)
         self.test_dataset = eval_dataset or get_dataset_dict(config, train=True)
-
-        self.is_in_train = False
         self.verbose = verbose
 
+        self.is_in_train = False
+
         if 'train' in config['mode']:
-            # Optimizer and loss function
             log.info(f"Initializing loss function and optimizer")
-            
-            self.loss_fn = get_loss_func(config, self.dataset['target'])
-            self.model.loss_fn = self.loss_fn
-            self.optim = torch.optim.Adadelta(
-                self.model.parameters(),
-                lr=self.config['dpl_model']['nn_model']['learning_rate']
-            )
+
+            # Loss function initialization
+            self.loss_func = loss_func or get_loss_func(self.train_dataset['target'],
+                                                        config['loss_function'],
+                                                        config['device'])
+            self.model.loss_func = self.loss_func
+
+            # Optimizer initialization
+            self.optimizer = optimizer or self.create_optimizer()
+
             # Resume model training from epoch
             if self.config['train']['resume_from_checkpoint']:
                 self.start_epoch = self.config['train']['start_epoch']
             else:
                 self.start_epoch = 1
 
+    def create_optimizer(self) -> torch.optim.Optimizer:
+        """Initialize the optimizer as named in config.
+        
+        Adding additional optimizers is possible by extending the optimizer_dict.
+
+        Returns
+        -------
+        torch.optim.Optimizer
+            Initialized optimizer object.
+        """
+        optimizer_name = self.config['train']['optimizer']
+        learning_rate = self.config['dpl_model']['nn_model']['learning_rate']
+
+        # Dictionary mapping optimizer names to their corresponding classes
+        optimizer_dict = {
+            'SGD': torch.optim.SGD,
+            'Adam': torch.optim.Adam,
+            'AdamW': torch.optim.AdamW,
+            'Adadelta': torch.optim.Adadelta,
+            'RMSprop': torch.optim.RMSprop,
+        }
+
+        # Fetch optimizer class
+        optimizer_cls = optimizer_dict[optimizer_name]
+
+        if optimizer_cls is None:
+            raise ValueError(f"Optimizer '{optimizer_name}' not recognized. "
+                                f"Available options are: {list(optimizer_dict.keys())}")
+
+        # Initialize
+        try:
+            self.optimizer = optimizer_cls(
+                self.model.parameters(),
+                lr=learning_rate,
+            )
+        except Exception as e:
+            log.error(f"Error initializing optimizer: {e}")
+
+        return self.optimizer
+                    
     def train(
         self,
         resume_from_checkpoint: Optional[Union[str,bool]] = None,

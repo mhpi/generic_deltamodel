@@ -129,7 +129,7 @@ class ModelHandler(torch.nn.Module):
             #     obs = self.dataset_dict_sample['target'][config['warm_up']:]
 
             loss = self.loss_func(self.config,
-                                  self.flow_out_dict[mod],
+                                  self.flow_out_dict[mod]['flow_sim'],
                                   self.dataset_dict_sample['target'],
                                   igrid=self.dataset_dict_sample['iGrid']
                                   )

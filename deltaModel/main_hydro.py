@@ -41,7 +41,7 @@ def main(config: DictConfig) -> None:
         eval_dataset = get_dataset_dict(config, train=False)
 
         ### Create Trainer object ###
-        trainer = Trainer(model, config, train_dataset, eval_dataset)
+        trainer = Trainer(config, model, train_dataset, eval_dataset)
 
 
         exit()

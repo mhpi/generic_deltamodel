@@ -1,5 +1,5 @@
 import os
-from typing import Dict
+from typing import Dict, List
 
 import torch.nn
 from core.utils import save_model
@@ -39,20 +39,26 @@ class ModelHandler(torch.nn.Module):
         if (self.config['ensemble_type'] == 'none') and (len(self.config['dpl_model']['phy_model']['model']) > 1):
             raise ValueError("Multiple hydro models given, but ensemble type not specified. Check config.")
         
-        elif self.config['train']['resume_from_checkpoint']:
-            # Reinitialize trained model(s).
+        elif self.config['train']['resume_from_checkpoint'] > 0:
+            # Reinitialize trained model(s) from checkpoint.
             self.parameters = []
-            for mod in self.config['phy_model']['model']:
-                load_path = self.config['checkpoint'][mod]
-                self.model_dict[mod] = torch.load(load_path).to(self.config['device'])
-                self.parameters += list(self.model_dict[mod].parameters())
+            start_epoch = self.config['train']['start_epoch']
+            try:        
+                for mod in self.config['dpl_model']['phy_model']['model']:
+                    save_name = str(mod) + '_model_Ep' + str(start_epoch) + '.pt'
+                    load_path = os.path.join(self.config['output_dir'], save_name)
 
-                self.model_dict[mod].zero_grad()
-                self.model_dict[mod].train()
-            self.init_optimizer()
+                    self.model_dict[mod] = torch.load(load_path).to(self.config['device'])
+                    self.parameters += list(self.model_dict[mod].parameters())
+
+                    self.model_dict[mod].zero_grad()
+                    self.model_dict[mod].train()
+                self.init_optimizer()
+            except FileNotFoundError:
+                raise FileNotFoundError(f"Model file {load_path} was not found. Make sure model checkpoint exists for epoch {start_epoch}.")
 
         elif self.config['mode'] in ['test']:
-            for mod in self.config['phy_model']['model']:
+            for mod in self.config['dpl_model']['phy_model']['model']:
                 self.load_model(mod)
 
         else:
@@ -69,6 +75,14 @@ class ModelHandler(torch.nn.Module):
 
                 self.model_dict[mod].zero_grad()
                 self.model_dict[mod].train()
+    
+    def parameters(self) -> List[torch.Tensor]:
+        """Return all model parameters."""
+        self.parameters = []
+        for mod in self.config['dpl_model']['phy_model']['model']:
+            self.parameters += list(self.model_dict[mod].parameters())
+
+        return self.parameters
     
     def load_model(self, model) -> None:
         model_name = str(model) + '_model_Ep' + str(self.config['train']['epochs']) + '.pt'
@@ -104,7 +118,7 @@ class ModelHandler(torch.nn.Module):
         comb_loss = 0.0
         for mod in self.model_dict:
             loss = self.loss_fn(self.config,
-                           self.flow_out_dict[mod],
+                           self.flow_out_dict[mod]['flow_sim'],
                            dataset['target'],
                            igrid=dataset['iGrid']
                            )

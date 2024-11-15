@@ -21,13 +21,15 @@ train:
     end_time: 2008/09/30
     target: [00060_Mean]
     batch_size: 100
+    optimizer: Adam
     epochs: 50
     save_epoch: 10
     resume_from_checkpoint: False
-    start_epoch: 0
+    start_epoch: 1
 
 loss_function:
-    model: NseLossBatchFlow  # RmseLossFlowComb, NseLossBatchFlow
+    model: NseLossBatch  # RmseLossComb, NseLossBatch
+    target: [00060_Mean]
     weights:
         w1: 11.0
         w2: 1.0

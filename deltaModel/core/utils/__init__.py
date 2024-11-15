@@ -156,7 +156,7 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
         for param in config['dpl_model']['phy_model']['dy_params'][mod]:
             dy_params += param + '_'
         
-        loss_fn += config['loss_function']['model'] + '_'
+        loss_fn += config['loss_function']['model'][0] + '_'
 
     # Add dir for hyperparam spec.
     params = config['dpl_model']['nn_model']['model'] + \
@@ -232,7 +232,6 @@ def save_model(config, model, model_name, epoch, create_dirs=False) -> None:
     if create_dirs: create_output_dirs(config)
 
     save_name = str(model_name) + '_model_Ep' + str(epoch) + '.pt'
-    # os.makedirs(save_name, exist_ok=True)
 
     full_path = os.path.join(config['output_dir'], save_name)
     torch.save(model, full_path)
@@ -332,8 +331,8 @@ def print_config(config: Dict[str, Any]) -> None:
         print(f"  {'Train Range :':<20}{config['train']['start_time']:<20}{config['train']['end_time']:<20}")
     if config['mode'] != 'train':
         print(f"  {'Test Range :':<20}{config['test']['start_time']:<20}{config['test']['end_time']:<20}")
-    if config['train']['resume_from_checkpoint'] == True:
-        print(f"  {'Resuming training from epoch:':<20}{config['resume_from_checkpoint']['start_epoch']:<20}")
+    if config['train']['start_epoch'] > 0:
+        print(f"  {'Resume training from epoch:':<20}{config['train']['start_epoch']:<20}")
     print()
 
     print("\033[1m" + "Model Parameters" + "\033[0m")
