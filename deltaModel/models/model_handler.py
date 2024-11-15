@@ -41,7 +41,6 @@ class ModelHandler(torch.nn.Module):
         
         elif self.config['train']['resume_from_checkpoint'] > 0:
             # Reinitialize trained model(s) from checkpoint.
-            self.parameters = []
             start_epoch = self.config['train']['start_epoch']
             try:        
                 for mod in self.config['dpl_model']['phy_model']['model']:
@@ -49,7 +48,6 @@ class ModelHandler(torch.nn.Module):
                     load_path = os.path.join(self.config['output_dir'], save_name)
 
                     self.model_dict[mod] = torch.load(load_path).to(self.config['device'])
-                    self.parameters += list(self.model_dict[mod].parameters())
 
                     self.model_dict[mod].zero_grad()
                     self.model_dict[mod].train()
@@ -63,7 +61,6 @@ class ModelHandler(torch.nn.Module):
 
         else:
             # Initialize differentiable hydrology model(s) and bulk optimizer.
-            self.parameters = []
             for mod in self.config['dpl_model']['phy_model']['model']:
 
                 ### TODO: change which models are set to which devices here: ###
@@ -71,12 +68,11 @@ class ModelHandler(torch.nn.Module):
                     phy_model_name=mod,
                     config=self.config['dpl_model']
                     ).to(self.config['device'])
-                self.parameters += list(self.model_dict[mod].parameters())
 
                 self.model_dict[mod].zero_grad()
                 self.model_dict[mod].train()
     
-    def parameters(self) -> List[torch.Tensor]:
+    def get_parameters(self) -> List[torch.Tensor]:
         """Return all model parameters."""
         self.parameters = []
         for mod in self.config['dpl_model']['phy_model']['model']:
@@ -117,7 +113,7 @@ class ModelHandler(torch.nn.Module):
     def calc_loss(self, dataset: Dict[str, torch.Tensor]) -> torch.Tensor:
         comb_loss = 0.0
         for mod in self.model_dict:
-            loss = self.loss_fn(self.config,
+            loss = self.loss_func(self.config,
                            self.flow_out_dict[mod]['flow_sim'],
                            dataset['target'],
                            igrid=dataset['iGrid']

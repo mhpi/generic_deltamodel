@@ -6,7 +6,7 @@ import torch
 import tqdm
 import numpy as np
 import pandas as pd
-from core.data import calc_training_params, take_sample_train, take_sample_test
+from core.data import create_training_grid, get_training_sample, take_sample_test
 from core.data.dataset_loading import get_dataset_dict
 from core.utils import save_outputs
 from models.loss_functions import get_loss_func
@@ -20,20 +20,11 @@ from typing import Union
 log = logging.getLogger(__name__)
 
 
-#         batchsize: Optional[int] = 1,
-
-
-
-# # Setup training grid (number of samples, minimbatches, timesteps)
-# n_grid, n_minibatch, nt = calc_training_params(
-#     self.dataset['inputs_nn_scaled'],
-#     self.config['train_t_range'],
-#     self.config
-# )
-
 
 class Trainer:
     """Generic, unified Trainer for differentiable models.
+
+    Designed after the Hugging Face Trainer class.
     
     Retrieves and formats data, initializes optimizer and loss function,
     and runs training and testing loops as specified.
@@ -90,6 +81,8 @@ class Trainer:
         
         Adding additional optimizers is possible by extending the optimizer_dict.
 
+        TODO: Add (dynamic) support for additional optimizer parameters.
+
         Returns
         -------
         torch.optim.Optimizer
@@ -100,11 +93,11 @@ class Trainer:
 
         # Dictionary mapping optimizer names to their corresponding classes
         optimizer_dict = {
-            'SGD': torch.optim.SGD,
-            'Adam': torch.optim.Adam,
-            'AdamW': torch.optim.AdamW,
+            # 'SGD': torch.optim.SGD,
+            # 'Adam': torch.optim.Adam,
+            # 'AdamW': torch.optim.AdamW,
             'Adadelta': torch.optim.Adadelta,
-            'RMSprop': torch.optim.RMSprop,
+            # 'RMSprop': torch.optim.RMSprop,
         }
 
         # Fetch optimizer class
@@ -117,11 +110,11 @@ class Trainer:
         # Initialize
         try:
             self.optimizer = optimizer_cls(
-                self.model.parameters(),
+                self.model.get_parameters(),
                 lr=learning_rate,
             )
         except Exception as e:
-            log.error(f"Error initializing optimizer: {e}")
+            raise ValueError(f"Error initializing optimizer: {e}")
 
         return self.optimizer
                     
@@ -134,34 +127,46 @@ class Trainer:
         
         Parameters
         ----------
-        n_grid : int
-            Number of samples to train on.
-        nt : int
-            Number of timesteps in each sample.
-        n_minibatch : int, optional
-            Number of minibatches to train on. The default is 100.
+        resume_from_checkpoint : str, optional
+            Path to checkpoint file to resume training from. The default is None.
+        dataset_sampler : Callable, optional
+            Function to sample from the dataset. The default is None.
         
         TODO: Training grid needs improved handling.
         """
-        log.info(f"Training model: {self.config['name']}")
         self.is_in_train = True
-        self.train_batchsize = batchsize
+        self.batchsize = self.config['train']['batch_size']
+        self.epochs = epochs = self.config['train']['epochs']
+
+
+        log.info(f"Training model: {self.config['name']}")
+
+
+        # Setup a training grid (number of samples, minibatches, and timesteps)
+        n_samples, n_minibatch, n_timesteps = create_training_grid(
+            self.train_dataset['x_nn_scaled'],
+            self.config
+        )
 
         # Training loop
-        log.info(f"Training for {self.config['train']['n_epochs']} epochs")
-        epochs = self.config['train']['epochs']
-        for epoch in range(self.start_epoch, epochs + 1):
+        log.info(f"Begin training for {self.config['train']['epochs']} epochs")
+        for epoch in range(self.start_epoch, self.epochs + 1):
             start_time = time.perf_counter()
-
-            total_loss = 0.0
             prog_str = f"Epoch {epoch}/{self.config['train']['epochs']}"
 
+            self.current_epoch = epoch
+            self.total_loss = 0.0
+
             # Iterate through minibatches
-            for i in tqdm.tqdm(range(1, batchsize), desc=prog_str,
+            for i in tqdm.tqdm(range(1, self.batchsize), desc=prog_str,
                             leave=False, dynamic_ncols=True):
                 
-                dataset_sample = take_sample_train(self.dataset, n_grid, nt,
-                                                   self.config)
+                dataset_sample = get_training_sample(
+                    self.train_dataset,
+                    n_samples,
+                    n_timesteps,
+                    self.config
+                )
             
                 # Forward pass through model.
                 prediction = self.model(dataset_sample)
@@ -171,7 +176,7 @@ class Trainer:
                 self.optim.step()
                 self.optim.zero_grad()
 
-                total_loss += loss.item()
+                self.total_loss += loss.item()
 
                 if self.verbose:
                     log.info(f"Epoch {epoch} minibatch {i} loss: {loss.item()}")

@@ -159,7 +159,7 @@ class DeltaModel(torch.nn.Module):
         
         # Parameterization + unpacking for physics model.
         params_all = self.nn_model(
-            data_dict['inputs_nn_scaled']
+            data_dict['x_nn_scaled']
             )
         params_dict = self.breakdown_params(params_all)
         

@@ -21,7 +21,7 @@ train:
     end_time: 2008/09/30
     target: [00060_Mean]
     batch_size: 100
-    optimizer: Adam
+    optimizer: Adadelta
     epochs: 50
     save_epoch: 10
     resume_from_checkpoint: False

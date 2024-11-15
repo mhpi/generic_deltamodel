@@ -116,7 +116,7 @@ def converting_flow_from_ft3_per_sec_to_mm_per_day(config, c_NN_sample, obs_samp
 def get_dataset_dict(config, train=False):
     """
     Create dictionary of datasets used by the models.
-    Contains 'c_nn', 'target', 'x_phy', 'inputs_nn_scaled'.
+    Contains 'c_nn', 'target', 'x_phy', 'x_nn_scaled'.
 
     train: bool, specifies whether data is for training.
     """
@@ -139,7 +139,7 @@ def get_dataset_dict(config, train=False):
     c_nn_scaled[c_nn_scaled != c_nn_scaled] = 0  # Remove nans
     c_nn_scaled = np.repeat(np.expand_dims(c_nn_scaled, 0), x_nn_scaled.shape[0], axis=0)
 
-    dataset_dict['inputs_nn_scaled'] = np.concatenate((x_nn_scaled, c_nn_scaled), axis=2)
+    dataset_dict['x_nn_scaled'] = np.concatenate((x_nn_scaled, c_nn_scaled), axis=2)
     del x_nn_scaled, c_nn_scaled, dataset_dict['x_nn']
     
     # Streamflow unit conversion.

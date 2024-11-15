@@ -43,13 +43,7 @@ def main(config: DictConfig) -> None:
         ### Create Trainer object ###
         trainer = Trainer(config, model, train_dataset, eval_dataset)
 
-
-        exit()
-        ######################################
-        ######################################
-
-
-
+        trainer.train()
 
     except KeyboardInterrupt:
         print("Keyboard interrupt received")     

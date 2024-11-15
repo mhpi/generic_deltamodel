@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Any
 
 import numpy as np
 import torch
@@ -28,23 +28,46 @@ def random_index(ngrid: int, nt: int, dim_subset: Tuple[int, int],
     return i_grid, i_t
 
 
-def calc_training_params(x: np.ndarray, t_range: Tuple[int, int],
-                         config: dict, ngrid=None) -> Tuple[int, int, int]:
-    """Calculate number of iterations, time steps, and grid points for training."""
-    nt = x.shape[0]
-    if ngrid is None:
-        ngrid = x.shape[1]
+def create_training_grid(
+    x: np.ndarray,
+    config: Dict[str, Any],
+    n_samples: int = None
+) -> Tuple[int, int, int]:
+    """Define a training grid of samples x iterations per epoch x time.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        The input data for a model.
+    config : dict
+        The configuration dictionary.
+    n_samples : int, optional
+        The number of samples to use in the training grid.
+    
+    Returns
+    -------
+    Tuple[int, int, int]
+        The number of samples, the number of iterations per epoch, and the
+        number of timesteps.
+    """
+    t_range = config['train_t_range']
+    n_t = x.shape[0]
+
+    if n_samples is None:
+        n_samples = x.shape[1]
 
     t = trange_to_array(t_range)
     rho = min(t.shape[0], config['dpl_model']['rho'])
+
+    # Calculate number of iterations per epoch.
     n_iter_ep = int(
         np.ceil(
             np.log(0.01)
-            / np.log(1 - config['train']['batch_size'] * rho / ngrid
-                     / (nt - config['dpl_model']['phy_model']['warm_up']))
+            / np.log(1 - config['train']['batch_size'] * rho / n_samples
+                     / (n_t - config['dpl_model']['phy_model']['warm_up']))
         )
     )
-    return ngrid, n_iter_ep, nt,
+    return n_samples, n_iter_ep, n_t,
 
 
 def select_subset(config: Dict,
@@ -99,11 +122,12 @@ def select_subset(config: Dict,
     return x_tensor.to(config['device']) if torch.cuda.is_available() else x_tensor
 
 
-def take_sample_train(config: Dict,
-                      dataset_dict: Dict[str, np.ndarray], 
-                      ngrid_train: int,
-                      nt: int,
-                      ) -> Dict[str, torch.Tensor]:
+def get_training_sample(
+    dataset_dict: Dict[str, np.ndarray], 
+    ngrid_train: int,
+    nt: int,
+    config: Dict,
+) -> Dict[str, torch.Tensor]:
     """Select random sample of data for training batch."""
     warm_up = config['dpl_model']['phy_model']['warm_up']
     subset_dims = (config['train']['batch_size'], config['dpl_model']['rho'])
@@ -123,8 +147,8 @@ def take_sample_train(config: Dict,
     # Create dataset sample dict.
     dataset_sample = {
         'iGrid': i_grid,
-        'inputs_nn_scaled': select_subset(
-            config, dataset_dict['inputs_nn_scaled'], i_grid, i_t,
+        'x_nn_scaled': select_subset(
+            config, dataset_dict['x_nn_scaled'], i_grid, i_t,
             config['dpl_model']['rho'], has_grad=False, warm_up=warm_up),
         'c_nn': torch.tensor(dataset_dict['c_nn'][i_grid],
                              device=config['device'], dtype=torch.float32),
@@ -145,7 +169,7 @@ def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor],
     dataset_sample = {}
     for key, value in dataset_dict.items():
         if value.ndim == 3:
-            if key in ['x_phy', 'inputs_nn_scaled']:
+            if key in ['x_phy', 'x_nn_scaled']:
                 warm_up = 0
             else:
                 warm_up = config['dpl_model']['phy_model']['warm_up']
@@ -171,7 +195,7 @@ def take_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
     dataset_sample = {}
     for key, value in dataset_dict.items():
         if value.ndim == 3:
-            if key in ['x_phy', 'inputs_nn_scaled']:
+            if key in ['x_phy', 'x_nn_scaled']:
                 warm_up = 0
             else:
                 warm_up = config['dpl_model']['phy_model']['warm_up']

@@ -71,8 +71,8 @@ class EnsembleWeights(torch.nn.Module):
         self.dataset_dict_sample = dataset_dict_sample
 
         # Get scaled mini-batch of basin forcings + attributes.
-        # inputs_nn_scaled = x_nn + c_nn, forcings + basin attributes
-        nn_inputs = dataset_dict_sample['inputs_nn_scaled']
+        # x_nn_scaled = x_nn + c_nn, forcings + basin attributes
+        nn_inputs = dataset_dict_sample['x_nn_scaled']
 
         # For testing
         if eval: self.lstm.eval()
