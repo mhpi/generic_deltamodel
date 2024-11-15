@@ -156,7 +156,7 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
         for param in config['dpl_model']['phy_model']['dy_params'][mod]:
             dy_params += param + '_'
         
-        loss_fn += config['loss_function']['model'][0] + '_'
+        loss_fn += config['loss_function']['model'] + '_'
 
     # Add dir for hyperparam spec.
     params = config['dpl_model']['nn_model']['model'] + \

@@ -1,10 +1,10 @@
 import logging
-from typing import Dict, Optional, Tuple, Any
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
 from core.utils.time import trange_to_array
-from abc import ABC, abstractmethod
 
 log = logging.getLogger(__name__)
 
@@ -132,10 +132,10 @@ def get_training_sample(
     warm_up = config['dpl_model']['phy_model']['warm_up']
     subset_dims = (config['train']['batch_size'], config['dpl_model']['rho'])
 
-    i_grid, i_t = random_index(ngrid_train, nt, subset_dims, warm_up=warm_up)
+    i_sample, i_t = random_index(ngrid_train, nt, subset_dims, warm_up=warm_up)
 
     # Remove warmup days for dHBV1.1p...
-    flow_obs = select_subset(config, dataset_dict['target'], i_grid, i_t,
+    flow_obs = select_subset(config, dataset_dict['target'], i_sample, i_t,
                              config['dpl_model']['rho'], warm_up=warm_up)
     
     # if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
@@ -146,16 +146,17 @@ def get_training_sample(
     
     # Create dataset sample dict.
     dataset_sample = {
-        'iGrid': i_grid,
+        'batch_sample': i_sample,
+        'x_phy': select_subset(config, dataset_dict['x_phy'],
+                        i_sample, i_t, config['dpl_model']['rho'],
+                        warm_up=warm_up),
         'x_nn_scaled': select_subset(
-            config, dataset_dict['x_nn_scaled'], i_grid, i_t,
+            config, dataset_dict['x_nn_scaled'], i_sample, i_t,
             config['dpl_model']['rho'], has_grad=False, warm_up=warm_up),
-        'c_nn': torch.tensor(dataset_dict['c_nn'][i_grid],
+        'c_nn': torch.tensor(dataset_dict['c_nn'][i_sample],
                              device=config['device'], dtype=torch.float32),
         'target': flow_obs,
-        'x_phy': select_subset(config, dataset_dict['x_phy'],
-                                       i_grid, i_t, config['dpl_model']['rho'],
-                                       warm_up=warm_up),
+
     }
 
     return dataset_sample

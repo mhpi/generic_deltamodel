@@ -4,9 +4,8 @@ import time
 
 import hydra
 import torch
-from core.utils import initialize_config, print_config, set_randomseed
 from core.data.dataset_loading import get_dataset_dict
-
+from core.utils import initialize_config, print_config, set_randomseed
 from models.model_handler import ModelHandler as dModel
 from omegaconf import DictConfig
 from trainers import run_experiment, run_train_test
@@ -41,7 +40,7 @@ def main(config: DictConfig) -> None:
         eval_dataset = get_dataset_dict(config, train=False)
 
         ### Create Trainer object ###
-        trainer = Trainer(config, model, train_dataset, eval_dataset)
+        trainer = Trainer(config, model, train_dataset, eval_dataset, verbose=True)
 
         trainer.train()
 

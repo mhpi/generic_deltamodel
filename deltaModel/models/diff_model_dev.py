@@ -1,12 +1,10 @@
-from typing import Dict
+from typing import Dict, Optional
 
 import torch.nn
 from core.data import numpy_to_torch_dict
 from hydroDL2 import load_model
 from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
-from typing import Optional
-
 
 
 class DeltaModel(torch.nn.Module):

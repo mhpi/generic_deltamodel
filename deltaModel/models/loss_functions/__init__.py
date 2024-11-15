@@ -1,15 +1,15 @@
 # A loss function initializer that dynamically loads loss function modules.
-from ast import Dict
 import importlib.util
 import os
 import re
 import sys
+from ast import Dict
 from typing import Any, Dict, Optional
-from torch import nn
 
 import numpy as np
 from numpy.typing import NDArray
 from sympy import E
+from torch import nn
 
 sys.path.append('../deltaModel/')  # for tutorials
 
@@ -85,7 +85,7 @@ def get_loss_func(
 
     # Initialize (NOTE: any loss function specific settings should be set here).
     try:
-        loss_obj = loss_func_cls(obs, config)
+        loss_obj = loss_func_cls(obs, config, device)
     except Exception as e:
         raise ValueError(f"Error initializing loss function '{loss_name}': {e}")
 

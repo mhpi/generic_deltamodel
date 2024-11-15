@@ -156,7 +156,7 @@ def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarra
 
     # Target stats
     for i, target_name in enumerate(config['train']['target']):
-        if target_name == '00060_Mean':
+        if target_name in ['00060_Mean', 'streamflow']:
             stat_dict[config['train']['target'][i]] = calc_stat_basinnorm(
                 np.swapaxes(y[:, :, i:i+1], 1,0).copy(), basin_area, config
             )  ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
@@ -318,4 +318,3 @@ def init_norm_stats(config: Dict[str, Any], x_NN: np.ndarray, c_NN: np.ndarray,
 
     if not os.path.isfile(stat_file):
         calculate_statistics_all(config, x_NN, c_NN, y, c_NN_all)
-        

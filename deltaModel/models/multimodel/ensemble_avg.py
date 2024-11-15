@@ -1,7 +1,6 @@
 from core.utils.utils import find_shared_keys
 
 
-
 def model_average(model_preds_dict, config):
     """
     For any number of metrics specified in the input dictionary, calculate composite predictions as the average of multiple models' outputs at each basin for each day.

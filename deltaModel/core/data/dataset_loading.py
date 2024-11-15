@@ -4,8 +4,8 @@ import pickle
 import numpy as np
 import pandas as pd
 from core.calc.normalize import init_norm_stats, trans_norm
-from core.data.dataframe_dataset import DataFrameDataset
 from core.data.array_dataset import ArrayDataset
+from core.data.dataframe_dataset import DataFrameDataset
 
 
 class choose_class_to_read_dataset():

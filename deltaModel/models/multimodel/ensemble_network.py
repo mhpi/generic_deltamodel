@@ -1,14 +1,13 @@
 import os
-import numpy as np
-import torch
 from typing import Dict, List
 
+import numpy as np
+import torch
 from conf.config import Config
 from core.calc.RangeBoundLoss import RangeBoundLoss
 from core.utils.utils import find_shared_keys
 from models.loss_functions import get_loss_function
 from models.neural_networks.lstm_models import CudnnLstmModel
-
 
 
 class EnsembleWeights(torch.nn.Module):
@@ -111,11 +110,11 @@ class EnsembleWeights(torch.nn.Module):
         self.ensemble_models(hydro_preds_dict)
 
         # Loss on streamflow preds.
-        loss_sf = self.loss_func(self.config,
-                                 self.ensemble_pred['flow_sim'],
-                                 self.dataset_dict_sample['target'],
-                                 igrid=self.dataset_dict_sample['iGrid']
-                                 )
+        loss_sf = self.loss_func(
+            self.ensemble_pred['flow_sim'],
+            self.dataset_dict_sample['target'],
+            n_samples=self.dataset_dict_sample['batch_sample']
+        )
     
         # Debugging
         # print("rb loss:", loss_rb)

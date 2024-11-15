@@ -113,11 +113,11 @@ class ModelHandler(torch.nn.Module):
     def calc_loss(self, dataset: Dict[str, torch.Tensor]) -> torch.Tensor:
         comb_loss = 0.0
         for mod in self.model_dict:
-            loss = self.loss_func(self.config,
-                           self.flow_out_dict[mod]['flow_sim'],
-                           dataset['target'],
-                           igrid=dataset['iGrid']
-                           )
+            loss = self.loss_func(
+                self.flow_out_dict[mod]['flow_sim'],
+                dataset['target'],
+                n_samples=dataset['batch_sample']
+            )
             comb_loss += loss
             self.loss_dict[mod] += loss.item()
         return comb_loss

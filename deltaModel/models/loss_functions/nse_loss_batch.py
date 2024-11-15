@@ -1,8 +1,8 @@
-import numpy as np
-from numpy.typing import NDArray
-import torch
-from typing import Any, Optional, Dict
+from typing import Any, Dict, Optional
 
+import numpy as np
+import torch
+from numpy.typing import NDArray
 
 
 class NseLossBatch(torch.nn.Module):

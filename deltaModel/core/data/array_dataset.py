@@ -1,12 +1,12 @@
 """TODO: convert to pytorch.dataset class format."""
-import os
-import torch
-import pandas as pd
-import numpy as np
 import logging
+import os
 
-from core.utils.time import trange_to_array
+import numpy as np
+import pandas as pd
+import torch
 from core.data import BaseDataset
+from core.utils.time import trange_to_array
 
 log = logging.getLogger(__name__)
 

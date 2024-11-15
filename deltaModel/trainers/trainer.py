@@ -1,21 +1,20 @@
 import logging
+import os
 import time
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, Optional, Union
 
-import torch
-import tqdm
 import numpy as np
 import pandas as pd
-from core.data import create_training_grid, get_training_sample, take_sample_test
+import torch
+import tqdm
+from core.calc.stat import stat_error
+from core.data import (create_training_grid, get_training_sample,
+                       take_sample_test)
 from core.data.dataset_loading import get_dataset_dict
 from core.utils import save_outputs
 from models.loss_functions import get_loss_func
 from models.model_handler import ModelHandler
-from core.calc.stat import stat_error
 from torch import nn
-from typing import Optional, Callable
-import os
-from typing import Union
 
 log = logging.getLogger(__name__)
 
@@ -135,7 +134,6 @@ class Trainer:
         TODO: Training grid needs improved handling.
         """
         self.is_in_train = True
-        self.batchsize = self.config['train']['batch_size']
         self.epochs = epochs = self.config['train']['epochs']
 
 
@@ -158,9 +156,10 @@ class Trainer:
             self.total_loss = 0.0
 
             # Iterate through minibatches
-            for i in tqdm.tqdm(range(1, self.batchsize), desc=prog_str,
+            for i in tqdm.tqdm(range(1, n_minibatch + 1), desc=prog_str,
                             leave=False, dynamic_ncols=True):
-                
+                self.current_batch = i
+
                 dataset_sample = get_training_sample(
                     self.train_dataset,
                     n_samples,
@@ -173,8 +172,8 @@ class Trainer:
                 loss = self.model.calc_loss(dataset_sample)
 
                 loss.backward()
-                self.optim.step()
-                self.optim.zero_grad()
+                self.optimizer.step()
+                self.optimizer.zero_grad()
 
                 self.total_loss += loss.item()
 
