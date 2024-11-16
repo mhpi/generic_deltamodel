@@ -5,14 +5,15 @@ defaults:
 
 
 ## General -------------------------------#
-mode: test  # train, test, train_test
+mode: train  # train, test, train_test
 ensemble_type: none
 random_seed: 111111
 device: cuda
 gpu_id: 0
 
 name: dmg-1.0-${observations.name}
-save_path: /data/lgl5139/project_blue_eyes/generic_diffModel/results 
+save_path: /data/lgl5139/project_blue_eyes/generic_diffModel/results
+# load_epoch: 50
 
 
 ## Training -------------------------------#
@@ -23,9 +24,8 @@ train:
     batch_size: 800
     optimizer: Adadelta
     epochs: 50
+    start_epoch: 0
     save_epoch: 1
-    resume_from_checkpoint: False
-    start_epoch: 1
 
 loss_function:
     model: RmseLossComb  # RmseLossComb, NseLossBatch, NseSqrtLossBatch

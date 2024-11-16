@@ -69,11 +69,8 @@ class Trainer:
             # Optimizer initialization
             self.optimizer = optimizer or self.create_optimizer()
 
-            # Resume model training from epoch
-            if self.config['train']['resume_from_checkpoint']:
-                self.start_epoch = self.config['train']['start_epoch']
-            else:
-                self.start_epoch = 1
+            # Resume model training from a saved epoch
+            self.start_epoch = self.config['train']['start_epoch']
 
     def create_optimizer(self) -> torch.optim.Optimizer:
         """Initialize the optimizer as named in config.
