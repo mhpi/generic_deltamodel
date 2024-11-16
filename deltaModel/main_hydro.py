@@ -8,7 +8,6 @@ from core.data.dataset_loading import get_dataset_dict
 from core.utils import initialize_config, print_config, set_randomseed
 from models.model_handler import ModelHandler as dModel
 from omegaconf import DictConfig
-from trainers import run_experiment, run_train_test
 from trainers.trainer import Trainer
 
 log = logging.getLogger(__name__)
@@ -42,11 +41,24 @@ def main(config: DictConfig) -> None:
         ### Create Trainer object ###
         trainer = Trainer(config, model, train_dataset, eval_dataset, verbose=True)
 
-        trainer.train()
-
+        mode = config['mode']
+        if mode == 'train':
+            trainer.train()
+        elif mode == 'test':
+            trainer.test()
+        elif mode == 'train_test':
+            trainer.train()
+            trainer.test()
+        else:
+            raise ValueError(f"Invalid mode: {mode}")
+        
     except KeyboardInterrupt:
-        print("Keyboard interrupt received")     
+        print("Keyboard interrupt received")
 
+    except Exception as e:
+        log.error(f"Error: {e}")
+        raise e
+    
     finally:
         print("Cleaning up...")
         torch.cuda.empty_cache()

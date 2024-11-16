@@ -321,9 +321,9 @@ class Config(BaseModel):
     def validate_dir(cls, v: str) -> Path:
         return check_path(v)
 
-    # @field_validator("output_dir")
+    # @field_validator("out_path")
     # @classmethod
-    # def validate_output_dir(cls, v: str) -> Path:
+    # def validate_out_path(cls, v: str) -> Path:
     #     return check_path(v)
 
 

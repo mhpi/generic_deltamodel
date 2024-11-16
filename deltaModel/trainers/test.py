@@ -10,7 +10,7 @@ import pandas as pd
 import torch
 import tqdm
 from core.calc.stat import stat_error
-from core.data import take_sample_test
+from core.data import get_validation_sample
 from core.utils import save_outputs
 from models.model_handler import ModelHandler
 from torch.nn import Module
@@ -68,7 +68,7 @@ class TestModel:
         """Get model predictions for each batch of test data."""
         prediction_list = []
         for i in tqdm.tqdm(range(len(self.iS)), leave=False, dynamic_ncols=True):
-            dataset_sample = take_sample_test(self.config,
+            dataset_sample = get_validation_sample(self.config,
                                                    self.dataset_dict,
                                                    self.iS[i],
                                                    self.iE[i])

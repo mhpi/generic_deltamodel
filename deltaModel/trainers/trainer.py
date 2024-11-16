@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,7 @@ import torch
 import tqdm
 from core.calc.stat import stat_error
 from core.data import (create_training_grid, get_training_sample,
-                       take_sample_test)
+                       get_validation_sample)
 from core.data.dataset_loading import get_dataset_dict
 from core.utils import save_outputs
 from models.loss_functions import get_loss_func
@@ -117,22 +117,8 @@ class Trainer:
 
         return self.optimizer
                     
-    def train(
-        self,
-        resume_from_checkpoint: Optional[Union[str,bool]] = None,
-        dataset_sampler: Optional[Callable] = None
-    ) -> None:
-        """Entry point for training loop.
-        
-        Parameters
-        ----------
-        resume_from_checkpoint : str, optional
-            Path to checkpoint file to resume training from. The default is None.
-        dataset_sampler : Callable, optional
-            Function to sample from the dataset. The default is None.
-        
-        TODO: Training grid needs improved handling.
-        """
+    def train(self) -> None:
+        """Entry point for training loop."""
         self.is_in_train = True
         self.epochs = epochs = self.config['train']['epochs']
 
@@ -157,7 +143,7 @@ class Trainer:
 
             # Iterate through minibatches
             for i in tqdm.tqdm(range(1, n_minibatch + 1), desc=prog_str,
-                            leave=False, dynamic_ncols=True):
+                               leave=False, dynamic_ncols=True):
                 self.current_batch = i
 
                 dataset_sample = get_training_sample(
@@ -187,48 +173,78 @@ class Trainer:
 
         log.info(f"Training complete.")
 
-    def test(self) -> None:
-        """Run testing loop."""
-        log.info(f"Testing model: {self.config['name']}")
 
-        batch_predictions = self._get_batch_predictions()
+    def test(self) -> None:
+        """Run testing loop and save results."""
+        log.info(f"Testing model: {self.config['name']}")
+        self.is_in_test = True
+
+        # Track overall predictions and observations
+        batch_predictions = []
         observations = self.test_dataset['target'][:, :, :]
 
-        log.info("Saving model results.")
+        # Testing loop
+        log.info(f"Begin validation on {len(self.iS)} batches...")
+        for i in tqdm.tqdm(range(len(self.iS)), desc="Testing", leave=False, dynamic_ncols=True):
+            self.current_batch = i
+
+            # Prepare test sample and model prediction.
+            dataset_sample = get_validation_sample(
+                self.test_dataset,
+                self.iS[i],
+                self.iE[i],
+                self.config
+            )
+
+            prediction = self.model(dataset_sample, eval=True)
+
+            # Extract and store prediction results.
+            model_name = self.config['phy_model']['model'][0]
+            prediction = {key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()}
+            batch_predictions.append(prediction)
+
+            if self.verbose:
+                log.info(f"Batch {i + 1}/{len(self.iS)} processed in testing loop.")
+
+        # Save predictions and calculate metrics
+        log.info("Saving model results and calculating metrics")
         save_outputs(self.config, batch_predictions, observations)
         self._calc_metrics(batch_predictions, observations)
 
-    def _get_batch_predictions(self) -> List[Dict[str, torch.Tensor]]:
-        """Generate predictions for each batch during testing."""
-        prediction_list = []
-        for i in tqdm.tqdm(range(len(self.iS)), leave=False, dynamic_ncols=True):
-            dataset_sample = take_sample_test(self.config, self.test_dataset, self.iS[i], self.iE[i])
-            prediction = self.model(dataset_sample, eval=True)
-            model_name = self.config['phy_model']['model'][0]
-            prediction_list.append({key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()})
-        return prediction_list
-
-    def _calc_metrics(self, batch_predictions: List[Dict[str, torch.Tensor]], observations: torch.Tensor) -> None:
-        """Calculate and save test metrics."""
+    def _calc_metrics(
+        self,
+        batch_predictions: List[Dict[str, torch.Tensor]],
+        observations: torch.Tensor
+    ) -> None:
+        """Calculate and save test metrics for each prediction type."""
         preds_list, obs_list, name_list = [], [], []
-        flow_preds = torch.cat([d['flow_sim'] for d in batch_predictions], dim=1)
-        flow_obs = observations[:, :, self.config['target'].index('00060_Mean')]
-        
-        if 'HBV1_1p' not in self.config['phy_model']['model']:
+
+        # Compile flow predictions and corresponding observations
+        flow_preds = torch.cat([pred['flow_sim'] for pred in batch_predictions], dim=1)
+        flow_obs = observations[:, :, 0]
+
+        # Remove warm-up period if needed
+        if self.config['dpl_model']['phy_model']['warm_up_states']:
             flow_obs = flow_obs[self.config['phy_model']['warm_up']:, :]
-        
+
+        # Add to lists for metrics computation
         preds_list.append(flow_preds.numpy())
         obs_list.append(np.expand_dims(flow_obs, 2))
         name_list.append('flow')
-        
-        statDictLst = [stat_error(np.swapaxes(x.squeeze(), 1, 0), np.swapaxes(y.squeeze(), 1, 0)) for (x, y) in zip(preds_list, obs_list)]
 
-        for stat, name in zip(statDictLst, name_list):
-            mdstd = pd.DataFrame(
-                [[np.nanmedian(stat[key]), np.nanstd(stat[key]), np.nanmean(stat[key])] for key in stat.keys()],
-                index=stat.keys(), columns=['median', 'STD', 'mean']
+        # Calculate statistics and save results to CSV
+        stat_dicts = [
+            stat_error(np.swapaxes(pred.squeeze(), 1, 0), np.swapaxes(obs.squeeze(), 1, 0))
+            for pred, obs in zip(preds_list, obs_list)
+        ]
+
+        for stat_dict, name in zip(stat_dicts, name_list):
+            metric_df = pd.DataFrame(
+                [[np.nanmedian(stat_dict[key]), np.nanstd(stat_dict[key]), np.nanmean(stat_dict[key])]
+                 for key in stat_dict.keys()],
+                index=stat_dict.keys(), columns=['median', 'STD', 'mean']
             )
-            mdstd.to_csv(os.path.join(self.config['testing_dir'], f'mdstd_{name}.csv'))
+            metric_df.to_csv(os.path.join(self.config['testing_dir'], f'metrics_{name}.csv'))
 
     def _log_epoch_stats(self, epoch: int, loss_dict: Dict[str, float], n_minibatch: int, start_time: float) -> None:
         """Log statistics after each epoch."""
@@ -236,4 +252,7 @@ class Trainer:
         loss_formated = ", ".join(f"{key}: {value:.6f}" for key, value in avg_loss_dict.items())
         elapsed = time.perf_counter() - start_time
         mem_aloc = int(torch.cuda.memory_reserved(device=self.config['device']) * 0.000001)
-        log.info(f"Model loss after epoch {epoch}: {loss_formated} \n~ Runtime {elapsed:.2f} sec, {mem_aloc} Mb reserved GPU memory")
+        log.info(
+            f"Model loss after epoch {epoch}: {loss_formated} \n"
+            f"~ Runtime {elapsed:.2f} sec, {mem_aloc} Mb reserved GPU memory"
+        )

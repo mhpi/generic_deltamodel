@@ -49,7 +49,7 @@ class EnsembleWeights(torch.nn.Module):
     
     def load_model(self, model) -> None:
         model_name = f"{model}_model_Ep{self.config['epochs']}.pt"
-        model_path = os.path.join(self.config['output_dir'], model_name)
+        model_path = os.path.join(self.config['out_path'], model_name)
         try:
             self.lstm = torch.load(model_path).to(self.config['device']) 
         except:

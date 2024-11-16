@@ -7,19 +7,22 @@ from models.differentiable_model import DeltaModel
 
 
 class ModelHandler(torch.nn.Module):
-    """
-    Streamlines instantiation and handling of differentiable models &
-    multimodel ensembles.
+    """Streamlines handling of differentiable models and multimodel ensembles.
+
+    This interface additionally acts as a link to the CSDMS BMI, enabling
+    compatibility with the NOAA-OWP NextGen framework.
 
     Basic functions include managing: 
     - high-level model init
-    - optimizer
     - loss function(s)
-    - high-level forwarding
+    - model forwarding
+    - multimodel ensembles (planned)
+    - multi-GPU compute (planned)
 
-    NOTE: In addition to interfacing with experiments, this handler is a plugin
-    for BMI. All PMI-interfaced models must ultimately use this handler if they
-    are to be BMI compatible.
+    Parameters
+    ----------
+    config : dict
+        Configuration settings for the model.
     """
     def __init__(self, config):
         super(ModelHandler, self).__init__()
@@ -45,7 +48,7 @@ class ModelHandler(torch.nn.Module):
             try:        
                 for mod in self.config['dpl_model']['phy_model']['model']:
                     save_name = str(mod) + '_model_Ep' + str(start_epoch) + '.pt'
-                    load_path = os.path.join(self.config['output_dir'], save_name)
+                    load_path = os.path.join(self.config['out_path'], save_name)
 
                     self.model_dict[mod] = torch.load(load_path).to(self.config['device'])
 
@@ -62,8 +65,6 @@ class ModelHandler(torch.nn.Module):
         else:
             # Initialize differentiable hydrology model(s) and bulk optimizer.
             for mod in self.config['dpl_model']['phy_model']['model']:
-
-                ### TODO: change which models are set to which devices here: ###
                 self.model_dict[mod] = DeltaModel(
                     phy_model_name=mod,
                     config=self.config['dpl_model']
@@ -81,10 +82,14 @@ class ModelHandler(torch.nn.Module):
         return self.parameters
     
     def load_model(self, model) -> None:
-        model_name = str(model) + '_model_Ep' + str(self.config['train']['epochs']) + '.pt'
+        model_name = str(model) + '_model_Ep' + str(self.config['test']['test_epoch']) + '.pt'
         model_path = os.path.join(self.config['out_path'], model_name)
         try:
-            self.model_dict[model] = torch.load(model_path).to(self.config['device'])
+            self.model_dict[model] = DeltaModel(
+                phy_model_name=model,
+                config=self.config['dpl_model']
+            ).to(self.config['device'])
+            self.model_dict[model].load_state_dict(torch.load(model_path))
 
             # Overwrite internal config if there is discontinuity:
             if self.model_dict[model].config:
@@ -130,5 +135,6 @@ class ModelHandler(torch.nn.Module):
         epoch : int
             Current epoch.
         """
-        for mod in self.config['phy_model']['model']:
-            save_model(self.config, self.model.model_dict[mod], mod, epoch)
+        for model in self.config['dpl_model']['phy_model']['model']:
+            save_model(self.config, self.model_dict[model], model, epoch)
+

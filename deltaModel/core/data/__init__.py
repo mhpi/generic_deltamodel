@@ -162,8 +162,12 @@ def get_training_sample(
     return dataset_sample
 
 
-def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor], 
-                     i_s: int, i_e: int) -> Dict[str, torch.Tensor]:
+def get_validation_sample(
+    dataset_dict: Dict[str, torch.Tensor],
+    i_s: int,
+    i_e: int,
+    config: Dict
+) -> Dict[str, torch.Tensor]:
     """
     Take sample of data for testing batch.
     """

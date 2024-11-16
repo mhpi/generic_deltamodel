@@ -5,7 +5,7 @@ defaults:
 
 
 ## General -------------------------------#
-mode: train  # train, test, train_test
+mode: test  # train, test, train_test
 ensemble_type: none
 random_seed: 111111
 device: cuda
@@ -20,10 +20,10 @@ train:
     start_time: 1999/10/01
     end_time: 2008/09/30
     target: [00060_Mean]
-    batch_size: 100
+    batch_size: 800
     optimizer: Adadelta
     epochs: 50
-    save_epoch: 10
+    save_epoch: 1
     resume_from_checkpoint: False
     start_epoch: 1
 
@@ -40,7 +40,7 @@ test:
     start_time: 1989/10/01
     end_time: 1999/09/30
     batch_size: 25
-    test_epoch: 50
+    test_epoch: 1
 
 
 ## dPL Model -------------------------------#
