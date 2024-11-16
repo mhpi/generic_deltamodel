@@ -1,6 +1,7 @@
 from json import load
 import os
 import logging
+from pyexpat import model
 from typing import Dict, List, Any, Optional
 
 from sympy import EX
@@ -149,45 +150,71 @@ class ModelHandler(torch.nn.Module):
         dataset_dict: Dict[str, torch.Tensor],
         eval: bool = False
     ) -> Dict[str, torch.Tensor]:        
-        """Sequentially forward one or more differentiable models."""
-        self.flow_out_dict = {}
-
-        for mod in self.model_dict:
-            ## Test/Validation
-            if eval:
-                self.model_dict[mod].eval()
-                # torch.set_grad_enabled(False)
-                self.flow_out_dict[mod] = self.model_dict[mod](dataset_dict)
-                # torch.set_grad_enabled(True)
-            ## Train
-            else:
-                self.flow_out_dict[mod] = self.model_dict[mod](dataset_dict)
-        return self.flow_out_dict
-
-    def calc_loss(self, dataset: Dict[str, torch.Tensor]) -> torch.Tensor:
-        """Calculate loss for each model in the multimodel."""
-        if not self.loss_func:
-            raise ValueError("No loss function(s) defined.")
+        """Sequentially forward one or more differentiable models.
         
-        comb_loss = 0.0
-        for mod in self.model_dict:
-            loss = self.loss_func(
-                self.flow_out_dict[mod]['flow_sim'],
+        Returns
+        -------
+        Dict[str, torch.Tensor]
+            Dictionary of model outputs. Each key corresponds to a model name.
+        """
+        self.output_dict = {}
+        for name, model in self.model_dict.items():
+            if eval:
+                ## Inference mode
+                model.eval()
+                with torch.no_grad():
+                    self.output_dict[name] = model(dataset_dict)
+            else:
+                ## Training mode
+                model.train()
+                self.output_dict[name] = model(dataset_dict)
+        return self.output_dict
+
+    def calc_loss(
+        self,
+        dataset: Dict[str, torch.Tensor],
+        loss_func: Optional[torch.nn.Module] = None
+    ) -> torch.Tensor:
+        """Calculate combined loss across all models.
+        
+        Parameters
+        ----------
+        dataset : dict
+            Dataset dictionary containing observation data.
+        loss_func : nn.Module, optional
+            Loss function to use. Default is None.
+        """
+        if not self.loss_func and not loss_func:
+            raise ValueError("No loss function defined.")
+        loss_func = loss_func or self.loss_func
+
+        loss_combined = 0.0
+
+        target_name = self.config['train']['target'][0]
+
+        for name, output in self.output_dict.items():
+            if target_name not in output.keys():
+                raise ValueError(f"Target variable '{target_name}' not in model outputs.")
+            output = output[target_name]
+
+            loss = loss_func(
+                output,
                 dataset['target'],
                 n_samples=dataset['batch_sample']
             )
-            comb_loss += loss
-            self.loss_dict[mod] += loss.item()
-        return comb_loss
+            loss_combined += loss
+            self.loss_dict[name] += loss.item()
+        return loss_combined
 
     def save_model(self, epoch: int) -> None:
-        """Save trained model/ensemble model state dict.
+        """Save state dictionary of trained models to disk.
         
         Parameters
         ----------
         epoch : int
-            Current epoch.
+            Epoch number model will be saved at.
         """
-        for model in self.config['dpl_model']['phy_model']['model']:
-            save_model(self.config, self.model_dict[model], model, epoch)
-
+        for name, model in self.model_dict.items():
+            save_model(self.config, model, name, epoch)
+            if self.verbose:
+                logger.info(f"Saved model: {name}, Ep {epoch}")

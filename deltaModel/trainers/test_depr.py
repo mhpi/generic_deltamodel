@@ -98,7 +98,7 @@ class TestModel:
         
         # Format streamflow predictions and observations.
         flow_preds = torch.cat([d['flow_sim'] for d in batch_predictions], dim=1)
-        flow_obs = observations[:, :, self.config['target'].index('00060_Mean')]
+        flow_obs = observations[:, :, self.config['target'].index('flow_sim')]
 
         # Remove warmup days for dHBV1.1p.
         if ('HBV1_1p' in self.config['phy_model']['model']) and \

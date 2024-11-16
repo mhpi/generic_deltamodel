@@ -27,7 +27,7 @@ class ArrayDataset(BaseDataset):
         self.all_forcings_name = ['prcp', 'tmean', 'pet', 'Lwd', 'PET_hargreaves(mm/day)', 'prcp(mm/day)'
                                 'Pres', 'RelHum', 'SpecHum', 'srad(W/m2)',
                                 'tmean(C)', 'tmax(C)', 'tmin(C)', 'Wind', 'ccov',
-                                'vp(Pa)', '00060_Mean', '00010_Mean','dayl(s)']  #
+                                'vp(Pa)', '00060_Mean', 'flow_sim', '00010_Mean','dayl(s)']  #
         self.attrLst_name = ['aridity', 'p_mean', 'ETPOT_Hargr', 'NDVI', 'FW', 'SLOPE_PCT', 'SoilGrids1km_sand',
                              'SoilGrids1km_clay', 'SoilGrids1km_silt', 'glaciers', 'HWSD_clay', 'HWSD_gravel',
                              'HWSD_sand', 'HWSD_silt', 'ELEV_MEAN_M_BASIN', 'meanTa', 'permafrost',

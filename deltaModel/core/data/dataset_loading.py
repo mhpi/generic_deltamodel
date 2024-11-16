@@ -102,14 +102,14 @@ def load_data(config, t_range=None, train=True):
 
 def converting_flow_from_ft3_per_sec_to_mm_per_day(config, c_NN_sample, obs_sample):
     varTar_NN = config['train']['target']
-    if '00060_Mean' in varTar_NN:
-        obs_flow_v = obs_sample[:, :, varTar_NN.index('00060_Mean')]
+    if 'flow_sim' in varTar_NN:
+        obs_flow_v = obs_sample[:, :, varTar_NN.index('flow_sim')]
         varC_NN = config['dpl_model']['nn_model']['attributes']
         area_name = config['observations']['area_name']
         
         c_area = c_NN_sample[:, varC_NN.index(area_name)]
         area = np.expand_dims(c_area, axis=0).repeat(obs_flow_v.shape[0], 0)  # np ver
-        obs_sample[:, :, varTar_NN.index('00060_Mean')] = (10 ** 3) * obs_flow_v * 0.0283168 * 3600 * 24 / (area * (10 ** 6)) # convert ft3/s to mm/day
+        obs_sample[:, :, varTar_NN.index('flow_sim')] = (10 ** 3) * obs_flow_v * 0.0283168 * 3600 * 24 / (area * (10 ** 6)) # convert ft3/s to mm/day
     return obs_sample
 
 
@@ -144,7 +144,7 @@ def get_dataset_dict(config, train=False):
     
     # Streamflow unit conversion.
     #### MOVED FROM LOAD_DATA
-    if '00060_Mean' in config['train']['target']:
+    if 'flow_sim' in config['train']['target']:
         dataset_dict['target'] = converting_flow_from_ft3_per_sec_to_mm_per_day(
             config,
             dataset_dict['c_nn'],
