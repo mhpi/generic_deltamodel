@@ -1,124 +1,216 @@
+import logging
 import os
-from typing import Dict
+from typing import Any, Dict, List, Optional
 
 import torch.nn
 from core.utils import save_model
 from models.differentiable_model import DeltaModel
 
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
+
 
 class ModelHandler(torch.nn.Module):
-    """
-    Streamlines instantiation and handling of differentiable models &
-    multimodel ensembles.
+    """Streamlines handling of differentiable models and multimodel ensembles.
 
-    Basic functions include managing: 
-    - high-level model init
-    - optimizer
-    - loss function(s)
-    - high-level forwarding
+    This interface additionally acts as a link to the CSDMS BMI, enabling
+    compatibility with the NOAA-OWP NextGen framework.
 
-    NOTE: In addition to interfacing with experiments, this handler is a plugin
-    for BMI. All PMI-interfaced models must ultimately use this handler if they
-    are to be BMI compatible.
+    Features
+    - Model initialization (new or from a checkpoint)
+    - Loss calculation
+    - Forwarding for single/multi-model setups
+    - (Planned) Multimodel ensembles/loss and multi-GPU compute
+
+    Parameters
+    ----------
+    config : dict
+        Configuration settings for the model.
+    device : str, optional
+        Device to run the model on. Default is None.
+    verbose : bool, optional
+        Whether to print verbose output. Default is False.
     """
-    def __init__(self, config):
-        super(ModelHandler, self).__init__()
+    def __init__(
+        self,
+        config: Dict[str, Any],
+        device: Optional[str] = None,
+        verbose=False
+    ) -> None:
+        super().__init__()
         self.config = config
         self.name = 'Differentiable Model Handler'
-        self._init_models()
-        self.loss_dict = {key: 0 for key in self.config['dpl_model']['phy_model']['model']}
+        self.save_path = config['out_path']
+        self.verbose = verbose
 
-        
-    def _init_models(self):
-        """
-        Initialize and store each differentiable hydro model and optimizer in
-        the multimodel.
-        """
-        self.model_dict = {}
-
-        if (self.config['ensemble_type'] == 'none') and (len(self.config['dpl_model']['phy_model']['model']) > 1):
-            raise ValueError("Multiple hydro models given, but ensemble type not specified. Check config.")
-        
-        elif self.config['train']['run_from_checkpoint']:
-            # Reinitialize trained model(s).
-            self.parameters = []
-            for mod in self.config['phy_model']['model']:
-                load_path = self.config['checkpoint'][mod]
-                self.model_dict[mod] = torch.load(load_path).to(self.config['device'])
-                self.parameters += list(self.model_dict[mod].parameters())
-
-                self.model_dict[mod].zero_grad()
-                self.model_dict[mod].train()
-            self.init_optimizer()
-
-        elif self.config['mode'] in ['test']:
-            for mod in self.config['phy_model']['model']:
-                self.load_model(mod)
-
+        if device is None:
+            self.device = config['device']
         else:
-            # Initialize differentiable hydrology model(s) and bulk optimizer.
-            self.parameters = []
-            for mod in self.config['dpl_model']['phy_model']['model']:
+            self.device = device
 
-                ### TODO: change which models are set to which devices here: ###
-                self.model_dict[mod] = DeltaModel(
-                    phy_model_name=mod,
-                    config=self.config['dpl_model']
-                    ).to(self.config['device'])
-                self.parameters += list(self.model_dict[mod].parameters())
+        self.model_dict = {}
+        self._init_models()
+        self.loss_func = None
+        self.loss_dict = {key: 0 for key in self.models_to_initialize}
+        if verbose:
+            log.info(f"Initialized {self.name} with {self.models_to_initialize}.")
 
-                self.model_dict[mod].zero_grad()
-                self.model_dict[mod].train()
+    @property
+    def models_to_initialize(self) -> List[str]:
+        """List of models specified in the configuration."""
+        return self.config['dpl_model']['phy_model']['model']
     
-    def load_model(self, model) -> None:
-        model_name = str(model) + '_model_Ep' + str(self.config['train']['epochs']) + '.pt'
-        model_path = os.path.join(self.config['out_path'], model_name)
-        try:
-            self.model_dict[model] = torch.load(model_path).to(self.config['device'])
-
-            # Overwrite internal config if there is discontinuity:
-            if self.model_dict[model].config:
-                self.model_dict[model].config = self.config
-        except:
-            raise FileNotFoundError(f"Model file {model_path} was not found. Check configurations.")
+    def _init_models(self) -> None:
+        """Initialize and store models, multimodels, and checkpoints."""
+        if self.config['ensemble_type'] == 'none' and len(self.models_to_initialize) > 1:
+            raise ValueError(
+                "Multiple models specified, but ensemble type is 'none'. Check configuration."
+            )
+        if self.config['mode'] == 'train':
+            load_epoch = self.config['train']['start_epoch']
+        elif self.config['mode'] == 'test':
+            load_epoch = self.config['test']['test_epoch']
+        else:
+            load_epoch = self.config.get('load_epoch', 0)
         
-    def forward(self, dataset_dict_sample, eval=False):        
-        """Batch forward one or more differentiable hydrology models."""
-        self.flow_out_dict = dict()
-        self.dataset_dict_sample = dataset_dict_sample
+        # Initialize new models or load from a saved checkpoint
+        try:
+            self.load_model(load_epoch)
+        except Exception as e:
+            raise e
 
-        # Forward
-        for mod in self.model_dict:
-            ## Test/Validation
-            if eval:
-                self.model_dict[mod].eval()
-                # torch.set_grad_enabled(False)
-                self.flow_out_dict[mod] = self.model_dict[mod](dataset_dict_sample)
-                # torch.set_grad_enabled(True)
-            ## Train
+    def load_model(self, epoch: int = 0) -> None:
+        """Load a specific model from a checkpoint.
+        
+        Parameters
+        ----------
+        epoch : int 
+            Epoch to load the model from. Default is 0.
+        """
+        for name in self.models_to_initialize:
+            # Created new model
+            self.model_dict[name] = DeltaModel(
+                phy_model_name=name,
+                config=self.config['dpl_model'],
+                device=self.device
+            )
+
+            if epoch == 0:
+                # Leave model uninitialized
+                if self.verbose:
+                    log.info(f"Created new model: {name}")
+                continue 
+            
             else:
-                self.flow_out_dict[mod] = self.model_dict[mod](dataset_dict_sample)
-        return self.flow_out_dict
+                # Initialize model from checkpoint state dict.
+                path = os.path.join(self.save_path, f"{name}_model_Ep{epoch}.pt")
+                if not os.path.exists(path):
+                    raise FileNotFoundError(
+                        f"{path} not found for model {name}."
+                    )
+                self.model_dict[name].load_state_dict(torch.load(path))
+                self.model_dict[name].to(self.device)
+                
+                # Overwrite internal config if there is discontinuity:
+                if self.model_dict[name].config:
+                    self.model_dict[name].config = self.config
 
-    def calc_loss(self, dataset: Dict[str, torch.Tensor]) -> torch.Tensor:
-        comb_loss = 0.0
-        for mod in self.model_dict:
-            loss = self.loss_fn(self.config,
-                           self.flow_out_dict[mod],
-                           dataset['obs'],
-                           igrid=dataset['iGrid']
-                           )
-            comb_loss += loss
-            self.loss_dict[mod] += loss.item()
-        return comb_loss
+                if self.verbose:
+                    log.info(f"Loaded model: {name}, Ep {epoch}")
+
+    def _new_model_instance(self, model_name: str) -> DeltaModel:
+        """Create a new instance of a differentiable model.
+        
+        Multi-GPU support is planned here.
+
+        Parameters
+        ----------
+        model_name : str
+            Name of the model to initialize.
+        """
+        return DeltaModel(
+            phy_model_name=model_name,
+            config=self.config['dpl_model'],
+            device=self.device
+        )
+
+    def get_parameters(self) -> List[torch.Tensor]:
+        """Return all model parameters."""
+        self.parameters = []
+        for model in self.model_dict.values():
+            self.parameters += list(model.parameters())
+        return self.parameters
+        
+    def forward(
+        self,
+        dataset_dict: Dict[str, torch.Tensor],
+        eval: bool = False
+    ) -> Dict[str, torch.Tensor]:        
+        """Sequentially forward one or more differentiable models.
+        
+        Returns
+        -------
+        Dict[str, torch.Tensor]
+            Dictionary of model outputs. Each key corresponds to a model name.
+        """
+        self.output_dict = {}
+        for name, model in self.model_dict.items():
+            if eval:
+                ## Inference mode
+                model.eval()
+                with torch.no_grad():
+                    self.output_dict[name] = model(dataset_dict)
+            else:
+                ## Training mode
+                model.train()
+                self.output_dict[name] = model(dataset_dict)
+        return self.output_dict
+
+    def calc_loss(
+        self,
+        dataset: Dict[str, torch.Tensor],
+        loss_func: Optional[torch.nn.Module] = None
+    ) -> torch.Tensor:
+        """Calculate combined loss across all models.
+        
+        Parameters
+        ----------
+        dataset : dict
+            Dataset dictionary containing observation data.
+        loss_func : nn.Module, optional
+            Loss function to use. Default is None.
+        """
+        if not self.loss_func and not loss_func:
+            raise ValueError("No loss function defined.")
+        loss_func = loss_func or self.loss_func
+
+        loss_combined = 0.0
+
+        target_name = self.config['train']['target'][0]
+
+        for name, output in self.output_dict.items():
+            if target_name not in output.keys():
+                raise ValueError(f"Target variable '{target_name}' not in model outputs.")
+            output = output[target_name]
+
+            loss = loss_func(
+                output,
+                dataset['target'],
+                n_samples=dataset['batch_sample']
+            )
+            loss_combined += loss
+            self.loss_dict[name] += loss.item()
+        return loss_combined
 
     def save_model(self, epoch: int) -> None:
-        """Save trained model/ensemble model state dict.
+        """Save state dictionary of trained models to disk.
         
         Parameters
         ----------
         epoch : int
-            Current epoch.
+            Epoch number model will be saved at.
         """
-        for mod in self.config['phy_model']['model']:
-            save_model(self.config, self.model.model_dict[mod], mod, epoch)
+        for name, model in self.model_dict.items():
+            save_model(self.config, model, name, epoch)
+            if self.verbose:
+                log.info(f"Saved model: {name}, Ep {epoch}")

@@ -295,7 +295,7 @@ class Config(BaseModel):
     # phy_forcings_model: list = "not_defined"
 
     def __init__(self, **data):
-        super(Config, self).__init__(**data)
+        super().__init__(**data)
         if self.params.save_path == "None":
             try:
                 self.params.save_path = HydraConfig.get().run.dir
@@ -321,9 +321,9 @@ class Config(BaseModel):
     def validate_dir(cls, v: str) -> Path:
         return check_path(v)
 
-    # @field_validator("output_dir")
+    # @field_validator("out_path")
     # @classmethod
-    # def validate_output_dir(cls, v: str) -> Path:
+    # def validate_out_path(cls, v: str) -> Path:
     #     return check_path(v)
 
 

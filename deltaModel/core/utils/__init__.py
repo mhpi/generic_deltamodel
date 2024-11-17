@@ -232,10 +232,9 @@ def save_model(config, model, model_name, epoch, create_dirs=False) -> None:
     if create_dirs: create_output_dirs(config)
 
     save_name = str(model_name) + '_model_Ep' + str(epoch) + '.pt'
-    # os.makedirs(save_name, exist_ok=True)
 
-    full_path = os.path.join(config['output_dir'], save_name)
-    torch.save(model, full_path)
+    full_path = os.path.join(config['out_path'], save_name)
+    torch.save(model.state_dict(), full_path)
 
 
 def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
@@ -280,7 +279,7 @@ def load_model(config, model_name, epoch):
         model (torch.nn.Module): The loaded PyTorch model.
     """
     model_name = str(model_name) + '_model_Ep' + str(epoch) + '.pt'
-    # model_path = os.path.join(config['output_dir'], model_name)
+    # model_path = os.path.join(config['out_path'], model_name)
     # try:
     #     self.model_dict[model] = torch.load(model_path).to(self.config['device']) 
     # except:
@@ -332,8 +331,8 @@ def print_config(config: Dict[str, Any]) -> None:
         print(f"  {'Train Range :':<20}{config['train']['start_time']:<20}{config['train']['end_time']:<20}")
     if config['mode'] != 'train':
         print(f"  {'Test Range :':<20}{config['test']['start_time']:<20}{config['test']['end_time']:<20}")
-    if config['train']['run_from_checkpoint'] == True:
-        print(f"  {'Resuming training from epoch:':<20}{config['run_from_checkpoint']['start_epoch']:<20}")
+    if config['train']['start_epoch'] > 0:
+        print(f"  {'Resume training from epoch:':<20}{config['train']['start_epoch']:<20}")
     print()
 
     print("\033[1m" + "Model Parameters" + "\033[0m")

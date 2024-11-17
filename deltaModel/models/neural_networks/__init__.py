@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 class Initialization(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
-        super(Initialization, self).__init__()
+        super().__init__()
         self.config = kwargs["config"]
 
     def kaiming_normal_initializer(self, x) -> None:
@@ -58,7 +58,7 @@ class Initialization(nn.Module):
 
 class NeuralNetwork(ABC, torch.nn.Module):
     def __init__(self, *args, **kwargs) -> None:
-        super(NeuralNetwork, self).__init__()
+        super().__init__()
         self.config = kwargs["config"]
         self.Initialization = Initialization(config=self.config)
 

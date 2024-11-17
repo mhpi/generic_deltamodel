@@ -10,7 +10,7 @@ import pandas as pd
 import torch
 import tqdm
 from core.calc.stat import stat_error
-from core.data import take_sample_test
+from core.data import get_validation_sample
 from core.utils import save_outputs
 from models.model_handler import ModelHandler
 from torch.nn import Module
@@ -56,7 +56,7 @@ class TestModel:
         # Get model predictions and observation data.
         log.info(f"Testing on batches of {self.config['test_batch']} basins...")
         batch_predictions = self._get_batch_predictions()
-        observations = self.dataset_dict['obs'][:, :, :]
+        observations = self.dataset_dict['target'][:, :, :]
 
         log.info(f"Saving model results.")
         save_outputs(self.config, batch_predictions, observations)
@@ -68,7 +68,7 @@ class TestModel:
         """Get model predictions for each batch of test data."""
         prediction_list = []
         for i in tqdm.tqdm(range(len(self.iS)), leave=False, dynamic_ncols=True):
-            dataset_sample = take_sample_test(self.config,
+            dataset_sample = get_validation_sample(self.config,
                                                    self.dataset_dict,
                                                    self.iS[i],
                                                    self.iE[i])
@@ -98,10 +98,10 @@ class TestModel:
         
         # Format streamflow predictions and observations.
         flow_preds = torch.cat([d['flow_sim'] for d in batch_predictions], dim=1)
-        flow_obs = observations[:, :, self.config['target'].index('00060_Mean')]
+        flow_obs = observations[:, :, self.config['target'].index('flow_sim')]
 
         # Remove warmup days for dHBV1.1p.
-        if ('hbv_v1_1p' in self.config['phy_model']['model']) and \
+        if ('HBV1_1p' in self.config['phy_model']['model']) and \
         (self.config['phy_model']['use_warmup_mode']) and (self.config['ensemble_type'] == 'none'):
             pass
         else:

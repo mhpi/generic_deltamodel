@@ -59,7 +59,7 @@ def normalize_streamflow(
 
     TODO: goes to hydroDL2
     """
-    output = torch.zeros([len(gage_ids), data.shape[1]], dtype=torch.float64)
+    output = torch.zeros([len(gage_ids), data.shape[1]], dtype=torch.float32)
     for idx, gage in enumerate(gage_ids):
         statistics = stat_dict[gage]
         output[idx] = (data[idx] - statistics[2]) / statistics[3]
@@ -79,7 +79,7 @@ def denormalize_streamflow(
     TODO: goes to hydroDL2
     """
 
-    output = torch.zeros([len(gage_ids), normalized_data.shape[1]], dtype=torch.float64)
+    output = torch.zeros([len(gage_ids), normalized_data.shape[1]], dtype=torch.float32)
     for idx, gage in enumerate(gage_ids):
         statistics = stat_dict[gage]
         output[idx] = normalized_data[idx] * statistics[3] + statistics[2]

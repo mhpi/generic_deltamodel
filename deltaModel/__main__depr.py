@@ -23,15 +23,14 @@ def main(config: DictConfig) -> None:
     try:
         start_time = time.perf_counter()
 
-        # Convert yaml to dict and initialize configuration settings.
+        # Initialize the config and randomseed.
         config = initialize_config(config)
-
         set_randomseed(config['random_seed'])
 
         log.info(f"RUNNING MODE: {config['mode']}")
         print_config(config)
 
-        # Initializing a dPL model object.
+        # Initializing a dPL model and trainer objects.
         model = dModel(config).to(config['device'])
 
         # Run Trainer based on mode.

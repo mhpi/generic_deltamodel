@@ -1,9 +1,7 @@
 # Generic, Scalable Differentiable Modeling Framework on PyTorch
 
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![image](https://img.shields.io/pypi/l/ruff.svg)](https://github.com/astral-sh/ruff/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11-blue)]()
-[![Actions status](https://github.com/astral-sh/ruff/workflows/CI/badge.svg)](https://github.com/astral-sh/ruff/actions)
 
 
 A domain-agnostic, PyTorch-based framework for developing trainable differentiable models that merge neural networks with process-based equations. "Differentiable" means that gradient calculations can be achieved efficiently at large scale throughout the model, so process-based equations can be trained together with NNs on big data, on GPU. 

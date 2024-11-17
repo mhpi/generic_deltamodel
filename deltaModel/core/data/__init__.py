@@ -1,5 +1,6 @@
 import logging
-from typing import Dict, Optional, Tuple
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -7,6 +8,16 @@ from core.utils.time import trange_to_array
 
 log = logging.getLogger(__name__)
 
+
+
+class BaseDataset(ABC, torch.utils.data.Dataset):
+    @abstractmethod
+    def getDataTs(self, config, varLst):
+        raise NotImplementedError
+
+    @abstractmethod
+    def getDataConst(self, config, varLst):
+        raise NotImplementedError
 
 
 def random_index(ngrid: int, nt: int, dim_subset: Tuple[int, int],
@@ -17,23 +28,46 @@ def random_index(ngrid: int, nt: int, dim_subset: Tuple[int, int],
     return i_grid, i_t
 
 
-def calc_training_params(x: np.ndarray, t_range: Tuple[int, int],
-                         config: dict, ngrid=None) -> Tuple[int, int, int]:
-    """Calculate number of iterations, time steps, and grid points for training."""
-    nt = x.shape[0]
-    if ngrid is None:
-        ngrid = x.shape[1]
+def create_training_grid(
+    x: np.ndarray,
+    config: Dict[str, Any],
+    n_samples: int = None
+) -> Tuple[int, int, int]:
+    """Define a training grid of samples x iterations per epoch x time.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        The input data for a model.
+    config : dict
+        The configuration dictionary.
+    n_samples : int, optional
+        The number of samples to use in the training grid.
+    
+    Returns
+    -------
+    Tuple[int, int, int]
+        The number of samples, the number of iterations per epoch, and the
+        number of timesteps.
+    """
+    t_range = config['train_t_range']
+    n_t = x.shape[0]
+
+    if n_samples is None:
+        n_samples = x.shape[1]
 
     t = trange_to_array(t_range)
     rho = min(t.shape[0], config['dpl_model']['rho'])
+
+    # Calculate number of iterations per epoch.
     n_iter_ep = int(
         np.ceil(
             np.log(0.01)
-            / np.log(1 - config['train']['batch_size'] * rho / ngrid
-                     / (nt - config['dpl_model']['phy_model']['warm_up']))
+            / np.log(1 - config['train']['batch_size'] * rho / n_samples
+                     / (n_t - config['dpl_model']['phy_model']['warm_up']))
         )
     )
-    return ngrid, n_iter_ep, nt,
+    return n_samples, n_iter_ep, n_t,
 
 
 def select_subset(config: Dict,
@@ -88,22 +122,23 @@ def select_subset(config: Dict,
     return x_tensor.to(config['device']) if torch.cuda.is_available() else x_tensor
 
 
-def take_sample_train(config: Dict,
-                      dataset_dict: Dict[str, np.ndarray], 
-                      ngrid_train: int,
-                      nt: int,
-                      ) -> Dict[str, torch.Tensor]:
+def get_training_sample(
+    dataset_dict: Dict[str, np.ndarray], 
+    ngrid_train: int,
+    nt: int,
+    config: Dict,
+) -> Dict[str, torch.Tensor]:
     """Select random sample of data for training batch."""
     warm_up = config['dpl_model']['phy_model']['warm_up']
     subset_dims = (config['train']['batch_size'], config['dpl_model']['rho'])
 
-    i_grid, i_t = random_index(ngrid_train, nt, subset_dims, warm_up=warm_up)
+    i_sample, i_t = random_index(ngrid_train, nt, subset_dims, warm_up=warm_up)
 
     # Remove warmup days for dHBV1.1p...
-    flow_obs = select_subset(config, dataset_dict['obs'], i_grid, i_t,
+    flow_obs = select_subset(config, dataset_dict['target'], i_sample, i_t,
                              config['dpl_model']['rho'], warm_up=warm_up)
     
-    # if ('HBV_v1_1p' in config['dpl_model']['phy_model']['model']) and \
+    # if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
     # (config['dpl_model']['phy_model']['warm_up_states']) and (config['ensemble_type'] == 'none'):
     #     pass
     # else:
@@ -111,30 +146,35 @@ def take_sample_train(config: Dict,
     
     # Create dataset sample dict.
     dataset_sample = {
-        'iGrid': i_grid,
-        'inputs_nn_scaled': select_subset(
-            config, dataset_dict['inputs_nn_scaled'], i_grid, i_t,
+        'batch_sample': i_sample,
+        'x_phy': select_subset(config, dataset_dict['x_phy'],
+                        i_sample, i_t, config['dpl_model']['rho'],
+                        warm_up=warm_up),
+        'x_nn_scaled': select_subset(
+            config, dataset_dict['x_nn_scaled'], i_sample, i_t,
             config['dpl_model']['rho'], has_grad=False, warm_up=warm_up),
-        'c_nn': torch.tensor(dataset_dict['c_nn'][i_grid],
+        'c_nn': torch.tensor(dataset_dict['c_nn'][i_sample],
                              device=config['device'], dtype=torch.float32),
-        'obs': flow_obs,
-        'x_hydro_model': select_subset(config, dataset_dict['x_hydro_model'],
-                                       i_grid, i_t, config['dpl_model']['rho'],
-                                       warm_up=warm_up),
+        'target': flow_obs,
+
     }
 
     return dataset_sample
 
 
-def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor], 
-                     i_s: int, i_e: int) -> Dict[str, torch.Tensor]:
+def get_validation_sample(
+    dataset_dict: Dict[str, torch.Tensor],
+    i_s: int,
+    i_e: int,
+    config: Dict
+) -> Dict[str, torch.Tensor]:
     """
     Take sample of data for testing batch.
     """
     dataset_sample = {}
     for key, value in dataset_dict.items():
         if value.ndim == 3:
-            if key in ['x_hydro_model', 'inputs_nn_scaled']:
+            if key in ['x_phy', 'x_nn_scaled']:
                 warm_up = 0
             else:
                 warm_up = config['dpl_model']['phy_model']['warm_up']
@@ -145,11 +185,11 @@ def take_sample_test(config: Dict, dataset_dict: Dict[str, torch.Tensor],
             raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
 
     # Keep 'warmup' days for dHBV1.1p.
-    if ('HBV_v1_1p' in config['dpl_model']['phy_model']['model']) and \
+    if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
     (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
         pass
     else:
-        dataset_sample['obs'] = dataset_sample['obs'][config['dpl_model']['phy_model']['warm_up']:, :]
+        dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:, :]
 
     return dataset_sample
 
@@ -160,7 +200,7 @@ def take_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
     dataset_sample = {}
     for key, value in dataset_dict.items():
         if value.ndim == 3:
-            if key in ['x_hydro_model', 'inputs_nn_scaled']:
+            if key in ['x_phy', 'x_nn_scaled']:
                 warm_up = 0
             else:
                 warm_up = config['dpl_model']['phy_model']['warm_up']
@@ -171,11 +211,11 @@ def take_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
             raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
 
     # Keep 'warmup' days for dHBV1.1p.
-    if ('HBV_v1_1p' in config['dpl_model']['phy_model']['model']) and \
+    if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
     (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
         pass
     else:
-        dataset_sample['obs'] = dataset_sample['obs'][config['dpl_model']['phy_model']['warm_up']:days, :basins]
+        dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:days, :basins]
     return dataset_sample
 
 
@@ -193,6 +233,8 @@ np.ndarray], device: str) -> Dict[str, torch.Tensor]:
     for key, value in data_dict.items():
         if type(value) != torch.Tensor:
             data_dict[key] = torch.tensor(
-                value.copy(),  #
-                dtype=torch.float32).to(device)
+                value.copy(),
+                dtype=torch.float32,
+                device=device
+            )
     return data_dict

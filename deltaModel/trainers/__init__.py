@@ -3,8 +3,8 @@ from typing import Any, Dict
 
 from conf.config import ModeEnum
 from torch.nn import Module
-from trainers.test import TestModel
-from trainers.train import TrainModel
+from trainers.test_depr import TestModel
+from trainers.train_depr import TrainModel
 
 log = logging.getLogger(__name__)
 

@@ -8,7 +8,7 @@ from torch.nn import Parameter
 
 class CudnnLstm(torch.nn.Module):
     def __init__(self, *, inputSize, hiddenSize, dr=0.5, drMethod="drW"):
-        super(CudnnLstm, self).__init__()
+        super().__init__()
         self.name = 'CudnnLstm'
         self.inputSize = inputSize
         self.hiddenSize = hiddenSize
@@ -24,11 +24,11 @@ class CudnnLstm(torch.nn.Module):
         self.reset_parameters()
 
     def _apply(self, fn):
-        ret = super(CudnnLstm, self)._apply(fn)
+        ret = super()._apply(fn)
         return ret
 
     def __setstate__(self, d):
-        super(CudnnLstm, self).__setstate__(d)
+        super().__setstate__(d)
         self.__dict__.setdefault("_data_ptrs", [])
         if "all_weights" in d:
             self._all_weights = d["all_weights"]
@@ -133,7 +133,7 @@ class CudnnLstm(torch.nn.Module):
 
 class CudnnLstmModel(torch.nn.Module):
     def __init__(self, *, nx, ny, hiddenSize, dr=0.5):
-        super(CudnnLstmModel, self).__init__()
+        super().__init__()
         self.name = 'CudnnLstmModel'
         self.nx = nx
         self.ny = ny

@@ -4,9 +4,9 @@ from typing import Any, Dict
 
 import torch
 import tqdm
-from core.data import calc_training_params, take_sample_train
+from core.data import create_training_grid, get_training_sample
 from core.data.dataset_loading import get_dataset_dict
-from models.loss_functions import get_loss_fn
+from models.loss_functions import get_loss_func
 from models.model_handler import ModelHandler
 from torch.nn import Module
 
@@ -49,22 +49,21 @@ class TrainModel:
         log.info(f"Training model: {self.config['name']}")
         
         # Setup training grid
-        n_grid, n_minibatch, nt = calc_training_params(
-            self.dataset['inputs_nn_scaled'],
-            self.config['train_t_range'],
+        n_grid, n_minibatch, nt = create_training_grid(
+            self.dataset['x_nn_scaled'],
             self.config
             )
 
         # Initialize loss function and optimizer
         log.info(f"Initializing loss function and optimizer")
-        self.loss_fn = get_loss_fn(self.config, self.dataset['obs'])
+        self.loss_fn = get_loss_fn(self.config, self.dataset['target'])
         self.model.loss_fn = self.loss_fn
         self.optim = torch.optim.Adadelta(
             self.model.parameters,
             lr=self.config['dpl_model']['nn_model']['learning_rate']
             )
 
-        if self.config['train']['run_from_checkpoint']:
+        if self.config['train']['resume_from_checkpoint']:
             start_ep = self.config['train']['start_epoch']
         else:
             start_ep = 1
@@ -72,7 +71,6 @@ class TrainModel:
         # Training loop
         for epoch in range(start_ep, self.config['train']['epochs'] + 1):
             start_time = time.perf_counter()
-            self.model.epoch = epoch
 
             self._train_epoch(epoch, n_minibatch, n_grid, nt)
             self._log_epoch_stats(epoch, self.model.loss_dict, n_minibatch, start_time)
@@ -102,8 +100,7 @@ class TrainModel:
         # Iterate through minibatches
         for i in tqdm.tqdm(range(1, n_minibatch + 1), desc=prog_str,
                            leave=False, dynamic_ncols=True):
-            self.model.minibatch = i
-            dataset_sample = take_sample_train(self.config, self.dataset,
+            dataset_sample = get_training_sample(self.config, self.dataset,
                                                n_grid, nt)
 
             # Forward pass for hydrology models.
@@ -126,7 +123,7 @@ class TrainModel:
         ----------
         epoch : int
             Current epoch.
-        ep_loss_dict : dict
+        ep_loss_dict : dictg
             Dictionary of model losses.
         minibatch_iter : int
             Number of minibatches.
