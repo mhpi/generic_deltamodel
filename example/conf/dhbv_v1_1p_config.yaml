@@ -19,7 +19,7 @@ save_path: /data/lgl5139/project_blue_eyes/generic_diffModel/results
 train:
     start_time: 1999/10/01
     end_time: 2008/09/30
-    target: [00060_Mean]
+    target: [flow_sim]
     batch_size: 100
     epochs: 50
     save_epoch: 10
