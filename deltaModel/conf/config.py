@@ -295,7 +295,7 @@ class Config(BaseModel):
     # phy_forcings_model: list = "not_defined"
 
     def __init__(self, **data):
-        super(Config, self).__init__(**data)
+        super().__init__(**data)
         if self.params.save_path == "None":
             try:
                 self.params.save_path = HydraConfig.get().run.dir

@@ -16,7 +16,7 @@ class RangeBoundLoss(nn.Module):
     Adapted from: Tadd Bindas
     """
     def __init__(self, config: Config):
-        super(RangeBoundLoss, self).__init__()
+        super().__init__()
         self.config = config
         self.lb = torch.tensor([self.config['weighting_nn']['loss_lower_bound']], device=config['device'])
         self.ub = torch.tensor([self.config['weighting_nn']['loss_upper_bound']],device=config['device'])

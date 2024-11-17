@@ -40,7 +40,7 @@ class NseSqrtLossBatch(torch.nn.Module):
         config: Dict[str, Any],
         device: Optional[str] = 'cpu'
     ) -> None:
-        super(NseSqrtLossBatch, self).__init__()
+        super().__init__()
         self.config = config
         self.device = device
         self.std = np.nanstd(target[:, :, 0], axis=0)

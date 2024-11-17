@@ -23,38 +23,44 @@ class DeltaModel(torch.nn.Module):
 
     Parameters
     ----------
+    pnn_model : torch.nn.Module, optional
+        The neural network model. The default is None.
     phy_model : torch.nn.Module, optional
         The physics model. The default is None.
-    nn_model : torch.nn.Module, optional
-        The neural network model. The default is None.
     config : dict, optional
         The configuration dictionary. The default is None.
+    device : torch.device, optional
+        The device to run the model on. The default is None.
     """
     def __init__(
             self,
-            nn_model: Optional[torch.nn.Module] = None,
+            pnn_model: Optional[torch.nn.Module] = None,
             phy_model: Optional[torch.nn.Module] = None,
-            phy_model_name: Optional[str] = None,
             config: Optional[dict] = None,
             device: Optional[torch.device] = None
         ) -> None:
-        super(DeltaModel, self).__init__()
-
-        self.name = 'DeltaModel'
+        super().__init__()
+        self.name = 'Differentiable Model (pNN -> phy_model)'
         self.config = config
+        self.nmul = config.get('nmul', 1)
         self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
-        self.nn_model = nn_model or self._init_nn_model(config)
-        self.phy_model = phy_model or self._init_phy_model(phy_model_name, config)
+        if pnn_model and phy_model:
+            self.pnn_model = pnn_model
+            self.phy_model = phy_model
+        elif config:
+            self.pnn_model = self._init_nn_model(config)
+            self.phy_model = self._init_phy_model(config)
+        else:
+            raise ValueError("A (1) neural network and physics model or (2) configuration dictionary is required.")
 
-        self.nmul = config['nmul'] or 16
         self.routing = config['phy_model']['routing'] or True
 
 
             
         self.param_bounds = self.phy_model.parameter_bounds
 
-        if nn_model is None:
+        if pnn_model is None:
             if config is not None:
                 self._init_nn_model()
             else:
@@ -108,33 +114,6 @@ class DeltaModel(torch.nn.Module):
             raise ValueError(self.model_name, "is not a valid physics model.")
         
         self.phy_model= self.hydro_model(self.config)
-
-    def _init_nn_model(self):
-        """Initialize a pNN model.
-        
-        TODO: Set this up as dynamic module import instead.
-        """
-        # Get input/output dimensions for nn.
-        self._get_nn_dims()
-        
-        model_name = self.config['nn_model']['model']
-
-        # Initialize the nn
-        if model_name == 'LSTM':
-            self.nn_model = CudnnLstmModel(
-                nx=self.nx,
-                ny=self.ny,
-                hiddenSize=self.config['nn_model']['hidden_size'],
-                dr=self.config['nn_model']['dropout']
-            )
-        elif model_name == 'MLP':
-            self.nn_model = MLPmul(
-                self.config,
-                nx=self.nx,
-                ny=self.ny
-            )
-        else:
-            raise ValueError(self.config['nn_model'], "is not a valid neural network type.")
 
     def _get_nn_dims(self) -> None:
         """Return dimensions for pNNs."""

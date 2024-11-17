@@ -35,7 +35,7 @@ class Metrics(BaseModel):
     rmse_mid: npt.NDArray[np.float64] = np.ndarray([])
 
     def __init__(self, pred: npt.NDArray[np.float64], target: npt.NDArray[np.float64]):
-        super(Metrics, self).__init__(pred=pred, target=target)
+        super().__init__(pred=pred, target=target)
 
     def model_post_init(self, __context: Any):
         self.bias = self._bias(self.pred, self.target)

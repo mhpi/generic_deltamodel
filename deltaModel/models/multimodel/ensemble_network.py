@@ -16,7 +16,7 @@ class EnsembleWeights(torch.nn.Module):
     multiple hydrology models.
     """
     def __init__(self, config: Config):
-        super(EnsembleWeights, self).__init__()
+        super().__init__()
         self.config = config
         self.name = 'Ensemble Weighting LSTM (wNN)'
         self.range_bound_loss = RangeBoundLoss(config)

@@ -43,7 +43,7 @@ class RmseLossComb(torch.nn.Module):
         config: Dict[str, Any],
         device: Optional[str] = 'cpu'
     ) -> None:
-        super(RmseLossComb, self).__init__()
+        super().__init__()
         self.config = config
         self.device = device
 

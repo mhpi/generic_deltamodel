@@ -7,7 +7,7 @@ from typing import Dict, List, Any, Optional
 from sympy import EX
 import torch.nn
 from core.utils import save_model
-from models.differentiable_model import DeltaModel
+from deltaModel.models.differentiable_model_depr import DeltaModel
 
 
 logger = logging.getLogger(__name__)

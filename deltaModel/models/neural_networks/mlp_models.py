@@ -4,7 +4,7 @@ import torch.nn as nn
 
 class MLP(nn.Module):
     def __init__(self, config):
-        super(MLP, self).__init__()
+        super().__init__()
         self.L1 = nn.Linear(
             len(config["optData"]["varC"]), config["seq_lin_layers"]["hidden_size"]
         )
@@ -43,7 +43,7 @@ class MLP(nn.Module):
 
 class MLPmul(nn.Module):
     def __init__(self, config, nx, ny):
-        super(MLPmul, self).__init__()
+        super().__init__()
         self.config = config
         self.L1 = nn.Linear(
             nx,  self.config["hidden_size"],
