@@ -7,7 +7,6 @@ from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
 
 
-
 class DeltaModel(torch.nn.Module):
     """Default class for instantiating a differentiable model.
     

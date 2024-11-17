@@ -1,6 +1,6 @@
-import os
 import logging
-from typing import Dict, List, Any, Optional
+import os
+from typing import Any, Dict, List, Optional
 
 import torch.nn
 from core.utils import save_model
