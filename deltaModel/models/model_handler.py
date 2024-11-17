@@ -1,17 +1,13 @@
-from json import load
 import os
 import logging
-from pyexpat import model
 from typing import Dict, List, Any, Optional
 
-from sympy import EX
 import torch.nn
 from core.utils import save_model
-from deltaModel.models.differentiable_model_depr import DeltaModel
+from models.differentiable_model import DeltaModel
 
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
 
 
 class ModelHandler(torch.nn.Module):
@@ -57,7 +53,7 @@ class ModelHandler(torch.nn.Module):
         self.loss_func = None
         self.loss_dict = {key: 0 for key in self.models_to_initialize}
         if verbose:
-            logger.info(f"Initialized {self.name} with {self.models_to_initialize}.")
+            log.info(f"Initialized {self.name} with {self.models_to_initialize}.")
 
     @property
     def models_to_initialize(self) -> List[str]:
@@ -102,7 +98,7 @@ class ModelHandler(torch.nn.Module):
             if epoch == 0:
                 # Leave model uninitialized
                 if self.verbose:
-                    logger.info(f"Created new model: {name}")
+                    log.info(f"Created new model: {name}")
                 continue 
             
             else:
@@ -120,7 +116,7 @@ class ModelHandler(torch.nn.Module):
                     self.model_dict[name].config = self.config
 
                 if self.verbose:
-                    logger.info(f"Loaded model: {name}, Ep {epoch}")
+                    log.info(f"Loaded model: {name}, Ep {epoch}")
 
     def _new_model_instance(self, model_name: str) -> DeltaModel:
         """Create a new instance of a differentiable model.
@@ -217,4 +213,4 @@ class ModelHandler(torch.nn.Module):
         for name, model in self.model_dict.items():
             save_model(self.config, model, name, epoch)
             if self.verbose:
-                logger.info(f"Saved model: {name}, Ep {epoch}")
+                log.info(f"Saved model: {name}, Ep {epoch}")

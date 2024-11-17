@@ -233,6 +233,8 @@ np.ndarray], device: str) -> Dict[str, torch.Tensor]:
     for key, value in data_dict.items():
         if type(value) != torch.Tensor:
             data_dict[key] = torch.tensor(
-                value.copy(),  #
-                dtype=torch.float32).to(device)
+                value.copy(),
+                dtype=torch.float32,
+                device=device
+            )
     return data_dict

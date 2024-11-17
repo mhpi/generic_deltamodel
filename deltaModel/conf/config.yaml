@@ -9,7 +9,7 @@ mode: train  # train, test, train_test
 ensemble_type: none
 random_seed: 111111
 device: cuda
-gpu_id: 0
+gpu_id: 3
 
 name: dmg-1.0-${observations.name}
 save_path: /data/lgl5139/project_blue_eyes/generic_diffModel/results
@@ -21,7 +21,7 @@ train:
     start_time: 1999/10/01
     end_time: 2008/09/30
     target: [flow_sim]
-    batch_size: 800
+    batch_size: 100
     optimizer: Adadelta
     epochs: 50
     start_epoch: 0
