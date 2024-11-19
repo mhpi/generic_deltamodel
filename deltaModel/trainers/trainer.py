@@ -40,15 +40,15 @@ class Trainer:
         Whether to print verbose output. The default is False.
     """
     def __init__(
-        self,
-        config: Dict[str, Any],
-        model: nn.Module = None,
-        train_dataset: Optional[dict] = None,
-        eval_dataset: Optional[dict] = None,
-        loss_func: Optional[nn.Module] = None,
-        optimizer: Optional[nn.Module] = None,
-        verbose: Optional[bool] = False
-    ) -> None:
+            self,
+            config: Dict[str, Any],
+            model: nn.Module = None,
+            train_dataset: Optional[dict] = None,
+            eval_dataset: Optional[dict] = None,
+            loss_func: Optional[nn.Module] = None,
+            optimizer: Optional[nn.Module] = None,
+            verbose: Optional[bool] = False
+        ) -> None:
         self.config = config
         self.model = model or ModelHandler(config)
         self.train_dataset = train_dataset or get_dataset_dict(config, train=True)
@@ -70,7 +70,7 @@ class Trainer:
             self.optimizer = optimizer or self.create_optimizer()
 
             # Resume model training from a saved epoch
-            self.start_epoch = self.config['train']['start_epoch']
+            self.start_epoch = self.config['train']['start_epoch'] + 1
 
     def create_optimizer(self) -> torch.optim.Optimizer:
         """Initialize the optimizer as named in config.
@@ -209,10 +209,10 @@ class Trainer:
         self._calc_metrics(batch_predictions, observations)
 
     def _calc_metrics(
-        self,
-        batch_predictions: List[Dict[str, torch.Tensor]],
-        observations: torch.Tensor
-    ) -> None:
+            self,
+            batch_predictions: List[Dict[str, torch.Tensor]],
+            observations: torch.Tensor
+        ) -> None:
         """Calculate and save test metrics for each prediction type."""
         preds_list, obs_list, name_list = [], [], []
 
@@ -243,7 +243,13 @@ class Trainer:
             )
             metric_df.to_csv(os.path.join(self.config['testing_dir'], f'metrics_{name}.csv'))
 
-    def _log_epoch_stats(self, epoch: int, loss_dict: Dict[str, float], n_minibatch: int, start_time: float) -> None:
+    def _log_epoch_stats(
+            self,
+            epoch: int,
+            loss_dict: Dict[str, float],
+            n_minibatch: int,
+            start_time: float
+        ) -> None:
         """Log statistics after each epoch."""
         avg_loss_dict = {key: value / n_minibatch + 1 for key, value in loss_dict.items()}
         loss_formated = ", ".join(f"{key}: {value:.6f}" for key, value in avg_loss_dict.items())
