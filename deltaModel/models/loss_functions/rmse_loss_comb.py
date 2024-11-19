@@ -85,9 +85,9 @@ class RmseLossComb(torch.nn.Module):
 
             # Log-Sqrt RMSE
             mask2 = ~torch.isnan(t_sub1)
-            p_sub3 = p_sub1[mask2]
-            t_sub3 = t_sub1[mask2]
-            loss2 = torch.sqrt(((p_sub3 - t_sub3) ** 2).mean())
+            p_sub2 = p_sub1[mask2]
+            t_sub2 = t_sub1[mask2]
+            loss2 = torch.sqrt(((p_sub2 - t_sub2) ** 2).mean())
 
             # Combined losses
             loss_total = (1.0 - self.alpha) * loss1 + self.alpha * loss2

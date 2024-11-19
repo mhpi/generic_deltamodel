@@ -9,10 +9,10 @@ mode: train  # train, test, train_test
 ensemble_type: none
 random_seed: 111111
 device: cuda
-gpu_id: 3
+gpu_id: 0
 
 name: dmg-1.0-${observations.name}
-save_path: /data/lgl5139/project_blue_eyes/generic_diffModel/results
+save_path: ../results
 # load_epoch: 50
 
 
@@ -28,7 +28,7 @@ train:
     save_epoch: 1
 
 loss_function:
-    model: RmseLossComb  # RmseLossComb, NseLossBatch, NseSqrtLossBatch
+    model: NseLossBatch  # RmseLossComb, NseLossBatch, NseSqrtLossBatch
     target: [flow_sim]
     weights:
         w1: 11.0
@@ -58,7 +58,8 @@ dpl_model:
         dy_params:
             HBV: [parBETA, parBETAET]
             HBV_1_1p: [parBETA, parBETAET, parK0]
-            PRMS: []
+            PRMS: [alpha, scx, cgw, resmax, k1, k2]
+            SACSMA_with_snow: [pctim, smax, f1, f2, kuz, rexp, f3, f4, pfree, klzp, klzs, parCWH]
 
         routing: True
         use_log_norm: [prcp]
