@@ -6,6 +6,7 @@ import torch.nn
 from core.utils import save_model
 from models.differentiable_model import DeltaModel
 from models.multimodel.ensemble_network import EnsembleGenerator
+
 from deltaModel.models.loss_functions.range_bound_loss import RangeBoundLoss
 
 log = logging.getLogger(__name__)
@@ -265,6 +266,7 @@ class ModelHandler(torch.nn.Module):
         # Add ensemble loss if applicable (wNN trained in parallel)
         if self.multimodel_type in ['pnn_parallel']:
             loss_combined += self.calc_loss_multimodel(dataset, loss_func)
+
         return loss_combined
 
     def calc_loss_multimodel(
@@ -308,11 +310,13 @@ class ModelHandler(torch.nn.Module):
             dataset['target'],
             n_samples=dataset['batch_sample']
         )
-        
+
         if self.verbose:
             log.info(f"Ensemble Loss: {ensemble_loss.item()}, Range Bound Loss: {rb_loss.item()}")
+        loss_combined = ensemble_loss + rb_loss
+        self.loss_dict['wNN'] += loss_combined.item()
 
-        return ensemble_loss + rb_loss
+        return loss_combined
 
     def save_model(self, epoch: int) -> None:
         """Save state dictionary of trained models to disk.

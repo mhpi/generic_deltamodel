@@ -1,15 +1,10 @@
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-import numpy as np
 import torch
 from core.data import numpy_to_torch_dict
-
-from deltaModel.models.loss_functions.range_bound_loss import RangeBoundLoss
 from core.utils.utils import find_shared_keys
-from models.loss_functions import get_loss_function
 from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
-
 
 
 class EnsembleGenerator(torch.nn.Module):
@@ -91,15 +86,6 @@ class EnsembleGenerator(torch.nn.Module):
             raise ValueError(f"{model_name} is not a supported neural network model type.")
         return model.to(self.device)
 
-
-    # def init_loss_func(self, obs: np.ndarray) -> None:
-    #     """Initialize the loss function based on configuration and observations."""
-    #     self.loss_func = get_loss_function(
-    #         self.config['weighting_nn'],
-    #         obs
-    #     ).to(self.config['device'])
-
-
     def forward(
             self,
             data_dict: Dict[str, torch.Tensor],
@@ -166,39 +152,3 @@ class EnsembleGenerator(torch.nn.Module):
             self.weights_scaled = torch.softmax(self._raw_weights, dim=1)
         else:
             raise ValueError(f"Invalid weighting method: {method}")
-
-
-
-
-
-
-
-
-
-
-
-
-    def calculate_loss(self, predictions: Dict[str, torch.Tensor], loss_dict: Dict = None) -> torch.Tensor:
-        """
-        Compute the composite loss, including:
-        1) Range-bound loss for the weights.
-        2) Loss on the ensembled hydrology model predictions.
-        """
-        # Compute range-bound loss
-        weights_sum = torch.sum(self.weights_scaled, dim=2)
-        loss_rb = self.range_bound_loss([weights_sum])
-
-        # Compute loss on streamflow predictions
-        self._ensemble_predictions(hydro_preds_dict)
-        loss_sf = self.loss_func(
-            self.ensemble_pred['flow_sim'],
-            self.dataset_dict_sample['target'],
-            n_samples=self.dataset_dict_sample['batch_sample']
-        )
-
-        total_loss = loss_rb + loss_sf
-
-        if loss_dict is not None:
-            loss_dict['wNN'] += total_loss.item()
-
-        return total_loss

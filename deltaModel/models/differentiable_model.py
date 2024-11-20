@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
 
 import torch.nn
 from core.data import numpy_to_torch_dict
