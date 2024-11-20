@@ -158,6 +158,11 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
         
         loss_fn += config['loss_function']['model'] + '_'
 
+    norm = 'noLogNorm'
+    norm_list = config['dpl_model']['phy_model']['use_log_norm']
+    if norm_list != []:
+        norm = 'logNorm_' + str(norm_list[0])
+
     # Add dir for hyperparam spec.
     params = config['dpl_model']['nn_model']['model'] + \
              '_E' + str(config['train']['epochs']) + \
@@ -165,7 +170,8 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
              '_B' + str(config['train']['batch_size']) + \
              '_H' + str(config['dpl_model']['nn_model']['hidden_size']) + \
              '_n' + str(config['dpl_model']['nmul']) + \
-             '_' + str(config['random_seed']) 
+             '_'  + norm + \
+             '_' + str(config['random_seed'])
 
     # If any model in ensemble is dynamic, whole ensemble is dynamic.
     dy_state = 'static_para' if dy_params.replace('_','') == '' else 'dynamic_para'

@@ -38,11 +38,11 @@ class RmseLossComb(torch.nn.Module):
         Stability term to prevent division by zero. The default is 1e-6.
     """
     def __init__(
-        self,
-        target: NDArray[np.float32],
-        config: Dict[str, Any],
-        device: Optional[str] = 'cpu'
-    ) -> None:
+            self,
+            target: NDArray[np.float32],
+            config: Dict[str, Any],
+            device: Optional[str] = 'cpu'
+        ) -> None:
         super().__init__()
         self.config = config
         self.device = device
@@ -52,11 +52,11 @@ class RmseLossComb(torch.nn.Module):
         self.beta = config.get('beta', 1e-6)
 
     def forward(
-        self,
-        y_pred: torch.Tensor,
-        y_obs: torch.Tensor,
-        n_samples: torch.Tensor
-    ) -> torch.Tensor:
+            self,
+            y_pred: torch.Tensor,
+            y_obs: torch.Tensor,
+            n_samples: torch.Tensor
+        ) -> torch.Tensor:
         """Compute loss.
         
         Parameters
@@ -67,6 +67,11 @@ class RmseLossComb(torch.nn.Module):
             The observed values.
         n_samples : torch.Tensor
             The number of samples in each batch.
+
+        Returns
+        -------
+        torch.Tensor
+            The combined loss.
         """
         prediction = y_pred.squeeze()
         target = y_obs[:, :, 0]
@@ -90,8 +95,7 @@ class RmseLossComb(torch.nn.Module):
             loss2 = torch.sqrt(((p_sub2 - t_sub2) ** 2).mean())
 
             # Combined losses
-            loss_total = (1.0 - self.alpha) * loss1 + self.alpha * loss2
+            loss = (1.0 - self.alpha) * loss1 + self.alpha * loss2
         else:
-            loss_total = torch.tensor(0.0, device=self.device)
-        return loss_total
-    
+            loss = torch.tensor(0.0, device=self.device)
+        return loss

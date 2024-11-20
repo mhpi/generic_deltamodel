@@ -4,7 +4,7 @@ from typing import Dict, List
 import numpy as np
 import torch
 from conf.config import Config
-from core.calc.RangeBoundLoss import RangeBoundLoss
+from deltaModel.models.loss_functions.range_bound_loss import RangeBoundLoss
 from core.utils.utils import find_shared_keys
 from models.loss_functions import get_loss_function
 from models.neural_networks.lstm_models import CudnnLstmModel

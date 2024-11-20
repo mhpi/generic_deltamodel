@@ -33,11 +33,11 @@ class NseLossBatch(torch.nn.Module):
         Stability term to prevent division by zero. The default is 0.1.
     """
     def __init__(
-        self,
-        target: NDArray[np.float32],
-        config: Dict[str, Any],
-        device: Optional[str] = 'cpu'
-    ) -> None:
+            self,
+            target: NDArray[np.float32],
+            config: Dict[str, Any],
+            device: Optional[str] = 'cpu'
+        ) -> None:
         super().__init__()
         self.config = config
         self.device = device
@@ -47,11 +47,11 @@ class NseLossBatch(torch.nn.Module):
         self.eps = config.get('eps', 0.1)
 
     def forward(
-        self,
-        y_pred: torch.Tensor,
-        y_obs: torch.Tensor,
-        n_samples: torch.Tensor
-    ) -> torch.Tensor:
+            self,
+            y_pred: torch.Tensor,
+            y_obs: torch.Tensor,
+            n_samples: torch.Tensor
+        ) -> torch.Tensor:
         """Compute loss.
         
         Parameters
@@ -62,6 +62,11 @@ class NseLossBatch(torch.nn.Module):
             The observed values.
         n_samples : torch.Tensor
             The number of samples in each batch.
+        
+        Returns
+        -------
+        torch.Tensor
+            The loss value.
         """
         prediction = y_pred.squeeze()
         target = y_obs[:, :, 0]

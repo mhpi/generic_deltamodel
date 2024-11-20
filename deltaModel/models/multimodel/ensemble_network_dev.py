@@ -1,169 +1,204 @@
-import os
-from typing import Dict, List
+from typing import Dict, Any, Optional, List, Tuple
 
 import numpy as np
 import torch
-from conf.config import Config
-from core.calc.RangeBoundLoss import RangeBoundLoss
+from core.data import numpy_to_torch_dict
+
+from deltaModel.models.loss_functions.range_bound_loss import RangeBoundLoss
 from core.utils.utils import find_shared_keys
 from models.loss_functions import get_loss_function
 from models.neural_networks.lstm_models import CudnnLstmModel
+from models.neural_networks.mlp_models import MLPmul
+
+
 
 class EnsembleGenerator(torch.nn.Module):
+    """Default class for instantiating a multimodel ensemble weights generator.
+
+    Default modality:
+        NN trained in series or parallel with multiple differentiable models
+        to learn weights for spatiotemporal ensembling.
+    
+    Parameters
+    ----------
+    model_list : list
+        List of names of differentiable models to ensemble.
+    config : dict
+        The configuration dictionary.
+    wnn_model : torch.nn.Module
+        The neural network model to learn weights for multimodel ensembling.
+        The default is None.
+    device : torch.device, optional
+        The device to run the model on. The default is None.
     """
-    """
-    def __init__(self, config: Config):
+    def __init__(
+            self,
+            model_list: List[str],
+            config: Dict[str, Any],
+            wnn_model: torch.nn.Module = None,
+            device: Optional[torch.device] = None
+        ) -> None:
         super().__init__()
-        self.config = config
         self.name = "Multimodel Ensemble Weights Generator"
-        self.range_bound_loss = RangeBoundLoss(config)
-        self.lstm = None
-        self.weights = None
-        self.weights_scaled = None
-        self.weights_dict = None
-        self.ensemble_pred = {}
-        self._initialize_model()
-
-    def _initialize_model(self) -> None:
-        """Initialize the LSTM model using configuration settings."""
-        if self.config['use_checkpoint']:
-            self._load_checkpoint()
-        elif self.config['mode'] in ['test', 'test_bmi']:
-            self._load_model('wNN')
-        else:
-            self._initialize_new_model()
-
-    def _load_checkpoint(self) -> None:
-        """Load a trained model from a checkpoint for resuming training."""
-        load_path = self.config['checkpoint']['weighting_nn']
-        if not os.path.exists(load_path):
-            raise FileNotFoundError(f"Checkpoint file {load_path} not found.")
-        self.lstm = torch.load(load_path).to(self.config['device'])
-        self.lstm.zero_grad()
-        self.lstm.train()
-
-    def _load_model(self, model_name: str) -> None:
-        """Load a model for testing."""
-        file_name = f"{model_name}_model_Ep{self.config['epochs']}.pt"
-        model_path = os.path.join(self.config['out_path'], file_name)
-        if not os.path.exists(model_path):
-            raise FileNotFoundError(f"Model file {model_path} not found.")
-        self.lstm = torch.load(model_path).to(self.config['device'])
-
-    def _initialize_new_model(self) -> None:
-        """Initialize a new LSTM model."""
-        self._determine_input_output_dimensions()
-        self.lstm = CudnnLstmModel(
-            nx=self.nx,
-            ny=self.ny,
-            hiddenSize=self.config['weighting_nn']['hidden_size'],
-            dr=self.config['weighting_nn']['dropout']
-        ).to(self.config['device'])
-        self.lstm.zero_grad()
-        self.lstm.train()
-
-    def _get_input_output_dimensions(self) -> None:
-        """Determine the input and output dimensions for the LSTM model."""
-        self.nx = len(self.config['observations']['var_t_nn'] + \
-                      self.config['observations']['var_c_nn'])
-        self.ny = len(self.config['hydro_models'])
+        self.config = config
+        self.model_list = model_list
+        self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
-    def init_loss_func(self, obs: np.ndarray) -> None:
-        """Initialize the loss function based on configuration and observations."""
-        self.loss_func = get_loss_function(
-            self.config['weighting_nn'],
-            obs
-        ).to(self.config['device'])
+        if wnn_model:
+            self.wnn_model = wnn_model
+        elif config:
+            self.wnn_model = self._init_wnn_model()
+        else:
+            raise ValueError("A (1) neural network or (2) configuration dictionary is required.")
+        
+        self.weights = {}
+        self.ensemble_prediction = {}
+        self.initialized = True
+
+    def _init_wnn_model(self) -> torch.nn.Module:
+        """Initialize a wNN model.
+        
+        wNN to learn weights for multimodel ensembling.
+            Inputs: forcings/attributes/observed variables.
+            Outputs: weights for each hydrology model.
+        
+        TODO: Set this up as dynamic module import instead.
+        """
+        n_forcings = len(self.config['forcings'])
+        n_attributes = len(self.config['attributes'])
+        
+        # Number of inputs 'x' and outputs 'y' for wnn
+        self.nx = n_forcings + n_attributes
+        self.ny = len(self.model_list)
+        
+        model_name = self.config['model']
+
+        # Initialize the nn
+        if model_name == 'LSTM':
+            model = CudnnLstmModel(
+                nx=self.nx,
+                ny=self.ny,
+                hiddenSize=self.config['hidden_size'],
+                dr=self.config['dropout']
+            )
+        elif model_name == 'MLP':
+            model = MLPmul(
+                self.config,
+                nx=self.nx,
+                ny=self.ny
+            )
+        else:
+            raise ValueError(f"{model_name} is not a supported neural network model type.")
+        return model.to(self.device)
 
 
-    def forward(self, dataset_dict_sample: Dict, eval: bool = False) -> Dict:
-        """Perform a forward pass through the LSTM model."""
-        nn_inputs = dataset_dict_sample['x_nn_scaled']
-        if eval:
-            self.lstm.eval()
+    # def init_loss_func(self, obs: np.ndarray) -> None:
+    #     """Initialize the loss function based on configuration and observations."""
+    #     self.loss_func = get_loss_function(
+    #         self.config['weighting_nn'],
+    #         obs
+    #     ).to(self.config['device'])
 
-        self.weights = self.lstm(nn_inputs)
+
+    def forward(
+            self,
+            data_dict: Dict[str, torch.Tensor],
+            predictions: Dict[str, torch.Tensor]
+        ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
+        """Forward pass for the model.
+        
+        Generate ensemble weights and ensemble model predictions.
+
+        Parameters
+        ----------
+        data_dict : dict
+            Dictionary containing input data.
+        predictions : dict
+            Dictionary containing predictions from individual models.
+        """
+        # Ensure input data is in the correct format and device.
+        data_dict = numpy_to_torch_dict(data_dict, device=self.device)
+        
+        # Generate ensemble weights
+        self._raw_weights = self.wnn_model(data_dict['x_nn_scaled'])
         self._scale_weights()
 
-        # Map scaled weights to hydrology models
-        self.weights_dict = {
-            mod: self.weights_scaled[self.config['warm_up']:, :, i]
-            for i, mod in enumerate(self.config['hydro_models'])
+        # Map weights to individual models
+        self.weights = {
+            model: self.weights_scaled[self.config['warm_up']:, :, i]
+            for i, model in enumerate(self.model_list)
         }
-        return self.weights_dict
-    
+
+        # Linearly combine individual model predictions.
+        predictions_list = [predictions[model] for model in self.model_list]
+        shared_keys = find_shared_keys(*predictions_list)
+
+        for key in shared_keys:
+            self.ensemble_predictions[key] = sum(
+                self.weights_dict[mod] * predictions[mod][key].squeeze()
+                for mod in self.model_list
+            )
+
+        ### Note: Potentially more efficient calculation with tensors.
+        # # Stack all model predictions for shared keys into a single tensor
+        # predictions_stack = {
+        #     key: torch.stack([predictions[mod][key].squeeze(dim=-1) for mod in self.model_list], dim=-1)
+        #     for key in shared_keys
+        # }
+
+        # # Convert weights dictionary to a single tensor for batch operations
+        # weights_tensor = torch.stack([self.weights[mod] for mod in self.model_list], dim=-1)
+
+        # # Compute ensemble predictions for all shared keys in one step
+        # self.ensemble_predictions = {
+        #     key: torch.sum(predictions_stack[key] * weights_tensor, dim=-1)
+        #     for key in shared_keys
+        # }
+
+        return self.ensemble_predictions, self.weights
+
     def _scale_weights(self) -> None:
-        if self.config['weighting_nn']['method'] == 'sigmoid':
-            self.weights_scaled = torch.sigmoid(self.weights)
-        elif self.config['weighting_nn']['method'] == 'softmax':
-            self.weights_scaled = torch.softmax(self.weights)
+        """Scale weights with an activation function."""
+        method = self.config['scaling_function']
+        if method == 'sigmoid':
+            self.weights_scaled = torch.sigmoid(self._raw_weights)
+        elif method == 'softmax':
+            self.weights_scaled = torch.softmax(self._raw_weights, dim=1)
         else:
-            raise ValueError(self.config['weighting_nn']['method'], "is not a valid model weighting method.")
+            raise ValueError(f"Invalid weighting method: {method}")
 
-    def calc_loss(self, hydro_preds_dict: Dict, loss_dict=None) -> float:
-        """
-        Compute a composite loss: 
-        1) Calculates range-bound loss on the lstm weights.
 
-        2) Takes in predictions from set of hydro models, and computes a loss on the linear combination of model predictions using lstm-derived weights.
+
+
+
+
+
+
+
+
+
+
+    def calculate_loss(self, predictions: Dict[str, torch.Tensor], loss_dict: Dict = None) -> torch.Tensor:
         """
-        # Range-bound loss on weights.
+        Compute the composite loss, including:
+        1) Range-bound loss for the weights.
+        2) Loss on the ensembled hydrology model predictions.
+        """
+        # Compute range-bound loss
         weights_sum = torch.sum(self.weights_scaled, dim=2)
         loss_rb = self.range_bound_loss([weights_sum])
 
-        # Get ensembled streamflow.
-        self.ensemble_models(hydro_preds_dict)
-
-        # Loss on streamflow preds.
+        # Compute loss on streamflow predictions
+        self._ensemble_predictions(hydro_preds_dict)
         loss_sf = self.loss_func(
             self.ensemble_pred['flow_sim'],
             self.dataset_dict_sample['target'],
             n_samples=self.dataset_dict_sample['batch_sample']
         )
-    
-        # Debugging
-        # print("rb loss:", loss_rb)
-        # print("stream loss:", 0.1*loss_sf)
 
-
-        # Return total_loss for optimizer.
-        ###### NOTE: Added e2 factor to streamflow loss to account for ~1 OoM difference.
         total_loss = loss_rb + loss_sf
-        if loss_dict:
+
+        if loss_dict is not None:
             loss_dict['wNN'] += total_loss.item()
-            return total_loss, loss_dict
 
-        # total_loss.backward()
-        # self.optim2.step()
-        # self.optim2.zero_grad()
-        # comb_loss += total_loss.item()
-        # return comb_loss
-
-        return total_loss, loss_rb, loss_sf
-    
-    def ensemble_models(self, model_preds_dict: Dict[str, np.float32]) -> Dict[str, np.float32]:
-        """
-        Calculate composite predictions by combining individual hydrology model results scaled by learned nn weights.
-        
-        Returns: predictions dict with attributes
-        'flow_sim', 'srflow', 'ssflow', 'gwflow', 'AET_hydro', 'PET_hydro', 'flow_sim_no_rout', 'srflow_no_rout', 'ssflow_no_rout', 'gwflow_no_rout', 'BFI_sim'
-        """
-        self.ensemble_pred = dict()
-
-        # Get prediction shared between all models.
-        mod_dicts = [model_preds_dict[mod] for mod in self.config['hydro_models']]
-        shared_keys = find_shared_keys(*mod_dicts)
-
-        shared_keys.remove('flow_sim_no_rout')
-
-        for key in shared_keys:
-            self.ensemble_pred[key] = 0
-            for mod in self.config['hydro_models']:
-                wts_size = self.weights_dict[mod].size(0)
-                pred_size = model_preds_dict[mod][key].squeeze().size()
-                if (wts_size != pred_size[0]) and len(pred_size) > 1:
-                    # Cut out warmup data present when testing model from loaded mod file.
-                    model_preds_dict[mod][key] = model_preds_dict[mod][key][self.config['warm_up']:,:]
-                self.ensemble_pred[key] += self.weights_dict[mod] * model_preds_dict[mod][key].squeeze()
-
-        return self.ensemble_pred
+        return total_loss
