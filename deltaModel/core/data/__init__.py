@@ -139,7 +139,7 @@ def get_training_sample(
                              config['dpl_model']['rho'], warm_up=warm_up)
     
     # if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
-    # (config['dpl_model']['phy_model']['warm_up_states']) and (config['ensemble_type'] == 'none'):
+    # (config['dpl_model']['phy_model']['warm_up_states']) and (config['multimodel_type'] == 'none'):
     #     pass
     # else:
     flow_obs = flow_obs[warm_up:, :]
@@ -186,7 +186,7 @@ def get_validation_sample(
 
     # Keep 'warmup' days for dHBV1.1p.
     if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
-    (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
+    (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['multimodel_type'] == 'none'):
         pass
     else:
         dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:, :]
@@ -212,7 +212,7 @@ def take_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
 
     # Keep 'warmup' days for dHBV1.1p.
     if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
-    (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
+    (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['multimodel_type'] == 'none'):
         pass
     else:
         dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:days, :basins]

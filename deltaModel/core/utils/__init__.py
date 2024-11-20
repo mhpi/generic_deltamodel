@@ -138,10 +138,10 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
     forcings = str(len(config['dpl_model']['nn_model']['forcings'])) + '_forcing'
 
     # Add dir for ensemble type:
-    if config['ensemble_type'] in ['none', '']:
+    if config['multimodel_type'] in ['none', '']:
         ensemble_state = 'no_ensemble'
     else:
-        ensemble_state = config['ensemble_type']
+        ensemble_state = config['multimodel_type']
     
     # Add dir for:
     #  1. model name(s)
@@ -196,7 +196,7 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
 
     # Create the directories.
     if (config['mode'] == 'test') and (os.path.exists(model_path) == False):
-        if config['ensemble_type'] in ['avg', 'frozen_pnn']:
+        if config['multimodel_type'] in ['avg', 'frozen_pnn']:
             for mod in config['dpl_model']['phy_model']['model']:
                 # Check if individually trained models exist and use those.
                 check_path = os.path.join(config['save_path'],
@@ -250,7 +250,7 @@ def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
     if create_dirs: create_output_dirs(config)
 
     for key in preds_list[0].keys():
-        if config['ensemble_type'] != 'none':
+        if config['multimodel_type'] != 'none':
             if len(preds_list[0][key].shape) == 3:
                 dim = 0
             else:
@@ -325,7 +325,7 @@ def print_config(config: Dict[str, Any]) -> None:
     print()
     print("\033[1m" + "Current Configuration" + "\033[0m")
     print(f"  {'Experiment Mode:':<20}{config['mode']:<20}")
-    print(f"  {'Ensemble Mode:':<20}{config['ensemble_type']:<20}")
+    print(f"  {'Ensemble Mode:':<20}{config['multimodel_type']:<20}")
 
     for i, mod in enumerate(config['dpl_model']['phy_model']['model']):
         print(f"  {f'Model {i+1}:':<20}{mod:<20}")
@@ -348,7 +348,7 @@ def print_config(config: Dict[str, Any]) -> None:
     print(f"  {'Optimizer:':<20}{config['loss_function']['model']:<20}")
     print()
 
-    # if 'pnn' in config['ensemble_type']:
+    # if 'pnn' in config['multimodel_type']:
     #     print("\033[1m" + "Weighting Network Parameters" + "\033[0m")
     #     print(f'  {"Dropout:":<20}{config.weighting_nn.dropout:<20}{"Hidden Size:":<20}{config.weighting_nn.hidden_size:<20}')
     #     print(f'  {"Method:":<20}{config.weighting_nn.method:<20}{"Loss Factor:":<20}{config.weighting_nn.loss_factor:<20}')

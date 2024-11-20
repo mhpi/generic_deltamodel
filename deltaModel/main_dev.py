@@ -7,7 +7,7 @@ import torch
 from core.data.dataset_loading import get_dataset_dict
 from core.utils import initialize_config, print_config, set_randomseed
 # Dev imports
-from models.model_handler import ModelHandler_dev as dModel
+from models.model_handler_dev import ModelHandler as dModel
 from omegaconf import DictConfig
 from trainers.trainer_dev import Trainer
 

@@ -47,7 +47,7 @@ class EnsembleGenerator(torch.nn.Module):
             raise ValueError("A (1) neural network or (2) configuration dictionary is required.")
         
         self.weights = {}
-        self.ensemble_prediction = {}
+        self.ensemble_predictions = {}
         self.initialized = True
 
     def _init_wnn_model(self) -> torch.nn.Module:
@@ -89,7 +89,8 @@ class EnsembleGenerator(torch.nn.Module):
     def forward(
             self,
             data_dict: Dict[str, torch.Tensor],
-            predictions: Dict[str, torch.Tensor]
+            predictions: Dict[str, torch.Tensor],
+            warm_up: Optional[bool] = False
         ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
         """Forward pass for the model.
         
@@ -101,6 +102,8 @@ class EnsembleGenerator(torch.nn.Module):
             Dictionary containing input data.
         predictions : dict
             Dictionary containing predictions from individual models.
+        warm_up : bool, optional
+            Whether to warm up the physics models. The default is False.
         """
         # Ensure input data is in the correct format and device.
         data_dict = numpy_to_torch_dict(data_dict, device=self.device)
@@ -111,7 +114,7 @@ class EnsembleGenerator(torch.nn.Module):
 
         # Map weights to individual models
         self.weights = {
-            model: self.weights_scaled[self.config['warm_up']:, :, i]
+            model: self.weights_scaled[warm_up:, :, i]
             for i, model in enumerate(self.model_list)
         }
 
@@ -121,7 +124,7 @@ class EnsembleGenerator(torch.nn.Module):
 
         for key in shared_keys:
             self.ensemble_predictions[key] = sum(
-                self.weights_dict[mod] * predictions[mod][key].squeeze()
+                self.weights[mod] * predictions[mod][key].squeeze()
                 for mod in self.model_list
             )
 

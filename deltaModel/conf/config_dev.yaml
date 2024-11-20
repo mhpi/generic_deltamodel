@@ -6,7 +6,7 @@ defaults:
 
 ## General -------------------------------#
 mode: train  # train, test, train_test
-multimodel_type: none
+multimodel_type: pnn_parallel  # none, pnn_parallel, pnn_sequential
 random_seed: 111111
 device: cuda
 gpu_id: 0
@@ -50,7 +50,7 @@ dpl_model:
     dy_drop: 0.0
     
     phy_model:
-        model: [HBV]  # HBV, HBV_1_1p (1.1p), PRMS, SACSMA_with_snow
+        model: [HBV, HBV_1_1p]  # HBV, HBV_1_1p (1.1p), PRMS, SACSMA_with_snow
         warm_up: 365
         warm_up_states: True
         stat_param_idx: -1
@@ -120,61 +120,63 @@ dpl_model:
             geol_porosity,
             geol_permeability
         ]
-    
-    multimodel:
-        model: LSTM
-        dropout: 0.5
-        hidden_size: 256
-        learning_rate: 0.1
-        scaling_function: sigmoid
-        loss_function: RmseLossComb
-        loss_function_weights:
-            w1: 11.0
-            w2: 1.0
-        loss_factor: 15
-        loss_lower_bound: 0.9
-        loss_upper_bound: 1.1
 
-        # TODO: wNN only using NN inputs for now
-        forcings: [
-            prcp,
-            tmean,
-            pet
-        ]
-        attributes: [
-            p_mean,
-            pet_mean,
-            p_seasonality,
-            frac_snow,
-            aridity,
-            high_prec_freq,
-            high_prec_dur,
-            low_prec_freq,
-            low_prec_dur,
-            elev_mean,
-            slope_mean,
-            area_gages2,
-            frac_forest,
-            lai_max,
-            lai_diff,
-            gvf_max,
-            gvf_diff,
-            dom_land_cover_frac,
-            dom_land_cover,
-            root_depth_50,
-            soil_depth_pelletier,
-            soil_depth_statsgo,
-            soil_porosity,
-            soil_conductivity,
-            max_water_content,
-            sand_frac,
-            silt_frac,
-            clay_frac,
-            geol_1st_class,
-            glim_1st_class_frac,
-            geol_2nd_class,
-            glim_2nd_class_frac,
-            carbonate_rocks_frac,
-            geol_porosity,
-            geol_permeability
-        ]
+
+## Multimodel -------------------------------#
+multimodel:
+    model: LSTM
+    dropout: 0.5
+    hidden_size: 256
+    learning_rate: 0.1
+    scaling_function: sigmoid
+    loss_function: RmseLossComb
+    loss_function_weights:
+        w1: 11.0
+        w2: 1.0
+    loss_factor: 15
+    loss_lower_bound: 0.9
+    loss_upper_bound: 1.1
+
+    # TODO: wNN only using NN inputs for now
+    forcings: [
+        prcp,
+        tmean,
+        pet
+    ]
+    attributes: [
+        p_mean,
+        pet_mean,
+        p_seasonality,
+        frac_snow,
+        aridity,
+        high_prec_freq,
+        high_prec_dur,
+        low_prec_freq,
+        low_prec_dur,
+        elev_mean,
+        slope_mean,
+        area_gages2,
+        frac_forest,
+        lai_max,
+        lai_diff,
+        gvf_max,
+        gvf_diff,
+        dom_land_cover_frac,
+        dom_land_cover,
+        root_depth_50,
+        soil_depth_pelletier,
+        soil_depth_statsgo,
+        soil_porosity,
+        soil_conductivity,
+        max_water_content,
+        sand_frac,
+        silt_frac,
+        clay_frac,
+        geol_1st_class,
+        glim_1st_class_frac,
+        geol_2nd_class,
+        glim_2nd_class_frac,
+        carbonate_rocks_frac,
+        geol_porosity,
+        geol_permeability
+    ]

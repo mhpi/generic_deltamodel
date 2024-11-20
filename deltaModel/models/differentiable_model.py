@@ -40,7 +40,7 @@ class DeltaModel(torch.nn.Module):
             self,
             phy_model_name: Optional[str] = None,
             phy_model: Optional[torch.nn.Module] = None,
-            pnn_model: Optional[torch.nn.Module] = None,
+            nn_model: Optional[torch.nn.Module] = None,
             config: Optional[Dict[str, Any]] = None,
             device: Optional[torch.device] = None
         ) -> None:
@@ -50,12 +50,12 @@ class DeltaModel(torch.nn.Module):
         self.nmul = config.get('nmul', 1)
         self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
-        if pnn_model and phy_model:
+        if nn_model and phy_model:
             self.phy_model = phy_model
-            self.pnn_model = pnn_model
+            self.nn_model = nn_model
         elif config:
             self.phy_model = self._init_phy_model(phy_model_name)
-            self.pnn_model = self._init_pnn_model()
+            self.nn_model = self._init_nn_model()
         else:
             raise ValueError("A (1) neural network and physics model or (2) configuration dictionary is required.")
 
@@ -73,7 +73,7 @@ class DeltaModel(torch.nn.Module):
         model = load_model(model_name)
         return model(self.config, device=self.device)
     
-    def _init_pnn_model(self) -> torch.nn.Module:
+    def _init_nn_model(self) -> torch.nn.Module:
         """Initialize a pNN model.
 
         pNN to learn parameters for the physics model.

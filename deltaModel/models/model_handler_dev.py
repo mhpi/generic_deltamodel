@@ -5,9 +5,9 @@ from typing import Any, Dict, List, Optional
 import torch.nn
 from core.utils import save_model
 from models.differentiable_model import DeltaModel
-from models.multimodel.ensemble_network import EnsembleGenerator
+from models.multimodel.ensemble_generator import EnsembleGenerator
 
-from deltaModel.models.loss_functions.range_bound_loss import RangeBoundLoss
+from models.loss_functions.range_bound_loss import RangeBoundLoss
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -70,7 +70,7 @@ class ModelHandler(torch.nn.Module):
         """List of models specified in the configuration."""
         models = self.config['dpl_model']['phy_model']['model']
         
-        if self.multimodel_type in ['pnn_frozen', 'pnn_parallel']:
+        if self.multimodel_type in ['pnn_parallel'] and 'wNN' not in models:
             # Add ensemble weighting NN to the list.
             models.append('wNN')
         return models
@@ -106,7 +106,7 @@ class ModelHandler(torch.nn.Module):
             # Created new model
             if name == 'wNN':
                 # Ensemble weighting NN
-                self.ensemble_generator[name] = EnsembleGenerator(
+                self.ensemble_generator = EnsembleGenerator(
                     config=self.config['multimodel'],
                     model_list = self.models_to_initialize[:-1],
                     device=self.device
@@ -188,14 +188,15 @@ class ModelHandler(torch.nn.Module):
                 model.train()
                 self.output_dict[name] = model(dataset_dict)
 
-        if self.multimodel_type:
-            self._forward_multimodel(dataset_dict)
+        if self.multimodel_type in ['pnn_parallel']:
+             self._forward_multimodel(dataset_dict, eval)
 
         return self.output_dict
     
     def _forward_multimodel(
             self,
-            dataset_dict: Dict[str, torch.Tensor]
+            dataset_dict: Dict[str, torch.Tensor],
+            eval: bool = False
         ) -> None:
         """
         Augment model outputs: Forward wNN and combine model outputs for
@@ -205,19 +206,26 @@ class ModelHandler(torch.nn.Module):
         ----------
         dataset_dict : dict
             Dictionary containing input data.
+        eval: bool, optional
+            Whether to run the model in evaluation mode with gradients
+            disabled. Default is False.
         """
         if eval:
             ## Inference mode
             self.ensemble_generator.eval()
             with torch.no_grad():
-                self.ensemble_generator(dataset_dict)
+                self.ensemble_output_dict, self.weights = self.ensemble_generator(
+                    dataset_dict,
+                    self.output_dict
+                )
         else:
-            if self.multimodel_type == 'pnn_free':
+            if self.multimodel_type in ['pnn_parallel']:
                 ## Training mode for parallel-trained ensemble.
                 self.ensemble_generator.train()
                 self.ensemble_output_dict, self.weights = self.ensemble_generator(
                     dataset_dict,
-                    self.output_dict
+                    self.output_dict,
+                    warm_up = self.config['dpl_model']['phy_model']['warm_up']
                 )
 
     def calc_loss(
@@ -302,11 +310,14 @@ class ModelHandler(torch.nn.Module):
         )
 
         # Range bound loss
-        rb_loss = RangeBoundLoss([weights_sum])
+        rb_loss = self.range_bound_loss(torch.tensor(weights_sum))
+
+        target_name = self.config['train']['target'][0]
+        output = self.ensemble_output_dict[target_name]
 
         # Ensemble predictions loss
         ensemble_loss = self.loss_func(
-            self.ensemble_output_dict,
+            output,
             dataset['target'],
             n_samples=dataset['batch_sample']
         )
