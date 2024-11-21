@@ -44,40 +44,41 @@ class ModelHandler(torch.nn.Module):
         self.config = config
         self.name = 'Differentiable Model Handler'
         self.save_path = config['out_path']
-        self.multimodel_type = config['multimodel_type']
         self.verbose = verbose
 
         if device is None:
             self.device = config['device']
         else:
             self.device = device
-
-        if self.multimodel_type in ['pnn_frozen', 'pnn_parallel']:
-            self.range_bound_loss = RangeBoundLoss(
-                config,
-                device=self.device
-            )
+        
+        self.multimodel_type = config['multimodel_type']
         self.model_dict = {}
-        self.weights = {}
+        self.models = self.list_models()
         self._init_models()
         self.loss_func = None
-        self.loss_dict = {key: 0 for key in self.models_to_initialize}
-        if verbose:
-            log.info(f"Initialized {self.name} with {self.models_to_initialize}.")
+        self.loss_dict = {key: 0 for key in self.models}
 
-    @property
-    def models_to_initialize(self) -> List[str]:
+        if self.multimodel_type in ['pnn_parallel']:
+            self.is_ensemble = True
+            self.weights = {}
+            self.range_bound_loss = RangeBoundLoss(config, device=self.device)
+
+        if verbose:
+            log.info(f"Initialized {self.name} with {self.models}.")
+
+    def list_models(self) -> List[str]:
         """List of models specified in the configuration."""
         models = self.config['dpl_model']['phy_model']['model']
         
-        if self.multimodel_type in ['pnn_parallel'] and 'wNN' not in models:
+        if self.multimodel_type in ['pnn_parallel']:
             # Add ensemble weighting NN to the list.
             models.append('wNN')
         return models
     
     def _init_models(self) -> None:
         """Initialize and store models, multimodels, and checkpoints."""
-        if self.multimodel_type == 'none' and len(self.models_to_initialize) > 1:
+
+        if self.multimodel_type == None and len(self.models) > 1:
             raise ValueError(
                 "Multiple models specified, but ensemble type is 'none'. Check configuration."
             )
@@ -102,13 +103,13 @@ class ModelHandler(torch.nn.Module):
         epoch : int 
             Epoch to load the model from. Default is 0.
         """
-        for name in self.models_to_initialize:
+        for name in self.models:
             # Created new model
             if name == 'wNN':
                 # Ensemble weighting NN
                 self.ensemble_generator = EnsembleGenerator(
                     config=self.config['multimodel'],
-                    model_list = self.models_to_initialize[:-1],
+                    model_list = self.models[:-1],
                     device=self.device
                 )
             else:
@@ -131,7 +132,9 @@ class ModelHandler(torch.nn.Module):
                     raise FileNotFoundError(
                         f"{path} not found for model {name}."
                     )
-                self.model_dict[name].load_state_dict(torch.load(path))
+                self.model_dict[name].load_state_dict(
+                    torch.load(path, weights_only=True)
+                )
                 self.model_dict[name].to(self.device)
                 
                 # Overwrite internal config if there is discontinuity:
@@ -148,7 +151,7 @@ class ModelHandler(torch.nn.Module):
             # Differentiable model parameters
             self.parameters += list(model.parameters())
         
-        if self.multimodel_type in ['pnn_parallel']:
+        if self.multimodel in ['pnn_parallel']:
             # Ensemble weighting NN parameters if trained in parallel.
             self.parameters += list(self.ensemble_generator.parameters())
         return self.parameters
@@ -219,7 +222,7 @@ class ModelHandler(torch.nn.Module):
                     self.output_dict
                 )
         else:
-            if self.multimodel_type in ['pnn_parallel']:
+            if self.multimodel in ['pnn_parallel']:
                 ## Training mode for parallel-trained ensemble.
                 self.ensemble_generator.train()
                 self.ensemble_output_dict, self.weights = self.ensemble_generator(
@@ -272,7 +275,7 @@ class ModelHandler(torch.nn.Module):
             self.loss_dict[name] += loss.item()
         
         # Add ensemble loss if applicable (wNN trained in parallel)
-        if self.multimodel_type in ['pnn_parallel']:
+        if self.multimodel in ['pnn_parallel']:
             loss_combined += self.calc_loss_multimodel(dataset, loss_func)
 
         return loss_combined
@@ -350,7 +353,7 @@ class ModelHandler(torch.nn.Module):
             if self.verbose:
                 log.info(f"Saved model: {name}, Ep {epoch}")
         
-        if self.ensemble_generator:
+        if self.is_ensemble:
             save_model(self.config, self.ensemble_generator, 'wNN', epoch)
             if self.verbose:
                 log.info(f"Saved ensemble generator, Ep {epoch}")

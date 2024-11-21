@@ -178,30 +178,35 @@ class Trainer:
 
         # Track overall predictions and observations
         batch_predictions = []
-        observations = self.test_dataset['target'][:, :, :]
+        observations = self.test_dataset['target']
+
+        # Get start and end indices for each batch.
+        n_samples = self.test_dataset['x_nn_scaled'].shape[1]
+        batch_start = np.arange(0, n_samples, self.config['test']['batch_size'])
+        batch_end = np.append(batch_start[1:], n_samples)
 
         # Testing loop
-        log.info(f"Begin validation on {len(self.iS)} batches...")
-        for i in tqdm.tqdm(range(len(self.iS)), desc="Testing", leave=False, dynamic_ncols=True):
+        log.info(f"Begin validation on {len(batch_start)} batches...")
+        for i in tqdm.tqdm(range(len(batch_start)), desc="Testing", leave=False, dynamic_ncols=True):
             self.current_batch = i
 
-            # Prepare test sample and model prediction.
+            # Select a batch of data
             dataset_sample = get_validation_sample(
                 self.test_dataset,
-                self.iS[i],
-                self.iE[i],
+                batch_start[i],
+                batch_end[i],
                 self.config
             )
 
             prediction = self.model(dataset_sample, eval=True)
 
-            # Extract and store prediction results.
-            model_name = self.config['phy_model']['model'][0]
+            # Save the batch predictions
+            model_name = self.config['dpl_model']['phy_model']['model'][0]
             prediction = {key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()}
             batch_predictions.append(prediction)
 
             if self.verbose:
-                log.info(f"Batch {i + 1}/{len(self.iS)} processed in testing loop.")
+                log.info(f"Batch {i + 1}/{len(batch_start)} processed in testing loop.")
 
         # Save predictions and calculate metrics
         log.info("Saving model results and calculating metrics")

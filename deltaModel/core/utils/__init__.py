@@ -73,9 +73,6 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
         except ValidationError as e:
             log.exception("Configuration validation error", exc_info=e)
             raise e
-    
-    # if len(config['phy_model']['model']) == 1:
-    #     config['phy_model']['model'] = config['phy_model']['model']
 
     config['device'], config['dtype'] = set_system_spec(config['gpu_id'])
 
@@ -84,6 +81,10 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
     config['test_t_range'] = Dates(config['test'], config['dpl_model']['rho']).date_to_int()
     config['total_t_range'] = [config['train_t_range'][0], config['test_t_range'][1]]
     
+    # change multimodel_type type to None if none.
+    if config['multimodel_type'] in ['none', 'None', '']:
+        config['multimodel_type'] = None
+
     # Create output directories.
     config = create_output_dirs(config)
 
@@ -138,7 +139,7 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
     forcings = str(len(config['dpl_model']['nn_model']['forcings'])) + '_forcing'
 
     # Add dir for ensemble type:
-    if config['multimodel_type'] in ['none', '']:
+    if config['multimodel_type'] == None:
         ensemble_state = 'no_ensemble'
     else:
         ensemble_state = config['multimodel_type']
@@ -325,8 +326,8 @@ def print_config(config: Dict[str, Any]) -> None:
     print()
     print("\033[1m" + "Current Configuration" + "\033[0m")
     print(f"  {'Experiment Mode:':<20}{config['mode']:<20}")
-    print(f"  {'Ensemble Mode:':<20}{config['multimodel_type']:<20}")
-
+    if config['multimodel_type'] != None:
+        print(f"  {'Ensemble Mode:':<20}{config['multimodel_type']:<20}")
     for i, mod in enumerate(config['dpl_model']['phy_model']['model']):
         print(f"  {f'Model {i+1}:':<20}{mod:<20}")
     print()

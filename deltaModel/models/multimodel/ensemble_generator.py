@@ -124,8 +124,8 @@ class EnsembleGenerator(torch.nn.Module):
 
         for key in shared_keys:
             self.ensemble_predictions[key] = sum(
-                self.weights[mod] * predictions[mod][key].squeeze()
-                for mod in self.model_list
+                self.weights[model] * predictions[model][key].squeeze()
+                for model in self.model_list
             )
 
         ### Note: Potentially more efficient calculation with tensors.
