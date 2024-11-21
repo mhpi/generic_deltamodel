@@ -32,7 +32,7 @@ def main(config: DictConfig) -> None:
         print_config(config)
 
         ### Create/Load differentiable model ###
-        model = dModel(config) #.to(config['device'])
+        model = dModel(config, verbose=True) #.to(config['device'])
 
         ### Process datasets ###
         log.info("Processing datasets...")

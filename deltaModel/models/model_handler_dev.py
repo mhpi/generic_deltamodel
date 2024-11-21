@@ -306,11 +306,15 @@ class ModelHandler(torch.nn.Module):
             torch.stack(
                 [self.weights[model] for model in self.model_dict.keys()],
                 dim=2
-            )
+            ),
+            dim=2
         )
 
         # Range bound loss
-        rb_loss = self.range_bound_loss(torch.tensor(weights_sum))
+        if self.config['multimodel']['use_rb_loss']:
+            rb_loss = self.range_bound_loss(torch.tensor(weights_sum))
+        else:
+            rb_loss = 0.0
 
         target_name = self.config['train']['target'][0]
         output = self.ensemble_output_dict[target_name]
@@ -323,7 +327,11 @@ class ModelHandler(torch.nn.Module):
         )
 
         if self.verbose:
-            log.info(f"Ensemble Loss: {ensemble_loss.item()}, Range Bound Loss: {rb_loss.item()}")
+            if self.config['multimodel']['use_rb_loss']:
+                log.info(f"Ensemble Loss: {ensemble_loss.item()}, Range Bound Loss: {rb_loss.item()}")
+            else:
+                log.info(f"Ensemble Loss: {ensemble_loss.item()}")
+
         loss_combined = ensemble_loss + rb_loss
         self.loss_dict['wNN'] += loss_combined.item()
 

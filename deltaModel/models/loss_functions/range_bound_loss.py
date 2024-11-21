@@ -1,3 +1,4 @@
+import time
 from typing import Any, Dict, Optional
 
 import numpy as np
@@ -39,24 +40,6 @@ class RangeBoundLoss(torch.nn.Module):
         self.lb = config.get('lb', 0.9)
         self.ub = config.get('ub', 1.1)
         self.scale_factor = config.get('loss_factor', 1.0)
-        self._lb = torch.tensor(
-            [self.lb],
-            dtype=torch.float32,
-            device=device,
-            requires_grad=False
-        )
-        self._ub = torch.tensor(
-            [self.ub],
-            dtype=torch.float32,
-            device=device,
-            requires_grad=False
-        )
-        self._scale_factor = torch.tensor(
-            self.scale_factor,
-            dtype=torch.float32,
-            device=device,
-            requires_grad=False
-        )
 
     def forward(
             self,
@@ -65,6 +48,8 @@ class RangeBoundLoss(torch.nn.Module):
             n_samples: Optional[torch.Tensor] = None
         ) -> torch.Tensor:
         """Compute the range-bound loss.
+        
+        Loss function that penalizes values outside of a specified range. Loss is calculated as the sum of the individual average losses for each batch in the prediction tensor.
         
         Parameters
         ----------
@@ -80,10 +65,13 @@ class RangeBoundLoss(torch.nn.Module):
         torch.Tensor
             The range-bound loss.
         """
-        # Calculate the deviation from the bounds
-        upper_bound_loss = torch.relu(y_pred - self._ub)
-        lower_bound_loss = torch.relu(self._lb - y_pred)
 
-        # Mean loss across all predictions
-        loss = self._scale_factor * (upper_bound_loss + lower_bound_loss).mean()
+        # Calculate the deviation from the bounds
+        upper_bound_loss = torch.relu(y_pred - self.ub)
+        lower_bound_loss = torch.relu(self.lb - y_pred)
+
+        # Batch mean loss across all predictions
+        loss = self.scale_factor * (upper_bound_loss + lower_bound_loss)
+        loss = loss.mean(dim=1).sum()
+
         return loss
