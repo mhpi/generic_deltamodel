@@ -249,13 +249,9 @@ def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
     """
     if create_dirs: create_output_dirs(config)
 
+
     for key in preds_list[0].keys():
-        # if config['multimodel_type'] != 'none':
-        #     if len(preds_list[0][key].shape) == 3:
-        #         dim = 0
-        #     else:
-        #         dim = 1
-        # else:
+
         if len(preds_list[0][key].shape) == 3:
             dim = 1
         else:
@@ -269,7 +265,7 @@ def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
     # Reading flow observation
     for var in config['train']['target']:
         item_obs = y_obs[:, :, config['train']['target'].index(var)]
-        file_name = var + '.npy'
+        file_name = var + '_obs.npy'
         np.save(os.path.join(config['testing_path'], file_name), item_obs)
 
 

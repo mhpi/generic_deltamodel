@@ -119,8 +119,8 @@ def metrics(pred, target):
         'CorrSp': CorrSp,
         'R2': R2,
         'NSE': NSE,
-        'FLV': PBiaslow,
-        'FHV': PBiashigh,
+        'FLV': PBiaslow, # FLV the low flows bias bottom 30%, log space
+        'FHV': PBiashigh, # FHV the peak flows bias 2%
         'PBias': PBias,
         'PBiasother': PBiasother,
         'absFLV': absPBiaslow,
