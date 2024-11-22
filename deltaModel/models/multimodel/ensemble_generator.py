@@ -88,9 +88,8 @@ class EnsembleGenerator(torch.nn.Module):
 
     def forward(
             self,
-            data_dict: Dict[str, torch.Tensor],
+            dataset_dict: Dict[str, torch.Tensor],
             predictions: Dict[str, torch.Tensor],
-            warm_up: Optional[bool] = False
         ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
         """Forward pass for the model.
         
@@ -98,30 +97,29 @@ class EnsembleGenerator(torch.nn.Module):
 
         Parameters
         ----------
-        data_dict : dict
+        dataset_dict : dict
             Dictionary containing input data.
         predictions : dict
             Dictionary containing predictions from individual models.
-        warm_up : bool, optional
-            Whether to warm up the physics models. The default is False.
         """
         # Ensure input data is in the correct format and device.
-        data_dict = numpy_to_torch_dict(data_dict, device=self.device)
+        dataset_dict = numpy_to_torch_dict(dataset_dict, device=self.device)
         
         # Generate ensemble weights
-        self._raw_weights = self.wnn_model(data_dict['x_nn_scaled'])
+        self._raw_weights = self.wnn_model(dataset_dict['x_nn_scaled'])
         self._scale_weights()
 
         # Map weights to individual models
+        diff = dataset_dict['x_nn_scaled'].shape[0] - dataset_dict['target'].shape[0]
         self.weights = {
-            model: self.weights_scaled[warm_up:, :, i]
+            model: self.weights_scaled[diff:, :, i]
             for i, model in enumerate(self.model_list)
         }
 
         # Linearly combine individual model predictions.
         predictions_list = [predictions[model] for model in self.model_list]
         shared_keys = find_shared_keys(*predictions_list)
-
+        
         for key in shared_keys:
             self.ensemble_predictions[key] = sum(
                 self.weights[model] * predictions[model][key].squeeze()

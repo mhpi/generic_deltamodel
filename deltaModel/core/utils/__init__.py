@@ -219,10 +219,9 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
     # Saving the config file to output path (overwrite if exists).
     config_file = json.dumps(config)
     config_path = os.path.join(model_path, 'config_file.json')
-    if os.path.exists(config_path):
-        os.remove(config_path)
-    with open(config_path, 'w') as f:
-        f.write(config_file)
+    if not os.path.exists(config_path):
+        with open(config_path, 'w') as f:
+            f.write(config_file)
 
     # Append the output directories to the config.
     config['out_path'] = model_path
@@ -251,27 +250,27 @@ def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
     if create_dirs: create_output_dirs(config)
 
     for key in preds_list[0].keys():
-        if config['multimodel_type'] != 'none':
-            if len(preds_list[0][key].shape) == 3:
-                dim = 0
-            else:
-                dim = 1
+        # if config['multimodel_type'] != 'none':
+        #     if len(preds_list[0][key].shape) == 3:
+        #         dim = 0
+        #     else:
+        #         dim = 1
+        # else:
+        if len(preds_list[0][key].shape) == 3:
+            dim = 1
         else:
-            if len(preds_list[0][key].shape) == 3:
-                dim = 1
-            else:
-                dim = 0
+            dim = 0
 
         concatenated_tensor = torch.cat([d[key] for d in preds_list], dim=dim)
         file_name = key + ".npy"        
 
-        np.save(os.path.join(config['testing_dir'], file_name), concatenated_tensor.numpy())
+        np.save(os.path.join(config['testing_path'], file_name), concatenated_tensor.numpy())
 
     # Reading flow observation
-    for var in config['target']:
-        item_obs = y_obs[:, :, config['target'].index(var)]
+    for var in config['train']['target']:
+        item_obs = y_obs[:, :, config['train']['target'].index(var)]
         file_name = var + '.npy'
-        np.save(os.path.join(config['testing_dir'], file_name), item_obs)
+        np.save(os.path.join(config['testing_path'], file_name), item_obs)
 
 
 def load_model(config, model_name, epoch):

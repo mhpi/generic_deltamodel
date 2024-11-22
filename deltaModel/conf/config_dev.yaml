@@ -21,26 +21,28 @@ train:
     start_time: 1999/10/01
     end_time: 2008/09/30
     target: [flow_sim]
-    batch_size: 400
+    batch_size: 100
     optimizer: Adadelta
-    epochs: 1
+    epochs: 50
     start_epoch: 0
-    save_epoch: 1
-
-loss_function:
-    model: RmseLossComb  # RmseLossComb, NseLossBatch, NseSqrtLossBatch
-    target: [flow_sim]
-    weights:
-        w1: 11.0
-        w2: 1.0
+    save_epoch: 5
 
 
 ## Testing -------------------------------#
 test:
     start_time: 1989/10/01
     end_time: 1999/09/30
-    batch_size: 100
-    test_epoch: 1
+    batch_size: 200
+    test_epoch: 50
+
+
+## Loss Function -------------------------------#
+loss_function:
+    model: RmseLossComb  # RmseLossComb, NseLossBatch, NseSqrtLossBatch
+    target: [flow_sim]
+    weights:
+        w1: 11.0
+        w2: 1.0
 
 
 ## dPL Model -------------------------------#
@@ -50,7 +52,7 @@ dpl_model:
     dy_drop: 0.0
     
     phy_model:
-        model: [HBV]  # HBV, HBV_1_1p (1.1p), PRMS, SACSMA_with_snow
+        model: [SACSMA_with_snow]  # HBV, HBV_1_1p (1.1p), PRMS, SACSMA_with_snow
         warm_up: 365
         warm_up_states: True
         stat_param_idx: -1

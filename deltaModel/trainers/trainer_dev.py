@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import torch
 import tqdm
-from core.calc.stat import stat_error
+from core.calc.stat import metrics
 from core.data import (create_training_grid, get_training_sample,
                        get_validation_sample)
 from core.data.dataset_loading import get_dataset_dict
@@ -211,9 +211,9 @@ class Trainer:
         # Save predictions and calculate metrics
         log.info("Saving model results and calculating metrics")
         save_outputs(self.config, batch_predictions, observations)
-        self._calc_metrics(batch_predictions, observations)
+        self._calculate_metrics(batch_predictions, observations)
 
-    def _calc_metrics(
+    def _calculate_metrics(
             self,
             batch_predictions: List[Dict[str, torch.Tensor]],
             observations: torch.Tensor
@@ -227,7 +227,7 @@ class Trainer:
 
         # Remove warm-up period if needed
         if self.config['dpl_model']['phy_model']['warm_up_states']:
-            flow_obs = flow_obs[self.config['phy_model']['warm_up']:, :]
+            flow_obs = flow_obs[self.config['dpl_model']['phy_model']['warm_up']:, :]
 
         # Add to lists for metrics computation
         preds_list.append(flow_preds.numpy())
@@ -236,7 +236,7 @@ class Trainer:
 
         # Calculate statistics and save results to CSV
         stat_dicts = [
-            stat_error(np.swapaxes(pred.squeeze(), 1, 0), np.swapaxes(obs.squeeze(), 1, 0))
+            metrics(np.swapaxes(pred.squeeze(), 1, 0), np.swapaxes(obs.squeeze(), 1, 0))
             for pred, obs in zip(preds_list, obs_list)
         ]
 
@@ -246,7 +246,7 @@ class Trainer:
                  for key in stat_dict.keys()],
                 index=stat_dict.keys(), columns=['median', 'STD', 'mean']
             )
-            metric_df.to_csv(os.path.join(self.config['testing_dir'], f'metrics_{name}.csv'))
+            metric_df.to_csv(os.path.join(self.config['testing_path'], f'metrics_{name}.csv'))
 
     def _log_epoch_stats(
             self,

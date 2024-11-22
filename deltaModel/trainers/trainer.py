@@ -241,7 +241,7 @@ class Trainer:
                  for key in stat_dict.keys()],
                 index=stat_dict.keys(), columns=['median', 'STD', 'mean']
             )
-            metric_df.to_csv(os.path.join(self.config['testing_dir'], f'metrics_{name}.csv'))
+            metric_df.to_csv(os.path.join(self.config['testing_path'], f'metrics_{name}.csv'))
 
     def _log_epoch_stats(
             self,
