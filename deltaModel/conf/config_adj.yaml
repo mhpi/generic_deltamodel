@@ -51,9 +51,9 @@ dpl_model:
     dy_drop: 0.0
     
     phy_model:
-        model: [HBV_1_1p]  # HBV, HBV_1_1p (1.1p), PRMS, SACSMA_with_snow
+        model: [HBV_adj]  # HBV, HBV_1_1p (1.1p),HBV_adj, PRMS, SACSMA_with_snow
         warm_up: 365
-        warm_up_states: True ## If False, tracking gradient from spin-up ## Increase your computational time. Slightly improve accuracy
+        warm_up_states: True ## If False, tracking gradient from spin-up ## Increase your computational time. Slightly improve accuracy. Not working now for Adjoint model (HBV_adj) 
         #stat_param_idx: -1
         dy_drop: 0.0
         dy_params:
@@ -64,7 +64,7 @@ dpl_model:
             SACSMA_with_snow: [pctim, smax, f1, f2, kuz, rexp, f3, f4, pfree, klzp, klzs, parCWH]
 
         routing: True
-        AD_efficient: True
+        AD_efficient: True  ## Specific for adjoint model
         use_log_norm: [prcp]
         nearzero: 1e-5
 
