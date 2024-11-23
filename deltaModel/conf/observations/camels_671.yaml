@@ -1,8 +1,8 @@
 name: camels_671
-gage_info: /data/yxs275/CAMELS/CAMELS_to_ICDS/gageid.npy
-train_path: /data/yxs275/CAMELS/training_file
-test_path: /data/yxs275/CAMELS/validation_file
-subset_path: /data/lgl5139/data/camels/Sub531ID.txt
+gage_info: /projects/mhpi/yxs275/model/dPLHBVrelease-master/hydroDL-dev/example/extreme_test/gageid.npy
+train_path: /projects/mhpi/yxs275/model/dPLHBVrelease-master/hydroDL-dev/example/extreme_test/training_file
+test_path: /projects/mhpi/yxs275/model/dPLHBVrelease-master/hydroDL-dev/example/extreme_test/validation_file
+#subset_path: /projects/mhpi/yxs275/model/dPLHBVrelease-master/hydroDL-dev/example/extreme_test/Sub531ID.txt
 
 area_name: area_gages2
 
