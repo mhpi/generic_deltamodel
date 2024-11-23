@@ -1,3 +1,4 @@
+from math import log
 from typing import Any, Dict, List, Optional, Tuple
 
 import torch
@@ -102,29 +103,85 @@ class EnsembleGenerator(torch.nn.Module):
         predictions : dict
             Dictionary containing predictions from individual models.
         """
-        # Ensure input data is in the correct format and device.
-        dataset_dict = numpy_to_torch_dict(dataset_dict, device=self.device)
-        
-        # Generate ensemble weights
-        self._raw_weights = self.wnn_model(dataset_dict['x_nn_scaled'])
-        self._scale_weights()
 
-        # Map weights to individual models
-        diff = dataset_dict['x_nn_scaled'].shape[0] - dataset_dict['target'].shape[0]
-        self.weights = {
-            model: self.weights_scaled[diff:, :, i]
-            for i, model in enumerate(self.model_list)
-        }
+        if self.config['mosaic'] == False:
+            # Ensure input data is in the correct format and device.
+            dataset_dict = numpy_to_torch_dict(dataset_dict, device=self.device)
+            
+            # Generate ensemble weights
+            self._raw_weights = self.wnn_model(dataset_dict['x_nn_scaled'])
+            self._scale_weights()
 
-        # Linearly combine individual model predictions.
-        predictions_list = [predictions[model] for model in self.model_list]
-        shared_keys = find_shared_keys(*predictions_list)
-        
-        for key in shared_keys:
-            self.ensemble_predictions[key] = sum(
-                self.weights[model] * predictions[model][key].squeeze()
-                for model in self.model_list
-            )
+            # Map weights to individual models
+            diff = dataset_dict['x_nn_scaled'].shape[0] - dataset_dict['target'].shape[0]
+            self.weights = {
+                model: self.weights_scaled[diff:, :, i]
+                for i, model in enumerate(self.model_list)
+            }
+
+            # Linearly combine individual model predictions.
+            predictions_list = [predictions[model] for model in self.model_list]
+            shared_keys = find_shared_keys(*predictions_list)
+            
+            for key in shared_keys:
+                self.ensemble_predictions[key] = sum(
+                    self.weights[model] * predictions[model][key].squeeze()
+                    for model in self.model_list
+                )
+        else:
+            print("Mosaic mode is enabled.")
+            # Generate ensemble weights
+            self._raw_weights = self.wnn_model(dataset_dict['x_nn_scaled'])
+            self._scale_weights()
+
+            # Map weights to individual models
+            diff = dataset_dict['x_nn_scaled'].shape[0] - dataset_dict['target'].shape[0]
+            self.weights = {
+                model: self.weights_scaled[diff:, :, i]
+                for i, model in enumerate(self.model_list)
+            }
+
+            # Convert weights to a tensor for easier manipulation
+            weights_tensor = torch.stack(list(self.weights.values()), dim=0)  # Shape: [num_models, num_timesteps, num_basins]
+
+            # Step 1: Find the index of the model with the highest weight
+            best_model_idx = weights_tensor.argmax(dim=0)  # Shape: [num_timesteps, num_basins]
+
+            # Step 2: Create a mask to select the model with the highest weight
+            # Create a one-hot mask
+            mask = torch.zeros_like(weights_tensor, dtype=torch.bool)
+            mask.scatter_(0, best_model_idx.unsqueeze(0), True)  # Shape: [num_models, num_timesteps, num_basins]
+            
+            # Step 3: Use the mask to select predictions
+            # Linearly combine individual model predictions.
+            predictions_list = [predictions[model] for model in self.model_list]
+            shared_keys = find_shared_keys(*predictions_list)
+            
+            for key in shared_keys:
+                predictions_tensor = torch.stack([predictions[model][key].squeeze() for model in self.model_list], dim=0)  
+                # Shape: [num_models, num_timesteps, num_basins]
+
+                if predictions_tensor.ndim == 2:
+                    predictions_tensor = predictions_tensor.unsqueeze(0)
+                elif predictions_tensor.ndim == 3:
+                    pass
+                else:
+                    # Skip BFI key with shape 1.
+                    continue
+            
+                final_predictions = torch.gather(predictions_tensor, 0, best_model_idx.unsqueeze(0)).squeeze(0)
+
+                self.ensemble_predictions[key] = final_predictions
+
+                
+                # # Mask out all but the best model's predictions
+                # selected_predictions = predictions_tensor * mask  # Shape: [num_models, num_timesteps, num_basins]
+
+                # # Step 4: Aggregate over the model dimension
+                # final_predictions = selected_predictions.sum(dim=0)  # Shape: [num_timesteps, num_basins]
+
+                # # Store the ensemble predictions
+                # self.ensemble_predictions[key] = final_predictions
 
         ### Note: Potentially more efficient calculation with tensors.
         # # Stack all model predictions for shared keys into a single tensor

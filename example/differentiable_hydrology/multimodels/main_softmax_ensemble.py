@@ -1,17 +1,16 @@
 """ Main script for running differentiable model experiments."""
 import logging
-import time
 import os
+import time
+
+import hydra
 import numpy as np
 import pandas as pd
 import torch
-import hydra
 from core.calc.stat import metrics
-
-from omegaconf import DictConfig
-from core.calc.stat import metrics
-from core.utils import initialize_config, print_config, set_randomseed
 from core.data.dataset_loading import get_dataset_dict
+from core.utils import initialize_config, print_config, set_randomseed
+from omegaconf import DictConfig
 
 log = logging.getLogger(__name__)
 
@@ -38,8 +37,8 @@ def main(config: DictConfig) -> None:
         ## Save Path ##
         # save_path = '/data/lgl5139/project_blue_eyes/generic_diffModel/results/camels_531/train_1999_2008/3_forcing/ensemble_softmax/' + stat_name + '/HBV_1_1p_PRMS_SACSMA_with_snow_/NSE_loss_batch'
         # save_path = '/data/lgl5139/project_blue_eyes/generic_diffModel/results/camels_531/train_1999_2008/3_forcing/ensemble_softmax/' + stat_name + '/PRMS_SACSMA_with_snow_/NSE_loss_batch'
-        # save_path = '/data/lgl5139/project_blue_eyes/generic_diffModel/results/camels_531/train_1999_2008/3_forcing/ensemble_softmax/' + stat_name + '/HBV_1_1p_SACSMA_with_snow_/NSE_loss_batch'
-        save_path = '/data/lgl5139/project_blue_eyes/generic_diffModel/results/camels_531/train_1999_2008/3_forcing/ensemble_softmax/' + stat_name + '/HBV_1_1p_PRMS_/NSE_loss_batch'
+        save_path = '/data/lgl5139/project_blue_eyes/generic_diffModel/results/camels_531/train_1999_2008/3_forcing/ensemble_softmax/' + stat_name + '/HBV_1_1p_SACSMA_with_snow_/NSE_loss_batch'
+        # save_path = '/data/lgl5139/project_blue_eyes/generic_diffModel/results/camels_531/train_1999_2008/3_forcing/ensemble_softmax/' + stat_name + '/HBV_1_1p_PRMS_/NSE_loss_batch'
 
         if not os.path.exists(save_path):
             os.makedirs(save_path, exist_ok=True)
@@ -48,8 +47,8 @@ def main(config: DictConfig) -> None:
         log.info("Loading predictions...")
         data_paths = [
             '/data/lgl5139/project_blue_eyes/generic_diffModel/results/camels_531/train_1999_2008/3_forcing/no_ensemble/LSTM_E50_R365_B100_H256_n16_noLogNorm_111111/HBV_1_1p_/NseLossBatch_/dynamic_para/parBETA_parBETAET_parK0_/test1989_1999/',
-            '/data/lgl5139/project_blue_eyes/generic_diffModel/results/camels_531/train_1999_2008/3_forcing/no_ensemble/LSTM_E50_R365_B100_H256_n16_noLogNorm_111111/PRMS_/NseLossBatch_/dynamic_para/alpha_scx_cgw_resmax_k1_k2_/test1989_1999/',
-            # '/data/lgl5139/project_blue_eyes/generic_diffModel/results/camels_531/train_1999_2008/3_forcing/no_ensemble/LSTM_E50_R365_B100_H256_n16_noLogNorm_111111/SACSMA_with_snow_/NseLossBatch_/dynamic_para/pctim_smax_f1_f2_kuz_rexp_f3_f4_pfree_klzp_klzs_parCWH_/test1989_1999/'
+            # '/data/lgl5139/project_blue_eyes/generic_diffModel/results/camels_531/train_1999_2008/3_forcing/no_ensemble/LSTM_E50_R365_B100_H256_n16_noLogNorm_111111/PRMS_/NseLossBatch_/dynamic_para/alpha_scx_cgw_resmax_k1_k2_/test1989_1999/',
+            '/data/lgl5139/project_blue_eyes/generic_diffModel/results/camels_531/train_1999_2008/3_forcing/no_ensemble/LSTM_E50_R365_B100_H256_n16_noLogNorm_111111/SACSMA_with_snow_/NseLossBatch_/dynamic_para/pctim_smax_f1_f2_kuz_rexp_f3_f4_pfree_klzp_klzs_parCWH_/test1989_1999/'
         ]
 
 

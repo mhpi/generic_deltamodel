@@ -1,17 +1,16 @@
 """ Main script for running differentiable model experiments."""
 import logging
-import time
 import os
+import time
+
+import hydra
 import numpy as np
 import pandas as pd
 import torch
-import hydra
 from core.calc.stat import metrics
-
-from omegaconf import DictConfig
-from core.calc.stat import metrics
-from core.utils import initialize_config, print_config, set_randomseed
 from core.data.dataset_loading import get_dataset_dict
+from core.utils import initialize_config, print_config, set_randomseed
+from omegaconf import DictConfig
 
 log = logging.getLogger(__name__)
 
