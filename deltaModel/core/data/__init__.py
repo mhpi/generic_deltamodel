@@ -1,5 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
+from re import I
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
@@ -139,7 +140,7 @@ def get_training_sample(
                              config['dpl_model']['rho'], warm_up=warm_up)
     
     # if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
-    # (config['dpl_model']['phy_model']['warm_up_states']) and (config['ensemble_type'] == 'none'):
+    # (config['dpl_model']['phy_model']['warm_up_states']) and (config['multimodel_type_type_type'] == 'none'):
     #     pass
     # else:
     flow_obs = flow_obs[warm_up:, :]
@@ -178,18 +179,26 @@ def get_validation_sample(
                 warm_up = 0
             else:
                 warm_up = config['dpl_model']['phy_model']['warm_up']
-            dataset_sample[key] = value[warm_up:, i_s:i_e, :].to(config['device'])
+            dataset_sample[key] = torch.tensor(
+                value[warm_up:, i_s:i_e, :],
+                dtype=torch.float32,
+                device = config['device']
+            )
         elif value.ndim == 2:
-            dataset_sample[key] = value[i_s:i_e, :].to(config['device'])
+            dataset_sample[key] = torch.tensor(
+                value[i_s:i_e, :],
+                dtype=torch.float32,
+                device = config['device']
+            )
         else:
             raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
 
     # Keep 'warmup' days for dHBV1.1p.
-    if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
-    (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
-        pass
-    else:
-        dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:, :]
+    # if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
+    # (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['multimodel_type'] == 'none'):
+    #     pass
+    # else:
+    # dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:, :]
 
     return dataset_sample
 
@@ -212,7 +221,7 @@ def take_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
 
     # Keep 'warmup' days for dHBV1.1p.
     if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
-    (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['ensemble_type'] == 'none'):
+    (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['multimodel_type'] == 'none'):
         pass
     else:
         dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:days, :basins]

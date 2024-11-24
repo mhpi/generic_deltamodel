@@ -6,7 +6,7 @@ defaults:
 
 ## General -------------------------------#
 mode: train  # train, test, train_test
-ensemble_type: none
+multimodel_type: none
 random_seed: 111111
 device: cuda
 gpu_id: 7

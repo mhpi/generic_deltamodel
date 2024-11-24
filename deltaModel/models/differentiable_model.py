@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import torch.nn
 from core.data import numpy_to_torch_dict
@@ -40,8 +40,8 @@ class DeltaModel(torch.nn.Module):
             self,
             phy_model_name: Optional[str] = None,
             phy_model: Optional[torch.nn.Module] = None,
-            pnn_model: Optional[torch.nn.Module] = None,
-            config: Optional[dict] = None,
+            nn_model: Optional[torch.nn.Module] = None,
+            config: Optional[Dict[str, Any]] = None,
             device: Optional[torch.device] = None
         ) -> None:
         super().__init__()
@@ -50,17 +50,15 @@ class DeltaModel(torch.nn.Module):
         self.nmul = config.get('nmul', 1)
         self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
-        if pnn_model and phy_model:
+        if nn_model and phy_model:
             self.phy_model = phy_model
-            self.pnn_model = pnn_model
+            self.nn_model = nn_model
         elif config:
             self.phy_model = self._init_phy_model(phy_model_name)
-            self.pnn_model = self._init_pnn_model()
+            self.nn_model = self._init_nn_model()
         else:
             raise ValueError("A (1) neural network and physics model or (2) configuration dictionary is required.")
 
-        #### TODO: self.phy_model.to(self.device)
-        self.nn_model.to(self.device)
         self.initialized = True
 
     def _init_phy_model(self, phy_model_name) -> torch.nn.Module:
@@ -70,18 +68,20 @@ class DeltaModel(torch.nn.Module):
         elif self.config['phy_model']:
             model_name = self.config['phy_model']['model'][0]
         else:
-            raise ValueError("A physics model name or model spec in a configuration dictionary is required.")
+            raise ValueError("A (1) physics model name or (2) model spec in a configuration dictionary is required.")
 
         model = load_model(model_name)
         return model(self.config, device=self.device)
     
-    def _init_pnn_model(self) -> torch.nn.Module:
+    def _init_nn_model(self) -> torch.nn.Module:
         """Initialize a pNN model.
+
+        pNN to learn parameters for the physics model.
+            Inputs: forcings/attributes/observed variables.
+            Outputs: parameters for the physics model.
         
         TODO: Set this up as dynamic module import instead.
         """
-        ## TODO: combine n_forcings and n_attributes in config.
-        # Number of variables 
         n_forcings = len(self.config['nn_model']['forcings'])
         n_attributes = len(self.config['nn_model']['attributes'])
         
@@ -93,24 +93,25 @@ class DeltaModel(torch.nn.Module):
 
         # Initialize the nn
         if model_name == 'LSTM':
-            self.nn_model = CudnnLstmModel(
+            model = CudnnLstmModel(
                 nx=self.nx,
                 ny=self.ny,
                 hiddenSize=self.config['nn_model']['hidden_size'],
                 dr=self.config['nn_model']['dropout']
             )
         elif model_name == 'MLP':
-            self.nn_model = MLPmul(
+            model = MLPmul(
                 self.config,
                 nx=self.nx,
                 ny=self.ny
             )
         else:
             raise ValueError(f"{model_name} is not a supported neural network model type.")
-
+        return model.to(self.device)
+    
     def forward(self, data_dict: Dict[str, torch.Tensor]) -> torch.Tensor:
         """Forward pass for the model."""
-        # Convert numpy data to torch tensors if necessary.
+        # Ensure input data is in the correct format and device.
         data_dict = numpy_to_torch_dict(data_dict, device=self.device)
         
         # Parameterization

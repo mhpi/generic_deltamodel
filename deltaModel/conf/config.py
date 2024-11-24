@@ -250,7 +250,7 @@ class Config(BaseModel):
     mode: ModeEnum = Field(default=ModeEnum.train_test)
     pnn_model: str
     # hydro_models: Union[List[str], str] = Field(default_factory=lambda: ['HBV'])
-    ensemble_type: EnsembleEnum = Field(default=EnsembleEnum.none)
+    multimodel_type: EnsembleEnum = Field(default=EnsembleEnum.none)
     # dy_params: DynamicConfig = Field(default_factory=ExperimentConfig)
 
     random_seed: int = 0

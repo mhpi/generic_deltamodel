@@ -73,9 +73,6 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
         except ValidationError as e:
             log.exception("Configuration validation error", exc_info=e)
             raise e
-    
-    # if len(config['phy_model']['model']) == 1:
-    #     config['phy_model']['model'] = config['phy_model']['model']
 
     config['device'], config['dtype'] = set_system_spec(config['gpu_id'])
 
@@ -84,6 +81,10 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
     config['test_t_range'] = Dates(config['test'], config['dpl_model']['rho']).date_to_int()
     config['total_t_range'] = [config['train_t_range'][0], config['test_t_range'][1]]
     
+    # change multimodel_type type to None if none.
+    if config['multimodel_type'] in ['none', 'None', '']:
+        config['multimodel_type'] = None
+
     # Create output directories.
     config = create_output_dirs(config)
 
@@ -138,10 +139,10 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
     forcings = str(len(config['dpl_model']['nn_model']['forcings'])) + '_forcing'
 
     # Add dir for ensemble type:
-    if config['ensemble_type'] in ['none', '']:
+    if config['multimodel_type'] == None:
         ensemble_state = 'no_ensemble'
     else:
-        ensemble_state = config['ensemble_type']
+        ensemble_state = config['multimodel_type']
     
     # Add dir for:
     #  1. model name(s)
@@ -158,6 +159,11 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
         
         loss_fn += config['loss_function']['model'] + '_'
 
+    norm = 'noLogNorm'
+    norm_list = config['dpl_model']['phy_model']['use_log_norm']
+    if norm_list != []:
+        norm = 'logNorm_' + str(norm_list[0])
+
     # Add dir for hyperparam spec.
     params = config['dpl_model']['nn_model']['model'] + \
              '_E' + str(config['train']['epochs']) + \
@@ -165,7 +171,8 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
              '_B' + str(config['train']['batch_size']) + \
              '_H' + str(config['dpl_model']['nn_model']['hidden_size']) + \
              '_n' + str(config['dpl_model']['nmul']) + \
-             '_' + str(config['random_seed']) 
+             '_'  + norm + \
+             '_' + str(config['random_seed'])
 
     # If any model in ensemble is dynamic, whole ensemble is dynamic.
     dy_state = 'static_para' if dy_params.replace('_','') == '' else 'dynamic_para'
@@ -190,7 +197,7 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
 
     # Create the directories.
     if (config['mode'] == 'test') and (os.path.exists(model_path) == False):
-        if config['ensemble_type'] in ['avg', 'frozen_pnn']:
+        if config['multimodel_type'] in ['avg', 'frozen_pnn']:
             for mod in config['dpl_model']['phy_model']['model']:
                 # Check if individually trained models exist and use those.
                 check_path = os.path.join(config['save_path'],
@@ -212,10 +219,9 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
     # Saving the config file to output path (overwrite if exists).
     config_file = json.dumps(config)
     config_path = os.path.join(model_path, 'config_file.json')
-    if os.path.exists(config_path):
-        os.remove(config_path)
-    with open(config_path, 'w') as f:
-        f.write(config_file)
+    if not os.path.exists(config_path):
+        with open(config_path, 'w') as f:
+            f.write(config_file)
 
     # Append the output directories to the config.
     config['out_path'] = model_path
@@ -243,28 +249,24 @@ def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
     """
     if create_dirs: create_output_dirs(config)
 
+
     for key in preds_list[0].keys():
-        if config['ensemble_type'] != 'none':
-            if len(preds_list[0][key].shape) == 3:
-                dim = 0
-            else:
-                dim = 1
+
+        if len(preds_list[0][key].shape) == 3:
+            dim = 1
         else:
-            if len(preds_list[0][key].shape) == 3:
-                dim = 1
-            else:
-                dim = 0
+            dim = 0
 
         concatenated_tensor = torch.cat([d[key] for d in preds_list], dim=dim)
         file_name = key + ".npy"        
 
-        np.save(os.path.join(config['testing_dir'], file_name), concatenated_tensor.numpy())
+        np.save(os.path.join(config['testing_path'], file_name), concatenated_tensor.numpy())
 
     # Reading flow observation
-    for var in config['target']:
-        item_obs = y_obs[:, :, config['target'].index(var)]
-        file_name = var + '.npy'
-        np.save(os.path.join(config['testing_dir'], file_name), item_obs)
+    for var in config['train']['target']:
+        item_obs = y_obs[:, :, config['train']['target'].index(var)]
+        file_name = var + '_obs.npy'
+        np.save(os.path.join(config['testing_path'], file_name), item_obs)
 
 
 def load_model(config, model_name, epoch):
@@ -319,8 +321,8 @@ def print_config(config: Dict[str, Any]) -> None:
     print()
     print("\033[1m" + "Current Configuration" + "\033[0m")
     print(f"  {'Experiment Mode:':<20}{config['mode']:<20}")
-    print(f"  {'Ensemble Mode:':<20}{config['ensemble_type']:<20}")
-
+    if config['multimodel_type'] != None:
+        print(f"  {'Ensemble Mode:':<20}{config['multimodel_type']:<20}")
     for i, mod in enumerate(config['dpl_model']['phy_model']['model']):
         print(f"  {f'Model {i+1}:':<20}{mod:<20}")
     print()
@@ -342,7 +344,7 @@ def print_config(config: Dict[str, Any]) -> None:
     print(f"  {'Optimizer:':<20}{config['loss_function']['model']:<20}")
     print()
 
-    # if 'pnn' in config['ensemble_type']:
+    # if 'pnn' in config['multimodel_type']:
     #     print("\033[1m" + "Weighting Network Parameters" + "\033[0m")
     #     print(f'  {"Dropout:":<20}{config.weighting_nn.dropout:<20}{"Hidden Size:":<20}{config.weighting_nn.hidden_size:<20}')
     #     print(f'  {"Method:":<20}{config.weighting_nn.method:<20}{"Loss Factor:":<20}{config.weighting_nn.loss_factor:<20}')
