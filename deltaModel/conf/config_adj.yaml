@@ -1,0 +1,125 @@
+defaults:
+    - _self_
+    - hydra: settings
+    - observations: camels_671  # camels_531, camels_671
+
+
+## General -------------------------------#
+mode: test  # train, test, train_test
+ensemble_type: none
+random_seed: 111111
+device: cuda
+gpu_id: 5
+
+name: dmg-1.0-${observations.name}
+save_path: ../results
+# load_epoch: 50
+
+
+## Training -------------------------------#
+train:
+    start_time: 1980/10/01
+    end_time: 1995/09/30
+    target: [flow_sim]
+    batch_size: 100
+    optimizer: Adadelta
+    epochs: 1
+    start_epoch: 0
+    save_epoch: 1
+
+loss_function:
+    model: RmseLossComb  # RmseLossComb, NseLossBatch, NseSqrtLossBatch
+    target: [flow_sim]
+    alpha: 0.25
+    weights:
+        w1: 11.0
+        w2: 1.0
+
+
+## Testing -------------------------------#
+test:
+    start_time: 1995/10/01
+    end_time: 2010/09/30
+    batch_size: 50
+    test_epoch: 1
+
+
+## dPL Model -------------------------------#
+dpl_model:
+    nmul: 16
+    rho: 365
+    dy_drop: 0.0
+    
+    phy_model:
+        model: [HBV_adj]  # HBV, HBV_1_1p (1.1p),HBV_adj, PRMS, SACSMA_with_snow
+        warm_up: 365
+        warm_up_states: True ## If False, tracking gradient from spin-up ## Increase your computational time. Slightly improve accuracy. Not working now for Adjoint model (HBV_adj) 
+        #stat_param_idx: -1
+        dy_drop: 0.0
+        dy_params:
+            HBV: [parBETA, parBETAET]
+            HBV_adj: [parBETA,parFC, parBETAET]
+            HBV_1_1p: [parBETA, parBETAET, parK0]
+            PRMS: [alpha, scx, cgw, resmax, k1, k2]
+            SACSMA_with_snow: [pctim, smax, f1, f2, kuz, rexp, f3, f4, pfree, klzp, klzs, parCWH]
+
+        routing: True
+        AD_efficient: True  ## Specific for adjoint model
+        use_log_norm: [prcp]
+        nearzero: 1e-5
+
+        forcings: [
+        prcp,
+        tmean,
+        pet
+        ]
+        
+
+    nn_model:
+        model: LSTM  # LSTM, MLP
+        dropout: 0.5
+        hidden_size: 256
+        learning_rate: 1.0
+
+        forcings: [
+        prcp,
+        tmean,
+        pet
+        ]
+        attributes: [
+        p_mean,
+        pet_mean,
+        p_seasonality,
+        frac_snow,
+        aridity,
+        high_prec_freq,
+        high_prec_dur,
+        low_prec_freq,
+        low_prec_dur,
+        elev_mean,
+        slope_mean,
+        area_gages2,
+        frac_forest,
+        lai_max,
+        lai_diff,
+        gvf_max,
+        gvf_diff,
+        dom_land_cover_frac,
+        dom_land_cover,
+        root_depth_50,
+        soil_depth_pelletier,
+        soil_depth_statsgo,
+        soil_porosity,
+        soil_conductivity,
+        max_water_content,
+        sand_frac,
+        silt_frac,
+        clay_frac,
+        geol_1st_class,
+        glim_1st_class_frac,
+        geol_2nd_class,
+        glim_2nd_class_frac,
+        carbonate_rocks_frac,
+        geol_porosity,
+        geol_permeability
+        ]
