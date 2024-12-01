@@ -5,8 +5,7 @@ TODO: This should really be it's own function, or exist in an example that anyon
 can adapt and use in their own case.
 """
 import torch
-
-from deltaModel.models.differentiable_model_depr import dPLHydroModel
+from models.differentiable_model_depr import dPLHydroModel
 
 save_path = '/home/lglonzarich/projects/hydro_multimodel/dPLHydro_multimodel/results/conus_3200_merit/debugging/train_1980_1995/3_forcing/no_ensemble/LSTM_E50_R365_B100_H64_n4_111111/HBV_waterLoss_/NseLossBatchFlow_/dynamic_para/parBETA_parBETAET_/'
 state_path = save_path + 'model_states_50.pt'

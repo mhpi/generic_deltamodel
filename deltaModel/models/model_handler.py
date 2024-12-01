@@ -62,9 +62,6 @@ class ModelHandler(torch.nn.Module):
             self.weights = {}
             self.range_bound_loss = RangeBoundLoss(config, device=self.device)
 
-        if verbose:
-            log.info(f"Initialized {self.name} with {self.models}.")
-
     def list_models(self) -> List[str]:
         """List of models specified in the configuration."""
         models = self.config['dpl_model']['phy_model']['model']

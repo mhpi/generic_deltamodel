@@ -5,8 +5,8 @@ defaults:
 
 
 ## General -------------------------------#
-mode: test  # train, test, train_test
-multimodel_type: pnn_parallel  # none, pnn_parallel, pnn_sequential
+mode: train  # train, test, train_test
+multimodel_type: none  # none, pnn_parallel, pnn_sequential
 random_seed: 111111
 device: cuda
 gpu_id: 1
@@ -33,12 +33,12 @@ test:
     start_time: 1989/10/01
     end_time: 1999/09/30
     batch_size: 400
-    test_epoch: 40
+    test_epoch: 50
 
 
 ## Loss Function -------------------------------#
 loss_function:
-    model: NseLossBatch  # RmseLossComb, NseLossBatch, NseSqrtLossBatch
+    model: RmseLossComb  # RmseLossComb, NseLossBatch, NseSqrtLossBatch
     target: [flow_sim]
     weights:
         w1: 11.0
@@ -52,13 +52,12 @@ dpl_model:
     dy_drop: 0.0
     
     phy_model:
-        model: [HBV_1_1p, PRMS, SACSMA_with_snow]  # HBV, HBV_1_1p (1.1p), PRMS, SACSMA_with_snow
+        model: [HBV]  # HBV, HBV_1_1p (1.1p), HBV_adj, PRMS, SACSMA_with_snow
         warm_up: 365
         warm_up_states: True
-        stat_param_idx: -1
         dy_drop: 0.0
         dy_params:
-            HBV: []
+            HBV: [parBETA, parBETAET]
             HBV_1_1p: [parBETA, parBETAET, parK0]
             PRMS: [alpha, scx, cgw, resmax, k1, k2]
             SACSMA_with_snow: [pctim, smax, f1, f2, kuz, rexp, f3, f4, pfree, klzp, klzs, parCWH]
