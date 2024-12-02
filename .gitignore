@@ -29,6 +29,17 @@ temp/
 tmp/
 *.tmp
 
+# Config (exclude non-public files)
+deltaModel/conf/*
+!deltaModel/conf/config.yaml
+!deltaModel/conf/config.py
+
+!deltaModel/conf/hydra
+
+!deltaModel/conf/observations
+deltaModel/conf/observations/*
+!deltaModel/conf/observations/none.yaml
+
 # Other Directories
 archive/
 runs/

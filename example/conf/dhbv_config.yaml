@@ -53,7 +53,7 @@ dpl_model:
         warm_up_states: True
         stat_param_idx: -1
         dy_drop: 0.0
-        dy_params:
+        dynamic_params:
             HBV: [parBETA, parBETAET]
 
         routing: True

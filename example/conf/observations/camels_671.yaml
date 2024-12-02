@@ -1,13 +1,12 @@
 name: camels_671
-gage_info: /data/yxs275/CAMELS/CAMELS_to_ICDS/gageid.npy
 train_path: /data/yxs275/CAMELS/training_file
 test_path: /data/yxs275/CAMELS/validation_file
-subset_path: /data/lgl5139/data/camels/Sub531ID.txt
 
+gage_info: /data/yxs275/CAMELS/CAMELS_to_ICDS/gageid.npy
 area_name: area_gages2
 
-start_date_all: 1980/10/01
-end_date_all: 2014/09/30
+start_time_all: 1980/10/01
+end_time_all: 2014/09/30
 
 forcings_all: [
   prcp,
@@ -51,3 +50,4 @@ attributes_all: [
   geol_porosity,
   geol_permeability
 ]
+d
