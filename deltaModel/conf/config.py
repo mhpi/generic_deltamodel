@@ -3,14 +3,15 @@
 Run this script to validate an example config object located below the
 validation classes.
 """
-import os
 import logging
+import os
+from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Union
-from enum import Enum
-from pydantic import BaseModel, Field, field_validator, ValidationError, model_validator
-from datetime import datetime
 
+from pydantic import (BaseModel, Field, ValidationError, field_validator,
+                      model_validator)
 
 log = logging.getLogger(__name__)
 

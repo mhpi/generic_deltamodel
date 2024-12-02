@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import torch
 import tqdm
-from core.calc.stat import metrics
+from deltaModel.core.calc.metrics import metrics
 from core.data import (create_training_grid, get_training_sample,
                        get_validation_sample)
 from core.data.dataset_loading import get_dataset_dict
