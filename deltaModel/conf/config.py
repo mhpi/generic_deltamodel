@@ -104,8 +104,8 @@ class ObservationConfig(BaseModel):
     name: str = 'not_defined'
     train_path: str = 'not_defined'
     test_path: str = 'not_defined'
-    data_start_time: str = 'not_defined'
-    data_end_time: str = 'not_defined'
+    start_time_all: str = 'not_defined'
+    end_time_all: str = 'not_defined'
     forcings_all: List[str] = Field(default_factory=list, description="List of dynamic input variables.")
     attributes_all: List[str] = Field(default_factory=list, description="List of static input variables.")
 
@@ -115,6 +115,19 @@ class ObservationConfig(BaseModel):
         if v == 'not_defined':
             return v
         return check_path(v)
+
+    @model_validator(mode='after')
+    def validate_dataset_times(cls, values):
+        if values.start_time_all == 'not_defined' and values.end_time_all == 'not_defined':
+            return values
+        elif values.start_time_all == 'not_defined' or values.end_time_all == 'not_defined':
+            raise ValueError("Both train_path and test_path must be defined if either is specified.")
+        else:
+            start_time = datetime.strptime(values.start_time_all, '%Y/%m/%d')
+            end_time = datetime.strptime(values.end_time_all, '%Y/%m/%d')
+            if start_time >= end_time:
+                raise ValueError("Dataset start time must be earlier than end time.")
+            return values
 
 
 class Config(BaseModel):
@@ -152,8 +165,8 @@ class Config(BaseModel):
     @model_validator(mode='after')
     def check_device(cls, values):
         """Validates device configuration."""
-        device = values.get('device')
-        gpu_id = values.get('gpu_id')
+        device = values.device
+        gpu_id = values.gpu_id
         if device == 'cuda' and gpu_id < 0:
             raise ValueError("GPU ID must be >= 0 when using CUDA.")
         return values
@@ -213,8 +226,8 @@ if __name__ == '__main__':
                 'name': 'example',
                 'train_path': '.',
                 'test_path': '.',
-                'data_start_time': '2000/01/01',
-                'data_end_time': '2024/12/31',
+                'start_time_all': '2000/01/01',
+                'end_time_all': '2024/12/31',
                 'forcings_all': ['x1_var', 'x2_var'],
                 'attributes_all': ['attr1', 'attr2']
             },

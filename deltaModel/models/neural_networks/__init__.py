@@ -5,7 +5,7 @@ from typing import Callable, Dict
 
 import torch
 import torch.nn as nn
-from deltaModel.conf.config_old import InitalizationEnum
+from conf.config_old import InitalizationEnum
 from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
 
