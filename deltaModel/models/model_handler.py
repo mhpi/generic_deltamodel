@@ -56,6 +56,7 @@ class ModelHandler(torch.nn.Module):
         self._init_models()
         self.loss_func = None
         self.loss_dict = {key: 0 for key in self.models}
+        self.target_name = config['train']['target'][0]
 
         if self.multimodel_type in ['pnn_parallel']:
             self.is_ensemble = True
@@ -260,13 +261,12 @@ class ModelHandler(torch.nn.Module):
 
         loss_combined = 0.0
 
-        target_name = self.config['train']['target'][0]
 
         # Loss calculation for each model
         for name, output in self.output_dict.items():
-            if target_name not in output.keys():
-                raise ValueError(f"Target variable '{target_name}' not in model outputs.")
-            output = output[target_name]
+            if self.target_name not in output.keys():
+                raise ValueError(f"Target variable '{self.target_name}' not in model outputs.")
+            output = output[self.target_name]
 
             loss = loss_func(
                 output,
@@ -321,8 +321,7 @@ class ModelHandler(torch.nn.Module):
         else:
             rb_loss = 0.0
 
-        target_name = self.config['train']['target'][0]
-        output = self.ensemble_output_dict[target_name]
+        output = self.ensemble_output_dict[self.target_name]
 
         # Ensemble predictions loss
         ensemble_loss = self.loss_func(

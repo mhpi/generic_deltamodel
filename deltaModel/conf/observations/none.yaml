@@ -2,14 +2,14 @@ name: None
 train_path: /path/to/training/data
 test_path: /path/to/validation/data
 
-data_start_time: 1900/01/01
-data_end_time: 2000/12/31
+data_start_time: 2000/01/01
+data_end_time: 2024/12/31
 
-dynamic_vars: [
-  x1_var,
-  x2_var
+forcings_all: [
+    x1_var,
+    x2_var
 ]
-static_vars: [
-    x3_var,
-    x4_var
+attributes_all: [
+    attr1,
+    attr2
 ]

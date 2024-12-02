@@ -149,13 +149,13 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
     #  2. static or dynamic parametrization
     #  3. loss functions per model.
     mod_names = ''
-    dy_params = ''
+    dynamic_params = ''
     loss_fn = ''
     for mod in config['dpl_model']['phy_model']['model']:
         mod_names += mod + '_'
 
-        for param in config['dpl_model']['phy_model']['dy_params'][mod]:
-            dy_params += param + '_'
+        for param in config['dpl_model']['phy_model']['dynamic_params'][mod]:
+            dynamic_params += param + '_'
         
         loss_fn += config['loss_function']['model'] + '_'
 
@@ -175,7 +175,7 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
              '_' + str(config['random_seed'])
 
     # If any model in ensemble is dynamic, whole ensemble is dynamic.
-    dy_state = 'static_para' if dy_params.replace('_','') == '' else 'dynamic_para'
+    dy_state = 'static_para' if dynamic_params.replace('_','') == '' else 'dynamic_para'
     
     # ---- Combine all dirs ---- #
     model_path = os.path.join(config['save_path'],
@@ -189,7 +189,7 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
                               dy_state)
 
     if dy_state == 'dynamic_para':
-        model_path = os.path.join(model_path, dy_params)
+        model_path = os.path.join(model_path, dynamic_params)
 
     test_period = 'test' + str(config['test']['start_time'][:4]) + '_' + \
         str(config['test']['end_time'][:4])

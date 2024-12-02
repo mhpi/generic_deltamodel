@@ -14,13 +14,11 @@ gpu_id: 0
 save_path: ../results
 
 
-## Training -------------------------------#
+## Training ------------------------------#
 train:
     start_time: 2000/01/01
     end_time: 2000/12/31
-    target: [
-        y_var
-    ]
+    target: [y_var]
     optimizer: Adadelta
     batch_size: 100
     epochs: 50
@@ -36,33 +34,29 @@ test:
     test_epoch: 50
 
 
-## Loss Function -------------------------------#
+## Loss Function -------------------------#
 loss_function:
     model: RmseLossComb
-    target: [
-        y_var
-    ]
     
 
-## dPL Model -------------------------------#
+## dPL Model -----------------------------#
 dpl_model:
-    nmul: 16
     rho: 365
-    dy_drop: 0.0
     
     phy_model:
         model: [None_model]
+        nmul: 16
         warm_up: 365
         dynamic_params:
             None_model: [z1, z2]
 
-        dynamic_vars: [
+        forcings: [
             x1_var,
             x2_var
         ]
-        static_vars: [
-            x3_var,
-            x4_var
+        attributes: [
+            attr1,
+            attr2
         ]
 
     nn_model:
@@ -71,11 +65,11 @@ dpl_model:
         hidden_size: 256
         learning_rate: 1.0
         
-        dynamic_vars: [
+        forcings: [
             x1_var,
             x2_var
         ]
-        static_vars: [
-            x3_var,
-            x4_var
+        attributes: [
+            attr1,
+            attr2
         ]

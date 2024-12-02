@@ -47,9 +47,8 @@ class DeltaModel(torch.nn.Module):
         super().__init__()
         self.name = 'Differentiable Model (pNN -> phy_model)'
         self.config = config
-        self.nmul = config.get('nmul', 1)
         self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        
+
         if nn_model and phy_model:
             self.phy_model = phy_model
             self.nn_model = nn_model
@@ -71,7 +70,7 @@ class DeltaModel(torch.nn.Module):
             raise ValueError("A (1) physics model name or (2) model spec in a configuration dictionary is required.")
 
         model = load_model(model_name)
-        return model(self.config, device=self.device)
+        return model(self.config['phy_model'], device=self.device)
     
     def _init_nn_model(self) -> torch.nn.Module:
         """Initialize a pNN model.

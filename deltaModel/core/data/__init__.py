@@ -131,6 +131,8 @@ def get_training_sample(
 ) -> Dict[str, torch.Tensor]:
     """Select random sample of data for training batch."""
     warm_up = config['dpl_model']['phy_model']['warm_up']
+
+    # rho is 
     subset_dims = (config['train']['batch_size'], config['dpl_model']['rho'])
 
     i_sample, i_t = random_index(ngrid_train, nt, subset_dims, warm_up=warm_up)
