@@ -1,0 +1,111 @@
+defaults:
+    - _self_
+    - hydra: settings
+    - observations: camels_531  # camels_531, camels_671
+
+
+## General -------------------------------#
+mode: train  # train, test, train_test
+multimodel_type: none
+random_seed: 111111
+device: cuda
+gpu_id: 0
+
+save_path: ../results
+
+
+## Training ------------------------------#
+train:
+    start_time: 1999/10/01
+    end_time: 2008/09/30
+    target: [flow_sim]
+    optimizer: Adadelta
+    batch_size: 100
+    epochs: 50
+    start_epoch: 0
+    save_epoch: 5
+
+
+## Testing -------------------------------#
+test:
+    start_time: 1989/10/01
+    end_time: 1999/09/30
+    batch_size: 25
+    test_epoch: 50
+
+
+## Loss Function -------------------------#
+loss_function:
+    model: RmseLossComb
+    
+
+## dPL Model -----------------------------#
+dpl_model:
+    rho: 365
+    
+    phy_model:
+        model: [HBV]
+        warm_up: 365
+        warm_up_states: True
+        dy_drop: 0.0
+        dynamic_params:
+            HBV: [parBETA, parBETAET]
+
+        routing: True
+        use_log_norm: [prcp]
+        nearzero: 1e-5
+
+        forcings: [
+            prcp,
+            tmean,
+            pet
+        ]
+
+    nn_model:
+        model: LSTM
+        dropout: 0.5
+        hidden_size: 256
+        learning_rate: 1.0
+        
+        forcings: [
+            prcp,
+            tmean,
+            pet
+        ]
+        attributes: [
+            p_mean,
+            pet_mean,
+            p_seasonality,
+            frac_snow,
+            aridity,
+            high_prec_freq,
+            high_prec_dur,
+            low_prec_freq,
+            low_prec_dur,
+            elev_mean,
+            slope_mean,
+            area_gages2,
+            frac_forest,
+            lai_max,
+            lai_diff,
+            gvf_max,
+            gvf_diff,
+            dom_land_cover_frac,
+            dom_land_cover,
+            root_depth_50,
+            soil_depth_pelletier,
+            soil_depth_statsgo,
+            soil_porosity,
+            soil_conductivity,
+            max_water_content,
+            sand_frac,
+            silt_frac,
+            clay_frac,
+            geol_1st_class,
+            glim_1st_class_frac,
+            geol_2nd_class,
+            glim_2nd_class_frac,
+            carbonate_rocks_frac,
+            geol_porosity,
+            geol_permeability
+        ]
