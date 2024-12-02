@@ -117,11 +117,7 @@ class Trainer:
     def train(self) -> None:
         """Entry point for training loop."""
         self.is_in_train = True
-        self.epochs = epochs = self.config['train']['epochs']
-
-
-        log.info(f"Training model: {self.config['name']}")
-
+        self.epochs = self.config['train']['epochs']
 
         # Setup a training grid (number of samples, minibatches, and timesteps)
         n_samples, n_minibatch, n_timesteps = create_training_grid(
@@ -130,7 +126,7 @@ class Trainer:
         )
 
         # Training loop
-        log.info(f"Begin training for {self.config['train']['epochs']} epochs")
+        log.info(f"Training model: Beginning {self.start_epoch} of {self.config['train']['epochs']} epochs")
         for epoch in range(self.start_epoch, self.epochs + 1):
             start_time = time.perf_counter()
             prog_str = f"Epoch {epoch}/{self.config['train']['epochs']}"

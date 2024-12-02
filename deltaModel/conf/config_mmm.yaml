@@ -11,9 +11,7 @@ random_seed: 111111
 device: cuda
 gpu_id: 1
 
-name: dmg-1.0-${observations.name}
 save_path: ../results
-# load_epoch: 50
 
 
 ## Training -------------------------------#
