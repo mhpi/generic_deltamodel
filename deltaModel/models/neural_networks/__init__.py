@@ -56,7 +56,7 @@ class Initialization(nn.Module):
         return func
 
 
-class NeuralNetwork(ABC, torch.nn.Module):
+class NeuralNetwork(ABC, nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
         self.config = kwargs["config"]
@@ -70,7 +70,7 @@ def init_nn_model(
     phy_model: nn.Module,
     config: Dict[str, Dict[str, Any]]
 ) -> nn.Module:
-    """Initialize a parameterization neural network.
+    """Initialize a parameterization neural network for hydrology models.
        
     Parameters
     ----------
@@ -84,16 +84,16 @@ def init_nn_model(
     torch.nn.Module
         The initialized neural network.
     """
-    n_forc = len(config['nn_model']['forcings'])
-    n_attr = len(config['nn_model']['attributes'])
-    n_model_params = len(phy_model.parameter_bounds)
-    n_rout_params = len(phy_model.conv_routing_hydro_model_bound)
+    n_forcings = len(config['nn_model']['forcings'])
+    n_attributes = len(config['nn_model']['attributes'])
+    n_phy_params = len(phy_model.parameter_bounds)
+    n_routing_params = len(phy_model.routing_parameter_bounds)
     
-    nx = n_forc + n_attr
-    ny = config['nmul'] * n_model_params
+    nx = n_forcings + n_attributes
+    ny = config['phy_model']['nmul'] * n_phy_params
 
     if config['phy_model']['routing'] == True:
-        ny += n_rout_params
+        ny += n_routing_params
     
     if config['nn_model']['model'] == 'LSTM':
         nn_model = CudnnLstmModel(
@@ -109,6 +109,6 @@ def init_nn_model(
             ny=ny
         )
     else:
-        raise ValueError(config['nn_model'], " not supported.")
+        raise ValueError(config['nn_model']['model'], " not supported.")
     
     return nn_model

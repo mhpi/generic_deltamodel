@@ -4,7 +4,7 @@ from typing import Any, Optional, Tuple
 import numpy as np
 import numpy.typing as npt
 import scipy.stats as stats
-from pydantic import BaseModel, model_validator, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 log = logging.getLogger()
 

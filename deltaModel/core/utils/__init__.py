@@ -231,27 +231,23 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
 
 
 def save_model(config, model, model_name, epoch, create_dirs=False) -> None:
-    """
-    Save ensemble or single models.
-    """
+    """Save model state dict."""
     # If the model folder has not been created, do it here.
-    if create_dirs: create_output_dirs(config)
+    if create_dirs:
+        create_output_dirs(config)
 
-    save_name = str(model_name) + '_model_Ep' + str(epoch) + '.pt'
+    save_name = f"d{str(model_name)}_model_Ep{str(epoch)}.pt"
 
     full_path = os.path.join(config['out_path'], save_name)
     torch.save(model.state_dict(), full_path)
 
 
 def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
-    """
-    Save outputs from a model.
-    """
-    if create_dirs: create_output_dirs(config)
-
+    """Save outputs from a model."""
+    if create_dirs:
+        create_output_dirs(config)
 
     for key in preds_list[0].keys():
-
         if len(preds_list[0][key].shape) == 3:
             dim = 1
         else:
@@ -280,7 +276,7 @@ def load_model(config, model_name, epoch):
     Returns:
         model (torch.nn.Module): The loaded PyTorch model.
     """
-    model_name = str(model_name) + '_model_Ep' + str(epoch) + '.pt'
+    model_name = f"d{str(model_name)}_model_Ep{str(epoch)}.pt"
     # model_path = os.path.join(config['out_path'], model_name)
     # try:
     #     self.model_dict[model] = torch.load(model_path).to(self.config['device']) 

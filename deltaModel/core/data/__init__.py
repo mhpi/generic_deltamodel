@@ -169,7 +169,7 @@ def get_validation_sample(
     dataset_dict: Dict[str, torch.Tensor],
     i_s: int,
     i_e: int,
-    config: Dict
+    config: Dict,
 ) -> Dict[str, torch.Tensor]:
     """
     Take sample of data for testing batch.
@@ -223,7 +223,7 @@ def take_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
 
     # Keep 'warmup' days for dHBV1.1p.
     if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
-    (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['multimodel_type'] == 'none'):
+    (config['dpl_model']['phy_model']['warm_up_states']) and (config['multimodel_type'] == 'none'):
         pass
     else:
         dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:days, :basins]

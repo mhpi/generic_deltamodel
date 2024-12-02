@@ -50,8 +50,8 @@ class DeltaModel(torch.nn.Module):
         self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         if nn_model and phy_model:
-            self.phy_model = phy_model
-            self.nn_model = nn_model
+            self.phy_model = phy_model.to(self.device)
+            self.nn_model = nn_model.to(self.device)
         elif config:
             self.phy_model = self._init_phy_model(phy_model_name)
             self.nn_model = self._init_nn_model()

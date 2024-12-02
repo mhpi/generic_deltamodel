@@ -45,6 +45,7 @@ dpl_model:
     
     phy_model:
         model: [HBV1_1p]
+        nmul: 16
         warm_up: 365
         warm_up_states: False
         dy_drop: 0.0
