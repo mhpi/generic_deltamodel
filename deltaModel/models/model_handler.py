@@ -37,7 +37,7 @@ class ModelHandler(torch.nn.Module):
         self,
         config: Dict[str, Any],
         device: Optional[str] = None,
-        verbose=False
+        verbose=False,
     ) -> None:
         super().__init__()
         self.config = config
@@ -61,6 +61,7 @@ class ModelHandler(torch.nn.Module):
         if self.multimodel_type in ['pnn_parallel']:
             self.is_ensemble = True
             self.weights = {}
+            self.loss_func_wnn = None
             self.range_bound_loss = RangeBoundLoss(config, device=self.device)
 
     def list_models(self) -> List[str]:
@@ -200,10 +201,10 @@ class ModelHandler(torch.nn.Module):
         return self.output_dict
     
     def _forward_multimodel(
-            self,
-            dataset_dict: Dict[str, torch.Tensor],
-            eval: bool = False
-        ) -> None:
+        self,
+        dataset_dict: Dict[str, torch.Tensor],
+        eval: bool = False
+    ) -> None:
         """
         Augment model outputs: Forward wNN and combine model outputs for
         multimodel ensemble predictions.
@@ -237,7 +238,7 @@ class ModelHandler(torch.nn.Module):
     def calc_loss(
         self,
         dataset: Dict[str, torch.Tensor],
-        loss_func: Optional[torch.nn.Module] = None
+        loss_func: Optional[torch.nn.Module] = None,
     ) -> torch.Tensor:
         """Calculate combined loss across all models.
         
@@ -261,7 +262,6 @@ class ModelHandler(torch.nn.Module):
 
         loss_combined = 0.0
 
-
         # Loss calculation for each model
         for name, output in self.output_dict.items():
             if self.target_name not in output.keys():
@@ -283,10 +283,10 @@ class ModelHandler(torch.nn.Module):
         return loss_combined
 
     def calc_loss_multimodel(
-            self,
-            dataset: Dict[str, torch.Tensor],
-            loss_func: torch.nn.Module
-        ) -> torch.Tensor:
+        self,
+        dataset: Dict[str, torch.Tensor],
+        loss_func: torch.nn.Module,
+    ) -> torch.Tensor:
         """
         Calculate loss for multimodel ensemble wNN trained in parallel with
         differentiable models.
@@ -306,6 +306,10 @@ class ModelHandler(torch.nn.Module):
         torch.Tensor
             Combined loss for the multimodel ensemble.
         """
+        if not self.loss_func_wnn and not loss_func:
+            raise ValueError("No loss function defined.")
+        self.loss_func_wnn = loss_func or self.loss_func_wnn
+        
         # Sum of weights for each model
         weights_sum = torch.sum(
             torch.stack(
@@ -324,7 +328,7 @@ class ModelHandler(torch.nn.Module):
         output = self.ensemble_output_dict[self.target_name]
 
         # Ensemble predictions loss
-        ensemble_loss = self.loss_func(
+        ensemble_loss = self.loss_func_wnn(
             output,
             dataset['target'],
             n_samples=dataset['batch_sample']

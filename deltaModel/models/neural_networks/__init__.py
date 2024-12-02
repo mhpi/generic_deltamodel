@@ -1,7 +1,7 @@
 import logging
 import math
 from abc import ABC
-from typing import Callable, Dict
+from typing import Any, Callable, Dict
 
 import torch
 import torch.nn as nn
@@ -66,9 +66,12 @@ class NeuralNetwork(ABC, torch.nn.Module):
         raise NotImplementedError("The forward function must be implemented")
     
 
-def init_nn_model(phy_model, config):
-    """Initialize the pNN model.
-    
+def init_nn_model(
+    phy_model: nn.Module,
+    config: Dict[str, Dict[str, Any]]
+) -> nn.Module:
+    """Initialize a parameterization neural network.
+       
     Parameters
     ----------
     phy_model : torch.nn.Module
@@ -109,4 +112,3 @@ def init_nn_model(phy_model, config):
         raise ValueError(config['nn_model'], " not supported.")
     
     return nn_model
-    

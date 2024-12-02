@@ -191,16 +191,16 @@ if __name__ == '__main__':
                 'batch_size': 100,
                 'epochs': 50,
                 'start_epoch': 0,
-                'save_epoch': 5
+                'save_epoch': 5,
             },
             test={
                 'start_time': '2001/01/01',
                 'end_time': '2001/12/31',
                 'batch_size': 100,
-                'test_epoch': 50
+                'test_epoch': 50,
             },
             loss_function={
-                'model': 'RmseLossComb'
+                'model': 'RmseLossComb',
             },
             dpl_model={
                 'rho': 365,
@@ -209,10 +209,10 @@ if __name__ == '__main__':
                     'nmul': 1,
                     'warm_up': 365,
                     'dynamic_params': {
-                        'None_model': ['z1', 'z2']
+                        'None_model': ['z1', 'z2'],
                     },
                     'forcings': ['x1_var', 'x2_var'],
-                    'attributes': ['attr1', 'attr2']
+                    'attributes': ['attr1', 'attr2'],
                     },
                 'nn_model': {
                     'model': 'LSTM',
@@ -220,7 +220,7 @@ if __name__ == '__main__':
                     'hidden_size': 256,
                     'learning_rate': 1.0,
                     'forcings': ['x1_var', 'x2_var'],
-                    'attributes': ['attr1', 'attr2']
+                    'attributes': ['attr1', 'attr2'],
                 }
             },
             observations={
@@ -230,7 +230,7 @@ if __name__ == '__main__':
                 'start_time_all': '2000/01/01',
                 'end_time_all': '2024/12/31',
                 'forcings_all': ['x1_var', 'x2_var'],
-                'attributes_all': ['attr1', 'attr2']
+                'attributes_all': ['attr1', 'attr2'],
             },
         )
         print("Configuration is valid.")

@@ -170,7 +170,7 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
              '_R' + str(config['dpl_model']['rho'])  + \
              '_B' + str(config['train']['batch_size']) + \
              '_H' + str(config['dpl_model']['nn_model']['hidden_size']) + \
-             '_n' + str(config['dpl_model']['nmul']) + \
+             '_n' + str(config['dpl_model']['phy_model']['nmul']) + \
              '_'  + norm + \
              '_' + str(config['random_seed'])
 
@@ -340,7 +340,7 @@ def print_config(config: Dict[str, Any]) -> None:
     print("\033[1m" + "Model Parameters" + "\033[0m")
     print(f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}")
     print(f"  {'Dropout:':<20}{config['dpl_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['dpl_model']['nn_model']['hidden_size']:<20}")
-    print(f"  {'Warmup:':<20}{config['dpl_model']['phy_model']['warm_up']:<20}{'Concurrent Models:':<20}{config['dpl_model']['nmul']:<20}")
+    print(f"  {'Warmup:':<20}{config['dpl_model']['phy_model']['warm_up']:<20}{'Concurrent Models:':<20}{config['dpl_model']['phy_model']['nmul']:<20}")
     print(f"  {'Optimizer:':<20}{config['loss_function']['model']:<20}")
     print()
 

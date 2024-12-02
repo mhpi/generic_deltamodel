@@ -37,13 +37,13 @@ class DeltaModel(torch.nn.Module):
         The device to run the model on. The default is None.
     """
     def __init__(
-            self,
-            phy_model_name: Optional[str] = None,
-            phy_model: Optional[torch.nn.Module] = None,
-            nn_model: Optional[torch.nn.Module] = None,
-            config: Optional[Dict[str, Any]] = None,
-            device: Optional[torch.device] = None
-        ) -> None:
+        self,
+        phy_model_name: Optional[str] = None,
+        phy_model: Optional[torch.nn.Module] = None,
+        nn_model: Optional[torch.nn.Module] = None,
+        config: Optional[Dict[str, Any]] = None,
+        device: Optional[torch.device] = None,
+    ) -> None:
         super().__init__()
         self.name = 'Differentiable Model (pNN -> phy_model)'
         self.config = config

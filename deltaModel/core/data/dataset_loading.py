@@ -44,7 +44,7 @@ def load_data(config, t_range=None, train=True):
             startdate =config['test']['start_time']
             enddate = config['test']['end_time']
             
-        all_time = pd.date_range(config['observations']['data_start_time'], config['observations']['data_end_time'], freq='d')
+        all_time = pd.date_range(config['observations']['start_time_all'], config['observations']['end_time_all'], freq='d')
         new_time = pd.date_range(startdate, enddate, freq='d')
         
         index_start = all_time.get_loc(new_time[0])
