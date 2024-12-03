@@ -1,16 +1,35 @@
 from typing import Any, Dict
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator, ConfigDict
 import os
 import json
 import hashlib
+
+from pytest import param
 
 
 class PathBuilder(BaseModel):
     """Build and initialize output directories for saving models and outputs.
     
     Using Pydantic BaseModel to enforce type checking and validation.
+    Scalable and flexible for diverse model configurations.
+
+    Parameters
+    ----------
+    config : dict
+        Configuration dictionary with experiment and model settings.
     """
-    config: Dict[str, Any] = {}
+    config = ConfigDict(arbitrary_types_allowed=True)
+    base_path: str = ''
+    dataset_name: str = ''
+    phy_model_inputs: str = ''
+    train_period: str = ''
+    test_period: str = ''
+    multimodel_state: str = ''
+    model_names: str = ''
+    dynamic_parameters: str = ''
+    dynamic_state: str = ''
+    loss_function: str = ''
+    hyperparameter_details: str = ''
 
     def __init__(self, config: Dict[str, Any]) -> None:
         super().__init__(config=config)
@@ -20,68 +39,223 @@ class PathBuilder(BaseModel):
         
         This method is called after the model is initialized.
         """
-        self.write_output_dir(self.config)  
+        self.base_path = self.config['save_path']
 
+        self.dataset_name = self._dataset_name(self.config)
+        self.phy_model_inputs = self._phy_model_inputs(self.config)
 
+        self.train_period = self._train_period(self.config, abbreviate=False)
+        self.test_period = self._test_period(self.config, abbreviate=False)
 
-    def write_output_dir(config: Dict[str, Any]) -> dict:
+        self.multimodel_state = self._multimodel_state(self.config)
+
+        self.model_names = self._model_names(self.config)
+        self.dynamic_parameters = self._dynamic_parameters(self.config, hash=False)
+        self.dynamic_state = self._dynamic_state(self.dynamic_parameters)
+
+        self.loss_function = self._loss_function(self.config)
+        self.hyperparameter_details = self._hyperparameter_details(self.config)
+
+        return super().model_post_init(__context)
+    
+    def build_path(self) -> Dict[str, Any]:
+        """Build path explicitly from individual root paths."""
+        return os.path.join(
+            self.base_path,
+            self.dataset_name,
+            self.train_period,
+            self.multimodel_state,
+            self.params,
+            self.model_names,
+            self.loss_fn,
+            self.dynamic_state,
+            self.dynamic_parameters,
+        )
+
+    def build_path_test(self) -> Dict[str, Any]:
+        """Build model testing path from individual root paths."""
+        return os.path.join(
+            self.build_path(),
+            self.test_period,
+        )
+
+    def write_path (self, config: Dict[str, Any]) -> dict:
         """Creates directory where model and outputs will be saved.
 
-        Creates all root directories to support the target directory for the model.
-
-        Parameters
-        ----------
-        config : dict
-            Configuration dictionary with paths and model settings.
+        Creates all root directories to support the target directory.
         
         Returns
         -------
         dict
             The original config with path modifications.
         """
-        # Dir for dataset name:
-        dataset_name = f"{config['observations']['name']}"
+        # Check base path
+        self.validate_base_path(config['save_path'])
 
-        # Dir for training period:
-        train_period = f"train{config['train']['start_time'][:4]}-{config['train']['end_time'][:4]}"
+        # Build path
+        path = self.build_path()
+        validation_path = self.build_path_validation()
+        
+        # Create dirs
+        os.makedirs(path, exist_ok=True)
+        os.makedirs(validation_path, exist_ok=True)
 
-        ## TODO: Leave out until better integration (e.g., what if same count, different inputs?).
-        # Dir for phy_model input count:
-        # attributes = config['dpl_model']['phy_model']['attributes']
-        # if attributes == []:
-        #     attributes = 0
-        # num_inputs = f"{config['dpl_model']['phy_model']['forcings']}dy_{attributes}st_in"
+        # Append the output paths to the config.
+        config['out_path'] = path
+        config['validation_path'] = validation_path
+        
+        # Save config
+        self.save_config(path, config)
+        
+        return config
 
-        # Dir for multimodel state:
-        multimodel_state = config['multimodel_type'] or 'no_multi'
+    @staticmethod
+    def save_config(path: str, config: Dict[str, Any]) -> None:
+        """Save the configuration metadata to the output directory.
+        
+        Overwrite if it already exists.
+        """
+        config_path = os.path.join(path, 'config.json')
+        with open(config_path, 'w') as f:
+            json.dump(config, f, indent=4)
+        
+    @staticmethod
+    def validate_base_path(base_path: Any) -> Any:
+        """Check that the base path exists. If not, attempt to create it.
+        
+        Parameters
+        ----------
+        base_path : Any
+            Base path for saving models and outputs.
+        """
+        base_path = os.path.abspath(base_path)
 
-        # Dirs for model names and parameters (hashed for concision):
+        if not os.path.exists(base_path):
+            try:
+                os.makedirs(base_path)
+            except Exception as e:
+                raise ValueError(f"Error creating base save path from config: {e}")
+    
+    @staticmethod
+    def _dataset_name(config: Dict[str, Any]) -> str:
+        """Name of the dataset used."""
+        return f"{config['observations']['name']}"
+
+    @staticmethod
+    def _phy_model_inputs(config: Dict[str, Any]) -> str:
+        """Number of physical model input variables.
+        
+        TODO: needs more thought (e.g. what is same count, different inputs?)
+        ...maybe use hash.
+        """
+        attributes = config['dpl_model']['phy_model']['attributes']
+        if attributes == []:
+            attributes = 0
+        return f"{config['dpl_model']['phy_model']['forcings']}dy_{attributes}st_in"
+    
+    @staticmethod
+    def _train_period(config: Dict[str, Any], abbreviate: bool = False) -> str:
+        """Training period for an experiment.
+
+        Format is 
+            'trainYYYY-YYYY' or 'trainYY-YY' if abbreviated.
+        """
+        start = config['train']['start_time'][:4]
+        end = config['train']['end_time'][:4]
+
+        if abbreviate:
+            return f"train{start[-2:]}-{end[-2:]}"
+        else: 
+            return f"train{start}-{end}"
+
+    @staticmethod
+    def _test_period(config: Dict[str, Any], abbreviate: bool = False) -> str:
+        """Testing period for an experiment.
+
+        Format is
+            'testYYYY-YYYY' or 'testYY-YY' if abbreviate.
+        """
+        start = config['test']['start_time'][:4]
+        end = config['test']['end_time'][:4]
+
+        if abbreviate:
+            return f"test{start[-2:]}-{end[-2:]}"
+        else: 
+            return f"test{start}-{end}"
+
+    @staticmethod
+    def _multimodel_state(config: Dict[str, Any]) -> str:
+        """Name multimodel state for an experiment."""
+        return config['multimodel_type'] or 'no_multi'
+
+    @staticmethod
+    def _model_names(config: Dict[str, Any]) -> str:
+        """Names of the models used in an experiment."""
+        models = config['dpl_model']['phy_model']['model']
+        return '_'.join(models)
+
+    @staticmethod
+    def _dynamic_parameters(config: Dict[str, Any], hash: bool = False) -> str:
+        """Dynamic parameters used in the model(s).
+        
+        Parameters
+        ----------
+        hash : bool
+            If True, returns a short hash of the dynamic parameters.
+
+        Format is
+            'p1_p2_q1_q2' etc. for model1 parameters p1, p2,... 
+            and model2 parameters q1, q2,...
+
+            or
+
+            'abc12345' if hash.
+        """
         models = config['dpl_model']['phy_model']['model']
         parameters = config['dpl_model']['phy_model']['dynamic_params']
 
-        model_names = '_'.join(models)
-        dynamic_param_str = '_'.join(
+        param_str =  '_'.join(
             param for model in models for param in parameters[model]
         )
-
-        dynamic_param_hash = hashlib.md5(dynamic_param_str.encode()).hexdigest()[:8]
+        if param_str == '':
+            return ''
+        if hash:
+            return hashlib.md5(param_str.encode()).hexdigest()[:8]
+        else:
+            return param_str
+    
+    @staticmethod
+    def _dynamic_state(dynamic_parameters: str) -> str:
+        """Identify if any physical model parameters are dynamic.
         
-        # Dir for dynamic or static physical parameter state:
-        dynamic_state = 'dyn' if dynamic_param_str else 'static'
+        Parameters
+        ----------
+        dynamic_parameters : str
+            String of dynamic parameters used in the model(s).
+        """
+        if dynamic_parameters.replace('_','') == '':
+            return 'dyn'
+        else:
+            return 'static'
 
-        # Dir for loss function:
-        loss_fn = '_'.join(
+    @staticmethod
+    def _loss_function(config: Dict[str, Any]) -> str:
+        """Loss function(s) used in the model(s)."""
+        models = config['dpl_model']['phy_model']['model']
+        return '_'.join(
             fn for model in models for fn in config['loss_function']['model']
         )
 
-        # Dir for hyperparemter details:
+    @staticmethod
+    def _hyperparameter_details(config: Dict[str, Any]) -> str:
+        """Details of hyperparameters used in the model(s)."""
         norm = 'noLn'
         norm_list = config['dpl_model']['phy_model']['use_log_norm']
         if norm_list != []:
             vars = '_'.join(var for var in norm_list)
             norm = f"Ln_{vars}"
 
-        params = f"{config['dpl_model']['nn_model']['model']}_ \
+        return f"{config['dpl_model']['nn_model']['model']}_ \
             E{config['train']['epochs']}_ \
             R{config['dpl_model']['rho']}_ \
             B{config['train']['batch_size']}_ \
@@ -89,34 +263,3 @@ class PathBuilder(BaseModel):
             n{config['dpl_model']['phy_model']['nmul']}_ \
             {norm}_ \
             {config['random_seed']}"
-        
-        # Full root path
-        model_path = os.path.join(
-            config['save_path'],
-            dataset_name,
-            train_period,
-            multimodel_state,
-            params,
-            model_names,
-            loss_fn,
-            dynamic_state,
-            dynamic_param_hash if dynamic_state == 'dyn' else ''
-        )
-
-        # Dir for test period:
-        test_period = f"test{config['test']['start_time'][:4]}-{config['test']['end_time'][:4]}"
-        test_path = os.path.join(model_path, test_period)
-
-        # Create dirs
-        os.makedirs(test_path, exist_ok=True)
-
-        # Append the output directories to the config.
-        config['out_path'] = model_path
-        config['validation_path'] = test_path
-        
-        # Save config metadata (overwrite if it exists).
-        config_path = os.path.join(model_path, 'config.json')
-        with open(config_path, 'w') as f:
-            json.dump(config, f)
-
-        return config

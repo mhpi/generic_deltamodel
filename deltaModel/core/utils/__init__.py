@@ -112,7 +112,7 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
 
     # Create output directories.
     out_path = PathBuilder(config)
-    config = out_path.write_output_dir(config)
+    config = out_path.write_path(config)
 
     return config
 
@@ -121,7 +121,7 @@ def save_model(config, model, model_name, epoch, create_dirs=False) -> None:
     """Save model state dict."""
     if create_dirs:
         out_path = PathBuilder(config)
-        out_path.write_output_dir(config)
+        out_path.write_path(config)
 
     save_name = f"d{str(model_name)}_model_Ep{str(epoch)}.pt"
 
@@ -133,7 +133,7 @@ def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
     """Save outputs from a model."""
     if create_dirs:
         out_path = PathBuilder(config)
-        out_path.write_output_dir(config)
+        out_path.write_path(config)
 
     for key in preds_list[0].keys():
         if len(preds_list[0][key].shape) == 3:

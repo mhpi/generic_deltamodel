@@ -208,7 +208,7 @@ class Metrics(BaseModel):
             raise ValueError(msg)
         return metrics
     
-    def calc_statistics(self, *args, **kwargs) -> Dict[str, Dict[str, float]]:
+    def calc_stats(self, *args, **kwargs) -> Dict[str, Dict[str, float]]:
         """Calculate aggregate statistics of metrics."""
         stats = {}
         model_dict = self.model_dump()
@@ -225,7 +225,7 @@ class Metrics(BaseModel):
                 }
         return stats
 
-    def dump_agg_statistics(self, path: str) -> None:
+    def model_dump_agg_stats(self, path: str) -> None:
         """Dump aggregate statistics (median, mean, std) to json or csv.
         
         Parameters
@@ -233,7 +233,7 @@ class Metrics(BaseModel):
         path : str
             Path to save file.
         """
-        stats = self.calc_statistics()
+        stats = self.calc_stats()
         
         if path.endswith('.json'):
             with open(path, 'w') as f:
@@ -271,7 +271,7 @@ class Metrics(BaseModel):
         """
         # Save aggregate statistics
         save_path = os.path.join(path, 'metrics_agg.json')
-        self.dump_agg_statistics(save_path)
+        self.model_dump_agg_stats(save_path)
 
         # Save raw metrics
         save_path = os.path.join(path, f'metrics.json')
@@ -279,16 +279,6 @@ class Metrics(BaseModel):
         
         with open(save_path, "w") as f:
             json.dump(json_dat, f)        
-
-    @property
-    def ngrid(self) -> int:
-        """Calculate number of items in grid."""
-        return self.pred.shape[0]
-    
-    @property
-    def nt(self) -> int:
-        """Calculate number of time steps."""
-        return self.pred.shape[1]
 
     def tile_mean(self, data: npt.NDArray[np.float32]) -> npt.NDArray[np.float32]:
         """Calculate mean of target.
@@ -304,6 +294,16 @@ class Metrics(BaseModel):
             Mean of data.
         """
         return np.tile(np.nanmean(data, axis=1), (self.nt, 1)).transpose()
+    
+    @property
+    def ngrid(self) -> int:
+        """Calculate number of items in grid."""
+        return self.pred.shape[0]
+    
+    @property
+    def nt(self) -> int:
+        """Calculate number of time steps."""
+        return self.pred.shape[1]
     
     @staticmethod
     def _bias(
