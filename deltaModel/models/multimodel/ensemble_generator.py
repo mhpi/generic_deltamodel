@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 from core.data import numpy_to_torch_dict
-from core.utils.utils import find_shared_keys
+from core.utils import find_shared_keys
 from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
 

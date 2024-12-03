@@ -1,10 +1,8 @@
 from typing import Any, Dict
-from pydantic import BaseModel, model_validator, ConfigDict
+from pydantic import BaseModel, field_validator, ConfigDict, Field
 import os
 import json
 import hashlib
-
-from pytest import param
 
 
 class PathBuilder(BaseModel):
@@ -18,7 +16,10 @@ class PathBuilder(BaseModel):
     config : dict
         Configuration dictionary with experiment and model settings.
     """
-    config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config['protected_namespaces'] = ()
+
+    config: Dict[str, Any] = Field(..., description="Experiment configuration dictionary")
     base_path: str = ''
     dataset_name: str = ''
     phy_model_inputs: str = ''
@@ -29,7 +30,7 @@ class PathBuilder(BaseModel):
     dynamic_parameters: str = ''
     dynamic_state: str = ''
     loss_function: str = ''
-    hyperparameter_details: str = ''
+    hyperparameter_detail: str = ''
 
     def __init__(self, config: Dict[str, Any]) -> None:
         super().__init__(config=config)
@@ -51,23 +52,32 @@ class PathBuilder(BaseModel):
 
         self.model_names = self._model_names(self.config)
         self.dynamic_parameters = self._dynamic_parameters(self.config, hash=False)
-        self.dynamic_state = self._dynamic_state(self.dynamic_parameters)
+        self.dynamic_state = self._dynamic_state()
 
         self.loss_function = self._loss_function(self.config)
-        self.hyperparameter_details = self._hyperparameter_details(self.config)
+        self.hyperparameter_detail = self._hyperparameter_details(self.config)
 
         return super().model_post_init(__context)
     
-    def build_path(self) -> Dict[str, Any]:
+    @field_validator('config')
+    def validate_config(cls, value) -> Dict[str, Any]:
+        """Validate the configuration dictionary."""
+        required_keys = ['save_path', 'train', 'test', 'dpl_model']
+        for key in required_keys:
+            if key not in value:
+                raise ValueError(f"Missing required configuration key: {key}")
+        return value
+    
+    def build_path(self) -> str:
         """Build path explicitly from individual root paths."""
         return os.path.join(
             self.base_path,
             self.dataset_name,
             self.train_period,
             self.multimodel_state,
-            self.params,
+            self.hyperparameter_detail,
             self.model_names,
-            self.loss_fn,
+            self.loss_function,
             self.dynamic_state,
             self.dynamic_parameters,
         )
@@ -94,16 +104,18 @@ class PathBuilder(BaseModel):
 
         # Build path
         path = self.build_path()
-        validation_path = self.build_path_validation()
+        test_path = self.build_path_test()
         
         # Create dirs
         os.makedirs(path, exist_ok=True)
-        os.makedirs(validation_path, exist_ok=True)
+        os.makedirs(test_path, exist_ok=True)
 
         # Append the output paths to the config.
         config['out_path'] = path
-        config['validation_path'] = validation_path
+        config['validation_path'] = test_path
         
+        print(os.path.abspath(path))
+
         # Save config
         self.save_config(path, config)
         
@@ -214,18 +226,17 @@ class PathBuilder(BaseModel):
         models = config['dpl_model']['phy_model']['model']
         parameters = config['dpl_model']['phy_model']['dynamic_params']
 
-        param_str =  '_'.join(
-            param for model in models for param in parameters[model]
+        param_str = '_'.join(
+            param for model in models for param in parameters.get(model, [])
         )
-        if param_str == '':
+        if not param_str:
             return ''
+
         if hash:
             return hashlib.md5(param_str.encode()).hexdigest()[:8]
-        else:
-            return param_str
-    
-    @staticmethod
-    def _dynamic_state(dynamic_parameters: str) -> str:
+        return param_str
+        
+    def _dynamic_state(self) -> str:
         """Identify if any physical model parameters are dynamic.
         
         Parameters
@@ -233,33 +244,38 @@ class PathBuilder(BaseModel):
         dynamic_parameters : str
             String of dynamic parameters used in the model(s).
         """
-        if dynamic_parameters.replace('_','') == '':
-            return 'dyn'
+        param_count = len(self.dynamic_parameters.split('_'))
+        if self.dynamic_parameters == '':
+            return 'stat'
         else:
-            return 'static'
+            return f"{param_count}dyn"
 
     @staticmethod
     def _loss_function(config: Dict[str, Any]) -> str:
         """Loss function(s) used in the model(s)."""
         models = config['dpl_model']['phy_model']['model']
-        return '_'.join(
-            fn for model in models for fn in config['loss_function']['model']
-        )
+        loss_fn = config['loss_function']['model']
+        loss_fn_str = '_'.join(
+            loss_fn for model in models
+        )          
+        return loss_fn_str
 
     @staticmethod
     def _hyperparameter_details(config: Dict[str, Any]) -> str:
         """Details of hyperparameters used in the model(s)."""
         norm = 'noLn'
         norm_list = config['dpl_model']['phy_model']['use_log_norm']
-        if norm_list != []:
-            vars = '_'.join(var for var in norm_list)
+        if norm_list:
+            vars = '_'.join(norm_list)
             norm = f"Ln_{vars}"
 
-        return f"{config['dpl_model']['nn_model']['model']}_ \
-            E{config['train']['epochs']}_ \
-            R{config['dpl_model']['rho']}_ \
-            B{config['train']['batch_size']}_ \
-            H{config['dpl_model']['nn_model']['hidden_size']}_ \
-            n{config['dpl_model']['phy_model']['nmul']}_ \
-            {norm}_ \
-            {config['random_seed']}"
+        return (
+            f"{config['dpl_model']['nn_model']['model']}_"
+            f"E{config['train']['epochs']}_"
+            f"R{config['dpl_model']['rho']}_"
+            f"B{config['train']['batch_size']}_"
+            f"H{config['dpl_model']['nn_model']['hidden_size']}_"
+            f"n{config['dpl_model']['phy_model']['nmul']}_"
+            f"{norm}_"
+            f"{config['random_seed']}"
+        )

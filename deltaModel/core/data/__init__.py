@@ -5,10 +5,45 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
-from core.utils.time import trange_to_array
+import datetime as dt
 
 log = logging.getLogger(__name__)
 
+
+def time_to_date(t, hr=False):
+    """Convert time to date or datetime object.
+    
+    Adapted from Farshid Rahmani.
+    
+    Parameters
+    ----------
+    t : int, datetime, date
+        Time object to convert.
+    hr : bool
+        If True, return datetime object.
+    """
+    tOut = None
+    if type(t) is int:
+        if t < 30000000 and t > 10000000:
+            t = dt.datetime.strptime(str(t), "%Y%m%d").date()
+            tOut = t if hr is False else t.datetime()
+
+    if type(t) is dt.date:
+        tOut = t if hr is False else t.datetime()
+
+    if type(t) is dt.datetime:
+        tOut = t.date() if hr is False else t
+
+    if tOut is None:
+        raise Exception("Failed to change time to date.")
+    return tOut
+
+
+def trange_to_array(tRange, *, step=np.timedelta64(1, "D")):
+    sd = time_to_date(tRange[0])
+    ed = time_to_date(tRange[1])
+    tArray = np.arange(sd, ed, step)
+    return tArray
 
 
 class BaseDataset(ABC, torch.utils.data.Dataset):

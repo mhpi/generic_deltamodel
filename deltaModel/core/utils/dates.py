@@ -132,31 +132,3 @@ class Dates(BaseModel):
         end = datetime.strptime(self.end_time, date_time_format).strftime(date_int)
 
         return [int(start), int(end)]
-
-    def time_to_date(t, hr=False):
-        """Convert time to date or datetime object.
-        
-        Adapted from Farshid Rahmani.
-        
-        Parameters
-        ----------
-        t : int, datetime, date
-            Time object to convert.
-        hr : bool
-            If True, return datetime object.
-        """
-        tOut = None
-        if type(t) is int:
-            if t < 30000000 and t > 10000000:
-                t = dt.datetime.strptime(str(t), "%Y%m%d").date()
-                tOut = t if hr is False else t.datetime()
-
-        if type(t) is dt.date:
-            tOut = t if hr is False else t.datetime()
-
-        if type(t) is dt.datetime:
-            tOut = t.date() if hr is False else t
-
-        if tOut is None:
-            raise Exception("Failed to change time to date.")
-        return tOut
