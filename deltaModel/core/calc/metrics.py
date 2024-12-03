@@ -1,12 +1,13 @@
+import csv
+import json
 import logging
-from typing import Any, Optional, Tuple, Dict
 import os
+from typing import Any, Dict, Optional, Tuple
+
 import numpy as np
 import numpy.typing as npt
 import scipy.stats as stats
 from pydantic import BaseModel, ConfigDict, model_validator
-import json
-import csv
 
 log = logging.getLogger()
 
@@ -495,34 +496,3 @@ class Metrics(BaseModel):
         sst = np.sum((target - target_mean) ** 2)
         ssres = np.sum((target - pred) ** 2)
         return 1 - ssres / sst
-
-
-
-    # outDict = {
-    #     'Bias': Bias,
-    #     'Bias_ab': Bias_ab,
-    #     'RMSE': RMSE,
-    #     'ubRMSE': ubRMSE,
-    #     'Corr': Corr,
-    #     'CorrSp': CorrSp,
-    #     'R2': R2,
-    #     'NSE': NSE,
-    #     'FLV': PBiaslow, # FLV the low flows bias bottom 30%, log space
-    #     'FHV': PBiashigh, # FHV the peak flows bias 2%
-    #     'PBias': PBias,
-    #     'PBiasother': PBiasother,
-    #     'absFLV': absPBiaslow,
-    #     'absFHV': absPBiashigh,
-    #     'absPBias': absPBias,
-    #     'absPBiasother': absPBiasother,
-    #     'KGE': KGE,
-    #     'KGE12': KGE12,
-    #     'fdcRMSE': FDCRMSE,
-    #     'lowRMSE': RMSElow,
-    #     'highRMSE': RMSEhigh,
-    #     'midRMSE': RMSEother,
-    #     'rdMax': dMax_rel,
-    #     'dMax': dMax
-    # }
-
-    # return outDict

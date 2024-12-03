@@ -15,9 +15,9 @@ log = logging.getLogger(__name__)
 
 
 @hydra.main(
-    version_base="1.3",
-    config_path="conf/",
-    config_name="config_multimodel",
+    version_base='1.3',
+    config_path='conf/',
+    config_name='config',
 )
 def main(config: DictConfig) -> None:
     try:
@@ -70,5 +70,5 @@ def main(config: DictConfig) -> None:
         ) 
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

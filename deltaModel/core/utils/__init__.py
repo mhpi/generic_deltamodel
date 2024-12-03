@@ -265,45 +265,6 @@ def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
         np.save(os.path.join(config['testing_path'], file_name), item_obs)
 
 
-def load_model(config, model_name, epoch):
-    """Load trained PyTorch models.
-    
-    Args:
-        config (dict): Configuration dictionary with paths and model settings.
-        model_name (str): Name of the model to load.
-        epoch (int): Epoch number to load the specific state of the model.
-        
-    Returns:
-        model (torch.nn.Module): The loaded PyTorch model.
-    """
-    model_name = f"d{str(model_name)}_model_Ep{str(epoch)}.pt"
-    # model_path = os.path.join(config['out_path'], model_name)
-    # try:
-    #     self.model_dict[model] = torch.load(model_path).to(self.config['device']) 
-    # except:
-    #     raise FileNotFoundError(f"Model file {model_path} was not found. Check that epochs and hydro models in your config are correct.")
-
-    # # Construct the path where the model is saved
-    # model_file_name = f"{model_name}_epoch_{epoch}.pth"
-    # model_path = os.path.join(config['model_dir'], model_file_name)
-    
-    # # Ensure the model file exists
-    # if not os.path.isfile(model_path):
-    #     raise FileNotFoundError(f"Model file '{model_path}' not found.")
-    
-    # return torch.load(model_path)
-    
-    # Retrieve the model class from config (assuming it's stored in the config)
-    # model_class = config['model_classes'][model_name]
-    
-    # Initialize the model (assumes model classes are callable and take no arguments)
-    # model = model_class()
-    # Load the state_dict into the model
-    # model.load_state_dict(state_dict)
-    
-    # return model
-
-
 def print_config(config: Dict[str, Any]) -> None:
     """Print the current configuration settings.
 
@@ -312,7 +273,7 @@ def print_config(config: Dict[str, Any]) -> None:
     config : dict
         Dictionary of configuration settings.
 
-    Adapted from: Jiangtao Liu
+    Adapted from Jiangtao Liu.
     """
     print()
     print("\033[1m" + "Current Configuration" + "\033[0m")
@@ -337,18 +298,18 @@ def print_config(config: Dict[str, Any]) -> None:
     print(f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}")
     print(f"  {'Dropout:':<20}{config['dpl_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['dpl_model']['nn_model']['hidden_size']:<20}")
     print(f"  {'Warmup:':<20}{config['dpl_model']['phy_model']['warm_up']:<20}{'Concurrent Models:':<20}{config['dpl_model']['phy_model']['nmul']:<20}")
-    print(f"  {'Optimizer:':<20}{config['loss_function']['model']:<20}")
+    print(f"  {'Loss Fn:':<20}{config['loss_function']['model']:<20}")
     print()
 
-    # if 'pnn' in config['multimodel_type']:
-    #     print("\033[1m" + "Weighting Network Parameters" + "\033[0m")
-    #     print(f'  {"Dropout:":<20}{config.weighting_nn.dropout:<20}{"Hidden Size:":<20}{config.weighting_nn.hidden_size:<20}')
-    #     print(f'  {"Method:":<20}{config.weighting_nn.method:<20}{"Loss Factor:":<20}{config.weighting_nn.loss_factor:<20}')
-    #     print(f'  {"Loss Lower Bound:":<20}{config.weighting_nn.loss_lower_bound:<20}{"Loss Upper Bound:":<20}{config.weighting_nn.loss_upper_bound:<20}')
-    #     print(f'  {"Optimizer:":<20}{config.weighting_nn.loss_function:<20}')
-    #     print()
+    if config['multimodel_type'] != None:
+        print("\033[1m" + "Multimodel Parameters" + "\033[0m")
+        print(f"  {'Mosaic:':<20}{config['multimodel']['mosaic']:<20}{'Dropout:':<20}{config['multimodel']['dropout']:<20}")
+        print(f"  {'Learning Rate:':<20}{config['multimodel']['learning_rate']:<20}{'Hidden Size:':<20}{config['multimodel']['hidden_size']:<20}")
+        print(f"  {'Scaling Fn:':<20}{config['multimodel']['scaling_function']:<20}{'Loss Fn:':<20}{config['multimodel']['loss_function']:<20}")
+        print(f"  {'Range-bound Loss:':<20}{config['multimodel']['use_rb_loss']:<20}{'Loss Factor:':<20}{config['multimodel']['loss_factor']:<20}")
+        print()
 
-    print("\033[1m" + "Machine" + "\033[0m")
+    print("\033[1m" + 'Machine' + "\033[0m")
     print(f"  {'Use Device:':<20}{str(config['device']):<20}")
     print()
     

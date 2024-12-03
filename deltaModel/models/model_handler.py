@@ -223,7 +223,7 @@ class ModelHandler(torch.nn.Module):
             with torch.no_grad():
                 self.ensemble_output_dict, self.weights = self.ensemble_generator(
                     dataset_dict,
-                    self.output_dict
+                    self.output_dict,
                 )
         else:
             if self.multimodel_type in ['pnn_parallel']:
@@ -232,7 +232,6 @@ class ModelHandler(torch.nn.Module):
                 self.ensemble_output_dict, self.weights = self.ensemble_generator(
                     dataset_dict,
                     self.output_dict,
-                    warm_up = self.config['dpl_model']['phy_model']['warm_up']
                 )
 
     def calc_loss(
