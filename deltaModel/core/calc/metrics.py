@@ -15,12 +15,10 @@ log = logging.getLogger()
 class Metrics(BaseModel):
     """Metrics for model evaluation.
 
-    Using pydantic BaseModel for validation.
+    Using Pydantic BaseModel for validation.
     Metrics are calculated at each grid point and are listed below.
     
     Adapted from Tadd Bindas, Yalan Song, Farshid Rahmani.
-
-    Note: Considering conversion to torch.nn.module for codebase consistency.
     """
     model_config = ConfigDict(arbitrary_types_allowed=True)
     pred: npt.NDArray[np.float32]
@@ -70,9 +68,11 @@ class Metrics(BaseModel):
 
         super().__init__(pred=pred, target=target)
 
-    def model_post_init(self, __context: Any):
+    def model_post_init(self, __context: Any) -> Any:
         """Calculate metrics.
-        
+
+        This method is called after the model is initialized.
+
         Parameters
         ----------
         __context : Any

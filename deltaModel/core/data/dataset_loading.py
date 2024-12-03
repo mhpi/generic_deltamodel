@@ -152,3 +152,45 @@ def get_dataset_dict(config, train=False):
         )
 
     return dataset_dict
+
+
+
+def intersect(tLst1, tLst2):
+    C, ind1, ind2 = np.intersect1d(tLst1, tLst2, return_indices=True)
+    return ind1, ind2
+
+
+def normalize_streamflow(
+    data: torch.Tensor, gage_ids: np.ndarray, stat_dict: Dict[str, torch.Tensor]
+) -> torch.Tensor:
+    """
+    Taken from the transNorm function of hydroDL
+
+    TODO: goes to hydroDL2
+    """
+    output = torch.zeros([len(gage_ids), data.shape[1]], dtype=torch.float32)
+    for idx, gage in enumerate(gage_ids):
+        statistics = stat_dict[gage]
+        output[idx] = (data[idx] - statistics[2]) / statistics[3]
+
+    return output
+
+
+def denormalize_streamflow(
+        
+    normalized_data: torch.Tensor,
+    gage_ids: np.ndarray,
+    stat_dict: Dict[str, torch.Tensor],
+) -> torch.Tensor:
+    """
+    Taken from the transNorm function of hydroDL
+
+    TODO: goes to hydroDL2
+    """
+
+    output = torch.zeros([len(gage_ids), normalized_data.shape[1]], dtype=torch.float32)
+    for idx, gage in enumerate(gage_ids):
+        statistics = stat_dict[gage]
+        output[idx] = normalized_data[idx] * statistics[3] + statistics[2]
+
+    return output

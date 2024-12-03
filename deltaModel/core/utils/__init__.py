@@ -1,9 +1,8 @@
-import json
 import logging
 import os
 import random
 import sys
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -12,7 +11,7 @@ from pydantic import ValidationError
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from dates import Dates
-
+from core.utils.path_builder import PathBuilder
 log = logging.getLogger(__name__)
 
 
@@ -53,6 +52,32 @@ def set_system_spec(cuda_devices: Optional[list] = None) -> Tuple[str, str]:
     dtype = torch.float32
     return str(device), str(dtype)
 
+def set_randomseed(seed=0) -> None:
+    """Fix random seeds for reproducibility.
+
+    Parameters
+    ----------
+    seed : int, optional
+        Random seed to set. If None, a random seed is used. Default is 0.
+    """
+    if seed == None:
+        # seed = int(np.random.uniform(low=0, high=1e6))
+        pass
+
+    np.random.seed(seed)
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    try:
+        import torch
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        # torch.use_deterministic_algorithms(True)
+    except Exception as e:
+        log.warning(f"Error fixing randomseed: {e}")
+
 
 def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
     """Parse and initialize configuration settings.
@@ -86,155 +111,17 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
         config['multimodel_type'] = None
 
     # Create output directories.
-    config = create_output_dirs(config)
+    out_path = PathBuilder(config)
+    config = out_path.write_output_dir(config)
 
-    return config
-
-
-def set_randomseed(seed=0) -> None:
-    """Fix random seeds for reproducibility.
-
-    Parameters
-    ----------
-    seed : int, optional
-        Random seed to set. If None, a random seed is generated (default 0).
-    """
-    if seed == None:
-        randomseed = int(np.random.uniform(low=0, high=1e6))
-        pass
-
-    np.random.seed(seed)
-    random.seed(seed)
-    os.environ["PYTHONHASHSEED"] = str(seed)
-    try:
-        import torch
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-        # torch.use_deterministic_algorithms(True)
-    except:
-        pass
-    
-
-def create_output_dirs(config: Dict[str, Any]) -> dict:
-    """Create output directories for saving models and results.
-
-    Parameters
-    ----------
-    config : dict
-        Configuration dictionary with paths and model settings.
-    
-    Returns
-    -------
-    dict
-        The original config with path modifications.
-    """
-    # Add dir for train period:
-    train_period = 'train_' + str(config['train']['start_time'][:4]) + '_' +  \
-        str(config['train']['end_time'][:4])
-
-    # Add dir for number of forcings:
-    forcings = str(len(config['dpl_model']['nn_model']['forcings'])) + '_forcing'
-
-    # Add dir for ensemble type:
-    if config['multimodel_type'] == None:
-        ensemble_state = 'no_ensemble'
-    else:
-        ensemble_state = config['multimodel_type']
-    
-    # Add dir for:
-    #  1. model name(s)
-    #  2. static or dynamic parametrization
-    #  3. loss functions per model.
-    mod_names = ''
-    dynamic_params = ''
-    loss_fn = ''
-    for mod in config['dpl_model']['phy_model']['model']:
-        mod_names += mod + '_'
-
-        for param in config['dpl_model']['phy_model']['dynamic_params'][mod]:
-            dynamic_params += param + '_'
-        
-        loss_fn += config['loss_function']['model'] + '_'
-
-    norm = 'noLogNorm'
-    norm_list = config['dpl_model']['phy_model']['use_log_norm']
-    if norm_list != []:
-        norm = 'logNorm_' + str(norm_list[0])
-
-    # Add dir for hyperparam spec.
-    params = config['dpl_model']['nn_model']['model'] + \
-             '_E' + str(config['train']['epochs']) + \
-             '_R' + str(config['dpl_model']['rho'])  + \
-             '_B' + str(config['train']['batch_size']) + \
-             '_H' + str(config['dpl_model']['nn_model']['hidden_size']) + \
-             '_n' + str(config['dpl_model']['phy_model']['nmul']) + \
-             '_'  + norm + \
-             '_' + str(config['random_seed'])
-
-    # If any model in ensemble is dynamic, whole ensemble is dynamic.
-    dy_state = 'static_para' if dynamic_params.replace('_','') == '' else 'dynamic_para'
-    
-    # ---- Combine all dirs ---- #
-    model_path = os.path.join(config['save_path'],
-                              config['observations']['name'],
-                              train_period,
-                              forcings,
-                              ensemble_state,
-                              params,
-                              mod_names,
-                              loss_fn,
-                              dy_state)
-
-    if dy_state == 'dynamic_para':
-        model_path = os.path.join(model_path, dynamic_params)
-
-    test_period = 'test' + str(config['test']['start_time'][:4]) + '_' + \
-        str(config['test']['end_time'][:4])
-    test_path = os.path.join(model_path, test_period)
-
-    # Create the directories.
-    if (config['mode'] == 'test') and (os.path.exists(model_path) == False):
-        if config['multimodel_type'] in ['avg', 'frozen_pnn']:
-            for mod in config['dpl_model']['phy_model']['model']:
-                # Check if individually trained models exist and use those.
-                check_path = os.path.join(config['save_path'],
-                                          config['observations']['name'],
-                                          train_period,
-                                          forcings,
-                                          'no_ensemble',
-                                          params,
-                                          dy_state,
-                                          mod + '_')
-                if os.path.exists(check_path) == False:           
-                    raise FileNotFoundError(f"Attempted to test with individually trained models but {check_path} not found. Check config or train models before testing.")
-        else:
-            raise FileNotFoundError(f"Model directory {model_path} not found. Check config or train models before testing.")
-
-    # Create the directories if they don't exist.
-    os.makedirs(test_path, exist_ok=True)
-    
-    # Saving the config file to output path (overwrite if exists).
-    config_file = json.dumps(config)
-    config_path = os.path.join(model_path, 'config_file.json')
-    if not os.path.exists(config_path):
-        with open(config_path, 'w') as f:
-            f.write(config_file)
-
-    # Append the output directories to the config.
-    config['out_path'] = model_path
-    config['testing_path'] = test_path
-    
     return config
 
 
 def save_model(config, model, model_name, epoch, create_dirs=False) -> None:
     """Save model state dict."""
-    # If the model folder has not been created, do it here.
     if create_dirs:
-        create_output_dirs(config)
+        out_path = PathBuilder(config)
+        out_path.write_output_dir(config)
 
     save_name = f"d{str(model_name)}_model_Ep{str(epoch)}.pt"
 
@@ -245,7 +132,8 @@ def save_model(config, model, model_name, epoch, create_dirs=False) -> None:
 def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
     """Save outputs from a model."""
     if create_dirs:
-        create_output_dirs(config)
+        out_path = PathBuilder(config)
+        out_path.write_output_dir(config)
 
     for key in preds_list[0].keys():
         if len(preds_list[0][key].shape) == 3:
@@ -312,4 +200,29 @@ def print_config(config: Dict[str, Any]) -> None:
     print("\033[1m" + 'Machine' + "\033[0m")
     print(f"  {'Use Device:':<20}{str(config['device']):<20}")
     print()
-    
+
+
+def find_shared_keys(*dicts: Dict[str, Any]) -> List[str]:
+    """Find keys shared between multiple dictionaries.
+
+    Parameters
+    ----------
+    *dicts : dict
+        Variable number of dictionaries.
+
+    Returns
+    -------
+    List[str]
+        A list of keys shared between the input dictionaries.
+    """
+    if len(dicts) == 1:
+        return list()
+
+    # Start with the keys of the first dictionary.
+    shared_keys = set(dicts[0].keys())
+
+    # Intersect with the keys of all other dictionaries.
+    for d in dicts[1:]:
+        shared_keys.intersection_update(d.keys())
+
+    return list(shared_keys)
