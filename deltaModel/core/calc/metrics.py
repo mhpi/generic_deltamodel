@@ -1,10 +1,12 @@
 import logging
-from typing import Any, Optional, Tuple
-
+from typing import Any, Optional, Tuple, Dict
+import os
 import numpy as np
 import numpy.typing as npt
 import scipy.stats as stats
 from pydantic import BaseModel, ConfigDict, model_validator
+import json
+import csv
 
 log = logging.getLogger()
 
@@ -16,6 +18,8 @@ class Metrics(BaseModel):
     Metrics are calculated at each grid point and are listed below.
     
     Adapted from Tadd Bindas, Yalan Song, Farshid Rahmani.
+
+    Note: Considering conversion to torch.nn.module for codebase consistency.
     """
     model_config = ConfigDict(arbitrary_types_allowed=True)
     pred: npt.NDArray[np.float32]
@@ -78,7 +82,7 @@ class Metrics(BaseModel):
         Any
             Context object.
         """
-        self.bias = self._bias(self.pred, self.target)
+        self.bias = self._bias(self.pred, self.target, offset=0.00001)
         self.bias_rel = self._bias_rel(self.pred, self.target)
 
         self.rmse = self._rmse(self.pred, self.target)
@@ -136,22 +140,22 @@ class Metrics(BaseModel):
                 mid_target = target_sort[index_low:index_high]
                 high_target = target_sort[index_high:]
                 
-                self.flv[i] = self._bias_percent(low_pred, low_target, offset=0.0001)
-                self.fhv[i] = self._bias_percent(high_pred, high_target)
-                self.pbias[i] = self._bias_percent(pred, target)
-                self.pbias_mid[i] = self._bias_percent(mid_pred, mid_target)
+                self.flv[i] = self._pbias(low_pred, low_target, offset=0.0001)
+                self.fhv[i] = self._pbias(high_pred, high_target)
+                self.pbias[i] = self._pbias(pred, target)
+                self.pbias_mid[i] = self._pbias(mid_pred, mid_target)
 
-                self.flv_abs[i] = self._bias_percent(low_pred, low_target, offset=0.0001)
-                self.fhv_abs[i] = self._bias_percent(high_pred, high_target)
-                self.pbias_abs[i] = self._bias_percent(pred, target)
-                self.pbias_abs_mid[i] = self._bias_percent(mid_pred, mid_target)
+                self.flv_abs[i] = self._pbias_abs(low_pred, low_target, offset=0.0001)
+                self.fhv_abs[i] = self._pbias_abs(high_pred, high_target)
+                self.pbias_abs[i] = self._pbias_abs(pred, target)
+                self.pbias_abs_mid[i] = self._pbias_abs(mid_pred, mid_target)
                 
                 self.rmse_low[i] = self._rmse(low_pred, low_target, axis=0)
                 self.rmse_mid[i] = self._rmse(mid_pred, mid_target, axis=0)
                 self.rmse_high[i] = self._rmse(high_pred, high_target, axis=0)
 
                 target_max = np.nanmax(target)
-                pred_max = self.pred_max(pred, lb=10, ub=11)
+                pred_max = self._pred_max(pred, target, lb=10, ub=11)
 
                 self.d_max[i] = pred_max - target_max
                 self.d_max_rel[i] = (pred_max - target_max) / target_max * 100
@@ -168,7 +172,7 @@ class Metrics(BaseModel):
                     self.kge[i] = self._kge(
                         _pred_mean, _target_mean, _pred_std, _target_std, self.corr[i]
                     )
-                    self.kge_12[i] = self._kge(
+                    self.kge_12[i] = self._kge_12(
                         _pred_mean, _target_mean, _pred_std, _target_std, self.corr[i]
                     )
                     
@@ -176,8 +180,7 @@ class Metrics(BaseModel):
 
         return super().model_post_init(__context)
 
-
-    @model_validator(mode="after")
+    @model_validator(mode='after')
     @classmethod
     def validate_pred(cls, metrics: Any) -> Any:
         """Checks that there are no NaN predictions.
@@ -204,8 +207,47 @@ class Metrics(BaseModel):
             raise ValueError(msg)
         return metrics
     
+    def calc_statistics(self, *args, **kwargs) -> Dict[str, Dict[str, float]]:
+        """Calculate aggregate statistics of metrics."""
+        stats = {}
+        model_dict = self.model_dump()
+        model_dict.pop('pred', None)
+        model_dict.pop('target', None)
+
+        # Calculate statistics
+        for key, value in model_dict.items():
+            if isinstance(value, np.ndarray) and value.size > 0:
+                stats[key] = {
+                    'median': float(np.nanmedian(value)),
+                    'mean': float(np.nanmean(value)),
+                    'std': float(np.nanstd(value)),
+                }
+        return stats
+
+    def dump_agg_statistics(self, path: str) -> None:
+        """Dump aggregate statistics (median, mean, std) to json or csv.
+        
+        Parameters
+        ----------
+        path : str
+            Path to save file.
+        """
+        stats = self.calc_statistics()
+        
+        if path.endswith('.json'):
+            with open(path, 'w') as f:
+                json.dump(stats, f, indent=4)
+        elif path.endswith('.csv'):
+            with open(path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(['Metric', 'Median', 'Mean', 'Std'])
+                for metric, values in stats.items():
+                    writer.writerow([metric, values['median'], values['mean'], values['std']])
+        else:
+            raise ValueError("Provide either a .json or .csv file path.")
+    
     def model_dump_json(self, *args, **kwargs) -> str:
-        """Dump metrics to json."""
+        """Dump raw metrics to json."""
         model_dict = self.model_dump()
         for key, value in model_dict.items():
             if isinstance(value, np.ndarray):
@@ -218,6 +260,25 @@ class Metrics(BaseModel):
 
         return super().model_dump_json(*args, **kwargs)
     
+    def dump_metrics(self, path: str) -> None:
+        """Dump all metrics and aggregate statistics (median, mean, std) to json.
+        
+        Parameters
+        ----------
+        path : str
+            Path to save file.
+        """
+        # Save aggregate statistics
+        save_path = os.path.join(path, 'metrics_agg.json')
+        self.dump_agg_statistics(save_path)
+
+        # Save raw metrics
+        save_path = os.path.join(path, f'metrics.json')
+        json_dat = self.model_dump_json(indent=4)
+        
+        with open(save_path, "w") as f:
+            json.dump(json_dat, f)        
+
     @property
     def ngrid(self) -> int:
         """Calculate number of items in grid."""
@@ -247,9 +308,10 @@ class Metrics(BaseModel):
     def _bias(
         pred: npt.NDArray[np.float32],
         target: npt.NDArray[np.float32],
+        offset: float = 0.0,
     ) -> npt.NDArray[np.float32]:
         """Calculate bias."""
-        return np.nanmean(abs(pred - target)/(target + 0.0001), axis=1)
+        return np.nanmean(abs(pred - target)/(target + offset), axis=1)
 
     @staticmethod
     def _bias_rel(
@@ -266,15 +328,23 @@ class Metrics(BaseModel):
         return (pred_sum - target_sum) / target_sum
 
     @staticmethod
-    def _bias_percent(
+    def _pbias(
         pred: npt.NDArray[np.float32],
         target: npt.NDArray[np.float32],
         offset: float = 0.0,
     ) -> np.float32:
         """Calculate percent bias."""
-        p_bias = np.sum(pred - target) / (np.sum(target) + offset) * 100
-        return p_bias
+        return np.sum(pred - target) / (np.sum(target) + offset) * 100
     
+    @staticmethod
+    def _pbias_abs(
+        pred: npt.NDArray[np.float32],
+        target: npt.NDArray[np.float32],
+        offset: float = 0.0,
+    ) -> np.float32:
+        """Calculate absolute percent bias."""
+        return np.sum(abs(pred - target)) / (np.sum(target) + offset) * 100
+
     @staticmethod
     def _rmse(
         pred: npt.NDArray[np.float32],
@@ -341,7 +411,7 @@ class Metrics(BaseModel):
         return fdc_100
 
     @staticmethod
-    def pred_max(
+    def _pred_max(
         pred: npt.NDArray[np.float32],
         target: npt.NDArray[np.float32],
         lb: int = 0,
@@ -374,17 +444,15 @@ class Metrics(BaseModel):
         pred: npt.NDArray[np.float32], target: npt.NDArray[np.float32]
     ) -> npt.NDArray[np.float32]:
         """Calculate correlation."""
-        corr = stats.pearsonr(pred, target)[0]
-        return corr
+        return stats.pearsonr(pred, target)[0]
 
     @staticmethod
     def _corr_spearman(
         pred: npt.NDArray[np.float32], target: npt.NDArray[np.float32]
     ) -> np.float32:
         """Calculate Spearman correlation."""
-        corr_spearman = stats.spearmanr(pred, target)[0]
-        return corr_spearman
-    
+        return stats.spearmanr(pred, target)[0]
+
     @staticmethod
     def _kge(
         pred_mean: np.float32,

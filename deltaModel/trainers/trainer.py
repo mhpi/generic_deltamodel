@@ -20,7 +20,6 @@ from torch import nn
 log = logging.getLogger(__name__)
 
 
-
 class Trainer:
     """Generic, unified Trainer for differentiable models.
 
@@ -170,7 +169,6 @@ class Trainer:
 
     def test(self) -> None:
         """Run testing loop and save results."""
-        log.info(f"Testing model: {self.config['name']}")
         self.is_in_test = True
 
         # Track overall predictions and observations
@@ -183,7 +181,7 @@ class Trainer:
         batch_end = np.append(batch_start[1:], n_samples)
 
         # Testing loop
-        log.info(f"Begin validation on {len(batch_start)} batches...")
+        log.info(f"Testing Model: Forwarding on {len(batch_start)} batches")
         for i in tqdm.tqdm(range(len(batch_start)), desc="Testing", leave=False, dynamic_ncols=True):
             self.current_batch = i
 
@@ -208,9 +206,9 @@ class Trainer:
         # Save predictions and calculate metrics
         log.info("Saving model results and calculating metrics")
         save_outputs(self.config, batch_predictions, observations)
-        self._calc_metrics(batch_predictions, observations)
+        self.calc_metrics(batch_predictions, observations)
 
-    def _calc_metrics(
+    def calc_metrics(
         self,
         batch_predictions: List[Dict[str, torch.Tensor]],
         observations: torch.Tensor,
@@ -224,7 +222,7 @@ class Trainer:
         observations : torch.Tensor
             Target variable observation data.
         """
-        target_name = self.config['test']['target'][0]
+        target_name = self.config['train']['target'][0]
 
         pred = torch.cat([x[target_name] for x in batch_predictions], dim=1).numpy()
         target = np.expand_dims(observations[:, :, 0], 2)
@@ -236,14 +234,11 @@ class Trainer:
         # Compute metrics
         metrics = Metrics(
             np.swapaxes(pred.squeeze(), 1, 0),
-            np.swapaxes(target.squeeze(), 1, 0)
+            np.swapaxes(target.squeeze(), 1, 0),
         )
 
-        # Save to json
-        json_cfg = self.metrics.model_dump_json(indent=4)
-        save_path = os.path.join(self.config['testing_path'], f'metrics.json')
-        with save_path.open("w") as f:
-            json.dump(json_cfg, f)
+        # Save all metrics and aggregated statistics.
+        metrics.dump_metrics(self.config['testing_path'])
 
     def _log_epoch_stats(
         self,

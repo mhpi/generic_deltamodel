@@ -96,13 +96,13 @@ class DeltaModel(torch.nn.Module):
                 nx=self.nx,
                 ny=self.ny,
                 hiddenSize=self.config['nn_model']['hidden_size'],
-                dr=self.config['nn_model']['dropout']
+                dr=self.config['nn_model']['dropout'],
             )
         elif model_name == 'MLP':
             model = MLPmul(
                 self.config,
                 nx=self.nx,
-                ny=self.ny
+                ny=self.ny,
             )
         else:
             raise ValueError(f"{model_name} is not a supported neural network model type.")
