@@ -1,20 +1,19 @@
 help:
-    app_name: generic_delaModel
+    app_name: generic_deltaModel
     header: == ${hydra.help.app_name} ==
     template: |-
         ${hydra.help.header}
 
-        Generic Differentiable Model framework developed by MHPI.
+        Generic, Differentiable Pytorch Model Framework developed by MHPI.
 
         ${hydra.help.footer}
     footer: |-
         Powered by Hydra (https://hydra.cc)
         Use --hydra-help to view Hydra specific help
 job:
-    name: ${name}
-    chdir: False # Changes working dir to 'run' dir.
+    chdir: False  # Changes working dir to run.dir below.
 run:
-    dir: ../results/logs/${hydra.job.name}/${now:%Y-%m-%d_%H-%M-%S}
+    dir: ../results/logs/${now:%Y-%m-%d_%H-%M-%S}
 sweep:
     dir: multirun
     subdir: ${hydra.job.override_dirname}

@@ -3,7 +3,7 @@ from typing import Dict, List
 
 import numpy as np
 import torch
-from conf.config import Config
+from conf.config_old import Config
 
 log = logging.getLogger(__name__)
 

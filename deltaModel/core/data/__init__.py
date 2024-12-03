@@ -131,6 +131,8 @@ def get_training_sample(
 ) -> Dict[str, torch.Tensor]:
     """Select random sample of data for training batch."""
     warm_up = config['dpl_model']['phy_model']['warm_up']
+
+    # rho is 
     subset_dims = (config['train']['batch_size'], config['dpl_model']['rho'])
 
     i_sample, i_t = random_index(ngrid_train, nt, subset_dims, warm_up=warm_up)
@@ -167,7 +169,7 @@ def get_validation_sample(
     dataset_dict: Dict[str, torch.Tensor],
     i_s: int,
     i_e: int,
-    config: Dict
+    config: Dict,
 ) -> Dict[str, torch.Tensor]:
     """
     Take sample of data for testing batch.
@@ -221,7 +223,7 @@ def take_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
 
     # Keep 'warmup' days for dHBV1.1p.
     if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
-    (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['multimodel_type'] == 'none'):
+    (config['dpl_model']['phy_model']['warm_up_states']) and (config['multimodel_type'] == 'none'):
         pass
     else:
         dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:days, :basins]

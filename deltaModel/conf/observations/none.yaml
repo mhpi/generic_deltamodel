@@ -1,1 +1,15 @@
 name: None
+train_path: /path/to/training/data
+test_path: /path/to/validation/data
+
+start_time_all: 2000/01/01
+end_time_all: 2024/12/31
+
+forcings_all: [
+    x1_var,
+    x2_var
+]
+attributes_all: [
+    attr1,
+    attr2
+]

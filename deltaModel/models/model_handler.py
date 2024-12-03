@@ -37,7 +37,7 @@ class ModelHandler(torch.nn.Module):
         self,
         config: Dict[str, Any],
         device: Optional[str] = None,
-        verbose=False
+        verbose=False,
     ) -> None:
         super().__init__()
         self.config = config
@@ -56,14 +56,13 @@ class ModelHandler(torch.nn.Module):
         self._init_models()
         self.loss_func = None
         self.loss_dict = {key: 0 for key in self.models}
+        self.target_name = config['train']['target'][0]
 
         if self.multimodel_type in ['pnn_parallel']:
             self.is_ensemble = True
             self.weights = {}
+            self.loss_func_wnn = None
             self.range_bound_loss = RangeBoundLoss(config, device=self.device)
-
-        if verbose:
-            log.info(f"Initialized {self.name} with {self.models}.")
 
     def list_models(self) -> List[str]:
         """List of models specified in the configuration."""
@@ -202,10 +201,10 @@ class ModelHandler(torch.nn.Module):
         return self.output_dict
     
     def _forward_multimodel(
-            self,
-            dataset_dict: Dict[str, torch.Tensor],
-            eval: bool = False
-        ) -> None:
+        self,
+        dataset_dict: Dict[str, torch.Tensor],
+        eval: bool = False
+    ) -> None:
         """
         Augment model outputs: Forward wNN and combine model outputs for
         multimodel ensemble predictions.
@@ -224,7 +223,7 @@ class ModelHandler(torch.nn.Module):
             with torch.no_grad():
                 self.ensemble_output_dict, self.weights = self.ensemble_generator(
                     dataset_dict,
-                    self.output_dict
+                    self.output_dict,
                 )
         else:
             if self.multimodel_type in ['pnn_parallel']:
@@ -233,13 +232,12 @@ class ModelHandler(torch.nn.Module):
                 self.ensemble_output_dict, self.weights = self.ensemble_generator(
                     dataset_dict,
                     self.output_dict,
-                    warm_up = self.config['dpl_model']['phy_model']['warm_up']
                 )
 
     def calc_loss(
         self,
         dataset: Dict[str, torch.Tensor],
-        loss_func: Optional[torch.nn.Module] = None
+        loss_func: Optional[torch.nn.Module] = None,
     ) -> torch.Tensor:
         """Calculate combined loss across all models.
         
@@ -263,13 +261,11 @@ class ModelHandler(torch.nn.Module):
 
         loss_combined = 0.0
 
-        target_name = self.config['train']['target'][0]
-
         # Loss calculation for each model
         for name, output in self.output_dict.items():
-            if target_name not in output.keys():
-                raise ValueError(f"Target variable '{target_name}' not in model outputs.")
-            output = output[target_name]
+            if self.target_name not in output.keys():
+                raise ValueError(f"Target variable '{self.target_name}' not in model outputs.")
+            output = output[self.target_name]
 
             loss = loss_func(
                 output,
@@ -286,10 +282,10 @@ class ModelHandler(torch.nn.Module):
         return loss_combined
 
     def calc_loss_multimodel(
-            self,
-            dataset: Dict[str, torch.Tensor],
-            loss_func: torch.nn.Module
-        ) -> torch.Tensor:
+        self,
+        dataset: Dict[str, torch.Tensor],
+        loss_func: torch.nn.Module,
+    ) -> torch.Tensor:
         """
         Calculate loss for multimodel ensemble wNN trained in parallel with
         differentiable models.
@@ -309,6 +305,10 @@ class ModelHandler(torch.nn.Module):
         torch.Tensor
             Combined loss for the multimodel ensemble.
         """
+        if not self.loss_func_wnn and not loss_func:
+            raise ValueError("No loss function defined.")
+        self.loss_func_wnn = loss_func or self.loss_func_wnn
+        
         # Sum of weights for each model
         weights_sum = torch.sum(
             torch.stack(
@@ -324,11 +324,10 @@ class ModelHandler(torch.nn.Module):
         else:
             rb_loss = 0.0
 
-        target_name = self.config['train']['target'][0]
-        output = self.ensemble_output_dict[target_name]
+        output = self.ensemble_output_dict[self.target_name]
 
         # Ensemble predictions loss
-        ensemble_loss = self.loss_func(
+        ensemble_loss = self.loss_func_wnn(
             output,
             dataset['target'],
             n_samples=dataset['batch_sample']

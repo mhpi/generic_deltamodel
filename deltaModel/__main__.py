@@ -6,20 +6,18 @@ import hydra
 import torch
 from core.data.dataset_loading import get_dataset_dict
 from core.utils import initialize_config, print_config, set_randomseed
+from models.model_handler import ModelHandler as dModel
 from omegaconf import DictConfig
-
-# Dev imports
-from deltaModel.models.model_handler import ModelHandler as dModel
-from deltaModel.trainers.trainer import Trainer
+from trainers.trainer import Trainer
 
 log = logging.getLogger(__name__)
 
 
 
 @hydra.main(
-    version_base="1.3",
-    config_path="conf/",
-    config_name="config_dev",
+    version_base='1.3',
+    config_path='conf/',
+    config_name='config',
 )
 def main(config: DictConfig) -> None:
     try:
@@ -72,5 +70,5 @@ def main(config: DictConfig) -> None:
         ) 
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

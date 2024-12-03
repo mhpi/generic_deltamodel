@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import time
@@ -7,7 +8,7 @@ import numpy as np
 import pandas as pd
 import torch
 import tqdm
-from core.calc.stat import metrics
+from core.calc.metrics import Metrics
 from core.data import (create_training_grid, get_training_sample,
                        get_validation_sample)
 from core.data.dataset_loading import get_dataset_dict
@@ -17,7 +18,6 @@ from models.model_handler import ModelHandler
 from torch import nn
 
 log = logging.getLogger(__name__)
-
 
 
 class Trainer:
@@ -40,15 +40,15 @@ class Trainer:
         Whether to print verbose output. The default is False.
     """
     def __init__(
-            self,
-            config: Dict[str, Any],
-            model: nn.Module = None,
-            train_dataset: Optional[dict] = None,
-            eval_dataset: Optional[dict] = None,
-            loss_func: Optional[nn.Module] = None,
-            optimizer: Optional[nn.Module] = None,
-            verbose: Optional[bool] = False
-        ) -> None:
+        self,
+        config: Dict[str, Any],
+        model: nn.Module = None,
+        train_dataset: Optional[dict] = None,
+        eval_dataset: Optional[dict] = None,
+        loss_func: Optional[nn.Module] = None,
+        optimizer: Optional[nn.Module] = None,
+        verbose: Optional[bool] = False,
+    ) -> None:
         self.config = config
         self.model = model or ModelHandler(config)
         self.train_dataset = train_dataset or get_dataset_dict(config, train=True)
@@ -117,11 +117,7 @@ class Trainer:
     def train(self) -> None:
         """Entry point for training loop."""
         self.is_in_train = True
-        self.epochs = epochs = self.config['train']['epochs']
-
-
-        log.info(f"Training model: {self.config['name']}")
-
+        self.epochs = self.config['train']['epochs']
 
         # Setup a training grid (number of samples, minibatches, and timesteps)
         n_samples, n_minibatch, n_timesteps = create_training_grid(
@@ -130,7 +126,7 @@ class Trainer:
         )
 
         # Training loop
-        log.info(f"Begin training for {self.config['train']['epochs']} epochs")
+        log.info(f"Training model: Beginning {self.start_epoch} of {self.config['train']['epochs']} epochs")
         for epoch in range(self.start_epoch, self.epochs + 1):
             start_time = time.perf_counter()
             prog_str = f"Epoch {epoch}/{self.config['train']['epochs']}"
@@ -173,7 +169,6 @@ class Trainer:
 
     def test(self) -> None:
         """Run testing loop and save results."""
-        log.info(f"Testing model: {self.config['name']}")
         self.is_in_test = True
 
         # Track overall predictions and observations
@@ -186,7 +181,7 @@ class Trainer:
         batch_end = np.append(batch_start[1:], n_samples)
 
         # Testing loop
-        log.info(f"Begin validation on {len(batch_start)} batches...")
+        log.info(f"Testing Model: Forwarding on {len(batch_start)} batches")
         for i in tqdm.tqdm(range(len(batch_start)), desc="Testing", leave=False, dynamic_ncols=True):
             self.current_batch = i
 
@@ -211,50 +206,47 @@ class Trainer:
         # Save predictions and calculate metrics
         log.info("Saving model results and calculating metrics")
         save_outputs(self.config, batch_predictions, observations)
-        self._calculate_metrics(batch_predictions, observations)
+        self.calc_metrics(batch_predictions, observations)
 
-    def _calculate_metrics(
-            self,
-            batch_predictions: List[Dict[str, torch.Tensor]],
-            observations: torch.Tensor
-        ) -> None:
-        """Calculate and save test metrics for each prediction type."""
-        preds_list, obs_list, name_list = [], [], []
+    def calc_metrics(
+        self,
+        batch_predictions: List[Dict[str, torch.Tensor]],
+        observations: torch.Tensor,
+    ) -> None:
+        """Calculate and save model performance metrics.
+        
+        Parameters
+        ----------
+        batch_predictions : list
+            List of dictionaries containing model predictions.
+        observations : torch.Tensor
+            Target variable observation data.
+        """
+        target_name = self.config['train']['target'][0]
 
-        # Compile flow predictions and corresponding observations
-        flow_preds = torch.cat([pred['flow_sim'] for pred in batch_predictions], dim=1)
-        flow_obs = observations[:, :, 0]
+        pred = torch.cat([x[target_name] for x in batch_predictions], dim=1).numpy()
+        target = np.expand_dims(observations[:, :, 0], 2)
 
-        # Remove warm-up period if needed
+        # Remove warm-up data
         if self.config['dpl_model']['phy_model']['warm_up_states']:
-            flow_obs = flow_obs[self.config['dpl_model']['phy_model']['warm_up']:, :]
+            target = target[self.config['dpl_model']['phy_model']['warm_up']:, :]
 
-        # Add to lists for metrics computation
-        preds_list.append(flow_preds.numpy())
-        obs_list.append(np.expand_dims(flow_obs, 2))
-        name_list.append('flow')
+        # Compute metrics
+        metrics = Metrics(
+            np.swapaxes(pred.squeeze(), 1, 0),
+            np.swapaxes(target.squeeze(), 1, 0),
+        )
 
-        # Calculate statistics and save results to CSV
-        stat_dicts = [
-            metrics(np.swapaxes(pred.squeeze(), 1, 0), np.swapaxes(obs.squeeze(), 1, 0))
-            for pred, obs in zip(preds_list, obs_list)
-        ]
-
-        for stat_dict, name in zip(stat_dicts, name_list):
-            metric_df = pd.DataFrame(
-                [[np.nanmedian(stat_dict[key]), np.nanstd(stat_dict[key]), np.nanmean(stat_dict[key])]
-                 for key in stat_dict.keys()],
-                index=stat_dict.keys(), columns=['median', 'STD', 'mean']
-            )
-            metric_df.to_csv(os.path.join(self.config['testing_path'], f'metrics_{name}.csv'))
+        # Save all metrics and aggregated statistics.
+        metrics.dump_metrics(self.config['testing_path'])
 
     def _log_epoch_stats(
-            self,
-            epoch: int,
-            loss_dict: Dict[str, float],
-            n_minibatch: int,
-            start_time: float
-        ) -> None:
+        self,
+        epoch: int,
+        loss_dict: Dict[str, float],
+        n_minibatch: int,
+        start_time: float,
+    ) -> None:
         """Log statistics after each epoch."""
         avg_loss_dict = {key: value / n_minibatch + 1 for key, value in loss_dict.items()}
         loss_formated = ", ".join(f"{key}: {value:.6f}" for key, value in avg_loss_dict.items())

@@ -16,21 +16,30 @@ var/
 wheels/
 share/python-wheels/
 
-#VSCode
+# VSCode
 .vscode/
 
-#PyCharm
+# PyCharm
 .idea/
 
-# Scratch, testing, and other temporary files
-scratch.py
-scratch/
+# Scratch / development / old / and other temporary files
+*scratch*
+*_dev*
+*_old*
 temp/
 tmp/
 *.tmp
+
+# Non-public config files
+deltaModel/conf/*
+!deltaModel/conf/config.yaml
+!deltaModel/conf/config.py
+!deltaModel/conf/hydra
+!deltaModel/conf/observations
+deltaModel/conf/observations/*
+!deltaModel/conf/observations/none.yaml
 
 # Other Directories
 archive/
 runs/
 results/
-ngen/
