@@ -13,7 +13,6 @@ from trainers.trainer import Trainer
 log = logging.getLogger(__name__)
 
 
-
 @hydra.main(
     version_base='1.3',
     config_path='conf/',

@@ -14,7 +14,6 @@ from torch import nn
 sys.path.append('../deltaModel/')  # for tutorials
 
 
-
 def snake_to_camel(snake_str):
     """
     Convert snake strings (underscore word separation, lower case) to
@@ -30,15 +29,14 @@ def camel_to_snake(camel_str):
     and replace them with the lowercase letter, an underscore, and the uppercase
     letter converted to lowercase.
     """
-    snake_str = re.sub(r'(?<!^)(?=[A-Z])', '_', camel_str).lower()
-    return snake_str
+    return re.sub(r'(?<!^)(?=[A-Z])', '_', camel_str).lower()
 
 
 def get_loss_func(
-        obs: NDArray[np.float32],
-        config: Dict[str, Any],
-        device: Optional[str] = 'cpu'
-    ) -> nn.Module:
+    obs: NDArray[np.float32],
+    config: Dict[str, Any],
+    device: Optional[str] = 'cpu'
+) -> nn.Module:
     """Dynamically load and initialize a loss function module by name.
     
     Currently only supports loss functions in the 'loss_functions' directory.
@@ -90,4 +88,3 @@ def get_loss_func(
         raise ValueError(f"Error initializing loss function '{loss_name}': {e}")
 
     return loss_obj.to(device)
-

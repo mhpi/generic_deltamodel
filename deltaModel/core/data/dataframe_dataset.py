@@ -4,11 +4,9 @@ import os
 
 import numpy as np
 import pandas as pd
-from core.data import BaseDataset
-from core.data import trange_to_array
+from core.data import BaseDataset, trange_to_array
 
 log = logging.getLogger(__name__)
-
 
 
 class DataFrameDataset(BaseDataset):

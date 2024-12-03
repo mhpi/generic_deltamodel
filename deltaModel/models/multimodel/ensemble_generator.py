@@ -28,12 +28,12 @@ class EnsembleGenerator(torch.nn.Module):
         The device to run the model on. The default is None.
     """
     def __init__(
-            self,
-            model_list: List[str],
-            config: Dict[str, Any],
-            wnn_model: torch.nn.Module = None,
-            device: Optional[torch.device] = None
-        ) -> None:
+        self,
+        model_list: List[str],
+        config: Dict[str, Any],
+        wnn_model: torch.nn.Module = None,
+        device: Optional[torch.device] = None
+    ) -> None:
         super().__init__()
         self.name = "Multimodel Ensemble Weights Generator"
         self.config = config
@@ -88,10 +88,10 @@ class EnsembleGenerator(torch.nn.Module):
         return model.to(self.device)
 
     def forward(
-            self,
-            dataset_dict: Dict[str, torch.Tensor],
-            predictions: Dict[str, torch.Tensor],
-        ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
+        self,
+        dataset_dict: Dict[str, torch.Tensor],
+        predictions: Dict[str, torch.Tensor],
+    ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
         """Forward pass for the model.
         
         Generate ensemble weights and ensemble model predictions.

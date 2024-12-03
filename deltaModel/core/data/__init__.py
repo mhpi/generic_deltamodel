@@ -1,3 +1,4 @@
+import datetime as dt
 import logging
 from abc import ABC, abstractmethod
 from re import I
@@ -5,7 +6,6 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
-import datetime as dt
 
 log = logging.getLogger(__name__)
 

@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 
 
 class RmseLossComb(torch.nn.Module):
-    """ Root mean squared error loss function.
+    """Combination root mean squared error loss function.
 
     This loss combines the RMSE of the target variable with the RMSE of
     the log-transformed target variable.
@@ -38,11 +38,11 @@ class RmseLossComb(torch.nn.Module):
         Stability term to prevent division by zero. The default is 1e-6.
     """
     def __init__(
-            self,
-            target: NDArray[np.float32],
-            config: Dict[str, Any],
-            device: Optional[str] = 'cpu'
-        ) -> None:
+        self,
+        target: NDArray[np.float32],
+        config: Dict[str, Any],
+        device: Optional[str] = 'cpu'
+    ) -> None:
         super().__init__()
         self.config = config
         self.device = device
@@ -52,11 +52,11 @@ class RmseLossComb(torch.nn.Module):
         self.beta = config.get('beta', 1e-6)
 
     def forward(
-            self,
-            y_pred: torch.Tensor,
-            y_obs: torch.Tensor,
-            n_samples: torch.Tensor
-        ) -> torch.Tensor:
+        self,
+        y_pred: torch.Tensor,
+        y_obs: torch.Tensor,
+        n_samples: torch.Tensor
+    ) -> torch.Tensor:
         """Compute loss.
         
         Parameters
@@ -75,7 +75,6 @@ class RmseLossComb(torch.nn.Module):
         """
         prediction = y_pred.squeeze()
         target = y_obs[:, :, 0]
-        n_samples = n_samples.cpu().detach().numpy().astype(int)
 
         if len(target) > 0:
             # Mask where observations are valid (not NaN).            
