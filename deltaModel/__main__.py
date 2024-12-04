@@ -4,7 +4,7 @@ import time
 
 import hydra
 import torch
-from core.data.dataset_loading import get_dataset_dict
+from core.data.data_loaders.hydro_loader import HydroDataLoader
 from core.utils import initialize_config, print_config, set_randomseed
 from models.model_handler import ModelHandler as dModel
 from omegaconf import DictConfig
@@ -33,12 +33,17 @@ def main(config: DictConfig) -> None:
         model = dModel(config, verbose=True) #.to(config['device'])
 
         ### Process datasets ###
-        log.info("Processing datasets...")
-        train_dataset = get_dataset_dict(config, train=True)
-        eval_dataset = get_dataset_dict(config, train=False)
+        log.info("Loading dataset...")
+        data_loader = HydroDataLoader(config, test_split=True, overwrite=True)
 
         ### Create Trainer object ###
-        trainer = Trainer(config, model, train_dataset, eval_dataset, verbose=True)
+        trainer = Trainer(
+            config,
+            model,
+            data_loader.train_dataset,
+            data_loader.eval_dataset,
+            verbose=True
+        )
 
         mode = config['mode']
         if mode == 'train':

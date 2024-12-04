@@ -1,7 +1,6 @@
 from typing import Any, Dict, Optional
 
 import torch.nn
-from core.data import numpy_to_torch_dict
 from hydroDL2 import load_model
 from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
@@ -111,10 +110,10 @@ class DeltaModel(torch.nn.Module):
     def forward(self, data_dict: Dict[str, torch.Tensor]) -> torch.Tensor:
         """Forward pass for the model."""
         # Ensure input data is in the correct format and device.
-        data_dict = numpy_to_torch_dict(data_dict, device=self.device)
+        # data_dict = numpy_to_torch_dict(data_dict, device=self.device)
         
         # Parameterization
-        parameters = self.nn_model(data_dict['x_nn_scaled'])        
+        parameters = self.nn_model(data_dict['xc_nn_norm'])        
 
         # Physics model
         predictions = self.phy_model(

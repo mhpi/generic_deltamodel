@@ -52,6 +52,7 @@ def set_system_spec(cuda_devices: Optional[list] = None) -> Tuple[str, str]:
     dtype = torch.float32
     return str(device), str(dtype)
 
+
 def set_randomseed(seed=0) -> None:
     """Fix random seeds for reproducibility.
 
@@ -102,10 +103,15 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
     config['device'], config['dtype'] = set_system_spec(config['gpu_id'])
 
     # Convert date ranges to integer values.
-    config['train_t_range'] = Dates(config['train'], config['dpl_model']['rho']).date_to_int()
-    config['test_t_range'] = Dates(config['test'], config['dpl_model']['rho']).date_to_int()
-    config['total_t_range'] = [config['train_t_range'][0], config['test_t_range'][1]]
-    
+    train_time = Dates(config['train'], config['dpl_model']['rho'])
+    test_time = Dates(config['test'], config['dpl_model']['rho'])
+    all_time = Dates(config['observations'], config['dpl_model']['rho'])
+
+    config['train_time'] = [train_time.start_time, train_time.end_time]
+    config['test_time'] = [test_time.start_time, test_time.end_time]
+    config['experiment_time'] = [train_time.start_time, test_time.end_time]
+    config['all_time'] = [all_time.start_time, all_time.end_time]   
+
     # change multimodel_type type to None if none.
     if config['multimodel_type'] in ['none', 'None', '']:
         config['multimodel_type'] = None
@@ -113,6 +119,9 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
     # Create output directories.
     out_path = PathBuilder(config)
     config = out_path.write_path(config)
+    
+    # Convert string back to data type.
+    config['dtype'] = eval(config['dtype'])
 
     return config
 

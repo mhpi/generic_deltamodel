@@ -105,7 +105,7 @@ class ObservationConfig(BaseModel):
     name: str = 'not_defined'
     train_path: str = 'not_defined'
     test_path: str = 'not_defined'
-    start_time_all: str = 'not_defined'
+    start_time: str = 'not_defined'
     end_time_all: str = 'not_defined'
     forcings_all: List[str] = Field(default_factory=list, description="List of dynamic input variables.")
     attributes_all: List[str] = Field(default_factory=list, description="List of static input variables.")

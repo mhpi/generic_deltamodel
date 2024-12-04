@@ -2,7 +2,6 @@ from math import log
 from typing import Any, Dict, List, Optional, Tuple
 
 import torch
-from core.data import numpy_to_torch_dict
 from core.utils import find_shared_keys
 from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
@@ -106,14 +105,14 @@ class EnsembleGenerator(torch.nn.Module):
 
         if self.config['mosaic'] == False:
             # Ensure input data is in the correct format and device.
-            dataset_dict = numpy_to_torch_dict(dataset_dict, device=self.device)
+            # dataset_dict = numpy_to_torch_dict(dataset_dict, device=self.device)
             
             # Generate ensemble weights
-            self._raw_weights = self.wnn_model(dataset_dict['x_nn_scaled'])
+            self._raw_weights = self.wnn_model(dataset_dict['xc_nn_norm'])
             self._scale_weights()
 
             # Map weights to individual models
-            diff = dataset_dict['x_nn_scaled'].shape[0] - dataset_dict['target'].shape[0]
+            diff = dataset_dict['xc_nn_norm'].shape[0] - dataset_dict['target'].shape[0]
             self.weights = {
                 model: self.weights_scaled[diff:, :, i]
                 for i, model in enumerate(self.model_list)
@@ -131,11 +130,11 @@ class EnsembleGenerator(torch.nn.Module):
         else:
             print("Mosaic mode is enabled.")
             # Generate ensemble weights
-            self._raw_weights = self.wnn_model(dataset_dict['x_nn_scaled'])
+            self._raw_weights = self.wnn_model(dataset_dict['xc_nn_norm'])
             self._scale_weights()
 
             # Map weights to individual models
-            diff = dataset_dict['x_nn_scaled'].shape[0] - dataset_dict['target'].shape[0]
+            diff = dataset_dict['xc_nn_norm'].shape[0] - dataset_dict['target'].shape[0]
             self.weights = {
                 model: self.weights_scaled[diff:, :, i]
                 for i, model in enumerate(self.model_list)

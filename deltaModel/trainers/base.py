@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import torch
 
 
-class BaseTrainer(torch.nn.Module, ABC):
+class BaseTrainer(ABC):
     @abstractmethod
     def create_optimizer(self) -> torch.optim.Optimizer:
         """Initialize the optimizer as named in config."""
