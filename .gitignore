@@ -43,3 +43,4 @@ deltaModel/conf/observations/*
 archive/
 runs/
 results/
+validation/

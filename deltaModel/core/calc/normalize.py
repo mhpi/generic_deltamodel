@@ -183,6 +183,16 @@ def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarra
     with open(stat_file, 'w') as f:
         json.dump(stat_dict, f, indent=4)
 
+
+
+
+
+
+
+
+
+
+######### DEPR
 def trans_norm(config: Dict[str, Any], x: np.ndarray, var_lst: List[str], *, to_norm: bool) -> np.ndarray:
     """
     Taken from the trans_norm function of hydroDL.
@@ -202,10 +212,6 @@ def trans_norm(config: Dict[str, Any], x: np.ndarray, var_lst: List[str], *, to_
 
     var_lst = [var_lst] if isinstance(var_lst, str) else var_lst  # Enforce list format
 
-    ## TODO: fix this dataset variable typo. This is a workaround
-    # if 'geol_porosity' in var_lst:
-    #     var_lst[var_lst.index('geol_porosity')] = 'geol_porostiy'
-    
     out = np.zeros(x.shape)
     
     for k, var in enumerate(var_lst):
