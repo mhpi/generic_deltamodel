@@ -11,6 +11,10 @@ random_seed: 111111
 device: cuda
 gpu_id: 0
 
+data_loader: hydro_loader
+data_sampler: hydro_sampler
+trainer: trainer
+
 save_path: ../results
 
 
