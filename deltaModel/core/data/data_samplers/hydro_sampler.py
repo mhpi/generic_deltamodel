@@ -1,9 +1,11 @@
-from core.data.data_samplers.base import BaseDataSampler
+from typing import Dict, Optional
 
 import numpy as np
 import torch
-from typing import Dict, Optional
+
 from core.data import random_index
+from core.data.data_samplers.base import BaseDataSampler
+
 
 class HydroDataSampler(BaseDataSampler):
     def __init__(self, data, labels):

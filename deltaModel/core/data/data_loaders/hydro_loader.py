@@ -2,15 +2,16 @@ import json
 import logging
 import os
 import pickle
-from math import log
+from math import e, log
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+from sklearn.exceptions import DataDimensionalityWarning
+
 from core.data import intersect
 from core.data.data_loaders.base import BaseDataLoader
-from sklearn.exceptions import DataDimensionalityWarning
 
 log = logging.getLogger(__name__)
 
@@ -66,6 +67,7 @@ class HydroDataLoader(BaseDataLoader):
         self.train_dataset = None
         self.eval_dataset = None
         self.dataset = None
+        self.norm_stats = None
         self.out_path = os.path.join(
             config['out_path'],
             'normalization_statistics.json',
@@ -208,15 +210,13 @@ class HydroDataLoader(BaseDataLoader):
         c_nn: npt.NDArray,
         target: npt.NDArray,
     ) -> None:
-        """Load or calculate normalization statistics if neccessary."""
-        if os.path.isfile(self.out_path):
-            if self.overwrite:
-                self.norm_stats = self._init_norm_stats(x_nn, c_nn, target)
-            else:
+        """Load or calculate normalization statistics if necessary."""
+        if os.path.isfile(self.out_path) and not self.overwrite:
+            if not self.norm_stats:
                 with open(self.out_path, 'r') as f:
                     self.norm_stats = json.load(f)
-                    return
         else:
+            # Init normalization stats if file doesn't exist or overwrite is True.
             self.norm_stats = self._init_norm_stats(x_nn, c_nn, target)
     
     def _init_norm_stats(

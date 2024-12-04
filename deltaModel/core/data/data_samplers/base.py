@@ -24,15 +24,3 @@ class BaseDataSampler(Dataset, ABC):
             device=self.device,
             requires_grad=False,
         )
-
-
-
-##### Depr #####
-class BaseDataset(ABC, torch.utils.data.Dataset):
-    @abstractmethod
-    def getDataTs(self, config, varLst):
-        raise NotImplementedError
-
-    @abstractmethod
-    def getDataConst(self, config, varLst):
-        raise NotImplementedError

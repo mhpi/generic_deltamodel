@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional
 
 import torch.nn
 from hydroDL2 import load_model
+
 from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
 

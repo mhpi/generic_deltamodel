@@ -115,8 +115,6 @@ class PathBuilder(BaseModel):
         config['out_path'] = path
         config['validation_path'] = test_path
         
-        print(os.path.abspath(path))
-
         # Save config
         self.save_config(path, config)
         

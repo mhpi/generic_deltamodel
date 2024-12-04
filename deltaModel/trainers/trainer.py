@@ -5,12 +5,13 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import torch
 import tqdm
+
 from core.calc.metrics import Metrics
 from core.data import create_training_grid
-from core.data.data_samplers.hydro_sampler import (
-    get_training_sample,
-    get_validation_sample,
-)
+from core.data.data_samplers import hydro_sampler
+# from core.data.data_samplers.hydro_sampler import (get_training_sample,
+#                                                    get_validation_sample)
+from core.data.data_samplers.hydro_sampler_dev import HydroDataSampler
 from core.utils import save_outputs
 from models.loss_functions import get_loss_func
 from models.model_handler import ModelHandler
@@ -142,13 +143,22 @@ class Trainer(BaseTrainer):
                                leave=False, dynamic_ncols=True):
                 self.current_batch = i
 
-                dataset_sample = get_training_sample(
+                # dataset_sample = get_training_sample(
+                #     self.train_dataset,
+                #     n_samples,
+                #     n_timesteps,
+                #     self.config
+                # )
+
+
+                self.sampler = HydroDataSampler(self.config)
+                dataset_sample = self.sampler.get_training_sample(
                     self.train_dataset,
                     n_samples,
                     n_timesteps,
-                    self.config
                 )
             
+
                 # Forward pass through model.
                 prediction = self.model(dataset_sample)
                 loss = self.model.calc_loss(dataset_sample)
@@ -189,12 +199,21 @@ class Trainer(BaseTrainer):
             self.current_batch = i
 
             # Select a batch of data
-            dataset_sample = get_validation_sample(
+            # dataset_sample = get_validation_sample(
+            #     self.test_dataset,
+            #     batch_start[i],
+            #     batch_end[i],
+            #     self.config
+            # )
+
+            dataset_sample = self.sampler.get_validation_sample(
                 self.test_dataset,
                 batch_start[i],
                 batch_end[i],
                 self.config
             )
+
+
 
             prediction = self.model(dataset_sample, eval=True)
 
