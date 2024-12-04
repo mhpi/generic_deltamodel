@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 class ArrayDataset(BaseDataset):
-    """Credit: Farshid Rahmani."""
+    """Created by Farshid Rahmani."""
     def __init__(self, config, tRange, data_path, attr_path=None):
         self.time = trange_to_array(tRange)
         self.config = config

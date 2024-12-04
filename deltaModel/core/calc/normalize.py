@@ -183,68 +183,6 @@ def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarra
     with open(stat_file, 'w') as f:
         json.dump(stat_dict, f, indent=4)
 
-
-def basin_norm(
-    x: np.array, basin_area: np.array, to_norm: bool
-) -> np.array:
-    """
-    From HydroDL.
-
-    Normalize or denormalize streamflow data with basin area and mean precipitation.
-
-    The formula is as follows when normalizing (denormalize equation is its inversion):
-
-    .. math:: normalized_x = \frac{x}{area * precipitation}
-
-    Because units of streamflow, area, and precipitation are ft^3/s, km^2 and mm/day, respectively,
-    and we need (m^3/day)/(m^3/day), we transform the equation as the code shows.
-
-    Parameters
-    ----------
-    x
-        data to be normalized or denormalized
-    basin_area
-        basins' area
-    mean_prep
-        basins' mean precipitation
-    to_norm
-        if true, normalize; else denormalize
-
-    Returns
-    -------
-    np.array
-        normalized or denormalized data
-    """
-    nd = len(x.shape)
-    # meanprep = readAttr(gageid, ['q_mean'])
-    if nd == 3 and x.shape[2] == 1:
-        x = x[:, :, 0]  # unsqueeze the original 3 dimension matrix
-    temparea = np.tile(basin_area, (1, x.shape[1]))
-
-    if to_norm is True:
-        # flow = (x * 0.0283168 * 3600 * 24) / (
-        #     (temparea * (10**6)) * (tempprep * 10 ** (-3))
-        # )  # (m^3/day)/(m^3/day)
-
-        flow = (x * 0.0283168 * 3600 * 24) / (temparea * (10 ** 6)) * 10 ** 3
-
-    else:
-        # flow = (
-        #     x
-        #     * ((temparea * (10**6)) * (tempprep * 10 ** (-3)))
-        #     / (0.0283168 * 3600 * 24)
-        # )
-        flow = (
-            x
-            * ((temparea * (10**6)) * (10 ** (-3)))
-            / (0.0283168 * 3600 * 24)
-        )
-
-    if nd == 3:
-        flow = np.expand_dims(flow, axis=2)
-    return flow
-
-
 def trans_norm(config: Dict[str, Any], x: np.ndarray, var_lst: List[str], *, to_norm: bool) -> np.ndarray:
     """
     Taken from the trans_norm function of hydroDL.

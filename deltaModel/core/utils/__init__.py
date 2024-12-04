@@ -16,7 +16,6 @@ from dates import Dates
 log = logging.getLogger(__name__)
 
 
-
 def set_system_spec(cuda_devices: Optional[list] = None) -> Tuple[str, str]:
     """Set the device and data type for the model on user's system.
 
