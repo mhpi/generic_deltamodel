@@ -6,8 +6,8 @@ import hydra
 import torch
 from omegaconf import DictConfig
 
-from core.data.data_loaders.hydro_loader import HydroDataLoader
 from core.utils import initialize_config, print_config, set_randomseed
+from core.utils.module_loaders import load_data_loader, load_trainer
 from models.model_handler import ModelHandler as dModel
 from trainers.trainer import Trainer
 
@@ -31,14 +31,16 @@ def main(config: DictConfig) -> None:
         print_config(config)
 
         ### Create/Load differentiable model ###
-        model = dModel(config, verbose=True) #.to(config['device'])
+        model = dModel(config, verbose=True)
 
         ### Process datasets ###
         log.info("Loading dataset...")
-        data_loader = HydroDataLoader(config, test_split=True, overwrite=False)
+        data_loader = load_data_loader(config['data_loader'])
+        data_loader = data_loader(config, test_split=True, overwrite=False)
 
         ### Create Trainer object ###
-        trainer = Trainer(
+        trainer = load_trainer(config['trainer'])
+        trainer = trainer(
             config,
             model,
             data_loader.train_dataset,

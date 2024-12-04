@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import Any, Dict, Optional
 
 import numpy.typing as npt
 import torch
