@@ -2,8 +2,8 @@ from math import log
 from typing import Any, Dict, List, Optional, Tuple
 
 import torch
-from core.data import numpy_to_torch_dict
-from core.utils.utils import find_shared_keys
+
+from core.utils import find_shared_keys
 from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
 
@@ -28,12 +28,12 @@ class EnsembleGenerator(torch.nn.Module):
         The device to run the model on. The default is None.
     """
     def __init__(
-            self,
-            model_list: List[str],
-            config: Dict[str, Any],
-            wnn_model: torch.nn.Module = None,
-            device: Optional[torch.device] = None
-        ) -> None:
+        self,
+        model_list: List[str],
+        config: Dict[str, Any],
+        wnn_model: torch.nn.Module = None,
+        device: Optional[torch.device] = None
+    ) -> None:
         super().__init__()
         self.name = "Multimodel Ensemble Weights Generator"
         self.config = config
@@ -88,10 +88,10 @@ class EnsembleGenerator(torch.nn.Module):
         return model.to(self.device)
 
     def forward(
-            self,
-            dataset_dict: Dict[str, torch.Tensor],
-            predictions: Dict[str, torch.Tensor],
-        ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
+        self,
+        dataset_dict: Dict[str, torch.Tensor],
+        predictions: Dict[str, torch.Tensor],
+    ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
         """Forward pass for the model.
         
         Generate ensemble weights and ensemble model predictions.
@@ -106,14 +106,14 @@ class EnsembleGenerator(torch.nn.Module):
 
         if self.config['mosaic'] == False:
             # Ensure input data is in the correct format and device.
-            dataset_dict = numpy_to_torch_dict(dataset_dict, device=self.device)
+            # dataset_dict = numpy_to_torch_dict(dataset_dict, device=self.device)
             
             # Generate ensemble weights
-            self._raw_weights = self.wnn_model(dataset_dict['x_nn_scaled'])
+            self._raw_weights = self.wnn_model(dataset_dict['xc_nn_norm'])
             self._scale_weights()
 
             # Map weights to individual models
-            diff = dataset_dict['x_nn_scaled'].shape[0] - dataset_dict['target'].shape[0]
+            diff = dataset_dict['xc_nn_norm'].shape[0] - dataset_dict['target'].shape[0]
             self.weights = {
                 model: self.weights_scaled[diff:, :, i]
                 for i, model in enumerate(self.model_list)
@@ -131,11 +131,11 @@ class EnsembleGenerator(torch.nn.Module):
         else:
             print("Mosaic mode is enabled.")
             # Generate ensemble weights
-            self._raw_weights = self.wnn_model(dataset_dict['x_nn_scaled'])
+            self._raw_weights = self.wnn_model(dataset_dict['xc_nn_norm'])
             self._scale_weights()
 
             # Map weights to individual models
-            diff = dataset_dict['x_nn_scaled'].shape[0] - dataset_dict['target'].shape[0]
+            diff = dataset_dict['xc_nn_norm'].shape[0] - dataset_dict['target'].shape[0]
             self.weights = {
                 model: self.weights_scaled[diff:, :, i]
                 for i, model in enumerate(self.model_list)

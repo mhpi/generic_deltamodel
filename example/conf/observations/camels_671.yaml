@@ -5,8 +5,8 @@ test_path: /data/yxs275/CAMELS/validation_file
 gage_info: /data/yxs275/CAMELS/CAMELS_to_ICDS/gageid.npy
 area_name: area_gages2
 
-start_time_all: 1980/10/01
-end_time_all: 2014/09/30
+start_time: 1980/10/01
+end_time: 2014/09/30
 
 forcings_all: [
   prcp,

@@ -1,26 +1,24 @@
-import json
 import logging
-import os
 import time
+from json import load
 from typing import Any, Dict, List, Optional
 
 import numpy as np
-import pandas as pd
 import torch
 import tqdm
+
 from core.calc.metrics import Metrics
-from core.data import (create_training_grid, get_training_sample,
-                       get_validation_sample)
-from core.data.dataset_loading import get_dataset_dict
+from core.data import create_training_grid
 from core.utils import save_outputs
+from core.utils.module_loaders import load_data_sampler
 from models.loss_functions import get_loss_func
 from models.model_handler import ModelHandler
-from torch import nn
+from trainers.base import BaseTrainer
 
 log = logging.getLogger(__name__)
 
 
-class Trainer:
+class Trainer(BaseTrainer):
     """Generic, unified Trainer for differentiable models.
 
     Designed after the Hugging Face Trainer class.
@@ -42,28 +40,32 @@ class Trainer:
     def __init__(
         self,
         config: Dict[str, Any],
-        model: nn.Module = None,
+        model: torch.nn.Module = None,
         train_dataset: Optional[dict] = None,
         eval_dataset: Optional[dict] = None,
-        loss_func: Optional[nn.Module] = None,
-        optimizer: Optional[nn.Module] = None,
+        dataset: Optional[dict] = None,
+        loss_func: Optional[torch.nn.Module] = None,
+        optimizer: Optional[torch.nn.Module] = None,
         verbose: Optional[bool] = False,
     ) -> None:
         self.config = config
         self.model = model or ModelHandler(config)
-        self.train_dataset = train_dataset or get_dataset_dict(config, train=True)
-        self.test_dataset = eval_dataset or get_dataset_dict(config, train=True)
+        self.train_dataset = train_dataset
+        self.test_dataset = eval_dataset
+        self.dataset = dataset
         self.verbose = verbose
-
+        self.sampler = load_data_sampler(config['data_sampler'])(config)
         self.is_in_train = False
 
         if 'train' in config['mode']:
             log.info(f"Initializing loss function and optimizer")
 
             # Loss function initialization
-            self.loss_func = loss_func or get_loss_func(self.train_dataset['target'],
-                                                        config['loss_function'],
-                                                        config['device'])
+            self.loss_func = loss_func or get_loss_func(
+                self.train_dataset['target'],
+                config['loss_function'],
+                config['device'],
+            )
             self.model.loss_func = self.loss_func
 
             # Optimizer initialization
@@ -121,7 +123,7 @@ class Trainer:
 
         # Setup a training grid (number of samples, minibatches, and timesteps)
         n_samples, n_minibatch, n_timesteps = create_training_grid(
-            self.train_dataset['x_nn_scaled'],
+            self.train_dataset['xc_nn_norm'],
             self.config
         )
 
@@ -139,11 +141,10 @@ class Trainer:
                                leave=False, dynamic_ncols=True):
                 self.current_batch = i
 
-                dataset_sample = get_training_sample(
+                dataset_sample = self.sampler.get_training_sample(
                     self.train_dataset,
                     n_samples,
                     n_timesteps,
-                    self.config
                 )
             
                 # Forward pass through model.
@@ -176,7 +177,7 @@ class Trainer:
         observations = self.test_dataset['target']
 
         # Get start and end indices for each batch.
-        n_samples = self.test_dataset['x_nn_scaled'].shape[1]
+        n_samples = self.test_dataset['xc_nn_norm'].shape[1]
         batch_start = np.arange(0, n_samples, self.config['test']['batch_size'])
         batch_end = np.append(batch_start[1:], n_samples)
 
@@ -185,8 +186,7 @@ class Trainer:
         for i in tqdm.tqdm(range(len(batch_start)), desc="Testing", leave=False, dynamic_ncols=True):
             self.current_batch = i
 
-            # Select a batch of data
-            dataset_sample = get_validation_sample(
+            dataset_sample = self.sampler.get_validation_sample(
                 self.test_dataset,
                 batch_start[i],
                 batch_end[i],

@@ -4,14 +4,14 @@ import time
 
 import hydra
 import torch
-from core.data.dataset_loading import get_dataset_dict
-from core.utils import initialize_config, print_config, set_randomseed
-from models.model_handler import ModelHandler as dModel
 from omegaconf import DictConfig
+
+from core.utils import initialize_config, print_config, set_randomseed
+from core.utils.module_loaders import load_data_loader, load_trainer
+from models.model_handler import ModelHandler as dModel
 from trainers.trainer import Trainer
 
 log = logging.getLogger(__name__)
-
 
 
 @hydra.main(
@@ -31,15 +31,22 @@ def main(config: DictConfig) -> None:
         print_config(config)
 
         ### Create/Load differentiable model ###
-        model = dModel(config, verbose=True) #.to(config['device'])
+        model = dModel(config, verbose=True)
 
         ### Process datasets ###
-        log.info("Processing datasets...")
-        train_dataset = get_dataset_dict(config, train=True)
-        eval_dataset = get_dataset_dict(config, train=False)
+        log.info("Loading dataset...")
+        data_loader = load_data_loader(config['data_loader'])
+        data_loader = data_loader(config, test_split=True, overwrite=False)
 
         ### Create Trainer object ###
-        trainer = Trainer(config, model, train_dataset, eval_dataset, verbose=True)
+        trainer = load_trainer(config['trainer'])
+        trainer = trainer(
+            config,
+            model,
+            data_loader.train_dataset,
+            data_loader.eval_dataset,
+            verbose=True
+        )
 
         mode = config['mode']
         if mode == 'train':

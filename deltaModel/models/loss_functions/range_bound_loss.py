@@ -29,11 +29,11 @@ class RangeBoundLoss(torch.nn.Module):
     Adapted from Tadd Bindas.
     """
     def __init__(
-            self,
-            config: Dict[str, Any],
-            target: NDArray[np.float32] = None,
-            device: Optional[str] = 'cpu'
-        ) -> None:
+        self,
+        config: Dict[str, Any],
+        target: NDArray[np.float32] = None,
+        device: Optional[str] = 'cpu',
+    ) -> None:
         super().__init__()
         self.config = config
         self.device = device
@@ -42,11 +42,11 @@ class RangeBoundLoss(torch.nn.Module):
         self.scale_factor = config.get('loss_factor', 1.0)
 
     def forward(
-            self,
-            y_pred: torch.Tensor,
-            y_obs: Optional[torch.Tensor] = None,
-            n_samples: Optional[torch.Tensor] = None
-        ) -> torch.Tensor:
+        self,
+        y_pred: torch.Tensor,
+        y_obs: Optional[torch.Tensor] = None,
+        n_samples: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
         """Compute the range-bound loss.
         
         Loss function that penalizes values outside of a specified range. Loss is calculated as the sum of the individual average losses for each batch in the prediction tensor.

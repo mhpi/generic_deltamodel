@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 class Dates(BaseModel):
     """Class to handle time-related operations and configurations.
 
-    Created by Tadd Bindas.
+    Adapted from Tadd Bindas.
     """
     model_config = ConfigDict(arbitrary_types_allowed=True)
     daily_format: str = "%Y/%m/%d"
@@ -94,7 +94,7 @@ class Dates(BaseModel):
             / 86400
         )
 
-        # The indices for the dates in your selected routing time range
+        # The indices for the dates in your selected routing time range.
         self.numerical_time_range = np.arange(
             origin_base_start_time, origin_base_end_time + 1, 1
         )
