@@ -137,6 +137,9 @@ class Config(BaseModel):
     random_seed: int = 0
     device: str = 'cpu'
     gpu_id: int = 0
+    data_loader: str = 'none'
+    data_sampler: str = 'none'
+    trainer: str = 'none'
     save_path: str
     train: TrainingConfig
     test: TestingConfig
@@ -182,6 +185,9 @@ if __name__ == '__main__':
             random_seed=42,
             device='cuda',
             gpu_id=0,
+            data_loader='base_loader',
+            data_sampler='base_sampler',
+            trainer='trainer',
             save_path='../results',
             train={
                 'start_time': '2000/01/01',

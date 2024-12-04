@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pandas as pd
 import torch
-from core.data import BaseDataset, trange_to_array
+from core.data.dataset_loading import BaseDataset, trange_to_array
 
 log = logging.getLogger(__name__)
 

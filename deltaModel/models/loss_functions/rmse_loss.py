@@ -33,7 +33,7 @@ class RmseLoss(torch.nn.Module):
         self,
         target: NDArray[np.float32],
         config: Dict[str, Any],
-        device: Optional[str] = 'cpu'
+        device: Optional[str] = 'cpu',
     ) -> None:
         super().__init__()
         self.config = config
@@ -47,7 +47,7 @@ class RmseLoss(torch.nn.Module):
         self,
         y_pred: torch.Tensor,
         y_obs: torch.Tensor,
-        n_samples: torch.Tensor
+        n_samples: torch.Tensor,
     ) -> torch.Tensor:
         """Compute loss.
         

@@ -1,5 +1,6 @@
-import torch
 from abc import ABC, abstractmethod
+
+import torch
 from torch.utils.data import Dataset
 
 

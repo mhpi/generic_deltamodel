@@ -1,11 +1,8 @@
-import json
 import logging
-import os
 import time
 from typing import Any, Dict, List, Optional
 
 import numpy as np
-import pandas as pd
 import torch
 import tqdm
 from core.calc.metrics import Metrics
@@ -15,12 +12,12 @@ from core.data.dataset_loading import get_dataset_dict
 from core.utils import save_outputs
 from models.loss_functions import get_loss_func
 from models.model_handler import ModelHandler
-from torch import nn
+from trainers.base import BaseTrainer
 
 log = logging.getLogger(__name__)
 
 
-class Trainer:
+class Trainer(BaseTrainer):
     """Generic, unified Trainer for differentiable models.
 
     Designed after the Hugging Face Trainer class.
@@ -42,11 +39,11 @@ class Trainer:
     def __init__(
         self,
         config: Dict[str, Any],
-        model: nn.Module = None,
+        model: torch.nn.Module = None,
         train_dataset: Optional[dict] = None,
         eval_dataset: Optional[dict] = None,
-        loss_func: Optional[nn.Module] = None,
-        optimizer: Optional[nn.Module] = None,
+        loss_func: Optional[torch.nn.Module] = None,
+        optimizer: Optional[torch.nn.Module] = None,
         verbose: Optional[bool] = False,
     ) -> None:
         self.config = config

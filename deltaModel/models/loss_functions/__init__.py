@@ -7,9 +7,9 @@ from ast import Dict
 from typing import Any, Dict, Optional
 
 import numpy as np
+import torch
 from numpy.typing import NDArray
 from sympy import E
-from torch import nn
 
 sys.path.append('../deltaModel/')  # for tutorials
 
@@ -36,7 +36,7 @@ def get_loss_func(
     obs: NDArray[np.float32],
     config: Dict[str, Any],
     device: Optional[str] = 'cpu'
-) -> nn.Module:
+) -> torch.nn.Module:
     """Dynamically load and initialize a loss function module by name.
     
     Currently only supports loss functions in the 'loss_functions' directory.

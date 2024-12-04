@@ -32,7 +32,7 @@ class RangeBoundLoss(torch.nn.Module):
         self,
         config: Dict[str, Any],
         target: NDArray[np.float32] = None,
-        device: Optional[str] = 'cpu'
+        device: Optional[str] = 'cpu',
     ) -> None:
         super().__init__()
         self.config = config
@@ -45,7 +45,7 @@ class RangeBoundLoss(torch.nn.Module):
         self,
         y_pred: torch.Tensor,
         y_obs: Optional[torch.Tensor] = None,
-        n_samples: Optional[torch.Tensor] = None
+        n_samples: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         """Compute the range-bound loss.
         
