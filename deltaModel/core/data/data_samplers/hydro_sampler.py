@@ -85,17 +85,44 @@ class HydroDataSampler(BaseDataSampler):
             for key, value in dataset.items()
         }
 
-    def take_sample(self, dataset: Dict[str, torch.Tensor], days=730, basins=100) -> Dict[str, torch.Tensor]:
-        """Take a sample for a specified time period and number of basins."""
-        sample = {
-            key: torch.tensor(
-                value[self.warm_up:days, :basins, :] if value.ndim == 3 else value[:basins, :],
-                dtype=torch.float32,
-                device=self.device
-            )
-            for key, value in dataset.items()
-        }
-        # Adjust target for warm-up days if necessary
-        if 'HBV1_1p' not in self.config['dpl_model']['phy_model']['model'] or not self.config['dpl_model']['phy_model']['warm_up_states']:
-            sample['target'] = sample['target'][self.warm_up:days, :basins]
-        return sample
+    # def take_sample_old(self, dataset: Dict[str, torch.Tensor], days=730, basins=100) -> Dict[str, torch.Tensor]:
+    #     """Take a sample for a specified time period and number of basins."""
+    #     sample = {
+    #         key: torch.tensor(
+    #             value[self.warm_up:days, :basins, :] if value.ndim == 3 else value[:basins, :],
+    #             dtype=torch.float32,
+    #             device=self.device
+    #         )
+    #         for key, value in dataset.items()
+    #     }
+    #     # Adjust target for warm-up days if necessary
+    #     if 'HBV1_1p' not in self.config['dpl_model']['phy_model']['model'] or not self.config['dpl_model']['phy_model']['warm_up_states']:
+    #         sample['target'] = sample['target'][self.warm_up:days, :basins]
+    #     return sample
+    
+def take_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
+                basins=100) -> Dict[str, torch.Tensor]:
+    """Take sample of data."""
+    dataset_sample = {}
+    for key, value in dataset_dict.items():
+        if value.ndim == 3:
+            if key in ['x_phy', 'xc_nn_norm']:
+                warm_up = 0
+            else:
+                warm_up = config['dpl_model']['phy_model']['warm_up']
+            dataset_sample[key] = torch.tensor(value[warm_up:days, :basins, :]).float().to(config['device'])
+        elif value.ndim == 2:
+            dataset_sample[key] = torch.tensor(value[:basins, :]).float().to(config['device'])
+        else:
+            raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
+    
+    return dataset_sample
+
+    # Keep 'warmup' days for dHBV1.1p.
+    if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
+    (config['dpl_model']['phy_model']['warm_up_states']) and (config['multimodel_type'] == 'none'):
+        pass
+    else:
+        dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:days, :basins]
+    return dataset_sample
+

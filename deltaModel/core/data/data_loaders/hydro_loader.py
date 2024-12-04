@@ -84,7 +84,7 @@ class HydroDataLoader(BaseDataLoader):
             self.train_dataset = self._preprocess_data(scope='train')
             self.eval_dataset = self._preprocess_data(scope='test')
         else:
-            self.dataset = self._preprocess_data(self.config['t_range'], scope='all')
+            self.dataset = self._preprocess_data(scope='all')
 
     def _preprocess_data(self, scope: Optional[str]) -> Tuple[npt.NDArray]:
         """Read data from the dataset."""
@@ -107,18 +107,21 @@ class HydroDataLoader(BaseDataLoader):
 
     def read_data(self, scope: Optional[str]) -> Tuple[npt.NDArray]:
         """Read data from the data file."""
-        if scope == 'train':
-            data_path = self.config['observations']['train_path']
-            time = self.config['train_time']
-        elif scope == 'test':
-            data_path = self.config['observations']['test_path']
-            time = self.config['test_time']
-        elif scope == 'all':
-            data_path = self.config['observations']['all_path']
-            time = self.config['experiment_time']
-        else:
-            raise ValueError("Scope must be 'train', 'test', or 'all'.")
-
+        try:
+            if scope == 'train':
+                data_path = self.config['observations']['train_path']
+                time = self.config['train_time']
+            elif scope == 'test':
+                data_path = self.config['observations']['test_path']
+                time = self.config['test_time']
+            elif scope == 'all':
+                data_path = self.config['observations']['path']
+                time = self.config['experiment_time']
+            else:
+                raise ValueError("Scope must be 'train', 'test', or 'all'.")
+        except KeyError as e:
+            raise ValueError(f"Key {e} for data path not in dataset config.")
+        
         # Load data
         with open(data_path, 'rb') as f:
             forcings, target, attributes = pickle.load(f)
