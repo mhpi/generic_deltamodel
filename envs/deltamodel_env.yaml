@@ -1,4 +1,4 @@
-name: deltamod
+name: deltamodel
 channels:
   - defaults
   - pytorch

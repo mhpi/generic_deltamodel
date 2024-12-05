@@ -42,16 +42,21 @@ It also hosts ([`global-scale photosynthesis `](https://doi.org/10.22541/au.1731
 
 <br>
 
-### The Overall Idea
-We define a "differentiable model" (dModel) class which describes how neural networks and the process-based model are coupled. dModel holds NNs and process-based models as attributes and can be trained and forwarded just as any other PyTorch model (nn.Module). We define classes to handle datasets (dataset class), various train/test experiments (trainer), multimodel handling and multi-GPU training (model handler), data assimilation and streaming in a uniform and modular way. All training and simulations can be specified by a config file to be adapted to custom applications. 
-According to the schema, we define these core classes, from bottom up:
 
-- **NN**: Neural networks that can provide either parameters, missing process representations, corrections or other forms of enhancements to process-based models.
-- **phy_model**: The physical model written in PyTorch (or potentially other interoperable differentiable platform).
-- **dModel**: Holds (one or multiple) NNs and (one or multiple) phy_model and describe how they are coupled; connection to ODE packages.
-- **model_handler**: Manages ensemble model, multi-GPU compute, and data assimilation or streaming. Can contain its own optimizers. Interface to BMI or other interfaces.
-- **Trainer**: Manages the train and test of models and connects data to model.
-- **dataset**: Manages data ingestion in a unified format; support multiple file formats.
+### The Overall Idea
+ 
+Characterized by the combination of process-based equations with neural networks (NNs), differentiable models train these components together, enabling parameter inputs for the equations to be effectively and efficiently learned at scale by the NNs. There are many possibilities for how such models are built.
+
+In 𝛿MG, we define a differentiable model with the class *DeltaModel* that can couple one or more NNs with a process-based model (itself potentially a collection of models). This class holds `nn` and a `phy_model` objects, respectively, as attributes internally and describes how they interface with each other. The *DeltaModel* object can be trained and forwarded just as any other PyTorch model (nn.Module). We also define *DataLoader* and *DataSampler* classes to handle datasets, a *Trainer* class for running train/test experiments, and a *ModelHandler* class for multimodel handling, multi-GPU training, data assimilation and streaming in a uniform and modular way. All model, training, and simulation settings are be collected in a configuration file that can be adapted to custom applications. 
+According to this schema, we define these core classes, from bottom up:
+
+- **nn**: PyTorch neural networks that can learn and provide either parameters, missing process representations, corrections, or other forms of enhancements to physical models.
+- **phy_model**: The physical model written in PyTorch (or potentially another interoperable differentiable platform) that takes learnable outputs from the `nn` model(s) and returns a prediction of some target variable(s). This can also be a wrapper holding several physical models.
+- **DeltaModel**: Holds (one or multiple) `nn` objects and a `phy_model` object, and describes how they are coupled; connection to ODE packages.
+- **ModelHandler**: Manages multimodeling, multi-GPU compute, and data assimilation or streaming. Can contain its own optimizers. Acts as an interface to CSDMS BMI or other interfaces.
+- **DataSampler:**: Samples data according to data format and train/test requirements.
+- **Trainer**: Manages model training and testing, and connects data to models.
+- **DataLoader**: Preprocesses data to be used in training, testing, and simulation.
 
 <br>
 
@@ -70,7 +75,7 @@ According to the schema, we define these core classes, from bottom up:
     │   │   ├── data/                   # Data processing
     │   │   └── utils/                  # Helper functions
     │   ├── models/                     
-    │   │   ├── differentiable_model.py # Differentiable model definition
+    │   │   ├── differentiable_model.py # Differentiable model definition DeltaModel
     │   │   ├── model_handler.py        # High-level model manager
     │   │   ├── loss_functions/         # Custom loss functions
     │   │   └── neural_networks/        # Neural network architectures
