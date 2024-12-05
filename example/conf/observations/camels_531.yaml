@@ -1,9 +1,9 @@
 name: camels_531
-train_path: /data/yxs275/CAMELS/training_file
-test_path: /data/yxs275/CAMELS/validation_file
+train_path: your/path/to/camels/training_file
+test_path: your/path/to/camels/validation_file
 
-gage_info: /data/yxs275/CAMELS/CAMELS_to_ICDS/gageid.npy
-subset_path: /data/lgl5139/data/camels/Sub531ID.txt
+gage_info: your/path/to/camels/gage_ids.npy
+subset_path: your/path/to/camels/531_subset.txt
 area_name: area_gages2
 
 start_time: 1980/10/01

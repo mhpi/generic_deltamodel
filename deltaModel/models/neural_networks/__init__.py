@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict
 import torch
 import torch.nn as nn
 
-from conf.config_old import InitalizationEnum
+from conf.config import InitalizationEnum
 from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
 
