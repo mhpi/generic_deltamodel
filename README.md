@@ -20,7 +20,7 @@ For differentiable hydrology models used in MHPI research, 𝛿MG seamlessly int
 - **HydroDL2.0 ([`hydroDL2`](https://github.com/mhpi/hydroDL2))**: Home to MHPI's suite of physics-based hydrology models, and differentiable model augmentations (think variational data
       assimilation, model coupling, and additional physics-based hydrology tools).
 - **HydroData ([`hydro_data_dev`](https://github.com/mhpi/hydro_data_dev))**: Data extraction, processing, and management tools optimized for geospatial datasets. 
-- **Numerical solvers [*In development*]**: To be integrated to (i) numerical PDE solvers on torch; (ii) adjoint sensitivity; (iii) extremely efficient and highly accurate surrogate models; (iv) mysteriously powerful neural networks. 
+- **Concurrent development activities**: We are working on these efforts connected to 𝛿MG: (i) numerical PDE solvers on torch; (ii) [adjoint](https://doi.org/10.5194/hess-28-3051-2024) sensitivity; (iii) extremely efficient and highly accurate surrogate models; (iv) downscaled and bias corrected climate data; (v) mysteriously powerful neural networks.
 
 <br>
 
