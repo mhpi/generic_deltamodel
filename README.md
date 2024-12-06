@@ -19,7 +19,8 @@ For differentiable hydrology models used in MHPI research, 𝛿MG seamlessly int
 
 - **HydroDL2.0 ([`hydroDL2`](https://github.com/mhpi/hydroDL2))**: Home to MHPI's suite of physics-based hydrology models, and differentiable model augmentations (think variational data
       assimilation, model coupling, and additional physics-based hydrology tools).
-- **HydroData ([`hydro_data_dev`](https://github.com/mhpi/hydro_data_dev))**: Data extraction, processing, and management tools optimized for geospatial datasets. 
+- **HydroData ([`hydro_data_dev`](https://github.com/mhpi/hydro_data_dev))**: Data extraction, processing, and management tools optimized for geospatial datasets.
+- **Config GUI ([`GUI-Config-builder`](https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/config_builder_gui/Config+Builder+GUI.zip))([Source](https://github.com/mhpi/GUI-Config-builder))**: An intuitive, user-friendly tool designed to simplify the creation and editing of configuration files for model setup and development.
 - **Concurrent development activities**: We are working on these efforts connected to 𝛿MG: (i) numerical PDE solvers on torch; (ii) [adjoint](https://doi.org/10.5194/hess-28-3051-2024) sensitivity; (iii) extremely efficient and highly accurate surrogate models; (iv) downscaled and bias corrected climate data; (v) mysteriously powerful neural networks.
 
 <br>
@@ -90,7 +91,7 @@ According to this schema, we define these core classes, from bottom up:
 ### Quick Start: Building a Differentiable HBV ($\delta$ HBV) Model
 
 Here’s an example of how you can build a differentiable model, coupling a physics-based model with a neural network to intelligently learn model parameters. In this instance, we use an
-LSTM with the [HBV](https://en.wikipedia.org/wiki/HBV_hydrology_model) hydrology model.
+LSTM with the [HBV](https://en.wikipedia.org/wiki/HBV_hydrology_model) hydrology model. The [Config GUI](https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/config_builder_gui/Config+Builder+GUI.zip) can be used to create/edit additional config files for use with these examples. (See [here](https://github.com/mhpi/GUI-Config-builder/blob/main/README.md) for usage instructions.)
 ```python
 # 1. Load configuration dictionary of model parameters and options.
 config = load_config(CONFIG_PATH)
