@@ -8,9 +8,10 @@ A domain-agnostic, PyTorch-based framework for developing trainable [differentia
 with process-based equations. "Differentiable" means that gradient calculations can be achieved efficiently at large
 scale throughout the model, so process-based equations can be trained together with NNs on big data, on GPU. 
 Following as a generalization of `HydroDL`, 𝛿MG (`generic_deltaModel`) aims to expand differentiable modeling and
-learning capabilities to a wide variety of domains where prior equations can bring in benefits.
+learning capabilities to a wide variety of domains where prior equations can bring in benefits. 
 
 Closely synergizes with deep learning tools and the scale advantage of PyTorch. Maintained by the [MHPI group](http://water.engr.psu.edu/shen/) advised by Dr. Chaopeng Shen.
+𝛿MG is not a partcularly model. Rather, it is a framework that support many models (some are from HydroDL2.0) in a generic way. Most of the differentiable modeling efforts in Shen's group will be using 𝛿MG.
 
 <br>
 
