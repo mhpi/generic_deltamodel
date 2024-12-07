@@ -4,7 +4,7 @@
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11-blue)]()
 
 
-A domain-agnostic, PyTorch-based framework for developing trainable differentiable models that merge neural networks
+A domain-agnostic, PyTorch-based framework for developing trainable [differentiable models](https://www.nature.com/articles/s43017-023-00450-9) that merge neural networks
 with process-based equations. "Differentiable" means that gradient calculations can be achieved efficiently at large
 scale throughout the model, so process-based equations can be trained together with NNs on big data, on GPU. 
 Following as a generalization of `HydroDL`, 𝛿MG (`generic_deltaModel`) aims to expand differentiable modeling and
@@ -42,9 +42,9 @@ For differentiable hydrology models used in MHPI research, 𝛿MG seamlessly int
 
 
 ## Use Cases
-This package powers the global- and  ([`national-scale water model`](https://doi.org/10.22541/essoar.172736277.74497104/v1)) that provide high-quality seamless hydrologic simulations over US and the world.
+This package powers the global- and  ([`national-scale water model`](https://doi.org/10.22541/essoar.172736277.74497104/v1)) that provide high-quality seamless hydrologic [simulations](https://mhpi.github.io/datasets/CONUS/) over US and the world. 
 It also hosts ([`global-scale photosynthesis `](https://doi.org/10.22541/au.173101418.87755465/v1)) learning and simulations
-
+Many other use cases are being developed concurrently.
 <br>
 
 
@@ -132,7 +132,7 @@ output = dpl_model.forward(dataset_sample)
 
 In the above, we illustrate a critical behavior of the differentiable model object `DeltaModel` (dHBV), which is the the composition of a physical model, `phy_model`, with a neural network, `nn`. 
 
-When we forward DeltaModel, we feed scaled inputs for the NN (stored within the dataset dictionary) to the NN and forward, which then outputs a set of parameter predictions (the config and phy_model definition ensure NN output is of correct size). Then, these parameters pass with the dataset dictionary to the forward the phy_model and output final model predictions. Internally, these steps are represented within DeltaModel as
+Let us explain just a little more. The differentiable model class will hold the phy_model and nn, and describes how they connect to each other (a modality). In the most classic modality, the nn will receive some inputs and produce (static or dynamic) parameters for the phy_model, which then outputs some simulation results. In this modality, the dpl_model has the ability of NNs to learn from data, while it outputs physically interpretable variables with process clarity. The config and phy_model definition ensure NN output is of correct size. In this example, internally, these steps are represented within DeltaModel as
 
 ```python
 # Parameterization
