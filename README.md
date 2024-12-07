@@ -11,7 +11,8 @@ Following as a generalization of `HydroDL`, 𝛿MG (`generic_deltaModel`) aims t
 learning capabilities to a wide variety of domains where prior equations can bring in benefits. 
 
 Closely synergizes with deep learning tools and the scale advantage of PyTorch. Maintained by the [MHPI group](http://water.engr.psu.edu/shen/) advised by Dr. Chaopeng Shen.
-𝛿MG is not a partcularly model. Rather, it is a framework that support many models (some are from HydroDL2.0) in a generic way. Most of the differentiable modeling efforts in Shen's group will be using 𝛿MG.
+𝛿MG is not a partcularly model. Rather, it is a framework that support many models (some are from HydroDL2.0) in a generic and uniform way, while integrating lots of ecosystem tools. 
+Most of the differentiable modeling efforts in Shen's group will be using 𝛿MG. 𝛿MG can be customized through a configuration file. We even include a Graphical User Interface that allows easy job customization.
 
 <br>
 
