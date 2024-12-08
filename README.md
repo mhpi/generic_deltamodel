@@ -72,18 +72,18 @@ According to this schema, we define these core classes, from bottom up:
 ## Repository Structure:
     .
     ├── deltaModel/
-    │   ├── __main__.py                 # Main entry point
-    │   ├── conf/                       # Configuration files
+    │   ├── __main__.py                 # Run the framework; model experiments
+    │   ├── conf/                       # Configuration repository
     │   │   ├── config.py
     │   │   ├── config.yaml             # Main configuration file
     │   │   ├── hydra/                  
-    │   │   └── observations/           # Observation data config
+    │   │   └── observations/           # Data configuration files
     │   ├── core/                       
     │   │   ├── calc/                   # Calculation utilities
-    │   │   ├── data/                   # Data processing
+    │   │   ├── data/                   # Data Loaders and Samplers
     │   │   └── utils/                  # Helper functions
     │   ├── models/                     
-    │   │   ├── differentiable_model.py # Differentiable model definition
+    │   │   ├── differentiable_model.py # Differentiable model (dPL modality)
     │   │   ├── model_handler.py        # High-level model manager
     │   │   ├── loss_functions/         # Custom loss functions
     │   │   └── neural_networks/        # Neural network architectures
