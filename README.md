@@ -53,7 +53,7 @@ Many other use cases are being developed concurrently.
 
 ### National-scale water modeling
 
-![Alt text](docs/images/CONUS_Dataset.jpg)
+![Alt text](https://github.com/mhpi/generic_deltaModel/blob/Yalan_edits/docs/images/CONUS_Dataset.jpg)
 
 ## The Overall Idea
 Characterized by the combination of process-based equations with neural networks (NNs), differentiable models train these components together, enabling parameter inputs for the equations to be effectively and efficiently learned at scale by the NNs. There are many possibilities for how such models are built.
