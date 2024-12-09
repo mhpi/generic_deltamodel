@@ -10,20 +10,22 @@ scale throughout the model, so process-based equations can be trained together w
 Following as a generalization of `HydroDL`, 𝛿MG (`generic_deltaModel`) aims to expand differentiable modeling and
 learning capabilities to a wide variety of domains where prior equations can bring in benefits. 
 
-Closely synergizes with deep learning tools and the scale advantage of PyTorch. Maintained by the [MHPI group](http://water.engr.psu.edu/shen/) advised by Dr. Chaopeng Shen.
-𝛿MG is not a partcularly model. Rather, it is a framework that support many models (some are from HydroDL2.0) in a generic and uniform way, while integrating lots of ecosystem tools. 
-Most of the differentiable modeling efforts in Shen's group will be using 𝛿MG. 𝛿MG can be customized through a configuration file. We even include a Graphical User Interface that allows easy job customization.
+𝛿MG is not a partcularly model. Rather, it is a generic framework that support many models across various domains (some are from HydroDL2.0) in a uniform way, while integrating lots of ecosystem tools. While the packages contains some basic examples for learners' convenience, the deployment models are supposed to exit in separate repositories and couple to the 𝛿MG framework. It is generalized and formalized after years of experiences working with various differentiable models across domains.
+Most of the differentiable modeling efforts in Shen's group will be using 𝛿MG. 𝛿MG can be configured to run through a configuration file and it should be easily and clear for new starters to learn. We even include a Graphical User Interface that allows easy job customization. The framework will closely synergize with advanced deep learning tools like foundation models and the scale advantage of PyTorch. 
+
+Maintained by the [MHPI group](http://water.engr.psu.edu/shen/) advised by Dr. Chaopeng Shen. If this work is of use to you, please cite this paper for now, but we will have more dedicated citations later: Shen et al., 2023, Differentiable modelling to unify machine learning and physical models for geosciences, Nature Reviews Earth & Environment, https://www.nature.com/articles/s43017-023-00450-9
 
 <br>
 
 
 ## Ecosystem Integration
-For differentiable hydrology models used in MHPI research, 𝛿MG seamlessly integrates with:
+𝛿MG seamlessly integrates with:
 
 - **HydroDL2.0 ([`hydroDL2`](https://github.com/mhpi/hydroDL2))**: Home to MHPI's suite of physics-based hydrology models, and differentiable model augmentations (think variational data
       assimilation, model coupling, and additional physics-based hydrology tools).
 - **HydroData ([`hydro_data_dev`](https://github.com/mhpi/hydro_data_dev))**: Data extraction, processing, and management tools optimized for geospatial datasets.
 - **Config GUI ([`GUI-Config-builder`](https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/config_builder_gui/Config+Builder+GUI.zip))([Source](https://github.com/mhpi/GUI-Config-builder))**: An intuitive, user-friendly tool designed to simplify the creation and editing of configuration files for model setup and development.
+- **Differentiable Ecosystem modeling ([`diffEcosys (dev version only)`](https://github.com/hydroPKDN/diffEcosys/))**: Data extraction, processing, and management tools optimized for geospatial datasets.
 - **Concurrent development activities**: We are working on these efforts connected to 𝛿MG: (i) numerical PDE solvers on torch; (ii) [adjoint](https://doi.org/10.5194/hess-28-3051-2024) sensitivity; (iii) extremely efficient and highly accurate surrogate models; (iv) data assimilation; (v) downscaled and bias corrected climate data; (vi) mysteriously powerful neural networks, and more ...
 
 <br>
