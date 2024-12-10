@@ -49,11 +49,19 @@ Maintained by the [MHPI group](http://water.engr.psu.edu/shen/) advised by Dr. C
 This package powers the global- and  ([`national-scale water model`](https://doi.org/10.22541/essoar.172736277.74497104/v1)) that provide high-quality seamless hydrologic [simulations](https://mhpi.github.io/datasets/CONUS/) over US and the world. 
 It also hosts ([`global-scale photosynthesis `](https://doi.org/10.22541/au.173101418.87755465/v1)) learning and simulations
 Many other use cases are being developed concurrently.
-<br>
+
 
 ### National-scale water modeling
 
 ![Alt text](./docs/images/CONUS_dataset.jpg)
+
+
+### Global-scale photosynthesis modeling
+
+![Alt text](./docs/images/Vcmax25_learnt_global_combined_2011_2020.png)
+
+<br>
+
 
 ## The Overall Idea
 Characterized by the combination of process-based equations with neural networks (NNs), differentiable models train these components together, enabling parameter inputs for the equations to be effectively and efficiently learned at scale by the NNs. There are many possibilities for how such models are built.
