@@ -46,8 +46,8 @@ Maintained by the [MHPI group](http://water.engr.psu.edu/shen/) advised by Dr. C
 
 
 ## Use Cases
-This package powers the global- and  ([`national-scale water model`](https://doi.org/10.22541/essoar.172736277.74497104/v1)) that provide high-quality seamless hydrologic [simulations](https://mhpi.github.io/datasets/CONUS/) over US and the world. 
-It also hosts ([`global-scale photosynthesis `](https://doi.org/10.22541/au.173101418.87755465/v1)) learning and simulations
+This package powers the global- and  [national-scale water model](https://doi.org/10.22541/essoar.172736277.74497104/v1) that provide high-quality seamless hydrologic [simulations](https://mhpi.github.io/datasets/CONUS/) over US and the world. 
+It also hosts [global-scale photosynthesis](https://doi.org/10.22541/au.173101418.87755465/v1) learning and simulations.
 Many other use cases are being developed concurrently.
 
 
