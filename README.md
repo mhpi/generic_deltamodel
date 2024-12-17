@@ -46,11 +46,17 @@ Maintained by the [MHPI group](http://water.engr.psu.edu/shen/) advised by Dr. C
 
 
 ## Use Cases
+
 ### Hydrologic modeling
 This package includes the differential lumped rainfall-runoff model [𝛿HBV1.0](https://agupubs.onlinelibrary.wiley.com/doi/epdf/10.1029/2022WR032404), improved [𝛿HBV1.1p](https://essopenarchive.org/doi/full/10.22541/essoar.172304428.82707157), 𝛿PRMS, and 𝛿SAC-SMA. 
 This package powers the global- and  [national-scale water model](https://doi.org/10.22541/essoar.172736277.74497104/v1) that provide high-quality seamless hydrologic [simulations](https://mhpi.github.io/datasets/CONUS/) over US and the world. 
 It also hosts [global-scale photosynthesis](https://doi.org/10.22541/au.173101418.87755465/v1) learning and simulations.
 Many other use cases are being developed concurrently.
+
+This package powers the global- and  [national-scale water model](https://doi.org/10.22541/essoar.172736277.74497104/v1) that provide high-quality seamless hydrologic [simulations](https://mhpi.github.io/datasets/CONUS/) over US and the world. 
+It also hosts [global-scale photosynthesis](https://doi.org/10.22541/au.173101418.87755465/v1) learning and simulations.
+Many other use cases are being developed concurrently.
+
 
 #### 1. Unseen extreme event test using 𝛿HBV1.1p
 In the unseen extreme event spatial test, we used water years with a 5-year or lower return period peak flow from 1990/10/01 to 2014/09/30 for training and held out the water years with greater than a 5-year return period peak flow for testing. The spatial test was conducted using a 5-fold cross-validation approach for CAMELS dataset. This application is benchmarked against LSTM and demonstrates better extrapolation ability. More details and results can be found in [Song, Sawadekar et al., 2024](https://essopenarchive.org/doi/full/10.22541/essoar.172304428.82707157). 
