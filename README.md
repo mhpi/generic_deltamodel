@@ -10,7 +10,7 @@ scale throughout the model, so process-based equations can be trained together w
 Following as a generalization of `HydroDL`, 𝛿MG (`generic_deltaModel`) aims to expand differentiable modeling and
 learning capabilities to a wide variety of domains where prior equations can bring in benefits. 
 
-𝛿MG is not a partcularly model. Rather, it is a generic framework that support many models across various domains (some are from HydroDL2.0) in a uniform way, while integrating lots of ecosystem tools. While the packages contains some basic examples for learners' convenience, the deployment models are supposed to exit in separate repositories and couple to the 𝛿MG framework. It is generalized and formalized after years of experiences working with various differentiable models across domains.
+𝛿MG is not a partcularly model. Rather, it is a generic framework that support many models across various domains (some are from HydroDL2.0) in a uniform way, while integrating lots of ecosystem tools. Although the packages contains some basic examples for learners' convenience, the deployment models are supposed to exist in separate repositories and couple to the 𝛿MG framework. 𝛿MG is generalized and formalized after years of experiences working with various differentiable models across domains.
 Most of the differentiable modeling efforts in Shen's group will be using 𝛿MG. 𝛿MG can be configured to run through a configuration file and it should be easy and clear for new starters to learn. We even include a Graphical User Interface that allows easy job customization. The framework will closely synergize with advanced deep learning tools like foundation models and the scale advantage of PyTorch. 
 
 Maintained by the [MHPI group](http://water.engr.psu.edu/shen/) advised by Dr. Chaopeng Shen. If this work is of use to you, please cite this paper for now, but we will have more dedicated citations later: Shen et al., 2023, Differentiable modelling to unify machine learning and physical models for geosciences, Nature Reviews Earth & Environment, https://www.nature.com/articles/s43017-023-00450-9
@@ -21,7 +21,7 @@ Maintained by the [MHPI group](http://water.engr.psu.edu/shen/) advised by Dr. C
 ## Ecosystem Integration
 𝛿MG seamlessly integrates with:
 
-- **HydroDL2.0 ([`hydroDL2`](https://github.com/mhpi/hydroDL2))**: Home to MHPI's suite of physics-based hydrology models, and differentiable model augmentations (think variational data
+- **HydroDL2.0 ([`hydroDL2`](https://github.com/mhpi/hydroDL2))**: Home to MHPI's suite of process-based hydrology models, and differentiable model augmentations (think variational data
       assimilation, model coupling, and other tools designed for hydrology).
 - **HydroData ([`hydro_data_dev`](https://github.com/mhpi/hydro_data_dev))**: Data extraction, processing, and management tools optimized for geospatial datasets. (In development)
 - **Config GUI ([`GUI-Config-builder`](https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/config_builder_gui/Config+Builder+GUI.zip))([Source](https://github.com/mhpi/GUI-Config-builder))**: An intuitive, user-friendly tool designed to simplify the creation and editing of configuration files for model setup and development.
@@ -48,15 +48,10 @@ Maintained by the [MHPI group](http://water.engr.psu.edu/shen/) advised by Dr. C
 ## Use Cases
 
 ### Hydrologic modeling
-This package includes the differential lumped rainfall-runoff model [𝛿HBV1.0](https://agupubs.onlinelibrary.wiley.com/doi/epdf/10.1029/2022WR032404), improved [𝛿HBV1.1p](https://essopenarchive.org/doi/full/10.22541/essoar.172304428.82707157), 𝛿PRMS, and 𝛿SAC-SMA. 
+This package includes the lumped differentiable rainfall-runoff model [𝛿HBV1.0](https://agupubs.onlinelibrary.wiley.com/doi/epdf/10.1029/2022WR032404), improved [𝛿HBV1.1p](https://essopenarchive.org/doi/full/10.22541/essoar.172304428.82707157), 𝛿PRMS, and 𝛿SAC-SMA. 
 This package powers the global- and  [national-scale water model](https://doi.org/10.22541/essoar.172736277.74497104/v1) that provide high-quality seamless hydrologic [simulations](https://mhpi.github.io/datasets/CONUS/) over US and the world. 
-It also hosts [global-scale photosynthesis](https://doi.org/10.22541/au.173101418.87755465/v1) learning and simulations.
+It also hosts [global-scale ecosystem](https://doi.org/10.22541/au.173101418.87755465/v1) learning and simulations.
 Many other use cases are being developed concurrently.
-
-This package powers the global- and  [national-scale water model](https://doi.org/10.22541/essoar.172736277.74497104/v1) that provide high-quality seamless hydrologic [simulations](https://mhpi.github.io/datasets/CONUS/) over US and the world. 
-It also hosts [global-scale photosynthesis](https://doi.org/10.22541/au.173101418.87755465/v1) learning and simulations.
-Many other use cases are being developed concurrently.
-
 
 #### 1. Unseen extreme event test using 𝛿HBV1.1p
 In the unseen extreme event spatial test, we used water years with a 5-year or lower return period peak flow from 1990/10/01 to 2014/09/30 for training and held out the water years with greater than a 5-year return period peak flow for testing. The spatial test was conducted using a 5-fold cross-validation approach for CAMELS dataset. This application is benchmarked against LSTM and demonstrates better extrapolation ability. More details and results can be found in [Song, Sawadekar et al., 2024](https://essopenarchive.org/doi/full/10.22541/essoar.172304428.82707157). 
@@ -77,7 +72,7 @@ This is a national-scale water modeling study on approximately 180,000 river rea
 
 
 ## The Overall Idea
-Characterized by the combination of process-based equations with neural networks (NNs), differentiable models train these components together, enabling parameter inputs for the equations to be effectively and efficiently learned at scale by the NNs. There are many possibilities for how such models are built.
+Characterized by the combination of process-based equations and neural networks (NNs), differentiable models train these components together, enabling parameter inputs for the equations to be effectively and efficiently learned at scale by the NNs. Alternatively, one can also have NNs learning the residuals of the physical models. There are many possibilities for how such models are built.
 
 In 𝛿MG, we define a differentiable model with the class *DeltaModel* that can couple one or more NNs with a process-based model (itself potentially a collection of models). This class holds `nn` and a `phy_model` objects, respectively, as attributes internally and describes how they interface with each other. The *DeltaModel* object can be trained and forwarded just as any other PyTorch model (nn.Module).
 
