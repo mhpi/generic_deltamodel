@@ -37,8 +37,8 @@ class HydroDataLoader(BaseDataLoader):
     ----------
     config : dict
         Configuration dictionary.
-    test_split : bool, optional`
-        Whether to split data into training and testing sets.
+    test_split : bool, optional
+        Whether to split data into training and testing sets. Default is False.
     """
     def __init__(
         self,
