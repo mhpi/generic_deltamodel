@@ -2,7 +2,6 @@ from typing import Dict, Optional
 
 import numpy as np
 import torch
-
 from core.data import random_index
 from core.data.data_samplers.base import BaseDataSampler
 

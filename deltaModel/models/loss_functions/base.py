@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
-from numpy.typing import NDArray
-import numpy as np
 
+import numpy as np
 import torch
+from numpy.typing import NDArray
 
 
 class BaseLossFunction(torch.nn.Module, ABC):
