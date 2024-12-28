@@ -48,6 +48,18 @@ class Dates(BaseModel):
     @model_validator(mode="after")
     @classmethod
     def validate_dates(cls, dates: Any) -> Any:
+        """Validate the dates configuration.
+        
+        Parameters
+        ----------
+        dates : Any
+            The dates configuration.
+
+        Returns
+        -------
+        Any
+            The validated dates configuration
+        """
         rho = dates.rho
         if isinstance(rho, int):
             if rho > len(dates.daily_time_range):
@@ -62,6 +74,13 @@ class Dates(BaseModel):
         return dates
 
     def model_post_init(self, __context: Any) -> None:
+        """Initialize the Dates class.
+
+        Parameters
+        ----------
+        __context : Any
+            The context of the model.
+        """
         self.daily_time_range = pd.date_range(
             datetime.strptime(self.start_time, self.daily_format),
             datetime.strptime(self.end_time, self.daily_format),
@@ -78,6 +97,13 @@ class Dates(BaseModel):
         self.set_batch_time(self.daily_time_range)
 
     def set_batch_time(self, daily_time_range: pd.DatetimeIndex):
+        """Set the batch time range.
+        
+        Parameters
+        ----------
+        daily_time_range : pd.DatetimeIndex
+            The daily time range.
+        """
         self.batch_hourly_time_range = pd.date_range(
             start=daily_time_range[0],
             end=daily_time_range[-1],
@@ -107,6 +133,7 @@ class Dates(BaseModel):
         )
 
     def calculate_time_period(self) -> None:
+        """Calculate the time period."""
         if self.rho is not None:
             sample_size = len(self.daily_time_range)
             random_start = torch.randint(
@@ -118,13 +145,26 @@ class Dates(BaseModel):
             self.set_batch_time(self.batch_daily_time_range)
 
     def set_date_range(self, chunk: np.ndarray) -> None:
+        """Set the date range.
+
+        Parameters
+        ----------
+        chunk : np.ndarray
+            The chunk of the date range.
+        """
         self.batch_daily_time_range = self.daily_time_range[chunk]
         self.set_batch_time(self.batch_daily_time_range)
 
     def date_to_int(self):
-        """
+        """Convert date strings to integers.
+
         Using this temporarily to convert config date values to compatible
         representations for data reading.
+
+        Returns
+        -------
+        list
+            The list of converted date values
         """
         date_time_format = "%Y/%m/%d"
         date_int = "%Y%m%d"
