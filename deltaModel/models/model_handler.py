@@ -63,6 +63,7 @@ class ModelHandler(torch.nn.Module):
             self.weights = {}
             self.loss_func_wnn = None
             self.range_bound_loss = RangeBoundLoss(config, device=self.device)
+        self.is_ensemble = False
 
     def list_models(self) -> List[str]:
         """List of models specified in the configuration."""

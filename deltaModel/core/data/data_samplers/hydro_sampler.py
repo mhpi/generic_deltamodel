@@ -7,7 +7,10 @@ from core.data.data_samplers.base import BaseDataSampler
 
 
 class HydroDataSampler(BaseDataSampler):
-    def __init__(self, config: Dict):
+    def __init__(
+        self,
+        config: Dict
+    ):
         super().__init__()
         self.config = config
         self.device = config['device']
@@ -95,7 +98,7 @@ class HydroDataSampler(BaseDataSampler):
     #         for key, value in dataset.items()
     #     }
     #     # Adjust target for warm-up days if necessary
-    #     if 'HBV1_1p' not in self.config['dpl_model']['phy_model']['model'] or not self.config['dpl_model']['phy_model']['warm_up_states']:
+    #     if 'HBV_1_1p' not in self.config['dpl_model']['phy_model']['model'] or not self.config['dpl_model']['phy_model']['warm_up_states']:
     #         sample['target'] = sample['target'][self.warm_up:days, :basins]
     #     return sample
     
@@ -118,7 +121,7 @@ def take_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
     return dataset_sample
 
     # Keep 'warmup' days for dHBV1.1p.
-    if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
+    if ('HBV_1_1p' in config['dpl_model']['phy_model']['model']) and \
     (config['dpl_model']['phy_model']['warm_up_states']) and (config['multimodel_type'] == 'none'):
         pass
     else:

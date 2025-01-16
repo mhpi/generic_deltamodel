@@ -23,11 +23,11 @@ class BaseDataLoader(Dataset, ABC):
     """
     def __init__(
         self,
-        config: Dict[str, Any],
+        # config: Dict[str, Any],
         test_split: Optional[bool] = False,
         overwrite: Optional[bool] = False,
     ) -> None:
-        self.config = config
+        # self.config = config
         self.test_split = test_split
         self.overwrite = overwrite
 

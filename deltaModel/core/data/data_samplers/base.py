@@ -19,13 +19,16 @@ class BaseDataSampler(Dataset, ABC):
         The configuration dictionary.
     """
 
-    def __init__(self, config: Dict):
+    def __init__(
+        self,
+        # config: Dict
+    ):
         super().__init__()
-        self.config = config
+        # self.config = config
         
         # Set dtype and device from config or provide defaults
-        self.dtype = self.config.get("dtype", torch.float32)
-        self.device = self.config.get("device", torch.device("cpu"))
+        # self.dtype = self.config.get("dtype", torch.float32)
+        # self.device = self.config.get("device", torch.device("cpu"))
         
     @abstractmethod
     def load_data(self):
