@@ -39,7 +39,7 @@ class RmseLossComb(torch.nn.Module):
     """
     def __init__(
         self,
-        target: NDArray[np.float32],
+        target: torch.Tensor,
         config: Dict[str, Any],
         device: Optional[str] = 'cpu',
     ) -> None:
