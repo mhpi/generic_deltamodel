@@ -185,11 +185,11 @@ class Trainer(BaseTrainer):
         for i in tqdm.tqdm(range(len(batch_start)), desc="Testing", leave=False, dynamic_ncols=True):
             self.current_batch = i
 
+            
             dataset_sample = self.sampler.get_validation_sample(
                 self.test_dataset,
                 batch_start[i],
                 batch_end[i],
-                self.config
             )
 
             prediction = self.model(dataset_sample, eval=True)
@@ -224,7 +224,8 @@ class Trainer(BaseTrainer):
         target_name = self.config['train']['target'][0]
 
         pred = torch.cat([x[target_name] for x in batch_predictions], dim=1).numpy()
-        target = np.expand_dims(observations[:, :, 0], 2)
+        target = np.expand_dims(observations[:, :, 0].cpu().numpy(), 2)
+
 
         # Remove warm-up data
         if self.config['dpl_model']['phy_model']['warm_up_states']:
@@ -237,7 +238,7 @@ class Trainer(BaseTrainer):
         )
 
         # Save all metrics and aggregated statistics.
-        metrics.dump_metrics(self.config['testing_path'])
+        metrics.dump_metrics(self.config['out_path'])
 
     def _log_epoch_stats(
         self,

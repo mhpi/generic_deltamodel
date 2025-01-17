@@ -116,10 +116,10 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
     if config['multimodel_type'] in ['none', 'None', '']:
         config['multimodel_type'] = None
 
-    # Create output directories.
+    # Create output directories and add path to config.
     out_path = PathBuilder(config)
     config = out_path.write_path(config)
-    
+
     # Convert string back to data type.
     config['dtype'] = eval(config['dtype'])
 
@@ -134,12 +134,15 @@ def save_model(config, model, model_name, epoch, create_dirs=False) -> None:
 
     save_name = f"d{str(model_name)}_model_Ep{str(epoch)}.pt"
 
-    full_path = os.path.join(config['out_path'], save_name)
+    full_path = os.path.join(config['model_path'], save_name)
     torch.save(model.state_dict(), full_path)
 
 
 def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
     """Save outputs from a model."""
+    if torch.is_tensor(y_obs):
+        y_obs = y_obs.cpu().numpy()
+        
     if create_dirs:
         out_path = PathBuilder(config)
         out_path.write_path(config)
@@ -153,13 +156,13 @@ def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
         concatenated_tensor = torch.cat([d[key] for d in preds_list], dim=dim)
         file_name = key + ".npy"        
 
-        np.save(os.path.join(config['testing_path'], file_name), concatenated_tensor.numpy())
+        np.save(os.path.join(config['out_path'], file_name), concatenated_tensor.numpy())
 
     # Reading flow observation
     for var in config['train']['target']:
         item_obs = y_obs[:, :, config['train']['target'].index(var)]
         file_name = var + '_obs.npy'
-        np.save(os.path.join(config['testing_path'], file_name), item_obs)
+        np.save(os.path.join(config['out_path'], file_name), item_obs)
 
 
 def print_config(config: Dict[str, Any]) -> None:

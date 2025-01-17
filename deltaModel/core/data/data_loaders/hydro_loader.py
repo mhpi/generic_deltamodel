@@ -68,7 +68,7 @@ class HydroDataLoader(BaseDataLoader):
         self.dataset = None
         self.norm_stats = None
         self.out_path = os.path.join(
-            config['out_path'],
+            config['model_path'],
             'normalization_statistics.json',
         )
 

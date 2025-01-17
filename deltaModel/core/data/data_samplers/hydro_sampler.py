@@ -76,14 +76,17 @@ class HydroDataSampler(BaseDataSampler):
             'batch_sample': i_sample,
         }
 
-    def get_validation_sample(self, dataset: Dict[str, torch.Tensor], i_s: int, i_e: int) -> Dict[str, torch.Tensor]:
+    def get_validation_sample(
+        self,
+        dataset: Dict[str, torch.Tensor],
+        i_s: int,
+        i_e: int
+    ) -> Dict[str, torch.Tensor]:
         """Generate a validation batch."""
         return {
-            key: torch.tensor(
-                value[self.warm_up:, i_s:i_e, :] if value.ndim == 3 else value[i_s:i_e, :],
-                dtype=torch.float32,
-                device=self.device
-            )
+            key: (
+                value[:, i_s:i_e, :] if value.ndim == 3 else value[i_s:i_e, :]
+            ).to(dtype=torch.float32, device=self.device)
             for key, value in dataset.items()
         }
 

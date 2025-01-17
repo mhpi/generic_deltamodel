@@ -42,7 +42,7 @@ class ModelHandler(torch.nn.Module):
         super().__init__()
         self.config = config
         self.name = 'Differentiable Model Handler'
-        self.save_path = config['out_path']
+        self.model_path = config['model_path']
         self.verbose = verbose
 
         if device is None:
@@ -126,7 +126,7 @@ class ModelHandler(torch.nn.Module):
                 continue 
             else:
                 # Initialize model from checkpoint state dict.
-                path = os.path.join(self.save_path, f"{name}_model_Ep{epoch}.pt")
+                path = os.path.join(self.model_path, f"d{name}_model_Ep{epoch}.pt")
                 if not os.path.exists(path):
                     raise FileNotFoundError(
                         f"{path} not found for model {name}."
