@@ -226,9 +226,8 @@ class Trainer(BaseTrainer):
         pred = torch.cat([x[target_name] for x in batch_predictions], dim=1).numpy()
         target = np.expand_dims(observations[:, :, 0].cpu().numpy(), 2)
 
-
         # Remove warm-up data
-        if self.config['dpl_model']['phy_model']['warm_up_states']:
+        if not self.config['dpl_model']['phy_model']['warm_up_states']:
             target = target[self.config['dpl_model']['phy_model']['warm_up']:, :]
 
         # Compute metrics

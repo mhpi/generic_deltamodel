@@ -120,14 +120,12 @@ def take_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
             dataset_sample[key] = torch.tensor(value[:basins, :]).float().to(config['device'])
         else:
             raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
-    
     return dataset_sample
 
-    # Keep 'warmup' days for dHBV1.1p.
-    if ('HBV_1_1p' in config['dpl_model']['phy_model']['model']) and \
-    (config['dpl_model']['phy_model']['warm_up_states']) and (config['multimodel_type'] == 'none'):
-        pass
-    else:
-        dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:days, :basins]
-    return dataset_sample
-
+    # # Keep 'warmup' days for dHBV1.1p.
+    # if ('HBV_1_1p' in config['dpl_model']['phy_model']['model']) and \
+    # (config['dpl_model']['phy_model']['warm_up_states']) and (config['multimodel_type'] == 'none'):
+    #     pass
+    # else:
+    #     dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:days, :basins]
+    # return dataset_sample
