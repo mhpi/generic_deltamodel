@@ -2,8 +2,8 @@ import hashlib
 import json
 import os
 from typing import Any, Dict
-import torch
 
+import torch
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -285,6 +285,10 @@ class PathBuilder(BaseModel):
         if norm_list:
             vars = '_'.join(norm_list)
             norm = f"Ln_{vars}"
+        
+        warmup = 'noWU'
+        if config['dpl_model']['phy_model']['warm_up_states']:
+            warmup = 'WU'
 
         return (
             f"{config['dpl_model']['nn_model']['model']}_"
@@ -294,5 +298,6 @@ class PathBuilder(BaseModel):
             f"H{config['dpl_model']['nn_model']['hidden_size']}_"
             f"n{config['dpl_model']['phy_model']['nmul']}_"
             f"{norm}_"
+            f"{warmup}_"
             f"{config['random_seed']}"
         )

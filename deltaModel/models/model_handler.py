@@ -32,6 +32,9 @@ class ModelHandler(torch.nn.Module):
         Device to run the model on. Default is None.
     verbose : bool, optional
         Whether to print verbose output. Default is False.
+
+    TODO
+    - Add support for wNN lr scheduler.
     """
     def __init__(
         self,
@@ -346,7 +349,7 @@ class ModelHandler(torch.nn.Module):
         return loss_combined
 
     def save_model(self, epoch: int) -> None:
-        """Save state dictionary of trained models to disk.
+        """Save model state dicts.
         
         Parameters
         ----------
@@ -355,10 +358,8 @@ class ModelHandler(torch.nn.Module):
         """
         for name, model in self.model_dict.items():
             save_model(self.config, model, name, epoch)
-            if self.verbose:
-                log.info(f"Saved model: {name}, Ep {epoch}")
-        
         if self.is_ensemble:
             save_model(self.config, self.ensemble_generator, 'wNN', epoch)
-            if self.verbose:
-                log.info(f"Saved ensemble generator, Ep {epoch}")
+
+        if self.verbose:
+            log.info(f"All states successfully saved for Ep {epoch}")

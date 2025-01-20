@@ -126,16 +126,92 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
     return config
 
 
-def save_model(config, model, model_name, epoch, create_dirs=False) -> None:
-    """Save model state dict."""
+def save_model(
+    config: Dict[str, Any],
+    model: torch.nn.Module,
+    model_name: str,
+    epoch: int,
+    create_dirs: Optional[bool] = False,
+) -> None:
+    """Save model state dict.
+    
+    Parameters
+    ----------
+    config : dict
+        Configuration settings.
+    model : torch.nn.Module
+        Model to save.
+    model_name : str
+        Name of the model.
+    epoch : int
+        Last completed epoch of training.
+    create_dirs : bool, optional
+        Create directories for saving files. Default is False.
+    """
     if create_dirs:
         out_path = PathBuilder(config)
         out_path.write_path(config)
 
-    save_name = f"d{str(model_name)}_model_Ep{str(epoch)}.pt"
+    save_name = f"d{str(model_name)}_Ep{str(epoch)}.pt"
 
     full_path = os.path.join(config['model_path'], save_name)
     torch.save(model.state_dict(), full_path)
+
+
+def save_train_state(
+    config: Dict[str, Any],
+    epoch: int, 
+    optimizer:torch.nn.Module,
+    scheduler: Optional[torch.nn.Module] = None,
+    create_dirs: Optional[bool] = False,
+    clear_prior: Optional[bool] = False,
+) -> None:
+    """Save dict of all experiment states for training.
+    
+    Parameters
+    ----------
+    config : dict
+        Configuration settings.
+    epoch : int
+        Last completed epoch of training.
+    optimizer : torch.nn.Module
+        Optimizer state dict.
+    scheduler : torch.nn.Module
+        Learning rate scheduler state dict.
+    create_dirs : bool, optional
+        Create directories for saving files. Default is False.
+    clear_prior : bool, optional
+        Clear previous saved states. Default is False.
+    """
+    root = 'train_state'
+
+    if create_dirs:
+        out_path = PathBuilder(config)
+        out_path.write_path(config)
+
+    if clear_prior:
+        for file in os.listdir(config['model_path']):
+            if root in file:
+                os.remove(os.path.join(config['model_path'], file))
+
+    file_name = f'{root}_Ep{str(epoch)}.pt'
+    full_path = os.path.join(config['model_path'], file_name)
+
+    scheduler_state = None
+    cuda_state = None
+
+    if scheduler:
+        scheduler_state = scheduler.state_dict()
+    if torch.cuda.is_available():
+        cuda_state = torch.cuda.get_rng_state()
+
+    torch.save({
+        'epoch': epoch,
+        'optimizer_state_dict': optimizer.state_dict(),
+        'scheduler_state_dict': scheduler_state,
+        'random_state': torch.get_rng_state(),
+        'cuda_state': cuda_state,
+    }, full_path)
 
 
 def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
@@ -163,6 +239,7 @@ def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
         item_obs = y_obs[:, :, config['train']['target'].index(var)]
         file_name = var + '_obs.npy'
         np.save(os.path.join(config['out_path'], file_name), item_obs)
+
 
 
 def print_config(config: Dict[str, Any]) -> None:

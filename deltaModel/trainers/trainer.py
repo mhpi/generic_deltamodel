@@ -1,6 +1,5 @@
 import logging
 import time
-from json import load
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -8,7 +7,7 @@ import torch
 import tqdm
 from core.calc.metrics import Metrics
 from core.data import create_training_grid
-from core.utils import save_outputs
+from core.utils import save_outputs, save_train_state
 from core.utils.module_loaders import load_data_sampler
 from models.loss_functions import get_loss_func
 from models.model_handler import ModelHandler
@@ -31,10 +30,11 @@ class Trainer(BaseTrainer):
         Configuration settings for the model and experiment.
     model : Module, optional
         dPL (differentiable parameter learning) model object.
-    dataset : dict, optional
-        Dataset dictionary containing forcings and attributes
     verbose : bool, optional
         Whether to print verbose output. The default is False.
+
+    TODO
+    - cleanup docstrings and comments
     """
     def __init__(
         self,
@@ -42,24 +42,25 @@ class Trainer(BaseTrainer):
         model: torch.nn.Module = None,
         train_dataset: Optional[dict] = None,
         eval_dataset: Optional[dict] = None,
-        dataset: Optional[dict] = None,
         loss_func: Optional[torch.nn.Module] = None,
         optimizer: Optional[torch.nn.Module] = None,
+        scheduler: Optional[torch.nn.Module] = None,
         verbose: Optional[bool] = False,
     ) -> None:
         self.config = config
         self.model = model or ModelHandler(config)
         self.train_dataset = train_dataset
-        self.test_dataset = eval_dataset
-        self.dataset = dataset
+        self.eval_dataset = eval_dataset
+        self.optimizer = optimizer
+        self.scheduler = scheduler
         self.verbose = verbose
         self.sampler = load_data_sampler(config['data_sampler'])(config)
         self.is_in_train = False
 
         if 'train' in config['mode']:
-            log.info(f"Initializing loss function and optimizer")
+            log.info(f"Initializing training mode")
 
-            # Loss function initialization
+            # Loss function
             self.loss_func = loss_func or get_loss_func(
                 self.train_dataset['target'],
                 config['loss_function'],
@@ -67,13 +68,20 @@ class Trainer(BaseTrainer):
             )
             self.model.loss_func = self.loss_func
 
-            # Optimizer initialization
-            self.optimizer = optimizer or self.create_optimizer()
+            # Optimizer and learning rate scheduler
+            self.optimizer = optimizer or self.init_optimizer()
 
+            if config['dpl_model']['nn_model']['use_scheduler']:
+                self.use_scheduler = True
+                self.scheduler = self.init_scheduler()
+            else:
+                self.use_scheduler = False
+
+            ## TODO: load saved epoch from file here
             # Resume model training from a saved epoch
             self.start_epoch = self.config['train']['start_epoch'] + 1
 
-    def create_optimizer(self) -> torch.optim.Optimizer:
+    def init_optimizer(self) -> torch.optim.Optimizer:
         """Initialize the optimizer as named in config.
         
         Adding additional optimizers is possible by extending the optimizer_dict.
@@ -114,6 +122,16 @@ class Trainer(BaseTrainer):
             raise ValueError(f"Error initializing optimizer: {e}")
 
         return self.optimizer
+    
+    def init_scheduler(self) -> None:
+        ## TODO: Implement learning rate scheduler
+        """
+        requires the optimizer
+
+        e.g., optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+        scheduler = ExponentialLR(optimizer, gamma=0.9)
+        """
+        return NotImplementedError
                     
     def train(self) -> None:
         """Entry point for training loop."""
@@ -159,13 +177,20 @@ class Trainer(BaseTrainer):
                 if self.verbose:
                     log.info(f"Epoch {epoch} minibatch {i} loss: {loss.item()}")
 
+            if self.use_scheduler: self.scheduler.step()
+
             self._log_epoch_stats(epoch, self.model.loss_dict, n_minibatch, start_time)
 
+            # Save model and trainer states.
             if epoch % self.config['train']['save_epoch'] == 0:
                 self.model.save_model(epoch)
-
+                save_train_state(
+                    self.config,
+                    epoch=epoch,
+                    optimizer=self.optimizer,
+                    scheduler=self.scheduler,
+                )
         log.info(f"Training complete.")
-
 
     def test(self) -> None:
         """Run testing loop and save results."""
@@ -173,10 +198,10 @@ class Trainer(BaseTrainer):
 
         # Track overall predictions and observations
         batch_predictions = []
-        observations = self.test_dataset['target']
+        observations = self.eval_dataset['target']
 
         # Get start and end indices for each batch.
-        n_samples = self.test_dataset['xc_nn_norm'].shape[1]
+        n_samples = self.eval_dataset['xc_nn_norm'].shape[1]
         batch_start = np.arange(0, n_samples, self.config['test']['batch_size'])
         batch_end = np.append(batch_start[1:], n_samples)
 
@@ -187,7 +212,7 @@ class Trainer(BaseTrainer):
 
             
             dataset_sample = self.sampler.get_validation_sample(
-                self.test_dataset,
+                self.eval_dataset,
                 batch_start[i],
                 batch_end[i],
             )
