@@ -10,8 +10,9 @@ from omegaconf import DictConfig, OmegaConf
 from pydantic import ValidationError
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from core.utils.path_builder import PathBuilder
 from dates import Dates
+
+from core.utils.path_builder import PathBuilder
 
 log = logging.getLogger(__name__)
 

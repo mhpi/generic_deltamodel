@@ -4,10 +4,11 @@ import time
 
 import hydra
 import torch
+from omegaconf import DictConfig
+
 from core.utils import initialize_config, print_config, set_randomseed
 from core.utils.module_loaders import load_data_loader, load_trainer
 from models.model_handler import ModelHandler as dModel
-from omegaconf import DictConfig
 from trainers.trainer import Trainer
 
 log = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ def main(config: DictConfig) -> None:
         data_loader = load_data_loader(config['data_loader'])
         data_loader = data_loader(config, test_split=True, overwrite=False)
 
-        ### Create Trainer object ###
+        ### Create trainer object ###
         trainer = load_trainer(config['trainer'])
         trainer = trainer(
             config,
@@ -51,10 +52,12 @@ def main(config: DictConfig) -> None:
         if mode == 'train':
             trainer.train()
         elif mode == 'test':
-            trainer.test()
+            trainer.evaluate()
         elif mode == 'train_test':
             trainer.train()
-            trainer.test()
+            trainer.evaluate()
+        elif mode == 'predict':
+            trainer.predict()
         else:
             raise ValueError(f"Invalid mode: {mode}")
         
