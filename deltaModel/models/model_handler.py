@@ -130,7 +130,7 @@ class ModelHandler(torch.nn.Module):
                 continue 
             else:
                 # Initialize model from checkpoint state dict.
-                path = os.path.join(self.model_path, f"d{name}_model_Ep{epoch}.pt")
+                path = os.path.join(self.model_path, f"d{name}_Ep{epoch}.pt")
                 if not os.path.exists(path):
                     raise FileNotFoundError(
                         f"{path} not found for model {name}."

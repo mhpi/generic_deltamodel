@@ -67,7 +67,7 @@ class BaseTrainer(ABC):
         raise NotImplementedError("Derived classes must implement the `train` method.")
 
     @abstractmethod
-    def test(self) -> None:
+    def evaluate(self) -> None:
         """Run testing loop and save results."""
         raise NotImplementedError("Derived classes must implement the `test` method.")
 

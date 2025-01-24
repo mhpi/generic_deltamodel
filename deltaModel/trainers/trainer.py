@@ -96,7 +96,7 @@ class Trainer(BaseTrainer):
 
             # Resume model training by loading prior states.
             self.start_epoch = self.config['train']['start_epoch'] + 1
-            if self.start_epoch > 0:
+            if self.start_epoch > 1:
                 log.info(f"Loading trainer states to begin epoch {self.start_epoch}") 
                 self.load_states()
 
@@ -168,12 +168,12 @@ class Trainer(BaseTrainer):
         for file in os.listdir(path):
             if 'train_state' and str(self.start_epoch-1) in file:
                 checkpoint = torch.load(os.path.join(path, file))
+                self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                if self.scheduler:
+                    self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
                 continue
         
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        
-        if self.scheduler:
-            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        raise FileNotFoundError(f"No checkpoint for epoch {self.start_epoch-1}.")
 
         # Restore random states
         torch.set_rng_state(checkpoint['random_state'])
@@ -236,6 +236,7 @@ class Trainer(BaseTrainer):
                     epoch=epoch,
                     optimizer=self.optimizer,
                     scheduler=self.scheduler,
+                    clear_prior=True,
                 )
         log.info(f"Training complete.")
 
@@ -342,7 +343,7 @@ class Trainer(BaseTrainer):
         target = np.expand_dims(observations[:, :, 0].cpu().numpy(), 2)
 
         # Remove warm-up data
-        if not self.config['dpl_model']['phy_model']['warm_up_states']:
+        if self.config['dpl_model']['phy_model']['warm_up_states']:
             target = target[self.config['dpl_model']['phy_model']['warm_up']:, :]
 
         # Compute metrics
