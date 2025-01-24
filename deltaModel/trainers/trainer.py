@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import torch
 import tqdm
-
 from core.calc.metrics import Metrics
 from core.data import create_training_grid
 from core.utils import save_outputs, save_train_state

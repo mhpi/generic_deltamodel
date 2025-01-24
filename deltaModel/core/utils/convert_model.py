@@ -1,7 +1,6 @@
 from typing import Any, Dict
 
 import torch
-
 from models.model_handler import ModelHandler as dModel
 
 

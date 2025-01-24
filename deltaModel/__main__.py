@@ -4,11 +4,10 @@ import time
 
 import hydra
 import torch
-from omegaconf import DictConfig
-
 from core.utils import initialize_config, print_config, set_randomseed
 from core.utils.module_loaders import load_data_loader, load_trainer
 from models.model_handler import ModelHandler as dModel
+from omegaconf import DictConfig
 from trainers.trainer import Trainer
 
 log = logging.getLogger(__name__)
