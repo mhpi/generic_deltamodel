@@ -11,6 +11,7 @@ from omegaconf import DictConfig
 from trainers.trainer import Trainer
 
 log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
 
 
 @hydra.main(

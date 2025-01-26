@@ -9,7 +9,6 @@ from models.loss_functions.range_bound_loss import RangeBoundLoss
 from models.multimodel.ensemble_generator import EnsembleGenerator
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)
 
 
 class ModelHandler(torch.nn.Module):
