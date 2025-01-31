@@ -68,6 +68,10 @@ dpl_model:
         dropout: 0.5
         hidden_size: 256
         learning_rate: 1.0
+        lr_scheduler: None
+        lr_scheduler_params:
+            step_size: 10
+            gamma: 0.5
         
         forcings: [
             x1_var,
