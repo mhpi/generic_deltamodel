@@ -1,0 +1,46 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling", "hatch-vcs"]
+
+[project]
+name = "generic-deltamodel"
+version = "0.1.0"
+description = "Differentiable modeling framework"
+readme = "README.md"
+requires-python = ">=3.9.0"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Leo Lonzarich"},
+    {name = "Tadd Bindas"},
+    {name = "Farshid Rahmani"},
+]
+maintainers = [
+    {name = "Leo Lonzarich", email = "lglonzaric@gmail.com"},
+    {name = "Tadd Bindas", email = "taddbindas@gmail.com"},
+    {name = "Yalan Song", email = "songyalan1@gmail.com"},
+    {name = "Doaa Aboelyazeed", email = "doaa.barawy@gmail.com"},
+    {name = "Chaopeng Shen", email = "shen.chaopeng@gmail.com"}, 
+]
+dependencies = [
+    "torch",
+    "numpy",
+]
+dynamic = ["version"]  # Add this line to indicate dynamic versioning
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu121", marker = "platform_system != 'Darwin'"},
+]
+torchvision = [
+    { index = "pytorch-cu121", marker = "platform_system != 'Darwin'"},
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true

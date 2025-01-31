@@ -30,8 +30,8 @@ class RangeBoundLoss(torch.nn.Module):
     """
     def __init__(
         self,
+        target: torch.Tensor,
         config: Dict[str, Any],
-        target: NDArray[np.float32] = None,
         device: Optional[str] = 'cpu',
     ) -> None:
         super().__init__()

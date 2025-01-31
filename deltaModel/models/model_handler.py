@@ -3,14 +3,12 @@ import os
 from typing import Any, Dict, List, Optional
 
 import torch.nn
-
 from core.utils import save_model
 from models.differentiable_model import DeltaModel
 from models.loss_functions.range_bound_loss import RangeBoundLoss
 from models.multimodel.ensemble_generator import EnsembleGenerator
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)
 
 
 class ModelHandler(torch.nn.Module):
@@ -33,6 +31,9 @@ class ModelHandler(torch.nn.Module):
         Device to run the model on. Default is None.
     verbose : bool, optional
         Whether to print verbose output. Default is False.
+
+    TODO
+    - Add support for wNN lr scheduler.
     """
     def __init__(
         self,
@@ -43,7 +44,7 @@ class ModelHandler(torch.nn.Module):
         super().__init__()
         self.config = config
         self.name = 'Differentiable Model Handler'
-        self.save_path = config['out_path']
+        self.model_path = config['model_path']
         self.verbose = verbose
 
         if device is None:
@@ -64,6 +65,7 @@ class ModelHandler(torch.nn.Module):
             self.weights = {}
             self.loss_func_wnn = None
             self.range_bound_loss = RangeBoundLoss(config, device=self.device)
+        self.is_ensemble = False
 
     def list_models(self) -> List[str]:
         """List of models specified in the configuration."""
@@ -126,7 +128,7 @@ class ModelHandler(torch.nn.Module):
                 continue 
             else:
                 # Initialize model from checkpoint state dict.
-                path = os.path.join(self.save_path, f"{name}_model_Ep{epoch}.pt")
+                path = os.path.join(self.model_path, f"d{name}_Ep{epoch}.pt")
                 if not os.path.exists(path):
                     raise FileNotFoundError(
                         f"{path} not found for model {name}."
@@ -346,7 +348,7 @@ class ModelHandler(torch.nn.Module):
         return loss_combined
 
     def save_model(self, epoch: int) -> None:
-        """Save state dictionary of trained models to disk.
+        """Save model state dicts.
         
         Parameters
         ----------
@@ -355,10 +357,8 @@ class ModelHandler(torch.nn.Module):
         """
         for name, model in self.model_dict.items():
             save_model(self.config, model, name, epoch)
-            if self.verbose:
-                log.info(f"Saved model: {name}, Ep {epoch}")
-        
         if self.is_ensemble:
             save_model(self.config, self.ensemble_generator, 'wNN', epoch)
-            if self.verbose:
-                log.info(f"Saved ensemble generator, Ep {epoch}")
+
+        if self.verbose:
+            log.info(f"All states successfully saved for Ep {epoch}")

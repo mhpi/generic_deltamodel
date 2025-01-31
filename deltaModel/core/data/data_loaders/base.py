@@ -7,6 +7,30 @@ from torch.utils.data import Dataset
 
 
 class BaseDataLoader(Dataset, ABC):
+    """Base class for data loaders extended from PyTorch Dataset.
+
+    All data loaders should enherit from this class to enforce minimum
+    requirements for use within dMG.
+
+    Parameters
+    ----------
+    config : dict
+        The configuration dictionary.
+    test_split : bool, optional
+        Whether to split data into training and testing sets. Default is False.
+    overwrite : bool, optional
+        Whether to overwrite existing data. Default is False.
+    """
+    def __init__(
+        self,
+        # config: Dict[str, Any],
+        test_split: Optional[bool] = False,
+        overwrite: Optional[bool] = False,
+    ) -> None:
+        # self.config = config
+        self.test_split = test_split
+        self.overwrite = overwrite
+
     @abstractmethod
     def load_dataset(self) -> None:
         """Load dataset into dictionary of input arrays."""    

@@ -34,7 +34,7 @@ def load_model(model: str, ver_name: str = None) -> Module:
     Module
         The uninstantiated model.
     """
-    if model in ['HBV', 'HBV1_1p', 'PRMS']:
+    if model in ['HBV', 'HBV_1_1p', 'PRMS', 'SACSMA_with_snow']:
         return load_hydro_model(model, ver_name)
     
     # Path to the models directory

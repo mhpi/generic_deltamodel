@@ -1,7 +1,6 @@
 from typing import Any, Dict
 
 import torch
-
 from models.model_handler import ModelHandler as dModel
 
 
@@ -63,7 +62,7 @@ def convert_and_load_model_state(
 
     # Save the new state dict and model
     torch.save(new_state_dict, f"{save_path}HBV_waterLoss_states_Ep50.pt")
-    torch.save(model, f"{save_path}HBV_waterLoss_model_Ep50.pt")
+    torch.save(model, f"{save_path}HBV_waterLoss_Ep50.pt")
 
 
 if __name__ == '__main__':

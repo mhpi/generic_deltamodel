@@ -48,13 +48,13 @@ dpl_model:
     rho: 365
     
     phy_model:
-        model: [HBV1_1p]
+        model: [HBV_1_1p]
         nmul: 16
         warm_up: 365
         warm_up_states: False
         dy_drop: 0.0
         dynamic_params:
-            HBV1_1p: [parBETA, parBETAET, parK0]
+            HBV_1_1p: [parBETA, parBETAET, parK0]
 
         routing: True
         use_log_norm: []

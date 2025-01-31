@@ -2,13 +2,15 @@ from typing import Dict, Optional
 
 import numpy as np
 import torch
-
 from core.data import random_index
 from core.data.data_samplers.base import BaseDataSampler
 
 
 class HydroDataSampler(BaseDataSampler):
-    def __init__(self, config: Dict):
+    def __init__(
+        self,
+        config: Dict
+    ):
         super().__init__()
         self.config = config
         self.device = config['device']
@@ -74,14 +76,17 @@ class HydroDataSampler(BaseDataSampler):
             'batch_sample': i_sample,
         }
 
-    def get_validation_sample(self, dataset: Dict[str, torch.Tensor], i_s: int, i_e: int) -> Dict[str, torch.Tensor]:
+    def get_validation_sample(
+        self,
+        dataset: Dict[str, torch.Tensor],
+        i_s: int,
+        i_e: int
+    ) -> Dict[str, torch.Tensor]:
         """Generate a validation batch."""
         return {
-            key: torch.tensor(
-                value[self.warm_up:, i_s:i_e, :] if value.ndim == 3 else value[i_s:i_e, :],
-                dtype=torch.float32,
-                device=self.device
-            )
+            key: (
+                value[:, i_s:i_e, :] if value.ndim == 3 else value[i_s:i_e, :]
+            ).to(dtype=torch.float32, device=self.device)
             for key, value in dataset.items()
         }
 
@@ -96,7 +101,7 @@ class HydroDataSampler(BaseDataSampler):
     #         for key, value in dataset.items()
     #     }
     #     # Adjust target for warm-up days if necessary
-    #     if 'HBV1_1p' not in self.config['dpl_model']['phy_model']['model'] or not self.config['dpl_model']['phy_model']['warm_up_states']:
+    #     if 'HBV_1_1p' not in self.config['dpl_model']['phy_model']['model'] or not self.config['dpl_model']['phy_model']['warm_up_states']:
     #         sample['target'] = sample['target'][self.warm_up:days, :basins]
     #     return sample
     
@@ -115,14 +120,12 @@ def take_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
             dataset_sample[key] = torch.tensor(value[:basins, :]).float().to(config['device'])
         else:
             raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
-    
     return dataset_sample
 
-    # Keep 'warmup' days for dHBV1.1p.
-    if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
-    (config['dpl_model']['phy_model']['warm_up_states']) and (config['multimodel_type'] == 'none'):
-        pass
-    else:
-        dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:days, :basins]
-    return dataset_sample
-
+    # # Keep 'warmup' days for dHBV1.1p.
+    # if ('HBV_1_1p' in config['dpl_model']['phy_model']['model']) and \
+    # (config['dpl_model']['phy_model']['warm_up_states']) and (config['multimodel_type'] == 'none'):
+    #     pass
+    # else:
+    #     dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:days, :basins]
+    # return dataset_sample

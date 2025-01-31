@@ -3,6 +3,7 @@ import json
 import os
 from typing import Any, Dict
 
+import torch
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -69,8 +70,8 @@ class PathBuilder(BaseModel):
                 raise ValueError(f"Missing required configuration key: {key}")
         return value
     
-    def build_path(self) -> str:
-        """Build path explicitly from individual root paths."""
+    def build_path_model(self) -> str:
+        """Build path to model object from individual root paths."""
         return os.path.join(
             self.base_path,
             self.dataset_name,
@@ -83,15 +84,15 @@ class PathBuilder(BaseModel):
             self.dynamic_parameters,
         )
 
-    def build_path_test(self) -> Dict[str, Any]:
-        """Build model testing path from individual root paths."""
+    def build_path_out(self) -> Dict[str, Any]:
+        """Build path to model outputs from individual root paths."""
         return os.path.join(
-            self.build_path(),
+            self.build_path_model(),
             self.test_period,
         )
 
     def write_path (self, config: Dict[str, Any]) -> dict:
-        """Creates directory where model and outputs will be saved.
+        """Create directory where model and outputs will be saved.
 
         Creates all root directories to support the target directory.
         
@@ -103,23 +104,45 @@ class PathBuilder(BaseModel):
         # Check base path
         self.validate_base_path(config['save_path'])
 
-        # Build path
-        path = self.build_path()
-        test_path = self.build_path_test()
+        # Build paths
+        model_path = self.build_path_model()
+        out_path = self.build_path_out()
         
         # Create dirs
-        os.makedirs(path, exist_ok=True)
-        os.makedirs(test_path, exist_ok=True)
+        if config['mode'] != 'test':
+            os.makedirs(model_path, exist_ok=True)
+            os.makedirs(out_path, exist_ok=True)
+        elif os.path.exists(model_path) and not os.path.exists(out_path):
+            os.makedirs(out_path, exist_ok=True)
+        else:
+            raise ValueError(f"No model to validate at path {model_path}")
 
         # Append the output paths to the config.
-        config['out_path'] = path
-        config['validation_path'] = test_path
+        config['model_path'] = model_path
+        config['out_path'] = out_path
         
         # Save config
-        self.save_config(path, config)
+        serializable_config = self.make_json_serializable(config)
+        self.save_config(model_path, serializable_config)
         
         return config
 
+    def make_json_serializable(self, obj: Any) -> Any:
+        """
+        Recursively converts objects in a dictionary to JSON-serializable
+        formats.
+        """
+        if isinstance(obj, dict):
+            return {k: self.make_json_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self.make_json_serializable(v) for v in obj]
+        elif isinstance(obj, torch.dtype):  # Handle torch.dtype specifically
+            return str(obj)  # Convert dtype to a string
+        elif hasattr(obj, '__dict__'):  # Handle objects with attributes
+            return self.make_json_serializable(vars(obj))
+        else:
+            return obj  # Return as is for natively serializable types
+        
     @staticmethod
     def save_config(path: str, config: Dict[str, Any]) -> None:
         """Save the configuration metadata to the output directory.
@@ -267,6 +290,10 @@ class PathBuilder(BaseModel):
         if norm_list:
             vars = '_'.join(norm_list)
             norm = f"Ln_{vars}"
+        
+        warmup = 'noWU'
+        if config['dpl_model']['phy_model']['warm_up_states']:
+            warmup = 'WU'
 
         return (
             f"{config['dpl_model']['nn_model']['model']}_"
@@ -276,5 +303,6 @@ class PathBuilder(BaseModel):
             f"H{config['dpl_model']['nn_model']['hidden_size']}_"
             f"n{config['dpl_model']['phy_model']['nmul']}_"
             f"{norm}_"
+            f"{warmup}_"
             f"{config['random_seed']}"
         )

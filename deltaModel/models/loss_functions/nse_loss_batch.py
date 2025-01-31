@@ -34,14 +34,14 @@ class NseLossBatch(torch.nn.Module):
     """
     def __init__(
         self,
-        target: NDArray[np.float32],
+        target: torch.Tensor,
         config: Dict[str, Any],
         device: Optional[str] = 'cpu',
     ) -> None:
         super().__init__()
         self.config = config
         self.device = device
-        self.std = np.nanstd(target[:, :, 0], axis=0)
+        self.std = np.nanstd(target[:, :, 0].cpu().detach().numpy(), axis=0)
         
         # Stability term
         self.eps = config.get('eps', 0.1)
@@ -70,7 +70,7 @@ class NseLossBatch(torch.nn.Module):
         """
         prediction = y_pred.squeeze()
         target = y_obs[:, :, 0]
-        n_samples = n_samples.cpu().detach().numpy().astype(int)
+        n_samples = n_samples.astype(int)
 
         if len(target) > 0:
             # Prepare grid-based standard deviations for normalization.

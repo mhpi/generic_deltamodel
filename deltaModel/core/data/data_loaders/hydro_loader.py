@@ -8,10 +8,9 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from sklearn.exceptions import DataDimensionalityWarning
-
 from core.data import intersect
 from core.data.data_loaders.base import BaseDataLoader
+from sklearn.exceptions import DataDimensionalityWarning
 
 log = logging.getLogger(__name__)
 
@@ -37,8 +36,8 @@ class HydroDataLoader(BaseDataLoader):
     ----------
     config : dict
         Configuration dictionary.
-    test_split : bool, optional`
-        Whether to split data into training and testing sets.
+    test_split : bool, optional
+        Whether to split data into training and testing sets. Default is False.
     """
     def __init__(
         self,
@@ -69,7 +68,7 @@ class HydroDataLoader(BaseDataLoader):
         self.dataset = None
         self.norm_stats = None
         self.out_path = os.path.join(
-            config['out_path'],
+            config['model_path'],
             'normalization_statistics.json',
         )
 

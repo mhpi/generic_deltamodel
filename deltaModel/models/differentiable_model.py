@@ -1,7 +1,6 @@
 from typing import Any, Dict, Optional
 
 import torch.nn
-
 from core.utils.module_loaders import load_model
 from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
@@ -16,7 +15,7 @@ class DeltaModel(torch.nn.Module):
         - pNN: LSTM or MLP
             Learns parameters for the physics model.
 
-        - phy_model: e.g., HBV, HBV1_1p, PRMS
+        - phy_model: e.g., HBV, HBV_1_1p, PRMS
             Injests pNN-generated parameters and produces some target output.
             The target output is compared to some observation to calculate loss
             to train the pNN.
