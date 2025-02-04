@@ -31,21 +31,17 @@ def set_system_spec(cuda_devices: Optional[list] = None) -> Tuple[str, str]:
     """
     if cuda_devices != []:
         # Set the first device as the active device.
-        # d = cuda_devices[0]
         if torch.cuda.is_available() and cuda_devices < torch.cuda.device_count():
             device = torch.device(f'cuda:{cuda_devices}')
-            torch.cuda.set_device(device)   # Set as active device.
+            torch.cuda.set_device(device)
         else:
             raise ValueError(f"Selected CUDA device {cuda_devices} is not available.")  
-    
     elif torch.cuda.is_available():
         device = torch.device(f'cuda:{torch.cuda.current_device()}')
-        torch.cuda.set_device(device)   # Set as active device.
-
+        torch.cuda.set_device(device)
     elif torch.backends.mps.is_available():
         # Use Mac M-series ARM architecture.
         device = torch.device('mps')
-
     else:
         device = torch.device('cpu')
     
@@ -235,11 +231,25 @@ def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
         np.save(os.path.join(config['out_path'], file_name), concatenated_tensor.numpy())
 
     # Reading flow observation
-    for var in config['train']['target']:
-        item_obs = y_obs[:, :, config['train']['target'].index(var)]
-        file_name = var + '_obs.npy'
-        np.save(os.path.join(config['out_path'], file_name), item_obs)
+    if  y_obs is not None:
+        for var in config['train']['target']:
+            item_obs = y_obs[:, :, config['train']['target'].index(var)]
+            file_name = var + '_obs.npy'
+            np.save(os.path.join(config['out_path'], file_name), item_obs)
 
+
+def load_model(config, model_name, epoch):
+    """Load trained PyTorch models.
+    
+    Args:
+        config (dict): Configuration dictionary with paths and model settings.
+        model_name (str): Name of the model to load.
+        epoch (int): Epoch number to load the specific state of the model.
+        
+    Returns:
+        model (torch.nn.Module): The loaded PyTorch model.
+    """
+    model_name = str(model_name) + '_model_Ep' + str(epoch) + '.pt'
 
 
 def print_config(config: Dict[str, Any]) -> None:
@@ -273,7 +283,11 @@ def print_config(config: Dict[str, Any]) -> None:
 
     print("\033[1m" + "Model Parameters" + "\033[0m")
     print(f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}")
-    print(f"  {'Dropout:':<20}{config['dpl_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['dpl_model']['nn_model']['hidden_size']:<20}")
+    if config['dpl_model']['nn_model']['model'] != 'LSTMMLP':
+        print(f"  {'Dropout:':<20}{config['dpl_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['dpl_model']['nn_model']['hidden_size']:<20}")
+    else:
+        print(f"  {'LSTM Dropout:':<20}{config['dpl_model']['nn_model']['LSTM_dropout']:<20}{'LSTM Hidden Size:':<20}{config['dpl_model']['nn_model']['LSTM_hidden_size']:<20}")
+        print(f"  {'MLP Dropout:':<20}{config['dpl_model']['nn_model']['MLP_dropout']:<20}{'MLP Hidden Size:':<20}{config['dpl_model']['nn_model']['MLP_hidden_size']:<20}")        
     print(f"  {'Warmup:':<20}{config['dpl_model']['phy_model']['warm_up']:<20}{'Concurrent Models:':<20}{config['dpl_model']['phy_model']['nmul']:<20}")
     print(f"  {'Loss Fn:':<20}{config['loss_function']['model']:<20}")
     print()

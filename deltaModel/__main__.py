@@ -8,7 +8,9 @@ from core.utils import initialize_config, print_config, set_randomseed
 from core.utils.module_loaders import load_data_loader, load_trainer
 from models.model_handler import ModelHandler as dModel
 from omegaconf import DictConfig
-from trainers.trainer import Trainer
+
+# Dev imports
+from deltaModel.models.model_handler import ModelHandler as dModel
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -35,17 +37,17 @@ def main(config: DictConfig) -> None:
 
         ### Process datasets ###
         log.info("Loading dataset...")
-        data_loader = load_data_loader(config['data_loader'])
+        data_loader = load_data_loader(config['data_loader'])    ### TODO: Check if dataset_loading_2 get_data_dict can be loaded
         data_loader = data_loader(config, test_split=True, overwrite=False)
 
         ### Create trainer object ###
-        trainer = load_trainer(config['trainer'])
+        trainer = load_trainer(config['trainer'])   ### TODO: Check if trainer_2_0 can be loaded
         trainer = trainer(
             config,
             model,
             data_loader.train_dataset,
             data_loader.eval_dataset,
-            verbose=True
+            verbose=True,
         )
 
         mode = config['mode']
