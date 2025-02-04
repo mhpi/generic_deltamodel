@@ -41,7 +41,7 @@ class DeltaModel(torch.nn.Module):
         phy_model: Optional[torch.nn.Module] = None,
         nn_model: Optional[torch.nn.Module] = None,
         config: Optional[Dict[str, Any]] = None,
-        device: Optional[torch.device] = None,
+        device: Optional[torch.device] = 'cpu',
     ) -> None:
         super().__init__()
         self.name = 'Differentiable Model (pNN -> phy_model)'

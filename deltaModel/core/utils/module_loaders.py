@@ -71,12 +71,6 @@ def load_model(model: str, ver_name: str = None) -> Module:
     return cls
 
 
-
-import importlib.util
-import os
-from typing import Type
-
-
 def load_data_loader(loader_name: str) -> Type:
     """Load a data loader from the data_loaders directory.
 

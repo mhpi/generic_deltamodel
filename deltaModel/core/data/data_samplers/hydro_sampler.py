@@ -36,23 +36,22 @@ class HydroDataSampler(BaseDataSampler):
     ) -> torch.Tensor:
         """Select a subset of input tensor."""
         batch_size, nx, nt = len(i_grid), x.shape[-1], x.shape[0]
-        rho, warm_up = self.rho, self.warm_up
 
         # Handle time indexing and create an empty tensor for selection
         if i_t is not None:
             x_tensor = torch.zeros(
-                [rho + warm_up, batch_size, nx],
+                [self.rho + self.warm_up, batch_size, nx],
                 device=self.device,
                 requires_grad=has_grad
             )
             for k in range(batch_size):
-                x_tensor[:, k:k + 1, :] = x[i_t[k] - warm_up:i_t[k] + rho, i_grid[k]:i_grid[k] + 1, :]
+                x_tensor[:, k:k + 1, :] = x[i_t[k] - self.warm_up:i_t[k] + self.rho, i_grid[k]:i_grid[k] + 1, :]
         else:
             x_tensor = x[:, i_grid, :].float().to(self.device) if x.ndim == 3 else x[i_grid, :].float().to(self.device)
 
         if c is not None:
             c_tensor = torch.from_numpy(c).float().to(self.device)
-            c_tensor = c_tensor[i_grid].unsqueeze(1).repeat(1, rho + warm_up, 1)
+            c_tensor = c_tensor[i_grid].unsqueeze(1).repeat(1, self.rho + self.warm_up, 1)
             return (x_tensor, c_tensor) if tuple_out else torch.cat((x_tensor, c_tensor), dim=2)
 
         return x_tensor

@@ -55,8 +55,12 @@ def trange_to_array(tRange, *, step=np.timedelta64(1, "D")):
     return tArray
 
 
-def random_index(ngrid: int, nt: int, dim_subset: Tuple[int, int],
-                 warm_up: int = 0) -> Tuple[np.ndarray, np.ndarray]:
+def random_index(
+    ngrid: int,
+    nt: int,
+    dim_subset: Tuple[int, int],
+    warm_up: int = 0
+) -> Tuple[np.ndarray, np.ndarray]:
     batch_size, rho = dim_subset
     i_grid = np.random.randint(0, ngrid, size=batch_size)
     i_t = np.random.randint(0 + warm_up, nt - rho, size=batch_size)

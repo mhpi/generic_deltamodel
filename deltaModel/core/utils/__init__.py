@@ -3,7 +3,7 @@ import os
 import random
 import sys
 from typing import Any, Dict, List, Optional, Tuple, Union
-
+import re
 import numpy as np
 import torch
 from omegaconf import DictConfig, OmegaConf
@@ -315,3 +315,21 @@ def find_shared_keys(*dicts: Dict[str, Any]) -> List[str]:
         shared_keys.intersection_update(d.keys())
 
     return list(shared_keys)
+
+
+def snake_to_camel(snake_str):
+    """
+    Convert snake strings (underscore word separation, lower case) to
+    Camel-case strings (no word separation, capitalized first letter of a word).
+    """
+    components = snake_str.split('_')
+    return ''.join(x.title() for x in components)
+
+
+def camel_to_snake(camel_str):
+    """
+    Convert CamelCase or PascalCase strings to snake_case while properly handling
+    consecutive uppercase letters (e.g., 'DiracDF' -> 'dirac_df').
+    """
+    return re.sub(r'([a-z])([A-Z])', r'\1_\2', camel_str).lower()
+
