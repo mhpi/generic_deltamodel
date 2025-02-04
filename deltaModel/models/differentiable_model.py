@@ -5,7 +5,7 @@ from core.data import numpy_to_torch_dict
 from hydroDL2 import load_model
 from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.mlp_models import MLPmul
-
+from models.neural_networks.lstmmlp_models import LSTMMLP
 
 class DeltaModel(torch.nn.Module):
     """Default class for instantiating a differentiable model.
@@ -105,6 +105,19 @@ class DeltaModel(torch.nn.Module):
                 nx=self.nx,
                 ny=self.ny
             )
+        elif model_name == 'LSTMMLP':
+
+            model = LSTMMLP(
+                nx1=self.nx,
+                ny1=self.phy_model.learnable_param_count1,
+                hiddeninv1=self.config['nn_model']['LSTM_hidden_size'],
+                nx2=n_attributes,
+                ny2=self.phy_model.learnable_param_count2,
+                hiddeninv2=self.config['nn_model']['MLP_hidden_size'],
+                dr1=self.config['nn_model']['LSTM_dropout'],
+                dr2=self.config['nn_model']['MLP_dropout'],
+            )
+
         else:
             raise ValueError(f"{model_name} is not a supported neural network model type.")
         return model.to(self.device)
@@ -112,10 +125,15 @@ class DeltaModel(torch.nn.Module):
     def forward(self, data_dict: Dict[str, torch.Tensor]) -> torch.Tensor:
         """Forward pass for the model."""
         # Ensure input data is in the correct format and device.
+        # Yalan: Why convert to torch again?
         data_dict = numpy_to_torch_dict(data_dict, device=self.device)
         
         # Parameterization
-        parameters = self.nn_model(data_dict['x_nn_scaled'])        
+        if type(self.nn_model) == LSTMMLP:
+
+            parameters = self.nn_model(data_dict['x_nn_scaled'],data_dict['c_nn_scaled'])
+        else:
+            parameters = self.nn_model(data_dict['x_nn_scaled'])        
 
         # Physics model
         predictions = self.phy_model(

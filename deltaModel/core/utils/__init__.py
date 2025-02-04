@@ -131,87 +131,95 @@ def create_output_dirs(config: Dict[str, Any]) -> dict:
     dict
         The original config with path modifications.
     """
-    # Add dir for train period:
-    train_period = 'train_' + str(config['train']['start_time'][:4]) + '_' +  \
-        str(config['train']['end_time'][:4])
 
-    # Add dir for number of forcings:
-    forcings = str(len(config['dpl_model']['nn_model']['forcings'])) + '_forcing'
+    try:
+        model_path = config['trainedModel']
+    except:
+        # Add dir for train period:
+        train_period = 'train_' + str(config['train']['start_time'][:4]) + '_' +  \
+            str(config['train']['end_time'][:4])
 
-    # Add dir for ensemble type:
-    if config['multimodel_type'] == None:
-        ensemble_state = 'no_ensemble'
-    else:
-        ensemble_state = config['multimodel_type']
-    
-    # Add dir for:
-    #  1. model name(s)
-    #  2. static or dynamic parametrization
-    #  3. loss functions per model.
-    mod_names = ''
-    dy_params = ''
-    loss_fn = ''
-    for mod in config['dpl_model']['phy_model']['model']:
-        mod_names += mod + '_'
+        # Add dir for number of forcings:
+        forcings = str(len(config['dpl_model']['nn_model']['forcings'])) + '_forcing'
 
-        for param in config['dpl_model']['phy_model']['dy_params'][mod]:
-            dy_params += param + '_'
+        # Add dir for ensemble type:
+        if config['multimodel_type'] == None:
+            ensemble_state = 'no_ensemble'
+        else:
+            ensemble_state = config['multimodel_type']
         
-        loss_fn += config['loss_function']['model'] + '_'
+        # Add dir for:
+        #  1. model name(s)
+        #  2. static or dynamic parametrization
+        #  3. loss functions per model.
+        mod_names = ''
+        dy_params = ''
+        loss_fn = ''
+        for mod in config['dpl_model']['phy_model']['model']:
+            mod_names += mod + '_'
 
-    norm = 'noLogNorm'
-    norm_list = config['dpl_model']['phy_model']['use_log_norm']
-    if norm_list != []:
-        norm = 'logNorm_' + str(norm_list[0])
+            for param in config['dpl_model']['phy_model']['dy_params'][mod]:
+                dy_params += param + '_'
+            
+            loss_fn += config['loss_function']['model'] + '_'
 
-    # Add dir for hyperparam spec.
-    params = config['dpl_model']['nn_model']['model'] + \
-             '_E' + str(config['train']['epochs']) + \
-             '_R' + str(config['dpl_model']['rho'])  + \
-             '_B' + str(config['train']['batch_size']) + \
-             '_H' + str(config['dpl_model']['nn_model']['hidden_size']) + \
-             '_n' + str(config['dpl_model']['nmul']) + \
-             '_'  + norm + \
-             '_' + str(config['random_seed'])
+        norm = 'noLogNorm'
+        norm_list = config['dpl_model']['phy_model']['use_log_norm']
+        if norm_list != []:
+            norm = 'logNorm_' + str(norm_list[0])
 
-    # If any model in ensemble is dynamic, whole ensemble is dynamic.
-    dy_state = 'static_para' if dy_params.replace('_','') == '' else 'dynamic_para'
+        # Add dir for hyperparam spec.
+        params = config['dpl_model']['nn_model']['model'] + \
+                '_E' + str(config['train']['epochs']) + \
+                '_R' + str(config['dpl_model']['rho'])  + \
+                '_B' + str(config['train']['batch_size']) + \
+                '_H' + str(config['dpl_model']['nn_model']['hidden_size']) + \
+                '_n' + str(config['dpl_model']['nmul']) + \
+                '_'  + norm + \
+                '_' + str(config['random_seed'])
+
+        # If any model in ensemble is dynamic, whole ensemble is dynamic.
+        dy_state = 'static_para' if dy_params.replace('_','') == '' else 'dynamic_para'
+        
+        # ---- Combine all dirs ---- #
+        model_path = os.path.join(config['save_path'],
+                                config['observations']['name'],
+                                train_period,
+                                forcings,
+                                ensemble_state,
+                                params,
+                                mod_names,
+                                loss_fn,
+                                dy_state)
+
+        if dy_state == 'dynamic_para':
+            model_path = os.path.join(model_path, dy_params)
+
+
+
+        # Create the directories.
+        if (config['mode'] == 'test') and (os.path.exists(model_path) == False):
+            if config['multimodel_type'] in ['avg', 'frozen_pnn']:
+                for mod in config['dpl_model']['phy_model']['model']:
+                    # Check if individually trained models exist and use those.
+                    check_path = os.path.join(config['save_path'],
+                                            config['observations']['name'],
+                                            train_period,
+                                            forcings,
+                                            'no_ensemble',
+                                            params,
+                                            dy_state,
+                                            mod + '_')
+                    if os.path.exists(check_path) == False:           
+                        raise FileNotFoundError(f"Attempted to test with individually trained models but {check_path} not found. Check config or train models before testing.")
+            else:
+                raise FileNotFoundError(f"Model directory {model_path} not found. Check config or train models before testing.")
     
-    # ---- Combine all dirs ---- #
-    model_path = os.path.join(config['save_path'],
-                              config['observations']['name'],
-                              train_period,
-                              forcings,
-                              ensemble_state,
-                              params,
-                              mod_names,
-                              loss_fn,
-                              dy_state)
 
-    if dy_state == 'dynamic_para':
-        model_path = os.path.join(model_path, dy_params)
 
     test_period = 'test' + str(config['test']['start_time'][:4]) + '_' + \
         str(config['test']['end_time'][:4])
     test_path = os.path.join(model_path, test_period)
-
-    # Create the directories.
-    if (config['mode'] == 'test') and (os.path.exists(model_path) == False):
-        if config['multimodel_type'] in ['avg', 'frozen_pnn']:
-            for mod in config['dpl_model']['phy_model']['model']:
-                # Check if individually trained models exist and use those.
-                check_path = os.path.join(config['save_path'],
-                                          config['observations']['name'],
-                                          train_period,
-                                          forcings,
-                                          'no_ensemble',
-                                          params,
-                                          dy_state,
-                                          mod + '_')
-                if os.path.exists(check_path) == False:           
-                    raise FileNotFoundError(f"Attempted to test with individually trained models but {check_path} not found. Check config or train models before testing.")
-        else:
-            raise FileNotFoundError(f"Model directory {model_path} not found. Check config or train models before testing.")
 
     # Create the directories if they don't exist.
     os.makedirs(test_path, exist_ok=True)
@@ -261,12 +269,12 @@ def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
         file_name = key + ".npy"        
 
         np.save(os.path.join(config['testing_path'], file_name), concatenated_tensor.numpy())
-
-    # Reading flow observation
-    for var in config['train']['target']:
-        item_obs = y_obs[:, :, config['train']['target'].index(var)]
-        file_name = var + '_obs.npy'
-        np.save(os.path.join(config['testing_path'], file_name), item_obs)
+    if  y_obs is not None:
+        # Reading flow observation
+        for var in config['train']['target']:
+            item_obs = y_obs[:, :, config['train']['target'].index(var)]
+            file_name = var + '_obs.npy'
+            np.save(os.path.join(config['testing_path'], file_name), item_obs)
 
 
 def load_model(config, model_name, epoch):
@@ -339,7 +347,11 @@ def print_config(config: Dict[str, Any]) -> None:
 
     print("\033[1m" + "Model Parameters" + "\033[0m")
     print(f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}")
-    print(f"  {'Dropout:':<20}{config['dpl_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['dpl_model']['nn_model']['hidden_size']:<20}")
+    if config['dpl_model']['nn_model']['model'] != 'LSTMMLP':
+        print(f"  {'Dropout:':<20}{config['dpl_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['dpl_model']['nn_model']['hidden_size']:<20}")
+    else:
+        print(f"  {'LSTM Dropout:':<20}{config['dpl_model']['nn_model']['LSTM_dropout']:<20}{'LSTM Hidden Size:':<20}{config['dpl_model']['nn_model']['LSTM_hidden_size']:<20}")
+        print(f"  {'MLP Dropout:':<20}{config['dpl_model']['nn_model']['MLP_dropout']:<20}{'MLP Hidden Size:':<20}{config['dpl_model']['nn_model']['MLP_hidden_size']:<20}")
     print(f"  {'Warmup:':<20}{config['dpl_model']['phy_model']['warm_up']:<20}{'Concurrent Models:':<20}{config['dpl_model']['nmul']:<20}")
     print(f"  {'Optimizer:':<20}{config['loss_function']['model']:<20}")
     print()

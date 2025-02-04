@@ -4,13 +4,13 @@ import time
 
 import hydra
 import torch
-from core.data.dataset_loading import get_dataset_dict
+from core.data.dataset_loading_2 import get_dataset_dict
 from core.utils import initialize_config, print_config, set_randomseed
 from omegaconf import DictConfig
 
 # Dev imports
-from deltaModel.models.model_handler import ModelHandler as dModel
-from deltaModel.trainers.trainer import Trainer
+from models.model_handler import ModelHandler as dModel
+from trainers.trainer_2_0 import Trainer
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 @hydra.main(
     version_base="1.3",
     config_path="conf/",
-    config_name="config_dev",
+    config_name="config",
 )
 def main(config: DictConfig) -> None:
     try:

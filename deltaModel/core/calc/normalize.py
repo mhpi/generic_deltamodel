@@ -127,6 +127,62 @@ def calculate_statistics_gamma(x: np.ndarray) -> List[float]:
     return [p10, p90, mean, max(std, 0.001)]
 
 
+# def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarray,
+#                              y: np.ndarray, c_all=None) -> None:
+#     """
+#     Taken from the calStatAll function of hydroDL.
+    
+#     Calculate and save statistics for all variables in the config.
+
+#     :param config: Configuration dictionary
+#     :param x: Forcing data
+#     :param c: Attribute data
+#     :param y: Target data
+#     """
+#     stat_dict = {}
+
+#     # Calculate basin area 
+#     # NOTE: should probably move to separate function.
+#     attr_list = config['dpl_model']['nn_model']['attributes']
+
+#     area_name = config['observations']['area_name']
+    
+#     if c_all is not None:
+#         # Basin area calculation for MERIT.
+#         basin_area = np.expand_dims(c_all["area"].values,axis = 1)
+#     else:
+#         basin_area = c[:, attr_list.index(area_name)][:, np.newaxis]
+
+
+#     # Target stats
+#     for i, target_name in enumerate(config['train']['target']):
+#         if target_name in ['flow_sim', 'streamflow']:
+#             stat_dict[config['train']['target'][i]] = calc_stat_basinnorm(
+#                 np.swapaxes(y[:, :, i:i+1], 1,0).copy(), basin_area, config
+#             )  ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
+#         else:
+#             stat_dict[config['train']['target'][i]] = calculate_statistics(
+#                 np.swapaxes(y[:, :, i:i+1], 1,0)
+#             )  ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
+
+#     # Forcing stats
+#     var_list = config['dpl_model']['nn_model']['forcings']
+#     for k, var in enumerate(var_list):
+#         if var in config['dpl_model']['phy_model']['use_log_norm']:
+#             stat_dict[var] = calculate_statistics_gamma(x[:, :, k])
+#         else:
+#             stat_dict[var] = calculate_statistics(x[:, :, k])
+
+#     # Attribute stats
+#     varList = config['dpl_model']['nn_model']['attributes']
+#     for k, var in enumerate(varList):
+#         stat_dict[var] = calculate_statistics(c[:, k])
+
+#     # Save all stats.
+#     stat_file = os.path.join(config['out_path'], 'statistics_basinnorm.json')
+#     with open(stat_file, 'w') as f:
+#         json.dump(stat_dict, f, indent=4)
+
 def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarray,
                              y: np.ndarray, c_all=None) -> None:
     """
@@ -143,28 +199,18 @@ def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarra
 
     # Calculate basin area 
     # NOTE: should probably move to separate function.
-    attr_list = config['dpl_model']['nn_model']['attributes']
-
-    area_name = config['observations']['area_name']
-    
-    if c_all is not None:
-        # Basin area calculation for MERIT.
-        basin_area = np.expand_dims(c_all["area"].values,axis = 1)
-    else:
-        basin_area = c[:, attr_list.index(area_name)][:, np.newaxis]
-
 
     # Target stats
-    for i, target_name in enumerate(config['train']['target']):
-        if target_name in ['flow_sim', 'streamflow']:
-            stat_dict[config['train']['target'][i]] = calc_stat_basinnorm(
-                np.swapaxes(y[:, :, i:i+1], 1,0).copy(), basin_area, config
-            )  ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
+    target_list = config['train']['target']
+    for i, target_name in enumerate(target_list):
+        if target_name in config['dpl_model']['phy_model']['use_log_norm']:
+            stat_dict[target_name] = calculate_statistics_gamma(
+                y[:, :, i:i+1]
+            )  ## NOTE: swap axes to match Yalan's HBV. This affects calculations...  ## Why swap in the beginning?
         else:
-            stat_dict[config['train']['target'][i]] = calculate_statistics(
-                np.swapaxes(y[:, :, i:i+1], 1,0)
-            )  ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
-
+            stat_dict[target_name] = calculate_statistics(
+                y[:, :, i:i+1]
+            )             
     # Forcing stats
     var_list = config['dpl_model']['nn_model']['forcings']
     for k, var in enumerate(var_list):
@@ -182,6 +228,7 @@ def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarra
     stat_file = os.path.join(config['out_path'], 'statistics_basinnorm.json')
     with open(stat_file, 'w') as f:
         json.dump(stat_dict, f, indent=4)
+
 
 
 def basin_norm(
@@ -302,6 +349,7 @@ def trans_norm(config: Dict[str, Any], x: np.ndarray, var_lst: List[str], *, to_
     else:
         return np.swapaxes(out, 1, 0) ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
 
+   
 
 def init_norm_stats(config: Dict[str, Any], x_NN: np.ndarray, c_NN: np.ndarray,
                     y: np.ndarray, c_NN_all=None) -> None:
@@ -318,3 +366,25 @@ def init_norm_stats(config: Dict[str, Any], x_NN: np.ndarray, c_NN: np.ndarray,
 
     if not os.path.isfile(stat_file):
         calculate_statistics_all(config, x_NN, c_NN, y, c_NN_all)
+
+
+
+def fill_Nan(array_3d):
+    # Define the x-axis for interpolation
+    x = np.arange(array_3d.shape[1])
+
+    # Iterate over the first and third dimensions to interpolate the second dimension
+    for i in range(array_3d.shape[0]):
+        for j in range(array_3d.shape[2]):
+            # Select the 1D slice for interpolation
+            slice_1d = array_3d[i, :, j]
+
+            # Find indices of NaNs and non-NaNs
+            nans = np.isnan(slice_1d)
+            non_nans = ~nans
+
+            # Only interpolate if there are NaNs and at least two non-NaN values for reference
+            if np.any(nans) and np.sum(non_nans) > 1:
+                # Perform linear interpolation using numpy.interp
+                array_3d[i, :, j] = np.interp(x, x[non_nans], slice_1d[non_nans], left=None, right=None)
+    return array_3d
