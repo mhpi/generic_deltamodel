@@ -33,19 +33,34 @@ def main(config: DictConfig) -> None:
         model = dModel(config, verbose=True)
 
         ### Process datasets ###
-        log.info("Loading dataset...")
-        data_loader = get_data_loader(config['data_loader'])    ### TODO: Check if dataset_loading_2 get_data_dict can be loaded
-        data_loader = data_loader(config, test_split=True, overwrite=False)
+        # log.info("Loading dataset...")
+        # data_loader = get_data_loader(config['data_loader'])    ### TODO: Check if dataset_loading_2 get_data_dict can be loaded
+        # data_loader = data_loader(config, test_split=True, overwrite=False)
 
-        ### Create trainer object ###
-        trainer = get_trainer(config['trainer'])   ### TODO: Check if trainer_2_0 can be loaded
-        trainer = trainer(
-            config,
-            model,
-            data_loader.train_dataset,
-            data_loader.eval_dataset,
-            verbose=True,
-        )
+        # ### Create trainer object ###
+        # trainer = get_trainer(config['trainer'])   ### TODO: Check if trainer_2_0 can be loaded
+        # trainer = trainer(
+        #     config,
+        #     model,
+        #     data_loader.train_dataset,
+        #     data_loader.eval_dataset,
+        #     verbose=True,
+        # )
+
+
+
+        ### NOTE: multiscale debugging ###
+        from core.data.data_loaders.loader_hydro_ms import get_dataset_dict
+        log.info("Processing datasets...")
+        train_dataset = get_dataset_dict(config, train=True)
+        eval_dataset = get_dataset_dict(config, train=False)
+
+        # Trainer
+        from trainers.trainer_ms import Trainer
+        trainer = Trainer(config, model, train_dataset, eval_dataset, verbose=True)
+        ##################################
+
+
 
         mode = config['mode']
         if mode == 'train':

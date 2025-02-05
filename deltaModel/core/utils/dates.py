@@ -40,8 +40,8 @@ class Dates(BaseModel):
 
     def __init__(self, time_range, rho):
         super(Dates, self).__init__(
-            start_time=time_range["start_time"],
-            end_time=time_range["end_time"],
+            start_time=time_range['start_time'],
+            end_time=time_range['end_time'],
             rho = rho,
         )
 

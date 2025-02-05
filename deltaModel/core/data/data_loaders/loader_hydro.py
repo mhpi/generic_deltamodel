@@ -372,7 +372,7 @@ class HydroDataLoader(BaseDataLoader):
         if len(data_norm.shape) < 3:
             return data_norm
         else:
-            return np.swapaxes(data_norm, 1, 0)
+            return np.swapaxes(data_norm, 1, 0)  ##TODO move to outside of _to_norm
 
     def _from_norm(self, data_norm: npt.NDArray, vars: List[str]) -> npt.NDArray:
         """De-normalize data."""

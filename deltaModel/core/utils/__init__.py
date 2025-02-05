@@ -111,10 +111,10 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
 
     # TODO: add this handling directly to the trainer; this is not generalizable in current form.
     # change multimodel_type type to None if none.
-    if config['multimodel_type'] in ['none', 'None', '']:
+    if config.get('multimodel_type', '')  in ['none', 'None', '']:
         config['multimodel_type'] = None
 
-    if config['dpl_model']['nn_model']['lr_scheduler'] in ['none', 'None', '']:
+    if config['dpl_model']['nn_model'].get('lr_scheduler', '') in ['none', 'None', '']:
         config['dpl_model']['nn_model']['lr_scheduler'] = None
 
     # Create output directories and add path to config.
@@ -291,8 +291,8 @@ def print_config(config: Dict[str, Any]) -> None:
     if config['dpl_model']['nn_model']['model'] != 'LSTMMLP':
         print(f"  {'Dropout:':<20}{config['dpl_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['dpl_model']['nn_model']['hidden_size']:<20}")
     else:
-        print(f"  {'LSTM Dropout:':<20}{config['dpl_model']['nn_model']['LSTM_dropout']:<20}{'LSTM Hidden Size:':<20}{config['dpl_model']['nn_model']['LSTM_hidden_size']:<20}")
-        print(f"  {'MLP Dropout:':<20}{config['dpl_model']['nn_model']['MLP_dropout']:<20}{'MLP Hidden Size:':<20}{config['dpl_model']['nn_model']['MLP_hidden_size']:<20}")        
+        print(f"  {'LSTM Dropout:':<20}{config['dpl_model']['nn_model']['lstm_dropout']:<20}{'LSTM Hidden Size:':<20}{config['dpl_model']['nn_model']['lstm_hidden_size']:<20}")
+        print(f"  {'MLP Dropout:':<20}{config['dpl_model']['nn_model']['mlp_dropout']:<20}{'MLP Hidden Size:':<20}{config['dpl_model']['nn_model']['mlp_hidden_size']:<20}")        
     print(f"  {'Warmup:':<20}{config['dpl_model']['phy_model']['warm_up']:<20}{'Concurrent Models:':<20}{config['dpl_model']['phy_model']['nmul']:<20}")
     print(f"  {'Loss Fn:':<20}{config['loss_function']['model']:<20}")
     print()

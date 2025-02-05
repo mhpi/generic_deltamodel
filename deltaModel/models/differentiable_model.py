@@ -108,12 +108,12 @@ class DeltaModel(torch.nn.Module):
             model = LSTMMLP(
                 nx1=self.nx,
                 ny1=self.phy_model.learnable_param_count1,
-                hiddeninv1=self.config['nn_model']['LSTM_hidden_size'],
+                hiddeninv1=self.config['nn_model']['lstm_hidden_size'],
                 nx2=n_attributes,
                 ny2=self.phy_model.learnable_param_count2,
-                hiddeninv2=self.config['nn_model']['MLP_hidden_size'],
-                dr1=self.config['nn_model']['LSTM_dropout'],
-                dr2=self.config['nn_model']['MLP_dropout'],
+                hiddeninv2=self.config['nn_model']['mlp_hidden_size'],
+                dr1=self.config['nn_model']['lstm_dropout'],
+                dr2=self.config['nn_model']['mlp_dropout'],
             )
         else:
             raise ValueError(f"{model_name} is not a supported neural network model type.")
