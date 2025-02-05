@@ -5,6 +5,9 @@ from core.calc.normalize import fill_Nan, trans_norm
 from core.data.array_dataset import ArrayDataset
 from core.data.dataframe_dataset import DataFrameDataset
 
+# from core.data.data_loaders.base_data_loader import BaseDataLoader
+# class HydroDataMSLoader(BaseDataLoader):
+
 
 class choose_class_to_read_dataset():
     def __init__(self, config, trange, data_path):

@@ -1,9 +1,10 @@
 import logging
 import os
 import random
+import re
 import sys
 from typing import Any, Dict, List, Optional, Tuple, Union
-import re
+
 import numpy as np
 import torch
 from omegaconf import DictConfig, OmegaConf

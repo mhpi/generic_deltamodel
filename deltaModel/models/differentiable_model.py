@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 
 import torch.nn
-from core.utils.module_loaders import load_model
+from core.utils.module_loaders import get_phy_model
 from models.neural_networks.lstm_models import CudnnLstmModel
 from models.neural_networks.lstmmlp_models import LSTMMLP
 from models.neural_networks.mlp_models import MLPmul
@@ -69,7 +69,7 @@ class DeltaModel(torch.nn.Module):
         else:
             raise ValueError("A (1) physics model name or (2) model spec in a configuration dictionary is required.")
 
-        model = load_model(model_name)
+        model = get_phy_model(model_name)
         return model(self.config['phy_model'], device=self.device)
     
     def _init_nn_model(self) -> torch.nn.Module:

@@ -16,7 +16,7 @@ log.setLevel(logging.INFO)
 @hydra.main(
     version_base='1.3',
     config_path='conf/',
-    config_name='config_multiscale',
+    config_name='config',
 )
 def main(config: DictConfig) -> None:
     try:
@@ -34,11 +34,11 @@ def main(config: DictConfig) -> None:
 
         ### Process datasets ###
         log.info("Loading dataset...")
-        data_loader = get_data_loader(config['data_loader'])    ### TODO: Check if dataset_loading_2 get_data_dict can be loaded
+        data_loader = get_data_loader(config['data_loader'])
         data_loader = data_loader(config, test_split=True, overwrite=False)
 
         ### Create trainer object ###
-        trainer = get_trainer(config['trainer'])   ### TODO: Check if trainer_2_0 can be loaded
+        trainer = get_trainer(config['trainer'])
         trainer = trainer(
             config,
             model,

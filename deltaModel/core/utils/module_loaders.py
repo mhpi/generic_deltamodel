@@ -1,11 +1,13 @@
 import importlib.util
 import os
-from json import load
 from pathlib import Path
-from typing import Dict, List, Type
+from typing import Type
 
-from hydroDL2 import load_model as load_hydro_model
-from torch.nn import Module
+import torch
+from core.data.data_loaders.base import BaseDataLoader
+from core.data.data_samplers.base import BaseDataSampler
+from hydroDL2 import load_model as load_from_hydrodl
+from trainers.base import BaseTrainer
 
 
 def get_dir(dir_name: str) -> Path:
@@ -17,11 +19,12 @@ def get_dir(dir_name: str) -> Path:
     return dir
 
 
-def load_model(model: str, ver_name: str = None) -> Module:
-    """Load a model from the models directory.
-
-    Each model file in `models/` directory should only contain one model class.
-
+def get_phy_model(model: str, ver_name: str = None) -> Type:
+    """
+    Load a model from the models directory.
+    
+    Each model file in `models/` directory should contain one or more model classes.
+    
     Parameters
     ----------
     model : str
@@ -31,54 +34,62 @@ def load_model(model: str, ver_name: str = None) -> Module:
     
     Returns
     -------
-    Module
-        The uninstantiated model.
+    Type
+        The uninstantiated model class.
     """
-    if model in ['HBV', 'HBV_1_1p', 'PRMS', 'SACSMA_with_snow']:
-        return load_hydro_model(model, ver_name)
-    
-    # Path to the models directory
-    parent_dir = get_dir('models')
-
-    # Construct file path
-    model_dir = model.split('_')[0].lower()
-    model_subpath = os.path.join(model_dir, f'{model.lower()}.py')
-    
-    # Path to the module file in the models directory
-    source = os.path.join(parent_dir, model_subpath)
-    
-    # Load the model dynamically as a module.
     try:
-        spec = importlib.util.spec_from_file_location(model, source)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-    except FileNotFoundError:
-        raise ImportError(f"Model '{model}' not found.")
+        # Attempt to load from HydroDL2.
+        return load_from_hydrodl(model, ver_name)
+    except:
+        # Otherwise, load from local models directory.
+        parent_dir = get_dir('models')
+        model_dir = model.split('_')[0].lower()
+        model_subpath = os.path.join(model_dir, f'{model.lower()}.py')
+        
+        source = os.path.join(parent_dir, model_subpath)
+        
+        try:
+            # Load the model dynamically as a module.
+            spec = importlib.util.spec_from_file_location(model, source)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+        except FileNotFoundError:
+            raise ImportError(f"Model '{model}' not found.")
+        
+        if ver_name:
+            # Retrieve by version name, if specified.
+            cls = getattr(module, ver_name)
+            # Ensure the class is defined in this module and inherits from BaseModel
+            if not isinstance(cls, type) or cls.__module__ != module.__name__:
+                raise ImportError(f"Class '{ver_name}' is not a valid instance of '{model}'.")
+            if not issubclass(cls, torch.nn.Module):
+                raise ImportError(f"Class '{ver_name}' does not inherit from torch.nn.Module.")
+            return cls
+        else:
+            # Search for a class that matches the expected naming convention and inheritance.
+            target_class = None
+            for attr_name in dir(module):
+                attr = getattr(module, attr_name)
+                if isinstance(attr, type) and (attr.__module__ == module.__name__):
+                    if issubclass(attr, torch.nn.Module):
+                        # TODO: This needs to be more robust.
+                        target_class = attr
+                        break
+            if target_class is None:
+                raise ImportError(f"No valid Model class found in '{model}'.")
+            
+            return target_class
+        
+
+def get_data_loader(loader_name: str) -> Type:
+    """
+    Load a data loader from the data_loaders directory.
     
-    # Retrieve the version name if specified, otherwise get the first class in the module
-    if ver_name:
-        cls = getattr(module, ver_name)
-    else:
-        # Find the first class in the module (this may not always be accurate)
-        classes = [
-            attr for attr in dir(module)
-            if isinstance(getattr(module, attr), type) and attr != 'Any'
-        ]
-        if not classes:
-            raise ImportError(f"Model version '{model}' not found.")
-        cls = getattr(module, classes[-1])
-    
-    return cls
-
-
-def load_data_loader(loader_name: str) -> Type:
-    """Load a data loader from the data_loaders directory.
-
     Parameters
     ----------
     loader_name : str
         The name of the data loader.
-
+    
     Returns
     -------
     Type
@@ -86,130 +97,111 @@ def load_data_loader(loader_name: str) -> Type:
     """
     # Path to the core/data/data_loaders directory
     parent_dir = get_dir('core/data/data_loaders')
-
     # Construct the file path for the loader
     loader_subpath = f"{loader_name}.py"
-
-    # Path to the module file in the data_loaders directory
     source = os.path.join(parent_dir, loader_subpath)
-
-    # Load the data loader dynamically as a module
+    
     try:
+        # Dynamically load the module
         spec = importlib.util.spec_from_file_location(loader_name, source)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
     except FileNotFoundError:
         raise ImportError(f"Data loader '{loader_name}' not found.")
-
-    # Dynamically load the first class found in the module
-    classes = [
-        attr for attr in dir(module)
-        if isinstance(getattr(module, attr), type) and attr != 'Any'
-    ]
-
-    if not classes:
-        raise ImportError(f"No valid classes found in loader '{loader_name}'.")
-
-    # Ensure the right class is chosen
-    # Optionally, you could inspect for class names that match 'HydroDataLoader' or similar
-    cls = getattr(module, classes[-1])
-
-    # Check if the class is a subclass of BaseDataLoader to confirm it's the right type
-
-    return cls
+    
+    # Search for a class that matches the expected naming convention and inheritance
+    target_class = None
+    for attr_name in dir(module):
+        attr = getattr(module, attr_name)
+        if isinstance(attr, type) and (attr.__module__ == module.__name__):
+            if attr_name.endswith('DataLoader') and issubclass(attr, BaseDataLoader):
+                target_class = attr
+                break
+    if target_class is None:
+        raise ImportError(f"No valid DataLoader class found in '{loader_name}'.")
+    
+    return target_class
 
 
-def load_data_sampler(sampler_name: str) -> Type:
-    """Load a data loader from the data_loaders directory.
-
+def get_data_sampler(sampler_name: str) -> Type:
+    """
+    Load a data sampler from the data_samplers directory.
+    
     Parameters
     ----------
-    loader_name : str
-        The name of the data loader.
-
+    sampler_name : str
+        The name of the data sampler.
+    
     Returns
     -------
     Type
-        The uninstantiated data loader class.
+        The uninstantiated data sampler class.
     """
-    # Path to the core/data/data_loaders directory
+    # Path to the core/data/data_samplers directory
     parent_dir = get_dir('core/data/data_samplers')
-
-    # Construct the file path for the loader
-    loader_subpath = f"{sampler_name}.py"
-
-    # Path to the module file in the data_loaders directory
-    source = os.path.join(parent_dir, loader_subpath)
-
-    # Load the data loader dynamically as a module
+    # Construct the file path for the sampler
+    sampler_subpath = f"{sampler_name}.py"
+    source = os.path.join(parent_dir, sampler_subpath)
+    
     try:
+        # Dynamically load the module
         spec = importlib.util.spec_from_file_location(sampler_name, source)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
     except FileNotFoundError:
-        raise ImportError(f"Data loader '{sampler_name}' not found.")
-
-    # Dynamically load the first class found in the module
-    classes = [
-        attr for attr in dir(module)
-        if isinstance(getattr(module, attr), type) and attr != 'Any'
-    ]
-
-    if not classes:
-        raise ImportError(f"No valid classes found in loader '{sampler_name}'.")
-
-    # Ensure the right class is chosen
-    # Optionally, you could inspect for class names that match 'HydroDataLoader' or similar
-    cls = getattr(module, classes[-1])
-
-    # Check if the class is a subclass of BaseDataLoader to confirm it's the right type
-
-    return cls
+        raise ImportError(f"Data sampler '{sampler_name}' not found.")
+    
+    # Search for a class that matches the expected naming convention and inheritance
+    target_class = None
+    for attr_name in dir(module):
+        attr = getattr(module, attr_name)
+        if isinstance(attr, type) and (attr.__module__ == module.__name__):
+            if attr_name.endswith('DataSampler') and issubclass(attr, BaseDataSampler):
+                target_class = attr
+                break
+    if target_class is None:
+        raise ImportError(f"No valid DataSampler class found in '{sampler_name}'.")
+    
+    return target_class
 
 
-def load_trainer(trainer_name: str) -> Type:
-    """Load a data loader from the data_loaders directory.
-
+def get_trainer(trainer_name: str) -> Type:
+    """
+    Load a trainer from the trainers directory.
+    
     Parameters
     ----------
-    loader_name : str
-        The name of the data loader.
-
+    trainer_name : str
+        The name of the trainer.
+    
     Returns
     -------
     Type
-        The uninstantiated data loader class.
+        The uninstantiated trainer class.
     """
-    # Path to the core/data/data_loaders directory
+    # Path to the core/trainers directory
     parent_dir = get_dir('trainers')
-
-    # Construct the file path for the loader
-    loader_subpath = f"{trainer_name}.py"
-
-    # Path to the module file in the data_loaders directory
-    source = os.path.join(parent_dir, loader_subpath)
-
-    # Load the data loader dynamically as a module
+    # Construct the file path for the trainer
+    trainer_subpath = f"{trainer_name}.py"
+    source = os.path.join(parent_dir, trainer_subpath)
+    
     try:
+        # Dynamically load the module
         spec = importlib.util.spec_from_file_location(trainer_name, source)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
     except FileNotFoundError:
-        raise ImportError(f"Data loader '{trainer_name}' not found.")
-
-    # Dynamically load the first class found in the module
-    classes = [
-        attr for attr in dir(module)
-        if isinstance(getattr(module, attr), type) and attr != 'Any'
-    ]
-
-    if not classes:
-        raise ImportError(f"No valid classes found in loader '{trainer_name}'.")
-
-    # Ensure the right class is chosen
-    # Optionally, you could inspect for class names that match 'HydroDataLoader' or similar
-    cls = getattr(module, classes[-1])
-
-    # Check if the class is a subclass of BaseDataLoader to confirm it's the right type
-
-    return cls
+        raise ImportError(f"Trainer '{trainer_name}' not found.")
+    
+    # Search for a class that matches the expected naming convention and inheritance
+    target_class = None
+    for attr_name in dir(module):
+        attr = getattr(module, attr_name)
+        if isinstance(attr, type) and (attr.__module__ == module.__name__):
+            if attr_name.endswith('Trainer') and issubclass(attr, BaseTrainer):
+                target_class = attr
+                break
+    if target_class is None:
+        raise ImportError(f"No valid Trainer class found in '{trainer_name}'.")
+    
+    return target_class

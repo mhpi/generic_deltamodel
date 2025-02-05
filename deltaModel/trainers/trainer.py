@@ -9,7 +9,7 @@ import tqdm
 from core.calc.metrics import Metrics
 from core.data import create_training_grid
 from core.utils import save_outputs, save_train_state
-from core.utils.module_loaders import load_data_sampler
+from core.utils.module_loaders import get_data_sampler
 from models.loss_functions import get_loss_func
 from models.model_handler import ModelHandler
 from trainers.base import BaseTrainer
@@ -70,7 +70,7 @@ class Trainer(BaseTrainer):
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.verbose = verbose
-        self.sampler = load_data_sampler(config['data_sampler'])(config)
+        self.sampler = get_data_sampler(config['data_sampler'])(config)
         self.is_in_train = False
 
         if 'train' in config['mode']:

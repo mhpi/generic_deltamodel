@@ -3,10 +3,10 @@ import os
 import sys
 from ast import Dict
 from typing import Any, Dict, Optional
-from core.utils import camel_to_snake
 
 import numpy as np
 import torch
+from core.utils import camel_to_snake
 from numpy.typing import NDArray
 
 sys.path.append('../deltaModel/')  # for tutorials
