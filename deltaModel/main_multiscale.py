@@ -9,9 +9,6 @@ from core.utils.module_loaders import load_data_loader, load_trainer
 from models.model_handler import ModelHandler as dModel
 from omegaconf import DictConfig
 
-# Dev imports
-from deltaModel.models.model_handler import ModelHandler as dModel
-
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
