@@ -112,7 +112,7 @@ class PathBuilder(BaseModel):
         if config['mode'] != 'test':
             os.makedirs(model_path, exist_ok=True)
             os.makedirs(out_path, exist_ok=True)
-        elif os.path.exists(model_path) and not os.path.exists(out_path):
+        elif os.path.exists(model_path):
             os.makedirs(out_path, exist_ok=True)
         else:
             raise ValueError(f"No model to validate at path {model_path}")

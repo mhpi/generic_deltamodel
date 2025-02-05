@@ -108,9 +108,13 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
     config['experiment_time'] = [train_time.start_time, test_time.end_time]
     config['all_time'] = [all_time.start_time, all_time.end_time]   
 
+    # TODO: add this handling directly to the trainer; this is not generalizable in current form.
     # change multimodel_type type to None if none.
     if config['multimodel_type'] in ['none', 'None', '']:
         config['multimodel_type'] = None
+
+    if config['dpl_model']['nn_model']['lr_scheduler'] in ['none', 'None', '']:
+        config['dpl_model']['nn_model']['lr_scheduler'] = None
 
     # Create output directories and add path to config.
     out_path = PathBuilder(config)
