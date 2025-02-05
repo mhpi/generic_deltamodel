@@ -189,8 +189,8 @@ def get_training_sample(
         'x_phy': select_subset(config, dataset_dict['x_phy'],
                         i_sample, i_t, config['dpl_model']['rho'],
                         warm_up=warm_up),
-        'x_nn_scaled': select_subset(
-            config, dataset_dict['x_nn_scaled'], i_sample, i_t,
+        'xc_nn_norm': select_subset(
+            config, dataset_dict['xc_nn_norm'], i_sample, i_t,
             config['dpl_model']['rho'], has_grad=False, warm_up=warm_up),
         'c_nn': torch.tensor(dataset_dict['c_nn'][i_sample],
                              device=config['device'], dtype=torch.float32),
@@ -234,9 +234,9 @@ def get_training_sample_2_0(
         
         start_id = start_id+len(subbasin_idx[gage])
 
-        xTrain =  np.full((start_id,config['dpl_model']['rho']+warm_up,dataset_dict['x_nn_scaled'].shape[-1]),np.nan)
-        xTrain2 = np.full((start_id,config['dpl_model']['rho']+warm_up,dataset_dict['x_nn_scaled'].shape[-1]),np.nan)
-        attr2 = np.full((start_id,dataset_dict['c_nn_scaled'].shape[-1]),np.nan)
+        xTrain =  np.full((start_id,config['dpl_model']['rho']+warm_up,dataset_dict['xc_nn_norm'].shape[-1]),np.nan)
+        xTrain2 = np.full((start_id,config['dpl_model']['rho']+warm_up,dataset_dict['xc_nn_norm'].shape[-1]),np.nan)
+        attr2 = np.full((start_id,dataset_dict['c_nn_norm'].shape[-1]),np.nan)
         
         idx_matric = np.zeros((start_id,len(gage_batch)))
         Ai_batch = []
@@ -250,8 +250,8 @@ def get_training_sample_2_0(
             Ac_batch.extend(dataset_dict['Ac_all'][np.array(subbasin_idx[gage]).astype(int)])
             Ele_batch.extend(dataset_dict['Ele_all'][np.array(subbasin_idx[gage]).astype(int)])
             xTrain[np.array(id_list[gageidx]),:,:] = dataset_dict['x_phy'][np.array(subbasin_idx[gage]).astype(int),i_t[gageidx]-warm_up:i_t[gageidx]+config['dpl_model']['rho'],:]
-            xTrain2[np.array(id_list[gageidx]),:,:] = dataset_dict['x_nn_scaled'][np.array(subbasin_idx[gage]).astype(int),i_t[gageidx]-warm_up:i_t[gageidx]+config['dpl_model']['rho'],:]
-            attr2[np.array(id_list[gageidx]),:] = dataset_dict['c_nn_scaled'][np.array(subbasin_idx[gage]).astype(int),:]   
+            xTrain2[np.array(id_list[gageidx]),:,:] = dataset_dict['xc_nn_norm'][np.array(subbasin_idx[gage]).astype(int),i_t[gageidx]-warm_up:i_t[gageidx]+config['dpl_model']['rho'],:]
+            attr2[np.array(id_list[gageidx]),:] = dataset_dict['c_nn_norm'][np.array(subbasin_idx[gage]).astype(int),:]   
 
         xTrain_torch = torch.from_numpy(np.swapaxes(xTrain, 0,1)).to(config['device'])
         attr_torch = torch.from_numpy(attr2).to(config['device'])
@@ -273,8 +273,8 @@ def get_training_sample_2_0(
     dataset_sample = {
         'batch_sample': i_sample,
         'x_phy': xTrain_torch,
-        'x_nn_scaled': zTrain2_torch,
-        'c_nn_scaled': attr_torch,
+        'xc_nn_norm': zTrain2_torch,
+        'c_nn_norm': attr_torch,
         'Ai_batch': Ai_batch,
         'Ac_batch': Ac_batch,
         'Ele_batch': Ele_batch,
@@ -300,7 +300,7 @@ def get_validation_sample(
     dataset_sample = {}
     for key, value in dataset_dict.items():
         if value.ndim == 3:
-            if key in ['x_phy', 'x_nn_scaled']:
+            if key in ['x_phy', 'xc_nn_norm']:
                 warm_up = 0
             else:
                 warm_up = config['dpl_model']['phy_model']['warm_up']
@@ -340,7 +340,7 @@ def take_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
     dataset_sample = {}
     for key, value in dataset_dict.items():
         if value.ndim == 3:
-            if key in ['x_phy', 'x_nn_scaled']:
+            if key in ['x_phy', 'xc_nn_norm']:
                 warm_up = 0
             else:
                 warm_up = config['dpl_model']['phy_model']['warm_up']

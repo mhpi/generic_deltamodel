@@ -1,10 +1,7 @@
-import json
-import pickle
-
 import numpy as np
 import pandas as pd
 import zarr
-from core.calc.normalize import fill_Nan, init_norm_stats, trans_norm
+from core.calc.normalize import fill_Nan, trans_norm
 from core.data.array_dataset import ArrayDataset
 from core.data.dataframe_dataset import DataFrameDataset
 
@@ -28,7 +25,7 @@ def load_data_subbasin(config, train=True):
 
     out_dict = dict()
 
-    if config['observations']['name'] in ['camels_671', 'camels_531','MERIT_forward_zone']:
+    if config['observations']['name'] in ['camels_671', 'camels_531','merit_forward_zone']:
         if train:
             startdate =config['train']['start_time']
             enddate = config['train']['end_time']
@@ -57,19 +54,19 @@ def load_data_subbasin(config, train=True):
                 attr_array = np.concatenate((attr_array,np.expand_dims(root_zone['attrs'][attr][:],-1) ),axis = -1)
 
         try:
-            Ac_name = config['observations']['Upstream_area_name'] 
+            Ac_name = config['observations']['upstream_area_name'] 
         except:
             raise ValueError(f"Upstream area is not provided. This is needed for high-resolution streamflow model")
 
         try:
-            Elevation_name = config['observations']['Elevation_name'] 
+            elevation_name = config['observations']['elevation_name'] 
         except:
             raise ValueError(f"Elevation is not provided. This is needed for high-resolution streamflow model")
 
 
         Ac_array = root_zone['attrs'][Ac_name][:]
  
-        Ele_array = root_zone['attrs'][Elevation_name][:]
+        Ele_array = root_zone['attrs'][elevation_name][:]
 
         for forc_idx, forc in enumerate(config['dpl_model']['nn_model']['forcings']):
             if forc not in config['observations']['forcings_all']:
@@ -105,40 +102,29 @@ def converting_flow_from_ft3_per_sec_to_mm_per_day(config, gage_area, obs_sample
 def get_dataset_dict(config, train=False):
     """
     Create dictionary of datasets used by the models.
-    Contains 'c_nn', 'target', 'x_phy', 'x_nn_scaled'.
+    Contains 'c_nn', 'target', 'x_phy', 'xc_nn_norm'.
 
     train: bool, specifies whether data is for training.
     """
-
     # Create stats for NN input normalizations.
-
     dataset_dict = load_data_subbasin(config, train=False)
 
     # Normalization
-    x_nn_scaled = trans_norm(config, dataset_dict['x_nn'],
+    x_nn_norm = trans_norm(config, dataset_dict['x_nn'],
                              var_lst=config['dpl_model']['nn_model']['forcings'], to_norm=True)
-    x_nn_scaled[x_nn_scaled != x_nn_scaled] = 0  # Remove nans
+    x_nn_norm[x_nn_norm != x_nn_norm] = 0  # Remove nans
 
-    c_nn_scaled = trans_norm(config, dataset_dict['c_nn'],
+    c_nn_norm = trans_norm(config, dataset_dict['c_nn'],
                              var_lst=config['dpl_model']['nn_model']['attributes'], to_norm=True) ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
-    c_nn_scaled[c_nn_scaled != c_nn_scaled] = 0  # Remove nans
-    c_nn_scaled_repeat = np.repeat(np.expand_dims(c_nn_scaled, 0), x_nn_scaled.shape[0], axis=0)
+    c_nn_norm[c_nn_norm != c_nn_norm] = 0  # Remove nans
+    c_nn_norm_repeat = np.repeat(np.expand_dims(c_nn_norm, 0), x_nn_norm.shape[0], axis=0)
 
-    dataset_dict['x_nn_scaled'] = np.concatenate((x_nn_scaled, c_nn_scaled_repeat), axis=2)
+    dataset_dict['xc_nn_norm'] = np.concatenate((x_nn_norm, c_nn_norm_repeat), axis=2)
 
-    dataset_dict['c_nn_scaled'] = c_nn_scaled
+    dataset_dict['c_nn_norm'] = c_nn_norm
     x_phy = np.swapaxes(dataset_dict['x_phy'], 1, 0)
     x_phy[x_phy != x_phy] = 0 
     dataset_dict['x_phy'] =  x_phy
-    del x_nn_scaled, c_nn_scaled, dataset_dict['x_nn']
-    
-    # Streamflow unit conversion.
-    #### MOVED FROM LOAD_DATA
-    # if 'flow_sim' in config['train']['target']:
-    #     dataset_dict['target'] = converting_flow_from_ft3_per_sec_to_mm_per_day(
-    #         config,
-    #         dataset_dict['c_nn'],
-    #         dataset_dict['target']
-    #     )
+    del x_nn_norm, c_nn_norm, dataset_dict['x_nn']
 
     return dataset_dict
