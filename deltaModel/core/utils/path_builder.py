@@ -105,14 +105,18 @@ class PathBuilder(BaseModel):
         self.validate_base_path(config['save_path'])
 
         # Build paths
-        model_path = self.build_path_model()
+        if os.path.exists(config.get('trained_model', '')):
+            # Use user defined model path if it exists
+            model_path = os.path.dirname(config['trained_model'])
+        else:
+            model_path = self.build_path_model()
         out_path = self.build_path_out()
         
         # Create dirs
         if config['mode'] != 'test':
             os.makedirs(model_path, exist_ok=True)
             os.makedirs(out_path, exist_ok=True)
-        elif os.path.exists(model_path) and not os.path.exists(out_path):
+        elif os.path.exists(model_path):
             os.makedirs(out_path, exist_ok=True)
         else:
             raise ValueError(f"No model to validate at path {model_path}")
@@ -182,7 +186,7 @@ class PathBuilder(BaseModel):
         TODO: needs more thought (e.g. what is same count, different inputs?)
         ...maybe use hash.
         """
-        attributes = config['dpl_model']['phy_model']['attributes']
+        attributes = config['dpl_model']['phy_model'].get('attributes', '')
         if attributes == []:
             attributes = 0
         return f"{config['dpl_model']['phy_model']['forcings']}dy_{attributes}st_in"
@@ -300,7 +304,7 @@ class PathBuilder(BaseModel):
             f"E{config['train']['epochs']}_"
             f"R{config['dpl_model']['rho']}_"
             f"B{config['train']['batch_size']}_"
-            f"H{config['dpl_model']['nn_model']['hidden_size']}_"
+            f"H{config['dpl_model']['nn_model']['lstm_hidden_size']}_"
             f"n{config['dpl_model']['phy_model']['nmul']}_"
             f"{norm}_"
             f"{warmup}_"

@@ -9,7 +9,7 @@ import tqdm
 from core.calc.metrics import Metrics
 from core.data import create_training_grid
 from core.utils import save_outputs, save_train_state
-from core.utils.module_loaders import load_data_sampler
+from core.utils.module_loaders import get_data_sampler
 from models.loss_functions import get_loss_func
 from models.model_handler import ModelHandler
 from trainers.base import BaseTrainer
@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 class Trainer(BaseTrainer):
     """Generic, unified trainer for neural networks and differentiable models.
 
-    Designed after the Hugging Face Trainer class.
+    Inspired by the Hugging Face Trainer class.
     
     Retrieves and formats data, initializes optimizers/schedulers/loss functions,
     and runs training and testing/inference loops.
@@ -70,11 +70,12 @@ class Trainer(BaseTrainer):
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.verbose = verbose
-        self.sampler = load_data_sampler(config['data_sampler'])(config)
+        self.sampler = get_data_sampler(config['data_sampler'])(config)
         self.is_in_train = False
 
         if 'train' in config['mode']:
             log.info(f"Initializing training mode")
+            self.epochs = self.config['train']['epochs']
 
             # Loss function
             self.loss_func = loss_func or get_loss_func(
@@ -86,7 +87,6 @@ class Trainer(BaseTrainer):
 
             # Optimizer and learning rate scheduler
             self.optimizer = optimizer or self.init_optimizer()
-
             if config['dpl_model']['nn_model']['lr_scheduler']:
                 self.use_scheduler = True
                 self.scheduler = scheduler or self.init_scheduler()
@@ -182,7 +182,6 @@ class Trainer(BaseTrainer):
     def train(self) -> None:
         """Train the model."""
         self.is_in_train = True
-        self.epochs = self.config['train']['epochs']
 
         # Setup a training grid (number of samples, minibatches, and timesteps)
         n_samples, n_minibatch, n_timesteps = create_training_grid(
@@ -191,15 +190,15 @@ class Trainer(BaseTrainer):
         )
 
         # Training loop
-        log.info(f"Training model: Beginning {self.start_epoch} of {self.config['train']['epochs']} epochs")
+        log.info(f"Training model: Beginning {self.start_epoch} of {self.epochs} epochs")
         for epoch in range(self.start_epoch, self.epochs + 1):
             start_time = time.perf_counter()
-            prog_str = f"Epoch {epoch}/{self.config['train']['epochs']}"
+            prog_str = f"Epoch {epoch}/{self.epochs}"
 
             self.current_epoch = epoch
             self.total_loss = 0.0
 
-            # Iterate through minibatches
+            # Iterate through minibatches.
             for i in tqdm.tqdm(range(1, n_minibatch + 1), desc=prog_str,
                                leave=False, dynamic_ncols=True):
                 self.current_batch = i
@@ -225,6 +224,8 @@ class Trainer(BaseTrainer):
 
             if self.use_scheduler: self.scheduler.step()
 
+            if self.verbose:
+                log.info(f"\n ---- \n Epoch {epoch} total loss: {self.total_loss}")
             self._log_epoch_stats(epoch, self.model.loss_dict, n_minibatch, start_time)
 
             # Save model and trainer states.
@@ -274,7 +275,7 @@ class Trainer(BaseTrainer):
             batch_predictions.append(prediction)
 
             if self.verbose:
-                log.info(f"Batch {i + 1}/{len(batch_start)} processed in testing loop.")
+                log.info(f"Batch {i + 1}/{len(batch_start)} evaluated.")
 
         # Save predictions and calculate metrics
         log.info("Saving model results and calculating metrics")

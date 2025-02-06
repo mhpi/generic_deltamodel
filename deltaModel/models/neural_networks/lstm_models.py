@@ -7,7 +7,7 @@ from torch.nn import Parameter
 
 
 class CudnnLstm(torch.nn.Module):
-    def __init__(self, *, inputSize, hiddenSize, dr=0.5, drMethod="drW"):
+    def __init__(self, *, inputSize, hiddenSize, dr=0.5, drMethod='drW', gpu=0):
         super().__init__()
         self.name = 'CudnnLstm'
         self.inputSize = inputSize
@@ -17,7 +17,7 @@ class CudnnLstm(torch.nn.Module):
         self.w_hh = Parameter(torch.Tensor(hiddenSize * 4, hiddenSize))
         self.b_ih = Parameter(torch.Tensor(hiddenSize * 4))
         self.b_hh = Parameter(torch.Tensor(hiddenSize * 4))
-        self._all_weights = [["w_ih", "w_hh", "b_ih", "b_hh"]]
+        self._all_weights = [['w_ih', 'w_hh', 'b_ih', 'b_hh']]
         self.cuda()
 
         self.reset_mask()
@@ -29,12 +29,12 @@ class CudnnLstm(torch.nn.Module):
 
     def __setstate__(self, d):
         super().__setstate__(d)
-        self.__dict__.setdefault("_data_ptrs", [])
-        if "all_weights" in d:
-            self._all_weights = d["all_weights"]
+        self.__dict__.setdefault('_data_ptrs', [])
+        if 'all_weights' in d:
+            self._all_weights = d['all_weights']
         if isinstance(self._all_weights[0][0], str):
             return
-        self._all_weights = [["w_ih", "w_hh", "b_ih", "b_hh"]]
+        self._all_weights = [['w_ih', 'w_hh', 'b_ih', 'b_hh']]
 
     def reset_mask(self):
         self.maskW_ih = createMask(self.w_ih, self.dr)
@@ -50,7 +50,7 @@ class CudnnLstm(torch.nn.Module):
         pass
 
     def forward(self, input, hx=None, cx=None, doDropMC=False, dropoutFalse=False):
-        # dropoutFalse: it will ensure doDrop is false, unless doDropMC is true
+        # dropoutFalse: it will ensure doDrop is false, unless doDropMC is true.
         if dropoutFalse and (not doDropMC):
             doDrop = False
         elif self.dr > 0 and (doDropMC is True or self.training is True):
@@ -118,9 +118,6 @@ class CudnnLstm(torch.nn.Module):
                 (),
                 None,
             )
-        # output, hy, cy, reserve, new_weight_buf = torch._cudnn_rnn(  #torch._C._VariableFunctions._cudnn_rnn(
-        #     input.cuda(), weight, 4, None, hx.cuda(), cx.cuda(), 2,  # 2 means LSTM
-        #     self.hiddenSize, 1, False, 0, self.training, False, (), None)   # 4 was False before
         return output, (hy, cy)
 
     @property
@@ -142,14 +139,19 @@ class CudnnLstmModel(torch.nn.Module):
         self.nLayer = 1
         self.linearIn = torch.nn.Linear(nx, hiddenSize)
         self.lstm = CudnnLstm(inputSize=hiddenSize, hiddenSize=hiddenSize, dr=dr)
-        
+
         self.linearOut = torch.nn.Linear(hiddenSize, ny)
+        self.gpu = 0
+
         # self.activation_sigmoid = torch.nn.Sigmoid()
+        # self.drtest = torch.nn.Dropout(p=0.4)
 
     def forward(self, x, doDropMC=False, dropoutFalse=False):
         x0 = F.relu(self.linearIn(x))
-        self.lstm.flatten_parameters()
+        # self.lstm.flatten_parameters()
+        
         outLSTM, (hn, cn) = self.lstm(x0, doDropMC=doDropMC, dropoutFalse=dropoutFalse)
+        # outLSTMdr = self.drtest(outLSTM)
         out = self.linearOut(outLSTM)
         return out
     
