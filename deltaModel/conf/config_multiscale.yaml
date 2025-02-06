@@ -1,3 +1,7 @@
+# This configuration file is specifically for the high-resolution, differentiable, hydrologic model, dHBV2.0UH from Song et al., 2024. If you find this code is useful to your work, please cite this paper below:
+# Yalan Song, Tadd Bindas, Chaopeng Shen, et al. High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning. ESS Open Archive. September 26, 2024. https://doi.org/10.22541/essoar.172736277.74497104/v1.
+
+
 defaults:
     - _self_
     - hydra: settings
