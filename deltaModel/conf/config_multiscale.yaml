@@ -1,5 +1,3 @@
-# Data and trained model can be accessed here: https://pennstateoffice365-my.sharepoint.com/personal/cxs1024_psu_edu/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fcxs1024%5Fpsu%5Fedu%2FDocuments%2FGroup%2FData%2FdHBV2%5F0%5Fcontinental%5Fdata&ga=1
-
 defaults:
     - _self_
     - hydra: settings
@@ -18,11 +16,13 @@ data_sampler: ms_hydro_sampler
 trainer: trainer_multiscale
 
 save_path: ./results
-trained_model: path/to/trained/model/
+trained_model: path/to/trained/model/  # The trained dHBV 2.0 model + input data can be downloaded from: https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/cxs1024_psu_edu/Eqi1NuJ3d2pMpEJpVu0EGSoBigi-VCWVHgOYIRoTeuGiOw?e=HaNNeA
 
 
 ## Training ------------------------------#
 train:
+    # NOTE: dHBV 2.0 currently does not support training.
+    # Training code will be released at a later time.
     start_time: 1980/10/01
     end_time: 1995/09/30
     target: [flow_sim]
@@ -44,7 +44,7 @@ test:
 
 ## Loss Function -------------------------#
 loss_function:
-    model: RmseLossComb
+    model: NseLossBatch
 
 
 ## dPL Model -----------------------------#
@@ -52,13 +52,19 @@ dpl_model:
     rho: 365
     
     phy_model:
-        #HBV : Feng, Dapeng, Jiangtao Liu, Kathryn Lawson, and Chaopeng Shen."Differentiable, Learnable, Regionalized Process‐Based Models With Multiphysical Outputs can Approach State‐Of‐The‐Art Hydrologic Prediction Accuracy." Water Resources Research 58, no. 10 (2022): e2022WR032404.
-        #HBV_1_1p (1.1p) : Song, Y., Sawadekar, K., Frame, J. M., Pan, M., Clark, M., Knoben, W. J. M., Wood, A. W., Patel, T., & Shen, C. (2024b). Improving physics-informed, differentiable hydrologic models for capturing unseen extreme events. ESS Open Archive. https://doi.org/10.22541/essoar.172304428.82707157/v1
-        #HBV_adj: Song, Y., Knoben, W. J. M., Clark, M. P., Feng, D., Lawson, K., Sawadekar, K., & Shen, C. (2024a). When ancient numerical demons meet physics-informed machine learning: Adjoint-based gradients for implicit differentiable modeling. Hydrology and Earth System Sciences, 28(13), 3051–3077. https://doi.org/10.5194/hess-28-3051-2024
+        ## Citations ##
+        # HBV: Feng, Dapeng, Jiangtao Liu, Kathryn Lawson, and Chaopeng Shen."Differentiable, Learnable, Regionalized Process‐Based Models With Multiphysical Outputs can Approach State‐Of‐The‐Art Hydrologic Prediction Accuracy." Water Resources Research 58, no. 10 (2022): e2022WR032404. https://doi.org/10.1029/2022WR032404.
+        ###
+        # HBV 1.1p (HBV_1_1p): Song, Y., Sawadekar, K., Frame, J. M., Pan, M., Clark, M., Knoben, W. J. M., Wood, A. W., Patel, T., & Shen, C. (2024b). Improving physics-informed, differentiable hydrologic models for capturing unseen extreme events. ESS Open Archive. https://doi.org/10.22541/essoar.172304428.82707157/v1.
+        ###
+        # HBV adj: Song, Y., Knoben, W. J. M., Clark, M. P., Feng, D., Lawson, K., Sawadekar, K., & Shen, C. (2024a). When ancient numerical demons meet physics-informed machine learning: Adjoint-based gradients for implicit differentiable modeling. Hydrology and Earth System Sciences, 28(13), 3051–3077. https://doi.org/10.5194/hess-28-3051-2024
+        ###
+        # HBV 2.0 (HBV_2_0): Yalan Song, Tadd Bindas, Chaopeng Shen, et al. High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning. ESS Open Archive. September 26, 2024. https://doi.org/10.22541/essoar.172736277.74497104/v1.
+
         model: [HBV_2_0]  # HBV, HBV_1_1p, HBV_adj
         nmul: 4
-        warm_up: 365
-        warm_up_states: True  # If False, tracking gradient from spin-up; Increase your computational time; Slightly improve accuracy; Not used by HBV_adj.
+        warm_up: 0
+        warm_up_states: False
         dy_drop: 0.0
         dynamic_params:
             HBV: [parBETA, parBETAET]
