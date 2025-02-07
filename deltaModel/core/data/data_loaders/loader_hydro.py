@@ -49,7 +49,7 @@ class HydroDataLoader(BaseDataLoader):
         self.config = config
         self.test_split = test_split
         self.overwrite = overwrite
-        self.supported_data = ['camels_671', 'camels_531']
+        self.supported_data = ['camels_671', 'camels_531', 'prism_671', 'prism_531']
         self.data_name = config['observations']['name']
         self.nn_attributes = config['dpl_model']['nn_model'].get('attributes', [])
         self.nn_forcings = config['dpl_model']['nn_model'].get('forcings', [])

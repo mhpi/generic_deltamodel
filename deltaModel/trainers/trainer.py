@@ -343,8 +343,8 @@ class Trainer(BaseTrainer):
         target = np.expand_dims(observations[:, :, 0].cpu().numpy(), 2)
 
         # Remove warm-up data
-        if self.config['dpl_model']['phy_model']['warm_up_states']:
-            target = target[self.config['dpl_model']['phy_model']['warm_up']:, :]
+        # if self.config['dpl_model']['phy_model']['warm_up_states']:  # NOTE: remove if bug does not reoccur
+        target = target[self.config['dpl_model']['phy_model']['warm_up']:, :]
 
         # Compute metrics
         metrics = Metrics(

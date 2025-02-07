@@ -69,7 +69,7 @@ dpl_model:
         dynamic_params:
             HBV: [parBETA, parBETAET]
             HBV_adj: [parBETA,parFC, parBETAET]
-            HBV_1_1p: [parBETA, parBETAET, parK0]
+            HBV_1_1p: [parBETA, parK0, parBETAET]
             HBV_2_0: [parBETA, parK0, parBETAET]
 
         routing: True

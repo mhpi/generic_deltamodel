@@ -215,11 +215,17 @@ class PathBuilder(BaseModel):
         """
         start = config['test']['start_time'][:4]
         end = config['test']['end_time'][:4]
+        test_epoch = config['test'].get('test_epoch', '')
+
+        if test_epoch:
+            test_epoch = f"_Ep{test_epoch}"
+        else:
+            test_epoch = ''
 
         if abbreviate:
-            return f"test{start[-2:]}-{end[-2:]}"
+            return f"test{start[-2:]}-{end[-2:]}" + test_epoch
         else: 
-            return f"test{start}-{end}"
+            return f"test{start}-{end}" + test_epoch
 
     @staticmethod
     def _multimodel_state(config: Dict[str, Any]) -> str:
@@ -304,7 +310,8 @@ class PathBuilder(BaseModel):
             f"E{config['train']['epochs']}_"
             f"R{config['dpl_model']['rho']}_"
             f"B{config['train']['batch_size']}_"
-            f"H{config['dpl_model']['nn_model']['lstm_hidden_size']}_"
+            f"H{config['dpl_model']['nn_model']['hidden_size']}_"
+            # f"H{config['dpl_model']['nn_model']['lstm_hidden_size']}_"
             f"n{config['dpl_model']['phy_model']['nmul']}_"
             f"{norm}_"
             f"{warmup}_"
