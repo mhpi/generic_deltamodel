@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 
 
 class RmseLossComb(torch.nn.Module):
-    """Combination root mean squared error loss function.
+    """Combination root mean squared error (RMSE) loss function.
 
     This loss combines the RMSE of the target variable with the RMSE of
     the log-transformed target variable.
@@ -44,6 +44,7 @@ class RmseLossComb(torch.nn.Module):
         device: Optional[str] = 'cpu',
     ) -> None:
         super().__init__()
+        self.name = 'Combination RMSE Loss'
         self.config = config
         self.device = device
 

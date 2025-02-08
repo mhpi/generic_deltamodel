@@ -1,0 +1,129 @@
+# This configuration file is specifically for the high-resolution, differentiable, hydrologic model dHBV2.0UH from Song et al., 2024. If you find this code is useful to your work, please cite this paper below:
+# Yalan Song, Tadd Bindas, Chaopeng Shen, et al. High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning. ESS Open Archive. 26 September 2024. https://doi.org/10.22541/essoar.172736277.74497104/v1.
+
+defaults:
+    - _self_
+    - hydra: settings
+    - observations: merit_forward_zone
+
+
+## General -------------------------------#
+mode: test
+ensemble_type: none
+random_seed: 111111
+device: cuda
+gpu_id: 0
+
+data_loader: ms_hydro_loader
+data_sampler: ms_hydro_sampler
+trainer: trainer_multiscale
+
+save_path: ./results
+trained_model: /projects/mhpi/lglonz/project_silmaril/generic_deltaModel/results/merit_forward_zone/train1980-1995/no_multi/LSTMMLP_E100_R365_B100_H64_n4_noLn_WU_111111/HBV_2_0/RmseLossComb/3dyn/parBETA_parK0_parBETAET/dHBV_2_0_Ep100.pt # path/to/trained/model/  # The trained dHBV 2.0 model + input data can be downloaded from: https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/cxs1024_psu_edu/Eqi1NuJ3d2pMpEJpVu0EGSoBigi-VCWVHgOYIRoTeuGiOw?e=HaNNeA
+
+
+## Training ------------------------------#
+train:
+    # NOTE: dHBV 2.0 currently does not support training.
+    # Training code will be released at a later time.
+    start_time: 1980/10/01
+    end_time: 1995/09/30
+    target: [flow_sim]
+    optimizer: Adadelta
+    batch_size: 100
+    epochs: 100
+    start_epoch: 0
+    save_epoch: 5
+
+
+## Testing -------------------------------#
+test:
+    start_time: 1980/01/01
+    end_time: 2020/12/31
+    batch_size: 400
+    test_epoch: 100
+    evaluation: False
+
+
+## Loss Function -------------------------#
+loss_function:
+    model: NseLossBatch
+
+
+## dPL Model -----------------------------#
+dpl_model:
+    rho: 365
+    
+    phy_model:
+        ## Citations ##
+        # HBV 2.0 (HBV_2_0): Yalan Song, Tadd Bindas, Chaopeng Shen, et al. High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning. ESS Open Archive. September 26, 2024. https://doi.org/10.22541/essoar.172736277.74497104/v1.
+
+        model: [HBV_2_0]
+        nmul: 4
+        warm_up: 0
+        warm_up_states: False
+        dy_drop: 0.0
+        dynamic_params:
+            HBV_2_0: [parBETA, parK0, parBETAET]
+
+        routing: True
+        use_log_norm: []
+        nearzero: 1e-5
+
+        forcings: [
+            P,
+            Temp,
+            PET,
+        ]
+        attributes: []
+
+    nn_model:
+        model: LSTMMLP
+
+        lstm_dropout: 0.5
+        lstm_hidden_size: 64
+
+        mlp_dropout: 0.5
+        mlp_hidden_size: 4096
+
+        learning_rate: 1.0
+        lr_scheduler: None
+        lr_scheduler_params:
+            step_size: 10
+            gamma: 0.5
+        
+        forcings: [
+            P,
+            Temp,
+            PET,
+        ]
+        attributes: [
+            ETPOT_Hargr,
+            FW,
+            HWSD_clay,
+            HWSD_gravel,
+            HWSD_sand,
+            HWSD_silt,
+            NDVI,
+            Porosity,
+            SoilGrids1km_clay,
+            SoilGrids1km_sand,
+            SoilGrids1km_silt,
+            T_clay,
+            T_gravel,
+            T_sand,
+            T_silt,
+            aridity,
+            glaciers,
+            meanP, 
+            meanTa,
+            meanelevation,
+            meanslope,
+            permafrost,
+            permeability,
+            seasonality_P,
+            seasonality_PET, 
+            snow_fraction,
+            snowfall_fraction,
+            uparea,
+        ]

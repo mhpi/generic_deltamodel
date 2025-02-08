@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 
 
 class RmseLoss(torch.nn.Module):
-    """ Root mean squared error loss function.
+    """ Root mean squared error (RMSE) loss function.
 
     The RMSE is calculated as:
         p: predicted value,
@@ -36,6 +36,7 @@ class RmseLoss(torch.nn.Module):
         device: Optional[str] = 'cpu',
     ) -> None:
         super().__init__()
+        self.name = 'RMSE Loss'
         self.config = config
         self.device = device
 

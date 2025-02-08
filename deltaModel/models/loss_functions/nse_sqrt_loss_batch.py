@@ -5,7 +5,7 @@ import torch
 
 
 class NseSqrtLossBatch(torch.nn.Module):
-    """Sqrt normalized squared error loss function.
+    """Sqrt normalized squared error (NSE) loss function.
 
     Same as Fredrick 2019, batch NSE loss.
     Adapted from Yalan Song.
@@ -40,6 +40,7 @@ class NseSqrtLossBatch(torch.nn.Module):
         device: Optional[str] = 'cpu',
     ) -> None:
         super().__init__()
+        self.name = 'Batch Sqrt NSE Loss'
         self.config = config
         self.device = device
         self.std = np.nanstd(target[:, :, 0].cpu().detach().numpy(), axis=0)
