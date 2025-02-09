@@ -408,9 +408,8 @@ def load_json(file_path: str) -> Dict:
         return None
 
 
-def txt_to_gageid(txt_path: str):
-    """Load txt file of gage ids to numpy array.
-    """
+def txt_to_array(txt_path: str):
+    """Load txt file of gage ids to numpy array."""
     with open(txt_path, 'r') as f:
         lines = f.read().strip()  # Remove extra whitespace
         lines = lines.replace("[", "").replace("]", "")  # Remove brackets

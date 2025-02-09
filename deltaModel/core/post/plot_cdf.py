@@ -1,6 +1,7 @@
+from typing import Dict, List
+
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import List, Dict
 
 
 def plot_cdf(
