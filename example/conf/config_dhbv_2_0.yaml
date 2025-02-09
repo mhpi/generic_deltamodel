@@ -4,7 +4,7 @@
 defaults:
     - _self_
     - hydra: settings
-    - observations: merit_forward_zone
+    - observations: merit_forward
 
 
 ## General -------------------------------#
@@ -18,8 +18,8 @@ data_loader: ms_hydro_loader
 data_sampler: ms_hydro_sampler
 trainer: trainer_multiscale
 
-save_path: ./results
-trained_model: /projects/mhpi/lglonz/project_silmaril/generic_deltaModel/results/merit_forward_zone/train1980-1995/no_multi/LSTMMLP_E100_R365_B100_H64_n4_noLn_WU_111111/HBV_2_0/RmseLossComb/3dyn/parBETA_parK0_parBETAET/dHBV_2_0_Ep100.pt # path/to/trained/model/  # The trained dHBV 2.0 model + input data can be downloaded from: https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/cxs1024_psu_edu/Eqi1NuJ3d2pMpEJpVu0EGSoBigi-VCWVHgOYIRoTeuGiOw?e=HaNNeA
+save_path: ../results
+trained_model: /projects/mhpi/lglonz/project_silmaril/generic_deltaModel/results/merit_forward_zone/train1980-1995/no_multi/LSTMMLP_E100_R365_B100_H64_n4_noLn_WU_111111/HBV_2_0/RmseLossComb/3dyn/parBETA_parK0_parBETAET/dHBV_2_0_Ep100.pt # path/to/trained/model/  # The trained dHBV 2.0 model (+ input data) can be downloaded from: https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/cxs1024_psu_edu/Eqi1NuJ3d2pMpEJpVu0EGSoBigi-VCWVHgOYIRoTeuGiOw?e=HaNNeA
 
 
 ## Training ------------------------------#

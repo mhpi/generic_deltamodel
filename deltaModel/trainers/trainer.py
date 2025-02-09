@@ -74,6 +74,9 @@ class Trainer(BaseTrainer):
         self.is_in_train = False
 
         if 'train' in config['mode']:
+            if not self.train_dataset:
+                raise ValueError("'train_dataset' required for training mode.")
+            
             log.info(f"Initializing training mode")
             self.epochs = self.config['train']['epochs']
 

@@ -8,17 +8,17 @@ defaults:
 
 
 ## General -------------------------------#
-mode: train_test  # train, test, train_test
+mode: train  # train, test, train_test
 random_seed: 111111
 device: cuda
-gpu_id: 0
+gpu_id: 1
 
 data_loader: loader_hydro
 data_sampler: sampler_hydro
 trainer: trainer
 
 save_path: ../results
-trained_model: path/to/trained/model/ ### TODO: add here model file here
+trained_model: path/to/trained/model/  # The trained dHBV 1.1p model can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_1_1p_trained.zip
 
 
 ## Training ------------------------------#
@@ -38,7 +38,7 @@ test:
     start_time: 1989/10/01
     end_time: 1999/09/30
     batch_size: 25
-    test_epoch: 100
+    test_epoch: 50
     evaluation: False
 
 
@@ -53,7 +53,7 @@ dpl_model:
     
     phy_model:
         ## Citations ##
-        # HBV 1.1p (HBV_1_1p): Song, Y., Sawadekar, K., Frame, J. M., Pan, M., Clark, M., Knoben, W. J. M., Wood, A. W., Patel, T., & Shen, C. (2024b). Improving physics-informed, differentiable hydrologic models for capturing unseen extreme events. ESS Open Archive. https://doi.org/10.22541/essoar.172304428.82707157/v1.
+        # HBV 1.1p (HBV_1_1p): Yalan Song, Kamlesh Sawadekar, Jonathan M Frame, Ming Pan, Martyn Clark, Wouter J M Knoben, Andrew W Wood, Trupesh Patel, Chaopeng Shen. "Improving physics-informed, differentiable hydrologic models for capturing unseen extreme events." ESS Open Archive (2024). https://doi.org/10.22541/essoar.172304428.82707157/v1.
 
         model: [HBV_1_1p]
         nmul: 16

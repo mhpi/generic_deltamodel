@@ -1,7 +1,6 @@
 import datetime as dt
+import json
 import logging
-from abc import ABC, abstractmethod
-from re import I
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
@@ -378,3 +377,41 @@ np.ndarray], device: str) -> Dict[str, torch.Tensor]:
                 device=device
             )
     return data_dict
+
+
+def load_json(file_path: str) -> Dict:
+    """Load JSON data from a file and return it as a dictionary.
+    
+    Parameters
+    ----------
+    file_path : str
+        Path to the JSON file to load.
+    
+    Returns
+    -------
+    dict
+        Dictionary containing the JSON data.
+    """   
+    try:
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+
+            if isinstance(data, str):
+                # If json is still a string, decode again.
+                return json.loads(data) 
+            return data
+    except FileNotFoundError:
+        print(f"Error: File '{file_path}' not found.")
+        return None
+    except json.JSONDecodeError:
+        print(f"Error: Failed to decode JSON from file '{file_path}'.")
+        return None
+
+
+def txt_to_gageid(txt_path: str):
+    """Load txt file of gage ids to numpy array.
+    """
+    with open(txt_path, 'r') as f:
+        lines = f.read().strip()  # Remove extra whitespace
+        lines = lines.replace("[", "").replace("]", "")  # Remove brackets
+    return np.array([int(x) for x in lines.split(",")])

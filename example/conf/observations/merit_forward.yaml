@@ -1,7 +1,7 @@
 # Data extraction and trained model can be downloaded from: https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/cxs1024_psu_edu/Eqi1NuJ3d2pMpEJpVu0EGSoBigi-VCWVHgOYIRoTeuGiOw?e=HaNNeA
 
 name: merit_forward
-subbasin_data_path: /projects/mhpi/yxs275/model/generic_deltaModel_dhbv2.0/data/71_0 # your/path/to/MERIT_input_sample/71_0
+subbasin_data_path: /projects/mhpi/yxs275/model/generic_deltaModel_dhbv2.0/data/71_0  # your/path/to/MERIT_input_sample/71_0
 
 subbasin_id_name: COMID
 upstream_area_name: uparea

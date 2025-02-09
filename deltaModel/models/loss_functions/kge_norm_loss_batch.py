@@ -15,6 +15,7 @@ class KgeNormLossBatch(torch.nn.Module):
         beta: variability ratio,
         gamma: variability error,
         KGE = 1 - sqrt((r - 1)^2 + (beta - 1)^2 + (gamma - 1)^2)
+        N-KGE = 1 - KGE/(2 - KGE)
 
     Parameters
     ----------
@@ -95,6 +96,6 @@ class KgeNormLossBatch(torch.nn.Module):
         kge = 1 - torch.sqrt((r - 1)**2 + (beta - 1)**2 + (gamma - 1)**2)
 
         # Return KGE loss (1 - KGE)
-        loss = 1-kge/(2 - kge)
+        loss = 1 - kge/(2 - kge)
 
         return loss

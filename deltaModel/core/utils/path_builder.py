@@ -84,12 +84,29 @@ class PathBuilder(BaseModel):
             self.dynamic_parameters,
         )
 
-    def build_path_out(self) -> Dict[str, Any]:
-        """Build path to model outputs from individual root paths."""
-        return os.path.join(
-            self.build_path_model(),
-            self.test_period,
-        )
+    def build_path_out(self, model_path: str = None) -> Dict[str, Any]:
+        """Build path to model outputs from individual root paths.
+        
+        Parameters
+        ----------
+        model_path : str
+            Path to the model object.
+        
+        Returns
+        -------
+        str
+            Path to the output directory.
+        """
+        if model_path:
+            return os.path.join(
+                model_path,
+                self.test_period,
+            )
+        else:
+            return os.path.join(
+                self.build_path_model(),
+                self.test_period,
+            )
 
     def write_path (self, config: Dict[str, Any]) -> dict:
         """Create directory where model and outputs will be saved.
@@ -108,9 +125,10 @@ class PathBuilder(BaseModel):
         if os.path.exists(config.get('trained_model', '')):
             # Use user defined model path if it exists
             model_path = os.path.dirname(config['trained_model'])
+            out_path = self.build_path_out(model_path)
         else:
             model_path = self.build_path_model()
-        out_path = self.build_path_out()
+            out_path = self.build_path_out(model_path)
         
         # Create dirs
         if config['mode'] != 'test':
