@@ -33,7 +33,7 @@ train:
     save_epoch: 5
 
 
-## Testing -------------------------------#
+## Evaluation -------------------------------#
 test:
     start_time: 1989/10/01
     end_time: 1999/09/30

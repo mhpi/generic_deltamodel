@@ -36,13 +36,20 @@ train:
     save_epoch: 5
 
 
-## Testing -------------------------------#
+## Evaluation -------------------------------#
 test:
     start_time: 1980/01/01
     end_time: 2020/12/31
     batch_size: 400
     test_epoch: 100
     evaluation: False
+
+
+## Inference -------------------------------#
+predict:
+    start_time: 2012/10/01
+    end_time: 2014/09/30
+    batch_size: 25
 
 
 ## Loss Function -------------------------#
