@@ -82,6 +82,8 @@ class HydroDataLoader(BaseDataLoader):
         if self.test_split:
             self.train_dataset = self._preprocess_data(scope='train')
             self.eval_dataset = self._preprocess_data(scope='test')
+        elif self.config['mode'] == 'predict':
+            self.dataset = self._preprocess_data(scope='predict')
         else:
             self.dataset = self._preprocess_data(scope='all')
 
@@ -113,11 +115,14 @@ class HydroDataLoader(BaseDataLoader):
             elif scope == 'test':
                 data_path = self.config['observations']['test_path']
                 time = self.config['test_time']
+            elif scope == 'predict':
+                data_path = self.config['observations']['test_path']
+                time = self.config['predict_time']                
             elif scope == 'all':
-                data_path = self.config['observations']['path']
-                time = self.config['experiment_time']
+                data_path = self.config['observations']['test_path']
+                time = self.config['all_time']
             else:
-                raise ValueError("Scope must be 'train', 'test', or 'all'.")
+                raise ValueError("Scope must be 'train', 'test', 'predict', or 'all'.")
         except KeyError as e:
             raise ValueError(f"Key {e} for data path not in dataset config.")
         

@@ -1,9 +1,10 @@
 import datetime as dt
 import json
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
+import pandas as pd
 import torch
 
 log = logging.getLogger(__name__)
@@ -285,8 +286,6 @@ def get_training_sample_2_0(
     return dataset_sample
 
 
-
-
 def get_validation_sample(
     dataset_dict: Dict[str, torch.Tensor],
     i_s: int,
@@ -414,3 +413,45 @@ def txt_to_array(txt_path: str):
         lines = f.read().strip()  # Remove extra whitespace
         lines = lines.replace("[", "").replace("]", "")  # Remove brackets
     return np.array([int(x) for x in lines.split(",")])
+
+
+def timestep_resample(
+    data: Union[pd.DataFrame, np.ndarray, torch.Tensor],
+    resolution: str = 'M',
+    method: str = 'mean',
+) -> pd.DataFrame:
+    """
+    Resample the data to a given resolution.
+
+    Parameters
+    ----------
+    data : Union[pd.DataFrame, np.ndarray]
+        The data to resample.
+    resolution : str
+        The resolution to resample the data to. Default is 'M' (monthly).
+    method : str
+        The resampling method. Default is 'mean'.
+
+    Returns
+    -------
+    pd.DataFrame
+        The resampled data.
+    """
+    if isinstance(data, pd.DataFrame):
+        pass
+    elif isinstance(data, torch.Tensor):
+        data = data.cpu().detach().numpy()
+        data = pd.DataFrame(data)
+        data['time'] = pd.to_datetime(data['time'])
+    elif isinstance(data, np.ndarray):
+        data = pd.DataFrame(data)
+        data['time'] = pd.to_datetime(data['time'])
+    else:
+        raise ValueError(f"Data type not supported: {type(data)}")
+    
+    data.set_index('time', inplace=True)
+    data_resample = data.resample(resolution).agg(method)
+
+    data_resample['time'] = data_resample.index
+
+    return data_resample

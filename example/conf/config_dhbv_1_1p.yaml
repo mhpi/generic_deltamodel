@@ -8,7 +8,7 @@ defaults:
 
 
 ## General -------------------------------#
-mode: train  # train, test, train_test
+mode: train  # train, test, train_test, predict
 random_seed: 111111
 device: cuda
 gpu_id: 1
@@ -39,7 +39,13 @@ test:
     end_time: 1999/09/30
     batch_size: 25
     test_epoch: 50
-    evaluation: False
+
+
+## Inference -------------------------------#
+predict:
+    start_time: 2012/10/01
+    end_time: 2014/09/30
+    batch_size: 25
 
 
 ## Loss Function -------------------------#

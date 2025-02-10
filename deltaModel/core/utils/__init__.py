@@ -102,11 +102,26 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
     # Convert date ranges to integer values.
     train_time = Dates(config['train'], config['dpl_model']['rho'])
     test_time = Dates(config['test'], config['dpl_model']['rho'])
+    predict_time = Dates(config['predict'], config['dpl_model']['rho'])
     all_time = Dates(config['observations'], config['dpl_model']['rho'])
+
+    exp_time_start = min(
+        train_time.start_time,
+        train_time.end_time,
+        test_time.start_time,
+        test_time.end_time,
+    )
+    exp_time_end = max(
+        train_time.start_time,
+        train_time.end_time,
+        test_time.start_time,
+        test_time.end_time,
+    ) 
 
     config['train_time'] = [train_time.start_time, train_time.end_time]
     config['test_time'] = [test_time.start_time, test_time.end_time]
-    config['experiment_time'] = [train_time.start_time, test_time.end_time]
+    config['predict_time'] = [predict_time.start_time, predict_time.end_time]
+    config['experiment_time'] = [exp_time_start, exp_time_end]
     config['all_time'] = [all_time.start_time, all_time.end_time]   
 
     # TODO: add this handling directly to the trainer; this is not generalizable in current form.
@@ -278,11 +293,13 @@ def print_config(config: Dict[str, Any]) -> None:
 
     print("\033[1m" + "Data Loader" + "\033[0m")
     print(f"  {'Data Source:':<20}{config['observations']['name']:<20}")
-    if config['mode'] != 'test':
+    if 'train' in config['mode']:
         print(f"  {'Train Range :':<20}{config['train']['start_time']:<20}{config['train']['end_time']:<20}")
-    if config['mode'] != 'train':
+    if 'test' in config['mode']:
         print(f"  {'Test Range :':<20}{config['test']['start_time']:<20}{config['test']['end_time']:<20}")
-    if config['train']['start_epoch'] > 0:
+    if 'predict' in config['mode']:
+        print(f"  {'Predict Range :':<20}{config['predict']['start_time']:<20}{config['predict']['end_time']:<20}")
+    if config['train']['start_epoch'] > 0 and 'train' in config['mode']:
         print(f"  {'Resume training from epoch:':<20}{config['train']['start_epoch']:<20}")
     print()
 
@@ -352,3 +369,48 @@ def camel_to_snake(camel_str):
     """
     return re.sub(r'([a-z])([A-Z])', r'\1_\2', camel_str).lower()
 
+
+def format_resample_interval(resample: str) -> str:
+    """Formats the resampling interval into a human-readable string.
+    
+    Parameters
+    ----------
+    resample: str
+        The resampling interval (e.g., 'D', 'W', '3D', 'M', 'Y').
+
+    Returns
+    -------
+    str
+        A formatted string describing the resampling interval.
+    """
+    # Check if the interval contains a number (e.g., "3D")
+    if any(char.isdigit() for char in resample):
+        # Extract the numeric part and the unit part
+        num = ''.join(filter(str.isdigit, resample))
+        unit = ''.join(filter(str.isalpha, resample))
+        
+        # Map units to human-readable names
+        if num == '1':
+            unit_map = {
+                'D': 'daily',
+                'W': 'weekly',
+                'M': 'monthly',
+                'Y': 'yearly',
+            }
+        else:
+            unit_map = {
+                'D': 'days',
+                'W': 'weeks',
+                'M': 'months',
+                'Y': 'years',
+            }
+        return f"{num} {unit_map.get(unit, unit)}"
+    else:
+        # Single-character intervals (e.g., "D", "W")
+        unit_map = {
+            'D': 'daily',
+            'W': 'weekly',
+            'M': 'monthly',
+            'Y': 'yearly',
+        }
+        return unit_map.get(resample, resample)
