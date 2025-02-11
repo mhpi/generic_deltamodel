@@ -25,7 +25,7 @@ def load_data_subbasin(config, train=True):
 
     out_dict = dict()
 
-    if config['observations']['name'] in ['camels_671', 'camels_531','merit_forward_zone']:
+    if config['observations']['name'] in ['camels_671', 'camels_531','merit_forward']:
         if train:
             startdate =config['train']['start_time']
             enddate = config['train']['end_time']

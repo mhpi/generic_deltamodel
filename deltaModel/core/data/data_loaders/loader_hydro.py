@@ -8,9 +8,10 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+from sklearn.exceptions import DataDimensionalityWarning
+
 from core.data import intersect
 from core.data.data_loaders.base import BaseDataLoader
-from sklearn.exceptions import DataDimensionalityWarning
 
 log = logging.getLogger(__name__)
 

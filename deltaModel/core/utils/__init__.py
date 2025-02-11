@@ -11,8 +11,9 @@ from omegaconf import DictConfig, OmegaConf
 from pydantic import ValidationError
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from core.utils.path_builder import PathBuilder
 from dates import Dates
+
+from core.utils.path_builder import PathBuilder
 
 log = logging.getLogger(__name__)
 
@@ -230,7 +231,7 @@ def save_train_state(
     }, full_path)
 
 
-def save_outputs(config, preds_list, y_obs, create_dirs=False) -> None:
+def save_outputs(config, preds_list, y_obs=None, create_dirs=False) -> None:
     """Save outputs from a model."""
     if torch.is_tensor(y_obs):
         y_obs = y_obs.cpu().numpy()

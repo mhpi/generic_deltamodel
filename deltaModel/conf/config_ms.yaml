@@ -5,21 +5,21 @@
 defaults:
     - _self_
     - hydra: settings
-    - observations: merit_forward_zone
+    - observations: merit_forward
 
 
 ## General -------------------------------#
-mode: test  # train, test, train_test
+mode: predict  # train, test, train_test
 ensemble_type: none
 random_seed: 111111
 device: cuda
-gpu_id: 7
+gpu_id: 1
 
-data_loader: ms_hydro_loader
-data_sampler: ms_hydro_sampler
-trainer: trainer_multiscale
+data_loader: loader_hydro_ms
+data_sampler: sampler_hydro_ms
+trainer: trainer_ms
 
-save_path: ./results
+save_path: ../results
 trained_model: path/to/trained/model/  # The trained dHBV 2.0 model + input data can be downloaded from: https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/cxs1024_psu_edu/Eqi1NuJ3d2pMpEJpVu0EGSoBigi-VCWVHgOYIRoTeuGiOw?e=HaNNeA
 
 
@@ -46,9 +46,16 @@ test:
     evaluation: False
 
 
+## Inference -------------------------------#
+predict:
+    start_time: 1980/01/01
+    end_time: 2020/12/31
+    batch_size: 400
+
+
 ## Loss Function -------------------------#
 loss_function:
-    model: NseLossBatch
+    model: RmseLossComb
 
 
 ## dPL Model -----------------------------#

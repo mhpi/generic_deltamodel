@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import torch
 import tqdm
+
 from core.calc.metrics import Metrics
 from core.data import create_training_grid
 from core.utils import save_outputs, save_train_state
@@ -175,7 +176,7 @@ class Trainer(BaseTrainer):
                     self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
                 continue
         
-        raise FileNotFoundError(f"No checkpoint for epoch {self.start_epoch-1}.")
+        # raise FileNotFoundError(f"No checkpoint for epoch {self.start_epoch-1}.") ## TODO: Fix resume model training
 
         # Restore random states
         torch.set_rng_state(checkpoint['random_state'])
@@ -244,10 +245,7 @@ class Trainer(BaseTrainer):
         log.info(f"Training complete.")
 
     def evaluate(self) -> None:
-        """Run model evaluation and return metrics.
-        
-        Model outputs and results are also saved.
-        """
+        """Run model evaluation and return both metrics and model outputs."""
         self.is_in_train = False
 
         # Track overall predictions and observations

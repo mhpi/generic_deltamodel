@@ -323,13 +323,19 @@ class PathBuilder(BaseModel):
         if config['dpl_model']['phy_model']['warm_up_states']:
             warmup = 'WU'
 
+        # Set hiddensize for single or multi-NN setups.
+        if config['dpl_model']['nn_model']['model'] == 'LSTMMLP':
+            hidden_size = f"{config['dpl_model']['nn_model']['lstm_hidden_size']}" \
+                            f"_{config['dpl_model']['nn_model']['mlp_hidden_size']}"
+        else:
+            hidden_size = config['dpl_model']['nn_model']['hidden_size']
+
         return (
             f"{config['dpl_model']['nn_model']['model']}_"
             f"E{config['train']['epochs']}_"
             f"R{config['dpl_model']['rho']}_"
             f"B{config['train']['batch_size']}_"
-            f"H{config['dpl_model']['nn_model']['hidden_size']}_"
-            # f"H{config['dpl_model']['nn_model']['lstm_hidden_size']}_"
+            f"H{hidden_size}_"
             f"n{config['dpl_model']['phy_model']['nmul']}_"
             f"{norm}_"
             f"{warmup}_"
