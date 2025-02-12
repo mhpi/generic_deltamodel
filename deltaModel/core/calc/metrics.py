@@ -5,8 +5,8 @@ import os
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
-import numpy.typing as npt
 import scipy.stats as stats
+from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict, model_validator
 
 log = logging.getLogger()
@@ -21,45 +21,45 @@ class Metrics(BaseModel):
     Adapted from Tadd Bindas, Yalan Song, Farshid Rahmani.
     """
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    pred: npt.NDArray[np.float32]
-    target: npt.NDArray[np.float32]
-    bias: npt.NDArray[np.float32] = np.ndarray([])
-    bias_rel: npt.NDArray[np.float32] = np.ndarray([])
+    pred: NDArray[np.float32]
+    target: NDArray[np.float32]
+    bias: NDArray[np.float32] = np.ndarray([])
+    bias_rel: NDArray[np.float32] = np.ndarray([])
 
-    rmse: npt.NDArray[np.float32] = np.ndarray([])
-    rmse_ub: npt.NDArray[np.float32] = np.ndarray([])
-    rmse_fdc: npt.NDArray[np.float32] = np.ndarray([])
+    rmse: NDArray[np.float32] = np.ndarray([])
+    rmse_ub: NDArray[np.float32] = np.ndarray([])
+    rmse_fdc: NDArray[np.float32] = np.ndarray([])
 
-    mae: npt.NDArray[np.float32] = np.ndarray([])
+    mae: NDArray[np.float32] = np.ndarray([])
 
-    corr: npt.NDArray[np.float32] = np.ndarray([])
-    corr_spearman: npt.NDArray[np.float32] = np.ndarray([])
-    r2: npt.NDArray[np.float32] = np.ndarray([])
-    nse: npt.NDArray[np.float32] = np.ndarray([])
+    corr: NDArray[np.float32] = np.ndarray([])
+    corr_spearman: NDArray[np.float32] = np.ndarray([])
+    r2: NDArray[np.float32] = np.ndarray([])
+    nse: NDArray[np.float32] = np.ndarray([])
 
-    flv: npt.NDArray[np.float32] = np.ndarray([])
-    fhv: npt.NDArray[np.float32] = np.ndarray([])
-    pbias: npt.NDArray[np.float32] = np.ndarray([])
-    pbias_mid: npt.NDArray[np.float32] = np.ndarray([])
-    flv_abs: npt.NDArray[np.float32] = np.ndarray([])
-    fhv_abs: npt.NDArray[np.float32] = np.ndarray([])
-    pbias_abs: npt.NDArray[np.float32] = np.ndarray([])
-    pbias_abs_mid: npt.NDArray[np.float32] = np.ndarray([])
+    flv: NDArray[np.float32] = np.ndarray([])
+    fhv: NDArray[np.float32] = np.ndarray([])
+    pbias: NDArray[np.float32] = np.ndarray([])
+    pbias_mid: NDArray[np.float32] = np.ndarray([])
+    flv_abs: NDArray[np.float32] = np.ndarray([])
+    fhv_abs: NDArray[np.float32] = np.ndarray([])
+    pbias_abs: NDArray[np.float32] = np.ndarray([])
+    pbias_abs_mid: NDArray[np.float32] = np.ndarray([])
 
-    kge: npt.NDArray[np.float32] = np.ndarray([])
-    kge_12: npt.NDArray[np.float32] = np.ndarray([])
+    kge: NDArray[np.float32] = np.ndarray([])
+    kge_12: NDArray[np.float32] = np.ndarray([])
     
-    rmse_low: npt.NDArray[np.float32] = np.ndarray([])
-    rmse_mid: npt.NDArray[np.float32] = np.ndarray([])
-    rmse_high: npt.NDArray[np.float32] = np.ndarray([])
+    rmse_low: NDArray[np.float32] = np.ndarray([])
+    rmse_mid: NDArray[np.float32] = np.ndarray([])
+    rmse_high: NDArray[np.float32] = np.ndarray([])
 
-    d_max: npt.NDArray[np.float32] = np.ndarray([])
-    d_max_rel: npt.NDArray[np.float32] = np.ndarray([])
+    d_max: NDArray[np.float32] = np.ndarray([])
+    d_max_rel: NDArray[np.float32] = np.ndarray([])
 
     def __init__(
         self,
-        pred: npt.NDArray[np.float32],
-        target: npt.NDArray[np.float32],
+        pred: NDArray[np.float32],
+        target: NDArray[np.float32],
     ) -> None:
         if pred.ndim == 1:
             pred = np.expand_dims(pred, axis=0)
@@ -280,17 +280,17 @@ class Metrics(BaseModel):
         with open(save_path, "w") as f:
             json.dump(json_dat, f)        
 
-    def tile_mean(self, data: npt.NDArray[np.float32]) -> npt.NDArray[np.float32]:
+    def tile_mean(self, data: NDArray[np.float32]) -> NDArray[np.float32]:
         """Calculate mean of target.
 
         Parameters
         ----------
-        data : npt.NDArray[np.float32]
+        data : NDArray[np.float32]
             Data to calculate mean.
         
         Returns
         -------
-        npt.NDArray[np.float32]
+        NDArray[np.float32]
             Mean of data.
         """
         return np.tile(np.nanmean(data, axis=1), (self.nt, 1)).transpose()
@@ -307,18 +307,18 @@ class Metrics(BaseModel):
     
     @staticmethod
     def _bias(
-        pred: npt.NDArray[np.float32],
-        target: npt.NDArray[np.float32],
+        pred: NDArray[np.float32],
+        target: NDArray[np.float32],
         offset: float = 0.0,
-    ) -> npt.NDArray[np.float32]:
+    ) -> NDArray[np.float32]:
         """Calculate bias."""
         return np.nanmean(abs(pred - target)/(target + offset), axis=1)
 
     @staticmethod
     def _bias_rel(
-        pred: npt.NDArray[np.float32],
-        target: npt.NDArray[np.float32],
-    ) -> npt.NDArray[np.float32]:
+        pred: NDArray[np.float32],
+        target: NDArray[np.float32],
+    ) -> NDArray[np.float32]:
         """Calculate relative bias.
         
         Don't sum together because if NaNs are present at different idx,
@@ -330,8 +330,8 @@ class Metrics(BaseModel):
 
     @staticmethod
     def _pbias(
-        pred: npt.NDArray[np.float32],
-        target: npt.NDArray[np.float32],
+        pred: NDArray[np.float32],
+        target: NDArray[np.float32],
         offset: float = 0.0,
     ) -> np.float32:
         """Calculate percent bias."""
@@ -339,8 +339,8 @@ class Metrics(BaseModel):
     
     @staticmethod
     def _pbias_abs(
-        pred: npt.NDArray[np.float32],
-        target: npt.NDArray[np.float32],
+        pred: NDArray[np.float32],
+        target: NDArray[np.float32],
         offset: float = 0.0,
     ) -> np.float32:
         """Calculate absolute percent bias."""
@@ -348,18 +348,18 @@ class Metrics(BaseModel):
 
     @staticmethod
     def _rmse(
-        pred: npt.NDArray[np.float32],
-        target: npt.NDArray[np.float32],
+        pred: NDArray[np.float32],
+        target: NDArray[np.float32],
         axis: Optional[int] = 1,
-    ) -> npt.NDArray[np.float32]:
+    ) -> NDArray[np.float32]:
         """Calculate root mean square error."""
         return np.sqrt(np.nanmean((pred - target) ** 2, axis=axis))
     
     def _rmse_ub(
         self,
-        pred: npt.NDArray[np.float32],
-        target: npt.NDArray[np.float32],
-    ) -> npt.NDArray[np.float32]:
+        pred: NDArray[np.float32],
+        target: NDArray[np.float32],
+    ) -> NDArray[np.float32]:
         """Calculate unbiased root mean square error."""
         pred_mean = self.tile_mean(self.pred)
         target_mean = self.tile_mean(self.target)
@@ -369,9 +369,9 @@ class Metrics(BaseModel):
     
     def _rmse_fdc(
         self,
-        pred: npt.NDArray[np.float32],
-        target: npt.NDArray[np.float32],
-    ) -> npt.NDArray[np.float32]:
+        pred: NDArray[np.float32],
+        target: NDArray[np.float32],
+    ) -> NDArray[np.float32]:
         """Calculate flow duration curve root mean square error."""
         pred_fdc = self._calc_fdc(pred)
         target_fdc = self._calc_fdc(target)
@@ -379,17 +379,17 @@ class Metrics(BaseModel):
 
     @staticmethod
     def _mae(
-        pred: npt.NDArray[np.float32],
-        target: npt.NDArray[np.float32],
+        pred: NDArray[np.float32],
+        target: NDArray[np.float32],
         axis: Optional[int] = 1,
-    ) -> npt.NDArray[np.float32]:
+    ) -> NDArray[np.float32]:
         """Calculate mean absolute error."""
         return np.nanmean(np.abs(pred - target), axis=axis)
     
     def _calc_fdc(
         self,
-        data: npt.NDArray[np.float32],
-    ) -> npt.NDArray[np.float32]:
+        data: NDArray[np.float32],
+    ) -> NDArray[np.float32]:
         """Calculate flow duration curve for each grid point."""
         fdc_100 = np.full([self.ngrid, 100], np.nan)
         for i in range(self.ngrid):
@@ -413,8 +413,8 @@ class Metrics(BaseModel):
 
     @staticmethod
     def _pred_max(
-        pred: npt.NDArray[np.float32],
-        target: npt.NDArray[np.float32],
+        pred: NDArray[np.float32],
+        target: NDArray[np.float32],
         lb: int = 0,
         ub: int = 10,
     ) -> np.float32:
@@ -422,9 +422,9 @@ class Metrics(BaseModel):
         
         Parameters
         ----------
-        pred : npt.NDArray[np.float32]
+        pred : NDArray[np.float32]
             Predictions.
-        target : npt.NDArray[np.float32]
+        target : NDArray[np.float32]
             Target values.
         lb : int, optional
             Lower bound. Default is 0.
@@ -442,14 +442,14 @@ class Metrics(BaseModel):
     
     @staticmethod
     def _corr(
-        pred: npt.NDArray[np.float32], target: npt.NDArray[np.float32]
-    ) -> npt.NDArray[np.float32]:
+        pred: NDArray[np.float32], target: NDArray[np.float32]
+    ) -> NDArray[np.float32]:
         """Calculate correlation."""
         return stats.pearsonr(pred, target)[0]
 
     @staticmethod
     def _corr_spearman(
-        pred: npt.NDArray[np.float32], target: npt.NDArray[np.float32]
+        pred: NDArray[np.float32], target: NDArray[np.float32]
     ) -> np.float32:
         """Calculate Spearman correlation."""
         return stats.spearmanr(pred, target)[0]
@@ -461,7 +461,7 @@ class Metrics(BaseModel):
         pred_std: np.float32,
         target_std: np.float32,
         corr: np.float32,
-    ) -> npt.NDArray[np.float32]:
+    ) -> NDArray[np.float32]:
         """Calculate Kling-Gupta Efficiency (KGE)."""
         kge = 1 - np.sqrt(
             (corr - 1) ** 2
@@ -477,7 +477,7 @@ class Metrics(BaseModel):
         pred_std: np.float32,
         target_std: np.float32,
         corr: np.float32,
-    ) -> npt.NDArray[np.float32]:
+    ) -> NDArray[np.float32]:
         """Calculate Kling-Gupta Efficiency (KGE) 1-2."""
         kge_12 = 1 - np.sqrt(
             (corr - 1) ** 2
@@ -488,8 +488,8 @@ class Metrics(BaseModel):
 
     @staticmethod
     def _nse_r2(
-        pred: npt.NDArray[np.float32],
-        target: npt.NDArray[np.float32],
+        pred: NDArray[np.float32],
+        target: NDArray[np.float32],
         target_mean: np.float32,
     ) -> Tuple[np.float32, np.float32]:
         """Calculate Nash-Sutcliffe Efficiency (NSE) == R^2."""

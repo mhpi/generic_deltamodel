@@ -86,7 +86,7 @@ class ModelHandler(torch.nn.Module):
             )
         if self.config['mode'] == 'train':
             load_epoch = self.config['train']['start_epoch']
-        elif self.config['mode'] == 'test':
+        elif self.config['mode'] in ['test', 'predict']:
             load_epoch = self.config['test']['test_epoch']
         else:
             load_epoch = self.config.get('load_epoch', 0)

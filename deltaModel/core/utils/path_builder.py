@@ -131,7 +131,7 @@ class PathBuilder(BaseModel):
             out_path = self.build_path_out(model_path)
         
         # Create dirs
-        if config['mode'] != 'test':
+        if config['mode'] not in ['test', 'predict']:
             os.makedirs(model_path, exist_ok=True)
             os.makedirs(out_path, exist_ok=True)
         elif os.path.exists(model_path):

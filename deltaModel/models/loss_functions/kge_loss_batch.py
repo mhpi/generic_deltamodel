@@ -1,6 +1,5 @@
 from typing import Any, Dict, Optional
 
-import numpy as np
 import torch
 from numpy.typing import NDArray
 

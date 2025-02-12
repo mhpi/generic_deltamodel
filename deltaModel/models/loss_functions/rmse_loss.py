@@ -1,8 +1,6 @@
 from typing import Any, Dict, Optional
 
-import numpy as np
 import torch
-from numpy.typing import NDArray
 
 
 class RmseLoss(torch.nn.Module):
@@ -31,7 +29,7 @@ class RmseLoss(torch.nn.Module):
     """
     def __init__(
         self,
-        target: NDArray[np.float32],
+        target: torch.Tensor,
         config: Dict[str, Any],
         device: Optional[str] = 'cpu',
     ) -> None:
