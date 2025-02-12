@@ -8,7 +8,6 @@ from omegaconf import DictConfig
 
 from core.utils import initialize_config, print_config, set_randomseed
 from core.utils.module_loaders import get_data_loader, get_trainer
-from core.data.data_loaders.loader_hydro_ms import HydroMSDataLoader
 from models.model_handler import ModelHandler as dModel
 
 log = logging.getLogger(__name__)
@@ -18,7 +17,7 @@ log.setLevel(logging.INFO)
 @hydra.main(
     version_base='1.3',
     config_path='conf/',
-    config_name='config_ms_dev',
+    config_name='config',
 )
 def main(config: DictConfig) -> None:
     try:
@@ -37,7 +36,7 @@ def main(config: DictConfig) -> None:
         ### Process datasets ###
         log.info("Processing datasets...")
         data_loader = get_data_loader(config['data_loader'])
-        data_loader = data_loader(config, test_split=False, overwrite=False)
+        data_loader = data_loader(config, test_split=True, overwrite=False)
 
         ### Create trainer object ###
         trainer = get_trainer(config['trainer'])
