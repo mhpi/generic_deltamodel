@@ -55,9 +55,30 @@ class HydroMSDataSampler(BaseDataSampler):
         i_e: int,
     ) -> Dict[str, torch.Tensor]:
         """Generate batch for model forwarding only."""
-        return {
-            key: (
-                value[:, i_s:i_e, :] if value.ndim == 3 else value[i_s:i_e, :]
-            ).to(dtype=torch.float32, device=self.device)
-            for key, value in dataset.items()
-        }
+        dataset_sample = {}
+        for key, value in dataset.items():
+            if value.ndim == 3:
+                if key in ['x_phy', 'xc_nn_norm']:
+                    warm_up = 0
+                else:
+                    warm_up = self.config['dpl_model']['phy_model']['warm_up']
+                dataset_sample[key] = torch.tensor(
+                    value[warm_up:, i_s:i_e, :],
+                    dtype=torch.float32,
+                    device = self.config['device']
+                )
+            elif value.ndim == 2:
+                dataset_sample[key] = torch.tensor(
+                    value[i_s:i_e, :],
+                    dtype=torch.float32,
+                    device = self.config['device']
+                )
+            elif value.ndim == 1:
+                dataset_sample[key] = torch.tensor(
+                    value[i_s:i_e],
+                    dtype=torch.float32,
+                    device = self.config['device']
+                )
+            else:
+                raise ValueError(f"Incorrect input dimensions. {key} array must have 1, 2 or 3 dimensions.")
+        return dataset_sample

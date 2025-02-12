@@ -41,6 +41,7 @@ class ModeEnum(str, Enum):
     train = 'train'
     test = 'test'
     train_test = 'train_test'
+    predict = 'predict'
 
 
 class LossFunctionConfig(BaseModel):

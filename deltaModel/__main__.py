@@ -11,6 +11,8 @@ from core.utils import initialize_config, print_config, set_randomseed
 from core.utils.module_loaders import get_data_loader, get_trainer
 from models.model_handler import ModelHandler as dModel
 
+from core.data.data_loaders.loader_hydro_ms_new import HydroMSDataLoader
+
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
@@ -31,13 +33,40 @@ def main(config: DictConfig) -> None:
         log.info(f"RUNNING MODE: {config['mode']}")
         print_config(config)
 
+
+
+
+
+        # inference_dataset = get_dataset_dict(config, train=False)
+
+        # print("DEBUG-----------------------")
+        # print(inference_dataset['xc_nn_norm'].mean())
+        # print(inference_dataset['x_phy'].mean())
+        # print("DEBUG-----------------------")
+
+
+        data_loader = HydroMSDataLoader(config)
+        inf2 = data_loader.dataset
+        print("DEBUG-----------------------")
+        print(inf2['xc_nn_norm'].mean())
+        print(inf2['x_phy'].mean())
+        print("DEBUG-----------------------")
+
+
+
+
+
+
+        exit()
+
+
         ### Create/Load differentiable model ###
         model = dModel(config, verbose=True)
 
         ### Process datasets ###
         log.info("Processing datasets...")
-        train_dataset = get_dataset_dict(config, train=True)
-        eval_dataset = get_dataset_dict(config, train=False)
+        # train_dataset = get_dataset_dict(config, train=True)
+        # eval_dataset = get_dataset_dict(config, train=False)
         inference_dataset = get_dataset_dict(config, train=False)
 
         # Trainer
@@ -48,7 +77,8 @@ def main(config: DictConfig) -> None:
         if mode == 'train':
             trainer.train()
         elif mode == 'test':
-            trainer.evaluate()
+            # trainer.evaluate()
+            trainer.inference()
         elif mode == 'train_test':
             trainer.train()
             trainer.evaluate()

@@ -2,9 +2,6 @@ import numpy as np
 import pandas as pd
 import zarr
 
-# from core.data.data_loaders.base_data_loader import BaseDataLoader
-# class HydroDataMSLoader(BaseDataLoader):
-
 
 class choose_class_to_read_dataset():
     def __init__(self, config, trange, data_path):
@@ -44,6 +41,8 @@ def load_data_subbasin(config, train=True):
         subbasin_id_name = config['observations']['subbasin_id_name']
         root_zone = zarr.open_group(subbasin_data_path, mode = 'r')
         subbasin_ID_all = np.array(root_zone[subbasin_id_name][:]).astype(int)
+        
+
         
         for attr_idx, attr in enumerate(config['dpl_model']['nn_model']['attributes']) :
             if attr not in config['observations']['attributes_all']:
@@ -87,16 +86,6 @@ def load_data_subbasin(config, train=True):
     else:    
         raise ValueError(f"Errors when loading data for multicale model")   
     return out_dict
-
-
-def converting_flow_from_ft3_per_sec_to_mm_per_day(config, gage_area, obs_sample):
-    varTar_NN = config['train']['target']
-    if 'flow_sim' in varTar_NN:
-        obs_flow_v = obs_sample[:, :, varTar_NN.index('flow_sim')]
-
-        area = np.expand_dims(gage_area, axis=0).repeat(obs_flow_v.shape[0], 0)  # np ver
-        obs_sample[:, :, varTar_NN.index('flow_sim')] = (10 ** 3) * obs_flow_v * 0.0283168 * 3600 * 24 / (area * (10 ** 6)) # convert ft3/s to mm/day
-    return obs_sample
 
 
 def get_dataset_dict(config, train=False):
@@ -219,37 +208,6 @@ def calculate_statistics(x: np.ndarray) -> List[float]:
     return [p10, p90, mean, max(std, 0.001)]
 
 
-# TODO: Eventually replace calculate_statistics with the version below.
-# def calculate_statistics_dmc(data: xr.Dataset, column: str = "time", row: str = "gage_id") -> Dict[str, torch.Tensor]:
-#     """
-#     Calculate statistics for the data in a similar manner to calStat from hydroDL.
-
-#     :param data: xarray Dataset
-#     :param column: Name of the column for calculations
-#     :param row: Name of the row for calculations
-#     :return: Dictionary with statistics
-#     """
-#     statistics = {}
-#     p_10 = data.quantile(0.1, dim=column)
-#     p_90 = data.quantile(0.9, dim=column)
-#     mean = data.mean(dim=column)
-#     std = data.std(dim=column)
-#     col_names = data[row].values.tolist()
-#     for idx, col in enumerate(
-#         tqdm(col_names, desc="\rCalculating statistics", ncols=140, ascii=True)
-#     ):
-#         col_str = str(col)
-#         statistics[col_str] = torch.tensor(
-#             data=[
-#                 p_10.streamflow.values[idx],
-#                 p_90.streamflow.values[idx],
-#                 mean.streamflow.values[idx],
-#                 std.streamflow.values[idx],
-#             ]
-#         )
-#     return statistics
-
-
 def calculate_statistics_gamma(x: np.ndarray) -> List[float]:
     """
     Taken from the cal_stat_gamma function of hydroDL.
@@ -271,62 +229,6 @@ def calculate_statistics_gamma(x: np.ndarray) -> List[float]:
 
     return [p10, p90, mean, max(std, 0.001)]
 
-
-# def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarray,
-#                              y: np.ndarray, c_all=None) -> None:
-#     """
-#     Taken from the calStatAll function of hydroDL.
-    
-#     Calculate and save statistics for all variables in the config.
-
-#     :param config: Configuration dictionary
-#     :param x: Forcing data
-#     :param c: Attribute data
-#     :param y: Target data
-#     """
-#     stat_dict = {}
-
-#     # Calculate basin area 
-#     # NOTE: should probably move to separate function.
-#     attr_list = config['dpl_model']['nn_model']['attributes']
-
-#     area_name = config['observations']['area_name']
-    
-#     if c_all is not None:
-#         # Basin area calculation for MERIT.
-#         basin_area = np.expand_dims(c_all["area"].values,axis = 1)
-#     else:
-#         basin_area = c[:, attr_list.index(area_name)][:, np.newaxis]
-
-
-#     # Target stats
-#     for i, target_name in enumerate(config['train']['target']):
-#         if target_name in ['flow_sim', 'streamflow']:
-#             stat_dict[config['train']['target'][i]] = calc_stat_basinnorm(
-#                 np.swapaxes(y[:, :, i:i+1], 1,0).copy(), basin_area, config
-#             )  ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
-#         else:
-#             stat_dict[config['train']['target'][i]] = calculate_statistics(
-#                 np.swapaxes(y[:, :, i:i+1], 1,0)
-#             )  ## NOTE: swap axes to match Yalan's HBV. This affects calculations...
-
-#     # Forcing stats
-#     var_list = config['dpl_model']['nn_model']['forcings']
-#     for k, var in enumerate(var_list):
-#         if var in config['dpl_model']['phy_model']['use_log_norm']:
-#             stat_dict[var] = calculate_statistics_gamma(x[:, :, k])
-#         else:
-#             stat_dict[var] = calculate_statistics(x[:, :, k])
-
-#     # Attribute stats
-#     varList = config['dpl_model']['nn_model']['attributes']
-#     for k, var in enumerate(varList):
-#         stat_dict[var] = calculate_statistics(c[:, k])
-
-#     # Save all stats.
-#     stat_file = os.path.join(config['out_path'], 'statistics_basinnorm.json')
-#     with open(stat_file, 'w') as f:
-#         json.dump(stat_dict, f, indent=4)
 
 def calculate_statistics_all(config: Dict[str, Any], x: np.ndarray, c: np.ndarray,
                              y: np.ndarray, c_all=None) -> None:

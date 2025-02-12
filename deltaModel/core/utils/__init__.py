@@ -231,7 +231,7 @@ def save_train_state(
     }, full_path)
 
 
-def save_outputs(config, preds_list, y_obs=None, create_dirs=False) -> None:
+def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
     """Save outputs from a model."""
     if torch.is_tensor(y_obs):
         y_obs = y_obs.cpu().numpy()
@@ -239,18 +239,43 @@ def save_outputs(config, preds_list, y_obs=None, create_dirs=False) -> None:
     if create_dirs:
         out_path = PathBuilder(config)
         out_path.write_path(config)
+    
+    if type(predictions) == list:
+        # Handle a single model
+        for key in predictions[0].keys():
+            if len(predictions[0][key].shape) == 3:
+                dim = 1
+            else:
+                dim = 0
 
-    for key in preds_list[0].keys():
-        if len(preds_list[0][key].shape) == 3:
-            dim = 1
-        else:
-            dim = 0
+            c_tensor = torch.cat([d[key] for d in predictions], dim=dim)
+            file_name = key + ".npy"        
 
-        concatenated_tensor = torch.cat([d[key] for d in preds_list], dim=dim)
-        file_name = key + ".npy"        
+            np.save(os.path.join(config['out_path'], file_name), c_tensor.numpy())
 
-        np.save(os.path.join(config['out_path'], file_name), concatenated_tensor.numpy())
+    elif type(predictions) == dict:
+        # Handle multiple models
+        models = config['dpl_model']['phy_model']['model']
+        for key in predictions[models[0]][0].keys():
+            out_dict = {}
 
+            if len(predictions[models[0]][0][key].shape) == 3:
+                dim = 1
+            else:
+                dim = 0
+
+            for model in models: 
+                out_dict[model] = torch.cat(
+                    [d[key] for d in predictions[model]],
+                    dim=dim,
+                ).numpy()
+            
+            file_name = key + '.npy'        
+            np.save(os.path.join(config['out_path'], file_name), out_dict)
+
+    else:
+        raise ValueError("Invalid output format.")
+    
     # Reading flow observation
     if  y_obs is not None:
         for var in config['train']['target']:

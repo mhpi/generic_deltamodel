@@ -1,37 +1,25 @@
 import json
 import logging
 import os
-import pickle
+
 from math import log
 from typing import Any, Dict, List, Optional, Tuple
+import zarr
 
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
 from sklearn.exceptions import DataDimensionalityWarning
 
-from core.data import intersect
 from core.data.data_loaders.base import BaseDataLoader
 
 log = logging.getLogger(__name__)
 
 
-class HydroDataLoader(BaseDataLoader):
-    """Data loader for hydrological data from CAMELS dataset.
+class HydroMSDataLoader(BaseDataLoader):
+    """Data loader for multiscale hydrological data loading.
     
-    All data is loaded as Pytorch tensors.
-
-    The CAMELS dataset is a large-sample watershed-scale hydrometeorological
-    dataset for the contiguous USA and includes both meteorological forcings
-    and basin attributes. 
-    
-    CAMELS: 
-    - https://ral.ucar.edu/solutions/products/camels
-
-    - A. Newman; K. Sampson; M. P. Clark; A. Bock; R. J. Viger; D. Blodgett,
-        2014. A large-sample watershed-scale hydrometeorological dataset for the
-        contiguous USA. Boulder, CO: UCAR/NCAR. 
-        https://dx.doi.org/10.5065/D6MW2F4D
+    All data is read from Zarr store and loaded as PyTorch tensors.
 
     Parameters
     ----------
@@ -39,8 +27,6 @@ class HydroDataLoader(BaseDataLoader):
         Configuration dictionary.
     test_split : bool, optional
         Whether to split data into training and testing sets. Default is False.
-    overwrite : bool, optional
-        Whether to overwrite existing normalization statistics. Default is False.
     """
     def __init__(
         self,
@@ -52,7 +38,7 @@ class HydroDataLoader(BaseDataLoader):
         self.config = config
         self.test_split = test_split
         self.overwrite = overwrite
-        self.supported_data = ['camels_671', 'camels_531', 'prism_671', 'prism_531']
+        self.supported_data = ['merit_forward']
         self.data_name = config['observations']['name']
         self.nn_attributes = config['dpl_model']['nn_model'].get('attributes', [])
         self.nn_forcings = config['dpl_model']['nn_model'].get('forcings', [])
@@ -92,20 +78,22 @@ class HydroDataLoader(BaseDataLoader):
 
     def _preprocess_data(self, scope: Optional[str]) -> Dict[str, npt.NDArray]:
         """Read data from the dataset."""
-        x_phy, c_phy, x_nn, c_nn, target = self.read_data(scope)
+        ac_all, elev_all, subbasin_id_all, x_nn, x_phy, c_nn = self.read_data(scope)
+
 
         # Normalize nn input data
-        self.load_norm_stats(x_nn, c_nn, target)
-        xc_nn_norm = self.normalize(x_nn, c_nn)
+        self.load_norm_stats(x_nn, c_nn)
+        xc_nn_norm, c_nn_norm = self.normalize(x_nn, c_nn)
 
         # Build data dict of Torch tensors
         dataset = {
-            'x_phy': self.to_tensor(x_phy),
-            'c_phy': self.to_tensor(c_phy),
-            'x_nn': self.to_tensor(x_nn),
+            'ac_all': self.to_tensor(ac_all),
+            'elev_all': self.to_tensor(elev_all),
+            'subbasin_id_all': self.to_tensor(subbasin_id_all),
             'c_nn': self.to_tensor(c_nn),
             'xc_nn_norm': self.to_tensor(xc_nn_norm),
-            'target': self.to_tensor(target),
+            'c_nn_norm': self.to_tensor(c_nn_norm),
+            'x_phy': self.to_tensor(x_phy),
         }
         return dataset
 
@@ -113,16 +101,12 @@ class HydroDataLoader(BaseDataLoader):
         """Read data from the data file."""
         try:
             if scope == 'train':
-                data_path = self.config['observations']['train_path']
                 time = self.config['train_time']
             elif scope == 'test':
-                data_path = self.config['observations']['test_path']
                 time = self.config['test_time']
             elif scope == 'predict':
-                data_path = self.config['observations']['test_path']
                 time = self.config['predict_time']                
             elif scope == 'all':
-                data_path = self.config['observations']['test_path']
                 time = self.config['all_time']
             else:
                 raise ValueError("Scope must be 'train', 'test', 'predict', or 'all'.")
@@ -139,66 +123,59 @@ class HydroDataLoader(BaseDataLoader):
         idx_end = all_time.get_loc(time[-1]) + 1
 
         # Load data
-        with open(data_path, 'rb') as f:
-            forcings, target, attributes = pickle.load(f)
-
-        forcings = np.transpose(forcings[:, idx_start:idx_end], (1,0,2))
+        root_zone = zarr.open_group(
+            self.config['observations']['subbasin_data_path'],
+            mode = 'r',
+        )
+        subbasin_id_all = np.array(
+            root_zone[self.config['observations']['subbasin_id_name']][:]
+        ).astype(int)
 
         # Forcing subset for phy model
-        phy_forc_idx = []
-        for forc in self.phy_forcings:
+        for i, forc in enumerate(self.phy_forcings):
             if forc not in self.all_forcings:
                 raise ValueError(f"Forcing {forc} not listed in available forcings.")
-            phy_forc_idx.append(self.all_forcings.index(forc))
-        
-        # Attribute subset for phy model
-        phy_attr_idx = []
-        for attr in self.phy_attributes:
-            if attr not in self.all_attributes:
-                raise ValueError(f"Attribute {attr} not in the list of all attributes.")
-            phy_attr_idx.append(self.all_attributes.index(attr))
-
-        # Forcings subset for nn model
-        nn_forc_idx = []
-        for forc in self.nn_forcings:
-            if forc not in self.all_forcings:
-                raise ValueError(f"Forcing {forc} not in the list of all forcings.")
-            nn_forc_idx.append(self.all_forcings.index(forc))
+            if i == 0:
+                forc_array = np.expand_dims(root_zone[forc][:, idx_start:idx_end], -1) 
+            else:
+                forc_array = np.concatenate((
+                    forc_array,
+                    np.expand_dims(root_zone[forc][:, idx_start:idx_end], -1),
+                ), axis = -1)
+        forc_array = self._fill_nan(forc_array)
 
         # Attribute subset for nn model
-        nn_attr_idx = []
-        for attr in self.nn_attributes:
+        for i, attr in enumerate(self.nn_attributes):
             if attr not in self.all_attributes:
                 raise ValueError(f"Attribute {attr} not in the list of all attributes.")
-            nn_attr_idx.append(self.all_attributes.index(attr))
-
-        x_phy = forcings[:,:, phy_forc_idx]
-        c_phy = attributes[:, phy_attr_idx]
-        x_nn = forcings[:,:, nn_forc_idx]
-        c_nn = attributes[:, nn_attr_idx]
-        target = np.transpose(target[:, idx_start:idx_end], (1,0,2))
-
-        # Subset basins if necessary
-        if self.data_name.split('_')[-1] != '671':
-            subset_path = self.config['observations']['subset_path']
-            gage_id_path = self.config['observations']['gage_info']
-
-            with open(subset_path, 'r') as f:
-                selected_basins = json.load(f)
-            gage_info = np.load(gage_id_path)
-
-            subset_idx = intersect(selected_basins, gage_info)
-
-            x_phy = x_phy[:, subset_idx, :]
-            c_phy = c_phy[subset_idx, :]
-            x_nn = x_nn[:, subset_idx, :]
-            c_nn = c_nn[subset_idx, :]
-            target = target[:, subset_idx, :]
-
-        # Convert flow to mm/day if necessary
-        target = self._flow_conversion(c_nn, target)
-
-        return x_phy, c_phy, x_nn, c_nn, target
+            if i == 0:
+                attr_array = np.expand_dims(root_zone['attrs'][attr][:],-1)
+            else:
+                attr_array = np.concatenate((
+                    attr_array,
+                    np.expand_dims(root_zone['attrs'][attr][:], -1)
+                ), axis = -1)
+        
+        # Get upstream area and elevation
+        try:
+            ac_name = self.config['observations']['upstream_area_name']
+            ac_array = root_zone['attrs'][ac_name][:]
+        except:
+            raise ValueError(f"Upstream area is not provided. This is needed for high-resolution streamflow model.")
+        try:
+            elevation_name = self.config['observations']['elevation_name']
+            elev_array = root_zone['attrs'][elevation_name][:] 
+        except:
+            raise ValueError(f"Elevation is not provided. This is needed for high-resolution streamflow model.")
+        
+        return [
+            ac_array,
+            elev_array,
+            subbasin_id_all,
+            forc_array,
+            forc_array.copy(),
+            attr_array,
+        ]
     
     def _flow_conversion(self, c_nn, target) -> npt.NDArray:
         """Convert hydraulic flow from ft3/s to mm/day."""
@@ -218,7 +195,6 @@ class HydroDataLoader(BaseDataLoader):
         self,
         x_nn: npt.NDArray,
         c_nn: npt.NDArray,
-        target: npt.NDArray,
     ) -> None:
         """Load or calculate normalization statistics if necessary."""
         if os.path.isfile(self.out_path) and not self.overwrite:
@@ -227,13 +203,13 @@ class HydroDataLoader(BaseDataLoader):
                     self.norm_stats = json.load(f)
         else:
             # Init normalization stats if file doesn't exist or overwrite is True.
-            self.norm_stats = self._init_norm_stats(x_nn, c_nn, target)
+            self.norm_stats = self._init_norm_stats(x_nn, c_nn)
+            # raise ValueError("Normalization statistics not found. Confirm 'normalization_statistics.json' is in your model directory.")
     
     def _init_norm_stats(
         self,
         x_nn: npt.NDArray,
         c_nn: npt.NDArray,
-        target: npt.NDArray,
     ) -> Dict[str, List[float]]:
         """Compile calculations of data normalization statistics."""
         stat_dict = {}
@@ -251,18 +227,6 @@ class HydroDataLoader(BaseDataLoader):
         # Attribute variable stats
         for k, var in enumerate(self.nn_attributes):
             stat_dict[var] = self._calc_norm_stats(c_nn[:, k])
-
-        # Target variable stats
-        for i, name in enumerate(self.target):
-            if name in ['flow_sim', 'streamflow', 'sf']:
-                stat_dict[name] = self._calc_norm_stats(
-                    np.swapaxes(target[:, :, i:i+1], 1, 0).copy(),
-                    basin_area,
-                )
-            else:
-                stat_dict[name] = self._calc_norm_stats(
-                    np.swapaxes(target[:, :, i:i+1], 1, 0),
-                )
 
         with open(self.out_path, 'w') as f:
             json.dump(stat_dict, f, indent=4)
@@ -351,13 +315,13 @@ class HydroDataLoader(BaseDataLoader):
         c_nn_norm = np.repeat(
             np.expand_dims(c_nn_norm, 0),
             x_nn_norm.shape[0],
-            axis=0
+            axis=0,
         )
 
         xc_nn_norm = np.concatenate((x_nn_norm, c_nn_norm), axis=2)
-        del x_nn_norm, c_nn_norm, x_nn
+        del x_nn_norm, x_nn
 
-        return xc_nn_norm
+        return xc_nn_norm, c_nn_norm
 
     def _to_norm(self, data: npt.NDArray, vars: List[str]) -> npt.NDArray:
         """Standard data normalization."""
@@ -403,3 +367,23 @@ class HydroDataLoader(BaseDataLoader):
             return data
         else:
             return np.swapaxes(data, 1, 0)
+
+    def _fill_nan(self, array_3d):
+        # Define the x-axis for interpolation
+        x = np.arange(array_3d.shape[1])
+
+        # Iterate over the first and third dimensions to interpolate the second dimension
+        for i in range(array_3d.shape[0]):
+            for j in range(array_3d.shape[2]):
+                # Select the 1D slice for interpolation
+                slice_1d = array_3d[i, :, j]
+
+                # Find indices of NaNs and non-NaNs
+                nans = np.isnan(slice_1d)
+                non_nans = ~nans
+
+                # Only interpolate if there are NaNs and at least two non-NaN values for reference
+                if np.any(nans) and np.sum(non_nans) > 1:
+                    # Perform linear interpolation using numpy.interp
+                    array_3d[i, :, j] = np.interp(x, x[non_nans], slice_1d[non_nans], left=None, right=None)
+        return array_3d

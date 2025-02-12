@@ -286,7 +286,7 @@ def get_training_sample_2_0(
     return dataset_sample
 
 
-def get_validation_sample(
+def _get_validation_sample(
     dataset_dict: Dict[str, torch.Tensor],
     i_s: int,
     i_e: int,
@@ -294,6 +294,8 @@ def get_validation_sample(
 ) -> Dict[str, torch.Tensor]:
     """
     Take sample of data for testing batch.
+
+    Depreciated.
     """
     dataset_sample = {}
     for key, value in dataset_dict.items():
@@ -321,14 +323,6 @@ def get_validation_sample(
             )
         else:
             raise ValueError(f"Incorrect input dimensions. {key} array must have 1, 2 or 3 dimensions.")
-
-    # Keep 'warmup' days for dHBV1.1p.
-    # if ('HBV1_1p' in config['dpl_model']['phy_model']['model']) and \
-    # (config['dpl_model']['phy_model']['use_warmup_mode']) and (config['multimodel_type'] == 'none'):
-    #     pass
-    # else:
-    # dataset_sample['target'] = dataset_sample['target'][config['dpl_model']['phy_model']['warm_up']:, :]
-
     return dataset_sample
 
 

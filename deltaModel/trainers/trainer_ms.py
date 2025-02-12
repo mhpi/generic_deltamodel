@@ -4,15 +4,10 @@ import time
 from typing import Any, Dict, List, Optional
 
 import numpy as np
-import pandas as pd
 import torch
 import tqdm
-from torch import nn
 
 from core.calc.metrics import Metrics
-from core.data import (create_training_grid, get_training_sample,
-                       get_validation_sample)
-from core.data.data_loaders.loader_hydro_ms import get_dataset_dict
 from core.utils import save_outputs
 from core.utils.module_loaders import get_data_sampler
 from models.loss_functions import get_loss_func
@@ -213,11 +208,10 @@ class Trainer(BaseTrainer):
             self.current_batch = i
 
             # Select a batch of data
-            dataset_sample = get_validation_sample(
+            dataset_sample = self.sampler.get_validation_sample(
                 self.eval_dataset,
                 batch_start[i],
                 batch_end[i],
-                self.config
             )
 
             prediction = self.model(dataset_sample, eval=True)
@@ -254,11 +248,10 @@ class Trainer(BaseTrainer):
             self.current_batch = i
 
             # Select a batch of data
-            dataset_sample = get_validation_sample(
+            dataset_sample = self.sampler.get_validation_sample(
                 self.inf_dataset,
                 batch_start[i],
                 batch_end[i],
-                self.config,
             )
 
             prediction = self.model(dataset_sample, eval=True)
