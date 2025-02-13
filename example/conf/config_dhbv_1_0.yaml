@@ -1,21 +1,24 @@
+# This configuration file is specifically for the multi-scale, differentiable, hydrologic model dHBV 1.0 from Feng et al., 2022. If you find this code is useful to your work, please cite this paper below:
+# Dapeng Feng, Jiangtao Liu, Kathryn Lawson et al. Differentiable, Learnable, Regionalized Process‐Based Models With Multiphysical Outputs can Approach State‐Of‐The‐Art Hydrologic Prediction Accuracy. Water Resources Research. 11 September 2022. https://doi.org/10.1029/2022WR032404.
+
 defaults:
     - _self_
     - hydra: settings
-    - observations: camels_531  # camels_531, camels_671
+    - observations: camels_531 # camels_531, camels_671 
 
 
 ## General -------------------------------#
-mode: train  # train, test, train_test
-multimodel_type: none
+mode: train  # train, test, train_test, predict
 random_seed: 111111
 device: cuda
 gpu_id: 0
 
-data_loader: hydro_loader
-data_sampler: hydro_sampler
-trainer: trainer
+data_loader: loader_hydro
+data_sampler: sampler_hydro
+trainer: trainers
 
 save_path: ../results
+trained_model: path/to/your/model/  # The trained dHBV 1.0 model can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_1_0_trained.zip
 
 
 ## Training ------------------------------#
@@ -25,29 +28,39 @@ train:
     target: [flow_sim]
     optimizer: Adadelta
     batch_size: 100
-    epochs: 50
+    epochs: 100
     start_epoch: 0
     save_epoch: 5
 
 
-## Testing -------------------------------#
+## Evaluation -------------------------------#
 test:
     start_time: 1989/10/01
     end_time: 1999/09/30
     batch_size: 25
-    test_epoch: 50
+    test_epoch: 100
+
+
+## Inference -------------------------------#
+predict:
+    start_time: 2012/10/01
+    end_time: 2014/09/30
+    batch_size: 25
 
 
 ## Loss Function -------------------------#
 loss_function:
     model: RmseLossComb
-    
+
 
 ## dPL Model -----------------------------#
 dpl_model:
     rho: 365
     
     phy_model:
+        ## Citations ##
+        # HBV 1.0: Dapeng Feng, Jiangtao Liu, Kathryn Lawson, Chaopeng Shen. "Differentiable, Learnable, Regionalized Process‐Based Models With Multiphysical Outputs can Approach State‐Of‐The‐Art Hydrologic Prediction Accuracy." Water Resources Research 58, no. 10 (2022): e2022WR032404. https://doi.org/10.1029/2022WR032404.
+
         model: [HBV]
         nmul: 16
         warm_up: 365
@@ -63,7 +76,7 @@ dpl_model:
         forcings: [
             prcp,
             tmean,
-            pet
+            pet,
         ]
         attributes: []
 
@@ -72,11 +85,15 @@ dpl_model:
         dropout: 0.5
         hidden_size: 256
         learning_rate: 1.0
+        lr_scheduler: None
+        lr_scheduler_params:
+            step_size: 10
+            gamma: 0.5
         
         forcings: [
             prcp,
             tmean,
-            pet
+            pet,
         ]
         attributes: [
             p_mean,
@@ -113,5 +130,5 @@ dpl_model:
             glim_2nd_class_frac,
             carbonate_rocks_frac,
             geol_porosity,
-            geol_permeability
+            geol_permeability,
         ]

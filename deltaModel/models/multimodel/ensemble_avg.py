@@ -1,4 +1,4 @@
-from core.utils.utils import find_shared_keys
+from core.utils import find_shared_keys
 
 
 def model_average(model_preds_dict, config):

@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import torch
 import tqdm
+
 from core.calc.metrics import Metrics
 from core.data import create_training_grid
 from core.utils import save_outputs, save_train_state
@@ -74,6 +75,9 @@ class Trainer(BaseTrainer):
         self.is_in_train = False
 
         if 'train' in config['mode']:
+            if not self.train_dataset:
+                raise ValueError("'train_dataset' required for training mode.")
+            
             log.info(f"Initializing training mode")
             self.epochs = self.config['train']['epochs']
 
@@ -172,7 +176,7 @@ class Trainer(BaseTrainer):
                     self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
                 continue
         
-        raise FileNotFoundError(f"No checkpoint for epoch {self.start_epoch-1}.")
+        # raise FileNotFoundError(f"No checkpoint for epoch {self.start_epoch-1}.") ## TODO: Fix resume model training
 
         # Restore random states
         torch.set_rng_state(checkpoint['random_state'])
@@ -241,10 +245,7 @@ class Trainer(BaseTrainer):
         log.info(f"Training complete.")
 
     def evaluate(self) -> None:
-        """Run model evaluation and return metrics.
-        
-        Model outputs and results are also saved.
-        """
+        """Run model evaluation and return both metrics and model outputs."""
         self.is_in_train = False
 
         # Track overall predictions and observations
@@ -291,7 +292,7 @@ class Trainer(BaseTrainer):
 
         # Get start and end indices for each batch.
         n_samples = self.eval_dataset['xc_nn_norm'].shape[1]
-        batch_start = np.arange(0, n_samples, self.config['test']['batch_size'])
+        batch_start = np.arange(0, n_samples, self.config['predict']['batch_size'])
         batch_end = np.append(batch_start[1:], n_samples)
 
         # Inference loop
@@ -343,8 +344,8 @@ class Trainer(BaseTrainer):
         target = np.expand_dims(observations[:, :, 0].cpu().numpy(), 2)
 
         # Remove warm-up data
-        if self.config['dpl_model']['phy_model']['warm_up_states']:
-            target = target[self.config['dpl_model']['phy_model']['warm_up']:, :]
+        # if self.config['dpl_model']['phy_model']['warm_up_states']:  # NOTE: remove if bug does not reoccur
+        target = target[self.config['dpl_model']['phy_model']['warm_up']:, :]
 
         # Compute metrics
         metrics = Metrics(

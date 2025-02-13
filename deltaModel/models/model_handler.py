@@ -3,6 +3,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 import torch.nn
+
 from core.utils import save_model
 from models.differentiable_model import DeltaModel
 from models.loss_functions.range_bound_loss import RangeBoundLoss
@@ -85,7 +86,7 @@ class ModelHandler(torch.nn.Module):
             )
         if self.config['mode'] == 'train':
             load_epoch = self.config['train']['start_epoch']
-        elif self.config['mode'] == 'test':
+        elif self.config['mode'] in ['test', 'predict']:
             load_epoch = self.config['test']['test_epoch']
         else:
             load_epoch = self.config.get('load_epoch', 0)
@@ -273,7 +274,7 @@ class ModelHandler(torch.nn.Module):
             loss = loss_func(
                 output,
                 dataset['target'],
-                n_samples=dataset['batch_sample']
+                n_samples=dataset['batch_sample'],
             )
             loss_combined += loss
             self.loss_dict[name] += loss.item()

@@ -4,9 +4,10 @@ from pathlib import Path
 from typing import Type
 
 import torch
+from hydroDL2 import load_model as load_from_hydrodl
+
 from core.data.data_loaders.base import BaseDataLoader
 from core.data.data_samplers.base import BaseDataSampler
-from hydroDL2 import load_model as load_from_hydrodl
 from trainers.base import BaseTrainer
 
 

@@ -6,8 +6,9 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 import torch
-from core.utils import camel_to_snake
 from numpy.typing import NDArray
+
+from core.utils import camel_to_snake
 
 sys.path.append('../deltaModel/')  # for tutorials
 

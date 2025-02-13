@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
-import numpy.typing as npt
 import torch
+from numpy.typing import NDArray
 from torch.utils.data import Dataset
 
 
@@ -51,7 +51,7 @@ class BaseDataLoader(Dataset, ABC):
         """Read, preprocess, and return data as dictionary of torch tensors."""
         pass
 
-    def to_tensor(self, data: npt.NDArray) -> torch.Tensor:
+    def to_tensor(self, data: NDArray) -> torch.Tensor:
         """Convert numpy array to Pytorch tensor."""
         tensor = torch.from_numpy(data).to(dtype=self.dtype, device=self.device)
         return tensor.requires_grad_(False)

@@ -84,12 +84,29 @@ class PathBuilder(BaseModel):
             self.dynamic_parameters,
         )
 
-    def build_path_out(self) -> Dict[str, Any]:
-        """Build path to model outputs from individual root paths."""
-        return os.path.join(
-            self.build_path_model(),
-            self.test_period,
-        )
+    def build_path_out(self, model_path: str = None) -> Dict[str, Any]:
+        """Build path to model outputs from individual root paths.
+        
+        Parameters
+        ----------
+        model_path : str
+            Path to the model object.
+        
+        Returns
+        -------
+        str
+            Path to the output directory.
+        """
+        if model_path:
+            return os.path.join(
+                model_path,
+                self.test_period,
+            )
+        else:
+            return os.path.join(
+                self.build_path_model(),
+                self.test_period,
+            )
 
     def write_path (self, config: Dict[str, Any]) -> dict:
         """Create directory where model and outputs will be saved.
@@ -108,12 +125,13 @@ class PathBuilder(BaseModel):
         if os.path.exists(config.get('trained_model', '')):
             # Use user defined model path if it exists
             model_path = os.path.dirname(config['trained_model'])
+            out_path = self.build_path_out(model_path)
         else:
             model_path = self.build_path_model()
-        out_path = self.build_path_out()
+            out_path = self.build_path_out(model_path)
         
         # Create dirs
-        if config['mode'] != 'test':
+        if config['mode'] not in ['test', 'predict']:
             os.makedirs(model_path, exist_ok=True)
             os.makedirs(out_path, exist_ok=True)
         elif os.path.exists(model_path):
@@ -215,11 +233,17 @@ class PathBuilder(BaseModel):
         """
         start = config['test']['start_time'][:4]
         end = config['test']['end_time'][:4]
+        test_epoch = config['test'].get('test_epoch', '')
+
+        if test_epoch:
+            test_epoch = f"_Ep{test_epoch}"
+        else:
+            test_epoch = ''
 
         if abbreviate:
-            return f"test{start[-2:]}-{end[-2:]}"
+            return f"test{start[-2:]}-{end[-2:]}" + test_epoch
         else: 
-            return f"test{start}-{end}"
+            return f"test{start}-{end}" + test_epoch
 
     @staticmethod
     def _multimodel_state(config: Dict[str, Any]) -> str:
@@ -299,12 +323,19 @@ class PathBuilder(BaseModel):
         if config['dpl_model']['phy_model']['warm_up_states']:
             warmup = 'WU'
 
+        # Set hiddensize for single or multi-NN setups.
+        if config['dpl_model']['nn_model']['model'] == 'LSTMMLP':
+            hidden_size = f"{config['dpl_model']['nn_model']['lstm_hidden_size']}" \
+                            f"_{config['dpl_model']['nn_model']['mlp_hidden_size']}"
+        else:
+            hidden_size = config['dpl_model']['nn_model']['hidden_size']
+
         return (
             f"{config['dpl_model']['nn_model']['model']}_"
             f"E{config['train']['epochs']}_"
             f"R{config['dpl_model']['rho']}_"
             f"B{config['train']['batch_size']}_"
-            f"H{config['dpl_model']['nn_model']['lstm_hidden_size']}_"
+            f"H{hidden_size}_"
             f"n{config['dpl_model']['phy_model']['nmul']}_"
             f"{norm}_"
             f"{warmup}_"

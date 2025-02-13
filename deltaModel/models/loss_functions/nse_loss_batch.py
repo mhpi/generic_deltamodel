@@ -2,11 +2,10 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 import torch
-from numpy.typing import NDArray
 
 
 class NseLossBatch(torch.nn.Module):
-    """Normalized squared error loss function.
+    """Normalized squared error (NSE) loss function.
 
     Same as Fredrick 2019, batch NSE loss.
     Adapted from Yalan Song.
@@ -39,6 +38,7 @@ class NseLossBatch(torch.nn.Module):
         device: Optional[str] = 'cpu',
     ) -> None:
         super().__init__()
+        self.name = 'Batch NSE Loss'
         self.config = config
         self.device = device
         self.std = np.nanstd(target[:, :, 0].cpu().detach().numpy(), axis=0)

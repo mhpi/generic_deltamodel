@@ -1,15 +1,14 @@
 import logging
 import os
-import sys
 from typing import Any, Dict
 
 import hydra
-# sys.path.append('../../deltaModel') # Add the root directory of dMG to the path
+import torch
+from omegaconf import OmegaConf
+
 from core.utils import initialize_config
-from omegaconf import DictConfig, OmegaConf
 
 log = logging.getLogger(__name__)
-
 
 
 def load_config(path: str) -> Dict[str, Any]:
@@ -43,3 +42,40 @@ def load_config(path: str) -> Dict[str, Any]:
     config = initialize_config(config)
 
     return config
+
+
+def take_data_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
+                     basins=100) -> Dict[str, torch.Tensor]:
+    """Take sample of data."""
+    dataset_sample = {}
+    
+    for key, value in dataset_dict.items():
+        if value.ndim == 3:
+            # Determine warm-up period based on the key
+            if key in ['x_phy', 'xc_nn_norm']:
+                warm_up = 0
+            else:
+                warm_up = config['dpl_model']['phy_model']['warm_up']
+            
+            # Clone and detach the tensor to avoid the warning
+            dataset_sample[key] = value[warm_up:days, :basins, :].clone().detach().to(
+                dtype=torch.float32, device=config['device'])
+        
+        elif value.ndim == 2:
+            # Clone and detach the tensor to avoid the warning
+            dataset_sample[key] = value[:basins, :].clone().detach().to(
+                dtype=torch.float32, device=config['device'])
+        
+        else:
+            raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
+    
+    # Adjust the 'target' tensor based on the configuration
+    if ('HBV1_1p' in config['dpl_model']['phy_model']['model'] and
+        config['dpl_model']['phy_model']['use_warmup_mode'] and
+        config['multimodel_type'] == 'none'):
+        pass  # Keep 'warmup' days for dHBV1.1p
+    else:
+        warm_up = config['dpl_model']['phy_model']['warm_up']
+        dataset_sample['target'] = dataset_sample['target'][warm_up:days, :basins]
+    
+    return dataset_sample

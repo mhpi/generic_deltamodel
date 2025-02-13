@@ -1,31 +1,30 @@
-# This configuration file is specifically for the high-resolution, differentiable, hydrologic model, dHBV2.0UH from Song et al., 2024. If you find this code is useful to your work, please cite this paper below:
-# Yalan Song, Tadd Bindas, Chaopeng Shen, et al. High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning. ESS Open Archive. September 26, 2024. https://doi.org/10.22541/essoar.172736277.74497104/v1.
-
+# This configuration file is specifically for the high-resolution, differentiable, hydrologic model, dHBV2.0UH, from Song et al., 2024. If you find this code is useful to your work, please cite this paper below:
+# Yalan Song, Tadd Bindas, Chaopeng Shen, et al. High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning. ESS Open Archive. 26 September 2024. https://doi.org/10.22541/essoar.172736277.74497104/v1.
 
 defaults:
     - _self_
     - hydra: settings
-    - observations: merit_forward_zone
+    - observations: merit_forward
 
 
 ## General -------------------------------#
-mode: test  # train, test, train_test
+mode: predict
 ensemble_type: none
 random_seed: 111111
 device: cuda
-gpu_id: 7
+gpu_id: 0
 
-data_loader: ms_hydro_loader
-data_sampler: ms_hydro_sampler
-trainer: trainer_multiscale
+data_loader: loader_hydro_ms
+data_sampler: sampler_hydro_ms
+trainer: trainer_ms
 
-save_path: ./results
-trained_model: path/to/trained/model/  # The trained dHBV 2.0 model + input data can be downloaded from: https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/cxs1024_psu_edu/Eqi1NuJ3d2pMpEJpVu0EGSoBigi-VCWVHgOYIRoTeuGiOw?e=HaNNeA
+save_path: ../../results
+trained_model: path/to/your/model/  # The trained dHBV 2.0 model (+ input data) can be downloaded from: https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/cxs1024_psu_edu/Eqi1NuJ3d2pMpEJpVu0EGSoBigi-VCWVHgOYIRoTeuGiOw?e=HaNNeA
 
 
 ## Training ------------------------------#
 train:
-    # NOTE: dHBV 2.0 currently does not support training.
+    # NOTE: Multiscale training for dHBV2.0 is not currently enabled in dMG.
     # Training code will be released at a later time.
     start_time: 1980/10/01
     end_time: 1995/09/30
@@ -37,7 +36,7 @@ train:
     save_epoch: 5
 
 
-## Testing -------------------------------#
+## Evaluation -------------------------------#
 test:
     start_time: 1980/01/01
     end_time: 2020/12/31
@@ -46,9 +45,16 @@ test:
     evaluation: False
 
 
+## Inference -------------------------------#
+predict:
+    start_time: 1980/01/01
+    end_time: 2020/12/31
+    batch_size: 400
+
+
 ## Loss Function -------------------------#
 loss_function:
-    model: NseLossBatch
+    model: RmseLossComb
 
 
 ## dPL Model -----------------------------#
@@ -57,27 +63,17 @@ dpl_model:
     
     phy_model:
         ## Citations ##
-        # HBV: Feng, Dapeng, Jiangtao Liu, Kathryn Lawson, and Chaopeng Shen."Differentiable, Learnable, Regionalized Process‐Based Models With Multiphysical Outputs can Approach State‐Of‐The‐Art Hydrologic Prediction Accuracy." Water Resources Research 58, no. 10 (2022): e2022WR032404. https://doi.org/10.1029/2022WR032404.
-        ###
-        # HBV 1.1p (HBV_1_1p): Song, Y., Sawadekar, K., Frame, J. M., Pan, M., Clark, M., Knoben, W. J. M., Wood, A. W., Patel, T., & Shen, C. (2024b). Improving physics-informed, differentiable hydrologic models for capturing unseen extreme events. ESS Open Archive. https://doi.org/10.22541/essoar.172304428.82707157/v1.
-        ###
-        # HBV adj: Song, Y., Knoben, W. J. M., Clark, M. P., Feng, D., Lawson, K., Sawadekar, K., & Shen, C. (2024a). When ancient numerical demons meet physics-informed machine learning: Adjoint-based gradients for implicit differentiable modeling. Hydrology and Earth System Sciences, 28(13), 3051–3077. https://doi.org/10.5194/hess-28-3051-2024
-        ###
         # HBV 2.0 (HBV_2_0): Yalan Song, Tadd Bindas, Chaopeng Shen, et al. High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning. ESS Open Archive. September 26, 2024. https://doi.org/10.22541/essoar.172736277.74497104/v1.
 
-        model: [HBV_2_0]  # HBV, HBV_1_1p, HBV_adj
+        model: [HBV_2_0]
         nmul: 4
         warm_up: 0
-        warm_up_states: False
+        warm_up_states: True
         dy_drop: 0.0
         dynamic_params:
-            HBV: [parBETA, parBETAET]
-            HBV_adj: [parBETA,parFC, parBETAET]
-            HBV_1_1p: [parBETA, parBETAET, parK0]
             HBV_2_0: [parBETA, parK0, parBETAET]
 
         routing: True
-        AD_efficient: True   ## Specific for HBV_adj
         use_log_norm: []
         nearzero: 1e-5
 

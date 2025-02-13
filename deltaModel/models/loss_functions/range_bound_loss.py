@@ -1,9 +1,6 @@
-import time
 from typing import Any, Dict, Optional
 
-import numpy as np
 import torch
-from numpy.typing import NDArray
 
 
 class RangeBoundLoss(torch.nn.Module):
@@ -26,6 +23,7 @@ class RangeBoundLoss(torch.nn.Module):
         The upper bound for the loss. The default is 1.1.
     loss_factor : float
         The scaling factor for the loss. The default is 1.0.
+        
     Adapted from Tadd Bindas.
     """
     def __init__(
@@ -35,6 +33,7 @@ class RangeBoundLoss(torch.nn.Module):
         device: Optional[str] = 'cpu',
     ) -> None:
         super().__init__()
+        self.name = 'Range Bound Loss'
         self.config = config
         self.device = device
         self.lb = config.get('lb', 0.9)

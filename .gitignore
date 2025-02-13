@@ -173,6 +173,14 @@ temp/
 tmp/
 *.tmp
 
+*results*
+*runs*
+
+
+# Other Directories
+archive/
+validation/
+
 
 # Non-public config files
 # deltaModel/conf/*
@@ -214,11 +222,3 @@ tmp/
 # !deltaModel/core/data_loaders/hydro_loader.py
 # !deltaModel/core/data_samplers/base.py
 # !deltaModel/core/data_samplers/hydro_sampler.py
-
-*results*
-*runs*
-
-
-# Other Directories
-archive/
-validation/

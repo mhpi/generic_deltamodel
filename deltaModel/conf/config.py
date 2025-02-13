@@ -1,7 +1,6 @@
 """Validation of basic configuration file parameters using Pydantic.
 
-Run this script to validate an example config object located below the
-validation classes.
+Run this script to validate an example config object (see bottom of file).
 """
 import logging
 import os
@@ -41,6 +40,7 @@ class ModeEnum(str, Enum):
     train = 'train'
     test = 'test'
     train_test = 'train_test'
+    predict = 'predict'
 
 
 class LossFunctionConfig(BaseModel):

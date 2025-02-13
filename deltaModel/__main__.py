@@ -4,11 +4,11 @@ import time
 
 import hydra
 import torch
+from omegaconf import DictConfig
+
 from core.utils import initialize_config, print_config, set_randomseed
 from core.utils.module_loaders import get_data_loader, get_trainer
 from models.model_handler import ModelHandler as dModel
-from core.data.data_loaders.loader_hydro_ms import get_dataset_dict
-from omegaconf import DictConfig
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -17,7 +17,7 @@ log.setLevel(logging.INFO)
 @hydra.main(
     version_base='1.3',
     config_path='conf/',
-    config_name='config_multiscale',
+    config_name='config',
 )
 def main(config: DictConfig) -> None:
     try:
@@ -35,12 +35,19 @@ def main(config: DictConfig) -> None:
 
         ### Process datasets ###
         log.info("Processing datasets...")
-        train_dataset = get_dataset_dict(config, train=True)
-        eval_dataset = get_dataset_dict(config, train=False)
+        data_loader = get_data_loader(config['data_loader'])
+        data_loader = data_loader(config, test_split=True, overwrite=False)
 
-        # Trainer
-        from trainers.trainer_ms import Trainer
-        trainer = Trainer(config, model, train_dataset, eval_dataset, verbose=True)
+        ### Create trainer object ###
+        trainer = get_trainer(config['trainer'])
+        trainer = trainer(
+            config,
+            model,
+            train_dataset = data_loader.train_dataset,
+            eval_dataset = data_loader.eval_dataset,
+            inf_dataset = data_loader.dataset,
+            verbose=True,
+        )
 
         mode = config['mode']
         if mode == 'train':
@@ -51,7 +58,7 @@ def main(config: DictConfig) -> None:
             trainer.train()
             trainer.evaluate()
         elif mode == 'predict':
-            trainer.predict()
+            trainer.inference()
         else:
             raise ValueError(f"Invalid mode: {mode}")
         

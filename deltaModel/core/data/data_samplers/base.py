@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Dict
 
-import numpy as np
-import numpy.typing as npt
 import torch
+from numpy.typing import NDArray
 from torch.utils.data import Dataset
 
 
@@ -40,7 +38,7 @@ class BaseDataSampler(Dataset, ABC):
         """Preprocess the data as needed."""
         pass
 
-    def to_tensor(self, data: npt.NDArray) -> torch.Tensor:
+    def to_tensor(self, data: NDArray) -> torch.Tensor:
         """Convert numpy array to PyTorch tensor.
 
         Parameters
