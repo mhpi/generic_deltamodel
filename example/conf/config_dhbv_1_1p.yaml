@@ -11,14 +11,14 @@ defaults:
 mode: train  # train, test, train_test, predict
 random_seed: 111111
 device: cuda
-gpu_id: 1
+gpu_id: 0
 
 data_loader: loader_hydro
 data_sampler: sampler_hydro
 trainer: trainer
 
 save_path: ../results
-trained_model: path/to/trained/model/  # The trained dHBV 1.1p model can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_1_1p_trained.zip
+trained_model: path/to/your/model/  # The trained dHBV 1.1p model can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_1_1p_trained.zip
 
 
 ## Training ------------------------------#
@@ -38,7 +38,7 @@ test:
     start_time: 1989/10/01
     end_time: 1999/09/30
     batch_size: 25
-    test_epoch: 50
+    test_epoch: 100
 
 
 ## Inference -------------------------------#

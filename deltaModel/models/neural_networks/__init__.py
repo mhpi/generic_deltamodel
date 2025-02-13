@@ -69,7 +69,7 @@ class NeuralNetwork(ABC, nn.Module):
 
 def init_nn_model(
     phy_model: nn.Module,
-    config: Dict[str, Dict[str, Any]]
+    config: Dict[str, Dict[str, Any]],
 ) -> nn.Module:
     """Initialize a parameterization neural network for hydrology models.
        
@@ -101,13 +101,13 @@ def init_nn_model(
             nx=nx,
             ny=ny,
             hiddenSize=config['nn_model']['hidden_size'],
-            dr=config['nn_model']['dropout']
+            dr=config['nn_model']['dropout'],
         )
     elif config['nn_model']['model'] == 'MLP':
         nn_model = MLPmul(
             config,
             nx=nx,
-            ny=ny
+            ny=ny,
         )
     else:
         raise ValueError(config['nn_model']['model'], " not supported.")

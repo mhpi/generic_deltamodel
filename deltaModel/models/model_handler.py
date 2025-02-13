@@ -274,7 +274,7 @@ class ModelHandler(torch.nn.Module):
             loss = loss_func(
                 output,
                 dataset['target'],
-                n_samples=dataset['batch_sample']
+                n_samples=dataset['batch_sample'],
             )
             loss_combined += loss
             self.loss_dict[name] += loss.item()

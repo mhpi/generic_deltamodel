@@ -8,17 +8,17 @@ defaults:
 
 
 ## General -------------------------------#
-mode: train_test  # train, test, train_test
+mode: train  # train, test, train_test, predict
 random_seed: 111111
 device: cuda
 gpu_id: 0
 
 data_loader: loader_hydro
 data_sampler: sampler_hydro
-trainer: trainer
+trainer: trainers
 
 save_path: ../results
-trained_model: path/to/trained/model/  # The trained dHBV 1.0 model can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_1_0_trained.zip
+trained_model: path/to/your/model/  # The trained dHBV 1.0 model can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_1_0_trained.zip
 
 
 ## Training ------------------------------#
@@ -39,7 +39,6 @@ test:
     end_time: 1999/09/30
     batch_size: 25
     test_epoch: 100
-    evaluation: False
 
 
 ## Inference -------------------------------#
@@ -68,7 +67,7 @@ dpl_model:
         warm_up_states: True
         dy_drop: 0.0
         dynamic_params:
-            HBV_1_1p: [parBETA, parBETAET]
+            HBV: [parBETA, parBETAET]
 
         routing: True
         use_log_norm: [prcp]
