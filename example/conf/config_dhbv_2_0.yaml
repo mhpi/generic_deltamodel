@@ -9,7 +9,6 @@ defaults:
 
 ## General -------------------------------#
 mode: predict
-ensemble_type: none
 random_seed: 111111
 device: cuda
 gpu_id: 0
@@ -42,7 +41,6 @@ test:
     end_time: 2020/12/31
     batch_size: 400
     test_epoch: 100
-    evaluation: False
 
 
 ## Inference -------------------------------#

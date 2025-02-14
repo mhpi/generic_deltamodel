@@ -250,18 +250,21 @@ class Trainer(BaseTrainer):
 
         # Track overall predictions and observations
         batch_predictions = []
-        observations = self.eval_dataset['target']
-
+        if self.config['test']['evaluation']: 
+            observations = self.eval_dataset['target']
+        else:
+            observations = None
         # Get start and end indices for each batch.
         n_samples = self.eval_dataset['xc_nn_norm'].shape[1]
         batch_start = np.arange(0, n_samples, self.config['test']['batch_size'])
         batch_end = np.append(batch_start[1:], n_samples)
 
         # Testing loop
-        log.info(f"Testing model: Forwarding on {len(batch_start)} batches")
+        log.info(f"Begin validation on {len(batch_start)} batches...")
         for i in tqdm.tqdm(range(len(batch_start)), desc="Testing", leave=False, dynamic_ncols=True):
             self.current_batch = i
 
+            # Select a batch of data
             dataset_sample = self.sampler.get_validation_sample(
                 self.eval_dataset,
                 batch_start[i],
@@ -283,25 +286,26 @@ class Trainer(BaseTrainer):
         save_outputs(self.config, batch_predictions, observations)
         self.calc_metrics(batch_predictions, observations)
 
-    def predict(self) -> None:
-        """Run model inference and return predictions."""
+    def inference(self) -> None:
+        """Run batch model inference and save model outputs."""
         self.is_in_train = False
 
         # Track overall predictions
         batch_predictions = []
 
         # Get start and end indices for each batch.
-        n_samples = self.eval_dataset['xc_nn_norm'].shape[1]
+        n_samples = self.inf_dataset['xc_nn_norm'].shape[1]
         batch_start = np.arange(0, n_samples, self.config['predict']['batch_size'])
         batch_end = np.append(batch_start[1:], n_samples)
 
-        # Inference loop
-        log.info(f"Running Inference: Forwarding on {len(batch_start)} batches")
-        for i in tqdm.tqdm(range(len(batch_start)), desc="Inference", leave=False, dynamic_ncols=True):
+        # Forward loop
+        log.info(f"Begin forward on {len(batch_start)} batches...")
+        for i in tqdm.tqdm(range(len(batch_start)), desc='Inference', leave=False, dynamic_ncols=True):
             self.current_batch = i
 
+            # Select a batch of data
             dataset_sample = self.sampler.get_validation_sample(
-                self.eval_dataset,
+                self.inf_dataset,
                 batch_start[i],
                 batch_end[i],
             )
@@ -314,16 +318,41 @@ class Trainer(BaseTrainer):
             batch_predictions.append(prediction)
 
             if self.verbose:
-                log.info(f"Batch {i + 1}/{len(batch_start)} processed in inference loop.")
+                log.info(f"Batch {i + 1}/{len(batch_start)} evaluated.")
 
         # Save predictions
-        log.info("Saving model predictions")
+        log.info("Saving model results")
         save_outputs(self.config, batch_predictions)
+        self.predictions = self._batch_data(batch_predictions)
+
+        return self.predictions
     
+    def _batch_data(
+        self,
+        batch_list: List[Dict[str, torch.Tensor]],
+        target_key: str = None,
+    ) -> None:
+        """Merge batch data into a single dictionary."""
+        data = {}
+        try:
+            if target_key:
+                return torch.cat([x[target_key] for x in batch_list], dim=1).numpy()
+
+            for key in batch_list[0].keys():
+                if len(batch_list[0][key].shape) == 3:
+                    dim = 1
+                else:
+                    dim = 0
+                data[key] = torch.cat([d[key] for d in batch_list], dim=dim).cpu().numpy()
+            return data
+        
+        except Exception as e:
+            raise ValueError(f"Error concatenating batch data: {e}")
+
     def evaluation_loop(self) -> None:
         """Inference loop used in .evaluate() and .predict() methods."""
         return NotImplementedError
-            
+    
     def calc_metrics(
         self,
         batch_predictions: List[Dict[str, torch.Tensor]],
@@ -339,8 +368,7 @@ class Trainer(BaseTrainer):
             Target variable observation data.
         """
         target_name = self.config['train']['target'][0]
-
-        pred = torch.cat([x[target_name] for x in batch_predictions], dim=1).numpy()
+        predictions = self._batch_data(batch_predictions, target_name)
         target = np.expand_dims(observations[:, :, 0].cpu().numpy(), 2)
 
         # Remove warm-up data
@@ -349,7 +377,7 @@ class Trainer(BaseTrainer):
 
         # Compute metrics
         metrics = Metrics(
-            np.swapaxes(pred.squeeze(), 1, 0),
+            np.swapaxes(predictions.squeeze(), 1, 0),
             np.swapaxes(target.squeeze(), 1, 0),
         )
 

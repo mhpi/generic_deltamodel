@@ -350,6 +350,7 @@ class HydroDataLoader(BaseDataLoader):
 
     def normalize(self, x_nn: np.ndarray, c_nn: np.ndarray) -> np.ndarray:
         """Normalize data for neural network."""
+        # TODO: Add np.swapaxes(x_nn, 1, 0) here and remove from _to_norm. This changes normalization, need to determine if it's detrimental.
         x_nn_norm = self._to_norm(
             np.swapaxes(x_nn, 1, 0).copy(),
             self.nn_forcings,
@@ -391,11 +392,12 @@ class HydroDataLoader(BaseDataLoader):
                 data_norm[:, k] = (data[:, k] - stat[2]) / stat[3]
             else:
                 raise DataDimensionalityWarning("Data dimension must be 2 or 3.")
-            
+
+        # Should be external, except altering order of first two dims augments normalization.
         if len(data_norm.shape) < 3:
             return data_norm
         else:
-            return np.swapaxes(data_norm, 1, 0)  ##TODO move to outside of _to_norm
+            return np.swapaxes(data_norm, 1, 0)
 
     def _from_norm(self, data_norm: np.ndarray, vars: List[str]) -> np.ndarray:
         """De-normalize data."""
