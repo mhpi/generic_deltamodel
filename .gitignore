@@ -182,16 +182,6 @@ archive/
 validation/
 
 
-# Non-public config files
-# deltaModel/conf/*
-# !deltaModel/conf/config.yaml
-# !deltaModel/conf/config.py
-# !deltaModel/conf/hydra
-# !deltaModel/conf/observations
-# deltaModel/conf/observations/*
-# !deltaModel/conf/observations/none.yaml
-
-
 # Usage-specific additions: (Only track base/example files)
 # deltaModel/trainers/
 # deltaModel/models/physics_models/

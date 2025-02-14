@@ -24,6 +24,8 @@ class HydroMSDataLoader(BaseDataLoader):
         Configuration dictionary.
     test_split : bool, optional
         Whether to split data into training and testing sets. Default is False.
+    overwrite : bool, optional
+        Whether to overwrite existing normalization statistics. Default is False.
     """
     def __init__(
         self,

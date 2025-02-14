@@ -144,8 +144,9 @@ class PathBuilder(BaseModel):
         config['out_path'] = out_path
         
         # Save config
-        serializable_config = self.make_json_serializable(config)
-        self.save_config(model_path, serializable_config)
+        if config['mode'] not in ['test', 'predict']:
+            serializable_config = self.make_json_serializable(config)
+            self.save_config(model_path, serializable_config)
         
         return config
 

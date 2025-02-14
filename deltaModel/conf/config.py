@@ -25,17 +25,6 @@ def check_path(v: str) -> Path:
     return path
 
 
-class InitalizationEnum(str, Enum):
-    kaiming_normal = "kaiming_normal"
-    kaiming_uniform = "kaiming_uniform"
-    orthogonal = "orthogonal"
-    sparse = "sparse"
-    trunc_normal = "trunc_normal"
-    xavier_normal = "xavier_normal"
-    xavier_uniform = "xavier_uniform"
-    default = "default"
-
-
 class ModeEnum(str, Enum):
     train = 'train'
     test = 'test'

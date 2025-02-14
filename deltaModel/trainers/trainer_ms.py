@@ -189,52 +189,13 @@ class Trainer(BaseTrainer):
 
     def evaluate(self) -> None:
         """Run model evaluation and return both metrics and model outputs."""
-        self.is_in_train = False
-
-        # Track overall predictions and observations
-        batch_predictions = []
-        if self.config['test']['evaluation']: 
-            observations = self.eval_dataset['target']
-        else:
-            observations = None
-        # Get start and end indices for each batch.
-        n_samples = self.eval_dataset['xc_nn_norm'].shape[1]
-        batch_start = np.arange(0, n_samples, self.config['test']['batch_size'])
-        batch_end = np.append(batch_start[1:], n_samples)
-
-        # Testing loop
-        log.info(f"Begin validation on {len(batch_start)} batches...")
-        for i in tqdm.tqdm(range(len(batch_start)), desc="Testing", leave=False, dynamic_ncols=True):
-            self.current_batch = i
-
-            # Select a batch of data
-            dataset_sample = self.sampler.get_validation_sample(
-                self.eval_dataset,
-                batch_start[i],
-                batch_end[i],
-            )
-
-            prediction = self.model(dataset_sample, eval=True)
-
-            # Save the batch predictions
-            model_name = self.config['dpl_model']['phy_model']['model'][0]
-            prediction = {key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()}
-            batch_predictions.append(prediction)
-
-            if self.verbose:
-                log.info(f"Batch {i + 1}/{len(batch_start)} processed in testing loop.")
-
-        # Save predictions and calculate metrics
-        log.info("Saving model results and calculating metrics")
-        save_outputs(self.config, batch_predictions, observations)
-        if self.config['test']['evaluation']: 
-            self._calculate_metrics(batch_predictions, observations)
+        raise NotImplementedError("Method not implemented. Multiscale training will be enabled at a later date.")
 
     def inference(self) -> None:
         """Run batch model inference and save model outputs."""
         self.is_in_train = False
 
-        # Track overall predictions and observations
+        # Track overall predictions
         batch_predictions = []
 
         # Get start and end indices for each batch.
@@ -293,6 +254,10 @@ class Trainer(BaseTrainer):
         except Exception as e:
             raise ValueError(f"Error concatenating batch data: {e}")
 
+    def evaluation_loop(self) -> None:
+        """Inference loop used in .evaluate() and .predict() methods."""
+        return NotImplementedError
+    
     def calc_metrics(
         self,
         batch_predictions: List[Dict[str, torch.Tensor]],
@@ -312,7 +277,6 @@ class Trainer(BaseTrainer):
         target = np.expand_dims(observations[:, :, 0].cpu().numpy(), 2)
 
         # Remove warm-up data
-        # if self.config['dpl_model']['phy_model']['warm_up_states']:  # NOTE: remove if bug does not reoccur
         target = target[self.config['dpl_model']['phy_model']['warm_up']:, :]
 
         # Compute metrics

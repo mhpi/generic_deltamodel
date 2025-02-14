@@ -133,6 +133,9 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
     if config['dpl_model']['nn_model'].get('lr_scheduler', '') in ['none', 'None', '']:
         config['dpl_model']['nn_model']['lr_scheduler'] = None
 
+    if config.get('trained_model', '') in ['none', 'None', '']:
+        config['trained_model'] = ''
+
     # Create output directories and add path to config.
     out_path = PathBuilder(config)
     config = out_path.write_path(config)
