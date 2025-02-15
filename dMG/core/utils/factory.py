@@ -13,7 +13,7 @@ from core.data.loaders.base import BaseLoader
 from core.data.samplers.base import BaseSampler
 from trainers.base import BaseTrainer
 
-sys.path.append('../deltaModel/')  # for tutorials
+sys.path.append('../dMG/')  # for tutorials
 
 import numpy as np
 import torch

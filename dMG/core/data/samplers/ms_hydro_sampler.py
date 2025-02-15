@@ -7,7 +7,7 @@ from numpy.typing import NDArray
 from core.data.samplers.base import BaseSampler
 
 
-class HydroMSSampler(BaseSampler):
+class MsHydroSampler(BaseSampler):
     def __init__(
         self,
         config: Dict,

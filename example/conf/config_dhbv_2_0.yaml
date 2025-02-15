@@ -13,9 +13,9 @@ random_seed: 111111
 device: cuda
 gpu_id: 0
 
-data_loader: loader_hydro_ms
-data_sampler: sampler_hydro_ms
-trainer: trainer_ms
+data_loader: MsHydroLoader
+data_sampler: MsHydroSampler
+trainer: MsTrainer
 
 save_path: ../../results
 trained_model: path/to/your/model/  # The trained dHBV 2.0 model (+ input data) can be downloaded from: https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/cxs1024_psu_edu/Eqi1NuJ3d2pMpEJpVu0EGSoBigi-VCWVHgOYIRoTeuGiOw?e=HaNNeA
@@ -52,7 +52,7 @@ predict:
 
 ## Loss Function -------------------------#
 loss_function:
-    model: RmseLossComb
+    model: RmseCombLoss
 
 
 ## dPL Model -----------------------------#
@@ -83,7 +83,7 @@ dpl_model:
         attributes: []
 
     nn_model:
-        model: LSTMMLP
+        model: LstmMlpModel
 
         lstm_dropout: 0.5
         lstm_hidden_size: 64

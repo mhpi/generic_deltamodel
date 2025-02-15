@@ -14,7 +14,7 @@ from core.data.loaders.base import BaseLoader
 log = logging.getLogger(__name__)
 
 
-class HydroMSLoader(BaseLoader):
+class MsHydroLoader(BaseLoader):
     """Data loader for multiscale hydrological data loading.
     
     All data is read from Zarr store and loaded as PyTorch tensors.
