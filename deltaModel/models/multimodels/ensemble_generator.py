@@ -3,8 +3,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import torch
 
 from core.utils import find_shared_keys
-from models.neural_networks.lstm_models import CudnnLstmModel
-from models.neural_networks.mlp_models import MLPmul
+from models.neural_networks.cudnn_lstm import CudnnLstmModel
+from models.neural_networks.mlp import MlpMulModel
 
 
 class EnsembleGenerator(torch.nn.Module):
@@ -77,7 +77,7 @@ class EnsembleGenerator(torch.nn.Module):
                 dr=self.config['dropout']
             )
         elif model_name == 'MLP':
-            model = MLPmul(
+            model = MlpMulModel(
                 self.config,
                 nx=self.nx,
                 ny=self.ny

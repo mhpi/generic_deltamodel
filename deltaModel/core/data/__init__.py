@@ -1,21 +1,22 @@
 import datetime as dt
 import json
 import logging
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import torch
+from numpy.typing import NDArray
 
 log = logging.getLogger(__name__)
 
 
-def intersect(tLst1, tLst2):
+def intersect(tLst1: List[np.float32], tLst2: List[np.float32]) -> List[int]:
     C, ind1, ind2 = np.intersect1d(tLst1, tLst2, return_indices=True)
     return ind2
 
 
-def time_to_date(t, hr=False):
+def time_to_date(t: int, hr: bool = False) -> Union[dt.date, dt.datetime]:
     """Convert time to date or datetime object.
     
     Adapted from Farshid Rahmani.
@@ -60,7 +61,7 @@ def random_index(
     nt: int,
     dim_subset: Tuple[int, int],
     warm_up: int = 0
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[NDArray[np.float32], NDArray[np.float32]]:
     batch_size, rho = dim_subset
     i_grid = np.random.randint(0, ngrid, size=batch_size)
     i_t = np.random.randint(0 + warm_up, nt - rho, size=batch_size)
@@ -68,15 +69,15 @@ def random_index(
 
 
 def create_training_grid(
-    x: np.ndarray,
+    x: NDArray[np.float32],
     config: Dict[str, Any],
-    n_samples: int = None
+    n_samples: int = None,
 ) -> Tuple[int, int, int]:
     """Define a training grid of samples x iterations per epoch x time.
 
     Parameters
     ----------
-    x : np.ndarray
+    x : NDArray[np.float32]
         The input data for a model.
     config : dict
         The configuration dictionary.
@@ -109,17 +110,18 @@ def create_training_grid(
     return n_samples, n_iter_ep, n_t,
 
 
-def select_subset(config: Dict,
-                  x: np.ndarray,
-                  i_grid: np.ndarray,
-                  i_t: np.ndarray,
-                  rho: int,
-                  *,
-                  c: Optional[np.ndarray] = None,
-                  tuple_out: bool = False,
-                  has_grad: bool = False,
-                  warm_up: int = 0
-                  ) -> torch.Tensor:
+def select_subset(
+    config: Dict,
+    x: NDArray[np.float32],
+    i_grid: NDArray[np.float32],
+    i_t: NDArray[np.float32],
+    rho: int,
+    *,
+    c: Optional[NDArray[np.float32]] = None,
+    tuple_out: bool = False,
+    has_grad: bool = False,
+    warm_up: int = 0,
+) -> torch.Tensor:
     """
     Select a subset of input array.
     """
@@ -162,14 +164,14 @@ def select_subset(config: Dict,
 
 
 def numpy_to_torch_dict(
-        data_dict: Dict[str, np.ndarray],
-        device: str
-    ) -> Dict[str, torch.Tensor]:
+    data_dict: Dict[str, NDArray[np.float32]],
+    device: str,
+) -> Dict[str, torch.Tensor]:
     """Convert numpy data dictionary to torch tensor dictionary.
 
     Parameters
     ----------
-    data_dict : Dict[str, np.ndarray]
+    data_dict : Dict[str, NDArray[np.float32]]
         The numpy data dictionary.
     device : str
         The device to move the data to.
@@ -222,7 +224,7 @@ def txt_to_array(txt_path: str):
 
 
 def timestep_resample(
-    data: Union[pd.DataFrame, np.ndarray, torch.Tensor],
+    data: Union[pd.DataFrame, NDArray[np.float32], torch.Tensor],
     resolution: str = 'M',
     method: str = 'mean',
 ) -> pd.DataFrame:
@@ -231,7 +233,7 @@ def timestep_resample(
 
     Parameters
     ----------
-    data : Union[pd.DataFrame, np.ndarray]
+    data : Union[pd.DataFrame, NDArray[np.float32]]
         The data to resample.
     resolution : str
         The resolution to resample the data to. Default is 'M' (monthly).
@@ -249,7 +251,7 @@ def timestep_resample(
         data = data.cpu().detach().numpy()
         data = pd.DataFrame(data)
         data['time'] = pd.to_datetime(data['time'])
-    elif isinstance(data, np.ndarray):
+    elif isinstance(data, NDArray[np.float32]):
         data = pd.DataFrame(data)
         data['time'] = pd.to_datetime(data['time'])
     else:

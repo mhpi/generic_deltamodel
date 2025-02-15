@@ -2,11 +2,12 @@ from typing import Dict, Optional
 
 import numpy as np
 import torch
+from numpy.typing import NDArray
 
-from core.data.data_samplers.base import BaseDataSampler
+from core.data.samplers.base import BaseSampler
 
 
-class HydroMSDataSampler(BaseDataSampler):
+class HydroMSSampler(BaseSampler):
     def __init__(
         self,
         config: Dict,
@@ -28,9 +29,9 @@ class HydroMSDataSampler(BaseDataSampler):
     def select_subset(
         self,
         x: torch.Tensor,
-        i_grid: np.ndarray,
-        i_t: Optional[np.ndarray] = None,
-        c: Optional[np.ndarray] = None,
+        i_grid: NDArray[np.float32],
+        i_t: Optional[NDArray[np.float32]] = None,
+        c: Optional[NDArray[np.float32]] = None,
         tuple_out: bool = False,
         has_grad: bool = False,
     ) -> torch.Tensor:
@@ -40,7 +41,7 @@ class HydroMSDataSampler(BaseDataSampler):
 
     def get_training_sample(
         self,
-        dataset: Dict[str, np.ndarray],
+        dataset: Dict[str, NDArray[np.float32]],
         ngrid_train: int,
         nt: int
     ) -> Dict[str, torch.Tensor]:

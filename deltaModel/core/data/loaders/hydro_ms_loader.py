@@ -6,14 +6,15 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 import zarr
+from numpy.typing import NDArray
 from sklearn.exceptions import DataDimensionalityWarning
 
-from core.data.data_loaders.base import BaseDataLoader
+from core.data.loaders.base import BaseLoader
 
 log = logging.getLogger(__name__)
 
 
-class HydroMSDataLoader(BaseDataLoader):
+class HydroMSLoader(BaseLoader):
     """Data loader for multiscale hydrological data loading.
     
     All data is read from Zarr store and loaded as PyTorch tensors.
@@ -74,7 +75,10 @@ class HydroMSDataLoader(BaseDataLoader):
         else:
             self.dataset = self._preprocess_data(scope='all')
 
-    def _preprocess_data(self, scope: Optional[str]) -> Dict[str, np.ndarray]:
+    def _preprocess_data(
+        self,
+        scope: Optional[str],
+    ) -> Dict[str, NDArray[np.float32]]:
         """Read data from the dataset."""
         ac_all, elev_all, subbasin_id_all, x_nn, x_phy, c_nn = self.read_data(scope)
     
@@ -107,7 +111,7 @@ class HydroMSDataLoader(BaseDataLoader):
         }
         return dataset
 
-    def read_data(self, scope: Optional[str]) -> Tuple[np.ndarray]:
+    def read_data(self, scope: Optional[str]) -> Tuple[NDArray[np.float32]]:
         """Read data from the data file."""
         try:
             if scope == 'train':
@@ -189,8 +193,8 @@ class HydroMSDataLoader(BaseDataLoader):
         
     def load_norm_stats(
         self,
-        x_nn: np.ndarray,
-        c_nn: np.ndarray,
+        x_nn: NDArray[np.float32],
+        c_nn: NDArray[np.float32],
         scope: str,
     ) -> None:
         """Load or calculate normalization statistics if necessary.
@@ -219,7 +223,11 @@ class HydroMSDataLoader(BaseDataLoader):
             # NOTE: will be supported with release of multiscale training code.
             raise ValueError("Normalization statistics not found. Confirm 'normalization_statistics.json' is in your model directory.")
 
-    def normalize(self, x_nn: np.ndarray, c_nn: np.ndarray) -> np.ndarray:
+    def normalize(
+        self,
+        x_nn: NDArray[np.float32],
+        c_nn: NDArray[np.float32]
+    ) -> NDArray[np.float32]:
         """Normalize data for neural network."""
         # TODO: Add np.swapaxes(x_nn, 1, 0) here and remove from _to_norm. This changes normalization, need to determine if it's detrimental.
         x_nn_norm = self._to_norm(x_nn, self.nn_forcings)
@@ -240,7 +248,11 @@ class HydroMSDataLoader(BaseDataLoader):
 
         return xc_nn_norm, c_nn_norm
 
-    def _to_norm(self, data: np.ndarray, vars: List[str]) -> np.ndarray:
+    def _to_norm(
+        self,
+        data: NDArray[np.float32],
+        vars: List[str],
+    ) -> NDArray[np.float32]:
         """Standard data normalization."""
         data_norm = np.zeros(data.shape)
 
@@ -264,7 +276,11 @@ class HydroMSDataLoader(BaseDataLoader):
         else:
             return np.swapaxes(data_norm, 1, 0)
 
-    def _from_norm(self, data_norm: np.ndarray, vars: List[str]) -> np.ndarray:
+    def _from_norm(
+        self,
+        data_norm: NDArray[np.float32],
+        vars: List[str],
+    ) -> NDArray[np.float32]:
         """De-normalize data."""
         data = np.zeros(data_norm.shape)
                 

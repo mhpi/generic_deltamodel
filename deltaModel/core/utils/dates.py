@@ -5,6 +5,7 @@ from typing import Any, Optional
 import numpy as np
 import pandas as pd
 import torch
+from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict, model_validator
 
 log = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ class Dates(BaseModel):
     hourly_time_range: Optional[pd.DatetimeIndex] = pd.DatetimeIndex(
         [], dtype="datetime64[ns]"
     )
-    numerical_time_range: Optional[np.ndarray] = np.empty(0)
+    numerical_time_range: Optional[NDArray[np.float32]] = np.empty(0)
 
     def __init__(self, time_range, rho):
         super(Dates, self).__init__(
@@ -144,12 +145,12 @@ class Dates(BaseModel):
             ]
             self.set_batch_time(self.batch_daily_time_range)
 
-    def set_date_range(self, chunk: np.ndarray) -> None:
+    def set_date_range(self, chunk: NDArray[np.float32]) -> None:
         """Set the date range.
 
         Parameters
         ----------
-        chunk : np.ndarray
+        chunk : NDArray[np.float32]
             The chunk of the date range.
         """
         self.batch_daily_time_range = self.daily_time_range[chunk]

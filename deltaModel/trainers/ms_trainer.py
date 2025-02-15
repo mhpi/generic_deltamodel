@@ -1,23 +1,20 @@
 import logging
 import os
-import time
 from typing import Any, Dict, List, Optional
 
 import numpy as np
 import torch
 import tqdm
 
-from core.calc.metrics import Metrics
 from core.utils import save_outputs
-from core.utils.module_loaders import get_data_sampler
-from models.loss_functions import get_loss_func
+from core.utils.factory import import_data_sampler
 from models.model_handler import ModelHandler
 from trainers.base import BaseTrainer
 
 log = logging.getLogger(__name__)
 
 
-class Trainer(BaseTrainer):
+class MsTrainer(BaseTrainer):
     """Generic, unified trainer for neural networks and differentiable models.
 
     Inspired by the Hugging Face Trainer class.
@@ -71,100 +68,17 @@ class Trainer(BaseTrainer):
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.verbose = verbose
-        self.sampler = get_data_sampler(config['data_sampler'])(config)
+        self.sampler = import_data_sampler(config['data_sampler'])(config)
         self.is_in_train = False
 
-        if 'train' in config['mode']:
-            if not self.train_dataset:
-                raise ValueError("'train_dataset' required for training mode.")
-            
-            log.info(f"Initializing training mode")
-            self.epochs = self.config['train']['epochs']
-
-            # Loss function
-            self.loss_func = loss_func or get_loss_func(
-                self.train_dataset['target'],
-                config['loss_function'],
-                config['device'],
-            )
-            self.model.loss_func = self.loss_func
-
-            # Optimizer and learning rate scheduler
-            self.optimizer = optimizer or self.init_optimizer()
-            if config['dpl_model']['nn_model']['lr_scheduler']:
-                self.use_scheduler = True
-                self.scheduler = scheduler or self.init_scheduler()
-            else:
-                self.use_scheduler = False
-
-            # Resume model training by loading prior states.
-            self.start_epoch = self.config['train']['start_epoch'] + 1
-            if self.start_epoch > 1:
-                log.info(f"Loading trainer states to begin epoch {self.start_epoch}") 
-                self.load_states()
-
     def init_optimizer(self) -> torch.optim.Optimizer:
-        """Initialize a model state optimizer.
-        
-        Adding additional optimizers is possible by extending the optimizer_dict.
+        """Initialize a model state optimizer."""
+        raise NotImplementedError("Method not implemented. Multiscale training will be enabled at a later date.")
 
-        Returns
-        -------
-        torch.optim.Optimizer
-            Initialized optimizer object.
-        """
-        name = self.config['train']['optimizer']
-        learning_rate = self.config['dpl_model']['nn_model']['learning_rate']
-        optimizer_dict = {
-            # 'SGD': torch.optim.SGD,
-            # 'Adam': torch.optim.Adam,
-            # 'AdamW': torch.optim.AdamW,
-            'Adadelta': torch.optim.Adadelta,
-            # 'RMSprop': torch.optim.RMSprop,
-        }
-
-        # Fetch optimizer class
-        cls = optimizer_dict[name]
-        if cls is None:
-            raise ValueError(f"Optimizer '{name}' not recognized. "
-                                f"Available options are: {list(optimizer_dict.keys())}")
-
-        # Initialize
-        try:
-            self.optimizer = cls(
-                self.model.get_parameters(),
-                lr=learning_rate,
-            )
-        except Exception as e:
-            raise ValueError(f"Error initializing optimizer: {e}")
-        return self.optimizer
-    
     def init_scheduler(self) -> None:
         """Initialize a learning rate scheduler for the optimizer."""
-        name = self.config['dpl_model']['nn_model']['lr_scheduler']
-        scheduler_dict = {
-            'StepLR': torch.optim.lr_scheduler.StepLR,
-            'ExponentialLR': torch.optim.lr_scheduler.ExponentialLR,
-            # 'ReduceLROnPlateau': torch.optim.lr_scheduler.ReduceLROnPlateau,
-            'CosineAnnealingLR': torch.optim.lr_scheduler.CosineAnnealingLR,
-        }
-
-        # Fetch scheduler class
-        cls = scheduler_dict[name]
-        if cls is None:
-            raise ValueError(f"Scheduler '{name}' not recognized. "
-                                f"Available options are: {list(scheduler_dict.keys())}")
-        
-        # Initialize
-        try:
-            self.scheduler = cls(
-                self.optimizer,
-                **self.config['dpl_model']['nn_model']['lr_scheduler_params'],
-            )
-        except Exception as e:
-            raise ValueError(f"Error initializing scheduler: {e}")
-        return self.scheduler
-
+        raise NotImplementedError("Method not implemented. Multiscale training will be enabled at a later date.")
+    
     def load_states(self) -> None:
         """Load model, optimizer, and scheduler states from a checkpoint."""
         path = self.config['model_path']
@@ -221,9 +135,6 @@ class Trainer(BaseTrainer):
             model_name = self.config['dpl_model']['phy_model']['model'][0]
             prediction = {key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()}
             batch_predictions.append(prediction)
-
-            if self.verbose:
-                log.info(f"Batch {i + 1}/{len(batch_start)} evaluated.")
         
         # Save predictions
         log.info("Saving model results")
@@ -263,30 +174,8 @@ class Trainer(BaseTrainer):
         batch_predictions: List[Dict[str, torch.Tensor]],
         observations: torch.Tensor,
     ) -> None:
-        """Calculate and save model performance metrics.
-        
-        Parameters
-        ----------
-        batch_predictions : list
-            List of dictionaries containing model predictions.
-        observations : torch.Tensor
-            Target variable observation data.
-        """
-        target_name = self.config['train']['target'][0]
-        predictions = self._batch_data(batch_predictions, target_name)
-        target = np.expand_dims(observations[:, :, 0].cpu().numpy(), 2)
-
-        # Remove warm-up data
-        target = target[self.config['dpl_model']['phy_model']['warm_up']:, :]
-
-        # Compute metrics
-        metrics = Metrics(
-            np.swapaxes(predictions.squeeze(), 1, 0),
-            np.swapaxes(target.squeeze(), 1, 0),
-        )
-
-        # Save all metrics and aggregated statistics.
-        metrics.dump_metrics(self.config['out_path'])
+        """Calculate and save model performance metrics."""
+        raise NotImplementedError("Method not implemented. Multiscale training will be enabled at a later date.")
 
     def _log_epoch_stats(
         self,
@@ -296,11 +185,4 @@ class Trainer(BaseTrainer):
         start_time: float,
     ) -> None:
         """Log statistics after each epoch."""
-        avg_loss_dict = {key: value / n_minibatch + 1 for key, value in loss_dict.items()}
-        loss_formated = ", ".join(f"{key}: {value:.6f}" for key, value in avg_loss_dict.items())
-        elapsed = time.perf_counter() - start_time
-        mem_aloc = int(torch.cuda.memory_reserved(device=self.config['device']) * 0.000001)
-        log.info(
-            f"Model loss after epoch {epoch}: {loss_formated} \n"
-            f"~ Runtime {elapsed:.2f} sec, {mem_aloc} Mb reserved GPU memory"
-        )
+        raise NotImplementedError("Method not implemented. Multiscale training will be enabled at a later date.")

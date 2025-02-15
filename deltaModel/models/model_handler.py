@@ -2,12 +2,12 @@ import logging
 import os
 from typing import Any, Dict, List, Optional
 
-import torch.nn
+import torch
 
 from core.utils import save_model
+from models.criterion.range_bound_loss import RangeBoundLoss
 from models.differentiable_model import DeltaModel
-from models.loss_functions.range_bound_loss import RangeBoundLoss
-from models.multimodel.ensemble_generator import EnsembleGenerator
+from models.multimodels.ensemble_generator import EnsembleGenerator
 
 log = logging.getLogger(__name__)
 
@@ -123,7 +123,7 @@ class ModelHandler(torch.nn.Module):
                 )
 
             if epoch == 0:
-                # Leave model uninitialized for training
+                # Leave model uninitialized for training.
                 if self.verbose:
                     log.info(f"Created new model: {name}")
                 continue 

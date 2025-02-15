@@ -10,8 +10,7 @@ import tqdm
 from core.calc.metrics import Metrics
 from core.data import create_training_grid
 from core.utils import save_outputs, save_train_state
-from core.utils.module_loaders import get_data_sampler
-from models.loss_functions import get_loss_func
+from core.utils.factory import import_data_sampler, load_loss_func
 from models.model_handler import ModelHandler
 from trainers.base import BaseTrainer
 
@@ -71,21 +70,21 @@ class Trainer(BaseTrainer):
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.verbose = verbose
-        self.sampler = get_data_sampler(config['data_sampler'])(config)
+        self.sampler = import_data_sampler(config['data_sampler'])(config)
         self.is_in_train = False
 
         if 'train' in config['mode']:
             if not self.train_dataset:
                 raise ValueError("'train_dataset' required for training mode.")
             
-            log.info(f"Initializing training mode")
+            log.info(f"Initializing experiment")
             self.epochs = self.config['train']['epochs']
 
             # Loss function
-            self.loss_func = loss_func or get_loss_func(
+            self.loss_func = loss_func or load_loss_func(
                 self.train_dataset['target'],
                 config['loss_function'],
-                config['device'],
+                device=config['device'],
             )
             self.model.loss_func = self.loss_func
 
@@ -100,7 +99,7 @@ class Trainer(BaseTrainer):
             # Resume model training by loading prior states.
             self.start_epoch = self.config['train']['start_epoch'] + 1
             if self.start_epoch > 1:
-                log.info(f"Loading trainer states to begin epoch {self.start_epoch}") 
+                log.info(f"Loading trainer states --> Resuming Training from epoch {self.start_epoch}") 
                 self.load_states()
 
     def init_optimizer(self) -> torch.optim.Optimizer:
@@ -202,7 +201,7 @@ class Trainer(BaseTrainer):
             self.current_epoch = epoch
             self.total_loss = 0.0
 
-            # Iterate through minibatches.
+            # Iterate through epoch in minibatches.
             for i in tqdm.tqdm(range(1, n_minibatch + 1), desc=prog_str,
                                leave=False, dynamic_ncols=True):
                 self.current_batch = i
@@ -224,7 +223,7 @@ class Trainer(BaseTrainer):
                 self.total_loss += loss.item()
 
                 if self.verbose:
-                    log.info(f"Epoch {epoch} minibatch {i} loss: {loss.item()}")
+                    tqdm.tqdm.write(f"Epoch {epoch}, batch {i} | loss: {loss.item()}")
 
             if self.use_scheduler: self.scheduler.step()
 
@@ -242,7 +241,7 @@ class Trainer(BaseTrainer):
                     scheduler=self.scheduler,
                     clear_prior=True,
                 )
-        log.info(f"Training complete.")
+        log.info(f"Training complete")
 
     def evaluate(self) -> None:
         """Run model evaluation and return both metrics and model outputs."""
@@ -260,7 +259,7 @@ class Trainer(BaseTrainer):
         batch_end = np.append(batch_start[1:], n_samples)
 
         # Testing loop
-        log.info(f"Begin validation on {len(batch_start)} batches...")
+        log.info(f"Validating Model: Forwarding {len(batch_start)} batches")
         for i in tqdm.tqdm(range(len(batch_start)), desc="Testing", leave=False, dynamic_ncols=True):
             self.current_batch = i
 
@@ -278,11 +277,8 @@ class Trainer(BaseTrainer):
             prediction = {key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()}
             batch_predictions.append(prediction)
 
-            if self.verbose:
-                log.info(f"Batch {i + 1}/{len(batch_start)} evaluated.")
-
         # Save predictions and calculate metrics
-        log.info("Saving model results and calculating metrics")
+        log.info("Saving model outputs + Calculating metrics")
         save_outputs(self.config, batch_predictions, observations)
         self.calc_metrics(batch_predictions, observations)
 
@@ -299,7 +295,7 @@ class Trainer(BaseTrainer):
         batch_end = np.append(batch_start[1:], n_samples)
 
         # Forward loop
-        log.info(f"Begin forward on {len(batch_start)} batches...")
+        log.info(f"Inference: Forwarding {len(batch_start)} batches")
         for i in tqdm.tqdm(range(len(batch_start)), desc='Inference', leave=False, dynamic_ncols=True):
             self.current_batch = i
 
@@ -317,11 +313,8 @@ class Trainer(BaseTrainer):
             prediction = {key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()}
             batch_predictions.append(prediction)
 
-            if self.verbose:
-                log.info(f"Batch {i + 1}/{len(batch_start)} evaluated.")
-
         # Save predictions
-        log.info("Saving model results")
+        log.info("Saving model outputs")
         save_outputs(self.config, batch_predictions)
         self.predictions = self._batch_data(batch_predictions)
 
@@ -393,10 +386,11 @@ class Trainer(BaseTrainer):
     ) -> None:
         """Log statistics after each epoch."""
         avg_loss_dict = {key: value / n_minibatch + 1 for key, value in loss_dict.items()}
-        loss_formated = ", ".join(f"{key}: {value:.6f}" for key, value in avg_loss_dict.items())
+        loss = ", ".join(f"{key}: {value:.6f}" for key, value in avg_loss_dict.items())
         elapsed = time.perf_counter() - start_time
         mem_aloc = int(torch.cuda.memory_reserved(device=self.config['device']) * 0.000001)
+        
         log.info(
-            f"Model loss after epoch {epoch}: {loss_formated} \n"
-            f"~ Runtime {elapsed:.2f} sec, {mem_aloc} Mb reserved GPU memory"
+            f"Loss after epoch {epoch}: {loss} \n"
+            f"~ Runtime {elapsed:.2f} s, {mem_aloc} Mb reserved GPU memory"
         )

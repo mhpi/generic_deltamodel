@@ -10,7 +10,7 @@ class RangeBoundLoss(torch.nn.Module):
     ----------
     config : dict
         The configuration dictionary.
-    target : np.ndarray
+    target : torch.Tensor
         The target data array. The default is None.
     device : str, optional
         The device to use for the loss function object. The default is 'cpu'.

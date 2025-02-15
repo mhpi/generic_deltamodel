@@ -1,12 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
-import numpy as np
 import torch
-from numpy.typing import NDArray
 
 
-class BaseLossFunction(torch.nn.Module, ABC):
+class BaseCriterion(torch.nn.Module, ABC):
     """Base class for loss functions extended from PyTorch Module.
     
     All loss functions should inherit from this class, which enforces minimum
@@ -14,7 +12,7 @@ class BaseLossFunction(torch.nn.Module, ABC):
     
     Parameters
     ----------
-    target : np.ndarray
+    target : torch.Tensor
         The target data array.
     config : dict
         The configuration dictionary.
@@ -23,7 +21,7 @@ class BaseLossFunction(torch.nn.Module, ABC):
     """
     def __init__(
         self,
-        target: NDArray[np.float32],
+        target: torch.Tensor,
         config: Dict[str, Any],
         device: Optional[str] = 'cpu',
     ) -> None:

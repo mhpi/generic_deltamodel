@@ -4,15 +4,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
+from numpy.typing import NDArray
 
 from core.data import timestep_resample
-from core.utils import format_resample_interval
+from core.post import format_resample_interval
 
 
 def plot_hydrograph(
     timesteps: pd.DatetimeIndex,
-    predictions: Union[np.ndarray, torch.Tensor],
-    obs: Union[np.ndarray, torch.Tensor] = None,
+    predictions: Union[NDArray[np.float32], torch.Tensor],
+    obs: Union[NDArray[np.float32], torch.Tensor] = None,
     resample: Literal['D','W', 'M', 'Y'] = 'D',
     title = None,
     ylabel: str = 'Streamflow (ft$^3$/s)',
@@ -27,9 +28,9 @@ def plot_hydrograph(
     ----------
     timesteps : pd.DatetimeIndex
         The timesteps of the predictions.
-    predictions : Union[np.ndarray, torch.Tensor]
+    predictions : Union[NDArray[np.float32], torch.Tensor]
         The model predictions.
-    obs : Union[np.ndarray, torch.Tensor], optional
+    obs : Union[NDArray[np.float32], torch.Tensor], optional
         The observed streamflow values. Default is None.
     resample : Literal['D','W', 'M', 'Y'], optional
         The resampling interval for the data. Default is 'D'.
@@ -62,7 +63,7 @@ def plot_hydrograph(
     plt.rcParams.update({'font.size': fontsize})
     
     # Create the figure.
-    plt.figure(figsize=figsize)
+    plt.figure(figsize=figsize, dpi=dpi)
     plt.plot(
         data['time'],
         list(data['pred']),

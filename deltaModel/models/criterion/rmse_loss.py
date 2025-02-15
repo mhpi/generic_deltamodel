@@ -3,25 +3,17 @@ from typing import Any, Dict, Optional
 import torch
 
 
-class RmseLossComb(torch.nn.Module):
-    """Combination root mean squared error (RMSE) loss function.
-
-    This loss combines the RMSE of the target variable with the RMSE of
-    the log-transformed target variable.
+class RmseLoss(torch.nn.Module):
+    """ Root mean squared error (RMSE) loss function.
 
     The RMSE is calculated as:
         p: predicted value,
         t: target value,
         RMSE = sqrt(mean((p - t)^2))
-    
-    The log-sqrt RMSE is calculated as:
-        p: predicted value,
-        t: target value,
-        RMSE = sqrt(mean((log(sqrt(p)) - log(sqrt(t)))^2))
 
     Parameters
     ----------
-    target : np.ndarray
+    target : torch.Tensor
         The target data array.
     config : dict
         The configuration dictionary.
@@ -42,7 +34,7 @@ class RmseLossComb(torch.nn.Module):
         device: Optional[str] = 'cpu',
     ) -> None:
         super().__init__()
-        self.name = 'Combination RMSE Loss'
+        self.name = 'RMSE Loss'
         self.config = config
         self.device = device
 
@@ -77,23 +69,10 @@ class RmseLossComb(torch.nn.Module):
 
         if len(target) > 0:
             # Mask where observations are valid (not NaN).            
-            mask1 = ~torch.isnan(target)
-            p_sub = prediction[mask1]
-            t_sub = target[mask1]
-            
-            # RMSE
-            p_sub1 = torch.log10(torch.sqrt(prediction + self.beta) + 0.1)
-            t_sub1 = torch.log10(torch.sqrt(target + self.beta) + 0.1)
-            loss1 = torch.sqrt(((p_sub - t_sub) ** 2).mean())  # RMSE item
-
-            # Log-Sqrt RMSE
-            mask2 = ~torch.isnan(t_sub1)
-            p_sub2 = p_sub1[mask2]
-            t_sub2 = t_sub1[mask2]
-            loss2 = torch.sqrt(((p_sub2 - t_sub2) ** 2).mean())
-
-            # Combined losses
-            loss = (1.0 - self.alpha) * loss1 + self.alpha * loss2
+            mask = ~torch.isnan(target)
+            p_sub = prediction[mask]
+            t_sub = target[mask] 
+            loss = torch.sqrt(((p_sub - t_sub) ** 2).mean())
         else:
             loss = torch.tensor(0.0, device=self.device)
         return loss

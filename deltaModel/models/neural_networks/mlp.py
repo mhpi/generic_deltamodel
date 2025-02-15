@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 
-class MLP(nn.Module):
+class MlpModel(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.L1 = nn.Linear(
@@ -41,7 +41,7 @@ class MLP(nn.Module):
         return out
 
 
-class MLPmul(nn.Module):
+class MlpMulModel(nn.Module):
     def __init__(self, config, nx, ny):
         super().__init__()
         self.config = config

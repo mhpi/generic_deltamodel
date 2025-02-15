@@ -1,33 +1,33 @@
 from typing import Any, Dict, Optional
 
 import torch
-from numpy.typing import NDArray
 
 
-class KgeLossBatch(torch.nn.Module):
-    """Kling-Gupta efficiency (KGE) loss function.
-    
-    The KGE is calculated as:
+class KgeNormBatchLoss(torch.nn.Module):
+    """Normalized Kling-Gupta efficiency (N-KGE) loss function.
+
+    The N-KGE is calculated as:
         p: predicted value,
         t: target value,
         r: correlation coefficient,
         beta: variability ratio,
         gamma: variability error,
         KGE = 1 - sqrt((r - 1)^2 + (beta - 1)^2 + (gamma - 1)^2)
+        N-KGE = 1 - KGE/(2 - KGE)
 
     Parameters
     ----------
-    target : np.ndarray
+    target : torch.Tensor
         The target data array.
     config : dict
         The configuration dictionary.
     device : str, optional
         The device to use for the loss function object. The default is 'cpu'.
-    
+
     Optional Parameters: (Set in config)
     --------------------
     eps : float
-        Stability term to prevent division by zero. The default is 0.1.
+        Stability term to prevent division by zero. The default is 0.1. 
     """
     def __init__(
         self,
@@ -36,7 +36,7 @@ class KgeLossBatch(torch.nn.Module):
         device: Optional[str] = 'cpu',
     ) -> None:
         super().__init__()
-        self.name = 'Batch KGE Loss'
+        self.name = 'Batch NKGE Loss'
         self.config = config
         self.device = device
 
@@ -94,6 +94,6 @@ class KgeLossBatch(torch.nn.Module):
         kge = 1 - torch.sqrt((r - 1)**2 + (beta - 1)**2 + (gamma - 1)**2)
 
         # Return KGE loss (1 - KGE)
-        loss = 1 - kge
+        loss = 1 - kge/(2 - kge)
 
         return loss

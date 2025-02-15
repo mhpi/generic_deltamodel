@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 
-class NseLossBatch(torch.nn.Module):
+class NseBatchLoss(torch.nn.Module):
     """Normalized squared error (NSE) loss function.
 
     Same as Fredrick 2019, batch NSE loss.
@@ -19,7 +19,7 @@ class NseLossBatch(torch.nn.Module):
 
     Parameters
     ----------
-    target : np.ndarray
+    target : torch.Tensor
         The target data array.
     config : dict
         The configuration dictionary.

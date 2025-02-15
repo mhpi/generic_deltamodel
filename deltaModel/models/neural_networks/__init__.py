@@ -1,115 +1,86 @@
 import logging
-import math
-from abc import ABC
-from typing import Any, Callable, Dict
+from typing import Any, Dict, Optional
 
 import torch
-import torch.nn as nn
 
-from conf.config import InitalizationEnum
-from models.neural_networks.lstm_models import CudnnLstmModel
-from models.neural_networks.mlp_models import MLPmul
+from core.utils.factory import load_component
 
 log = logging.getLogger(__name__)
 
 
-class Initialization(nn.Module):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__()
-        self.config = kwargs["config"]
-
-    def kaiming_normal_initializer(self, x) -> None:
-        nn.init.kaiming_normal_(x, mode=self.config.fan, nonlinearity="sigmoid")
-
-    def xavier_normal_initializer(self, x) -> None:
-        nn.init.xavier_normal_(x, gain=self.config.gain)
-
-    @staticmethod
-    def sparse_initializer(x) -> None:
-        nn.init.sparse_(x, sparsity=0.5)
-
-    @staticmethod
-    def uniform_initializer(x) -> None:
-        # hardcoding hidden size for now
-        stdv = 1.0 / math.sqrt(6)
-        nn.init.uniform_(x, a=-stdv, b=stdv)
-
-    def forward(self, *args, **kwargs) -> Callable[[torch.Tensor], None]:
-        init = self.config.initialization
-        log.debug(f"Initializing weight states using the {init} function")
-        if init == InitalizationEnum.kaiming_normal:
-            func = self.kaiming_normal_initializer
-        elif init == InitalizationEnum.kaiming_uniform:
-            func = nn.init.kaiming_uniform_
-        elif init == InitalizationEnum.orthogonal:
-            func = nn.init.orthogonal_
-        elif init == InitalizationEnum.sparse:
-            func = self.sparse_initializer
-        elif init == InitalizationEnum.trunc_normal:
-            func = nn.init.trunc_normal_
-        elif init == InitalizationEnum.xavier_normal:
-            func = self.xavier_normal_initializer
-        elif init == InitalizationEnum.xavier_uniform:
-            func = nn.init.xavier_uniform_
-        else:
-            log.info("Defaulting to a uniform initialization")
-            func = self.uniform_initializer
-        return func
+#------------------------------------------#
+# If directory structure changes, update these module paths.
+# NOTE: potentially move these to a framework config for easier access.
+nn_model_dir = 'models/neural_networks'
+#------------------------------------------#
 
 
-class NeuralNetwork(ABC, nn.Module):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__()
-        self.config = kwargs["config"]
-        self.Initialization = Initialization(config=self.config)
-
-    def forward(self, *args, **kwargs) -> Dict[str, torch.Tensor]:
-        raise NotImplementedError("The forward function must be implemented")
-    
-
-def init_nn_model(
-    phy_model: nn.Module,
+def load_nn_model(
+    phy_model: torch.nn.Module,
     config: Dict[str, Dict[str, Any]],
-) -> nn.Module:
-    """Initialize a parameterization neural network for hydrology models.
-       
+    device: Optional[str] = None,
+) -> torch.nn.Module:
+    """
+    Initialize a neural network.
+
     Parameters
     ----------
     phy_model : torch.nn.Module
         The physics model.
     config : dict
         The configuration dictionary.
-    
+
     Returns
     -------
     torch.nn.Module
-        The initialized neural network.
+        An initialized neural network.
     """
+    if not device:
+        device = config.get('device', 'cpu')
+    
     n_forcings = len(config['nn_model']['forcings'])
     n_attributes = len(config['nn_model']['attributes'])
-    n_phy_params = len(phy_model.parameter_bounds)
-    n_routing_params = len(phy_model.routing_parameter_bounds)
-    
-    nx = n_forcings + n_attributes
-    ny = config['phy_model']['nmul'] * n_phy_params
+    n_phy_params = phy_model.learnable_param_count
 
-    if config['phy_model']['routing'] == True:
-        ny += n_routing_params
+    # Number of inputs 'x' and outputs 'y' for nn.
+    nx = n_forcings + n_attributes
+    ny = n_phy_params
+
+    name = config['nn_model']['model']
     
-    if config['nn_model']['model'] == 'LSTM':
-        nn_model = CudnnLstmModel(
+    # Dynamically retrieve the model
+    cls = load_component(
+        name, 
+        nn_model_dir,
+        torch.nn.Module
+    )
+
+    # Initialize the model with the appropriate parameters
+    if name in ['CudnnLstmModel']:
+        model = cls(
             nx=nx,
             ny=ny,
             hiddenSize=config['nn_model']['hidden_size'],
             dr=config['nn_model']['dropout'],
         )
-    elif config['nn_model']['model'] == 'MLP':
-        nn_model = MLPmul(
+    elif name in ['MLP']:
+        model = cls(
             config,
             nx=nx,
             ny=ny,
         )
+    elif name in ['LstmMlpModel']:
+        model = cls(
+            nx1=nx,
+            ny1=config['phy_model']['nmul'] * n_phy_params,
+            hiddeninv1=config['nn_model']['lstm_hidden_size'],
+            nx2=n_attributes,
+            ny2=phy_model.learnable_param_count2,
+            hiddeninv2=config['nn_model']['mlp_hidden_size'],
+            dr1=config['nn_model']['lstm_dropout'],
+            dr2=config['nn_model']['mlp_dropout'],
+        )
     else:
-        raise ValueError(config['nn_model']['model'], " not supported.")
+        raise ValueError(f"Model {name} is not supported.")
     
-    return nn_model
+    return model.to(device)

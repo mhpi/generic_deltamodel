@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 from torch.utils.data import Dataset
 
 
-class BaseDataLoader(Dataset, ABC):
+class BaseLoader(Dataset, ABC):
     """Base class for data loaders extended from PyTorch Dataset.
 
     All data loaders should enherit from this class to enforce minimum

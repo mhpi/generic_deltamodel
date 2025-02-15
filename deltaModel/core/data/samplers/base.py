@@ -5,7 +5,7 @@ from numpy.typing import NDArray
 from torch.utils.data import Dataset
 
 
-class BaseDataSampler(Dataset, ABC):
+class BaseSampler(Dataset, ABC):
     """Base class for data samplers extended from PyTorch Dataset.
     
     All data samplers should inherit from this class to enforce minimum
