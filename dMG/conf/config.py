@@ -34,6 +34,7 @@ class ModeEnum(str, Enum):
 
 class LossFunctionConfig(BaseModel):
     model: str = Field(..., description="The name of the loss function.")
+    weight: float = Field(default=1.0, description="Weight of the loss function.")
 
 
 class TrainingConfig(BaseModel):
@@ -45,6 +46,7 @@ class TrainingConfig(BaseModel):
     epochs: int
     start_epoch: int = 0
     save_epoch: int = 5
+    learning_rate: float = Field(gt=0, description="Learning rate for training.")
 
     @model_validator(mode='after')
     def validate_training_times(cls, values):
@@ -129,7 +131,6 @@ class ObservationConfig(BaseModel):
             if start_time >= end_time:
                 raise ValueError("Dataset start time must be earlier than end time.")
             return values
-
 
 class Config(BaseModel):
     mode: ModeEnum = Field(default=ModeEnum.train_test)
