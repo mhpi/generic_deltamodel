@@ -4,7 +4,7 @@ requires = ["hatchling", "hatch-vcs"]
 
 [project]
 name = "generic-deltamodel"
-version = "0.1.0"
+version = "1.2.0"
 description = "Differentiable modeling framework"
 readme = "README.md"
 requires-python = ">=3.9.0"
@@ -13,6 +13,7 @@ authors = [
     {name = "Leo Lonzarich"},
     {name = "Tadd Bindas"},
     {name = "Farshid Rahmani"},
+    {name = "Yalan Song"},
 ]
 maintainers = [
     {name = "Leo Lonzarich", email = "lglonzaric@gmail.com"},
