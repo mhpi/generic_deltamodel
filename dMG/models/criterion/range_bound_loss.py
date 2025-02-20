@@ -28,7 +28,6 @@ class RangeBoundLoss(torch.nn.Module):
     """
     def __init__(
         self,
-        target: torch.Tensor,
         config: Dict[str, Any],
         device: Optional[str] = 'cpu',
     ) -> None:

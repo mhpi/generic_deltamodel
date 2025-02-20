@@ -3,8 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import torch
 
 from core.utils import find_shared_keys
-from models.neural_networks.cudnn_lstm import CudnnLstmModel
-from models.neural_networks.mlp import MlpMulModel
+from core.utils.factory import load_nn_model
 
 
 class EnsembleGenerator(torch.nn.Module):
@@ -20,17 +19,17 @@ class EnsembleGenerator(torch.nn.Module):
         List of names of differentiable models to ensemble.
     config : dict
         The configuration dictionary.
-    wnn_model : torch.nn.Module
+    nn_model : torch.nn.Module
         The neural network model to learn weights for multimodel ensembling.
-        The default is None.
+        Default is None.
     device : torch.device, optional
-        The device to run the model on. The default is None.
+        The device to run the model on. Default is None.
     """
     def __init__(
         self,
         model_list: List[str],
         config: Dict[str, Any],
-        wnn_model: torch.nn.Module = None,
+        nn_model: torch.nn.Module = None,
         device: Optional[torch.device] = None
     ) -> None:
         super().__init__()
@@ -39,10 +38,10 @@ class EnsembleGenerator(torch.nn.Module):
         self.model_list = model_list
         self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
-        if wnn_model:
-            self.wnn_model = wnn_model
+        if nn_model:
+            self.nn_model = nn_model
         elif config:
-            self.wnn_model = self._init_wnn_model()
+            self.nn_model = self._init_nn_model()
         else:
             raise ValueError("A (1) neural network or (2) configuration dictionary is required.")
         
@@ -50,41 +49,14 @@ class EnsembleGenerator(torch.nn.Module):
         self.ensemble_predictions = {}
         self.initialized = True
 
-    def _init_wnn_model(self) -> torch.nn.Module:
-        """Initialize a wNN model.
-        
-        wNN to learn weights for multimodel ensembling.
-            Inputs: forcings/attributes/observed variables.
-            Outputs: weights for each hydrology model.
-        
-        TODO: Set this up as dynamic module import instead.
-        """
-        n_forcings = len(self.config['forcings'])
-        n_attributes = len(self.config['attributes'])
-        
-        # Number of inputs 'x' and outputs 'y' for wnn
-        self.nx = n_forcings + n_attributes
-        self.ny = len(self.model_list)
-        
-        model_name = self.config['model']
-
-        # Initialize the nn
-        if model_name == 'LSTM':
-            model = CudnnLstmModel(
-                nx=self.nx,
-                ny=self.ny,
-                hiddenSize=self.config['hidden_size'],
-                dr=self.config['dropout']
-            )
-        elif model_name == 'MLP':
-            model = MlpMulModel(
-                self.config,
-                nx=self.nx,
-                ny=self.ny
-            )
-        else:
-            raise ValueError(f"{model_name} is not a supported neural network model type.")
-        return model.to(self.device)
+    def _init_nn_model(self) -> torch.nn.Module:
+        """Initialize a neural network model."""
+        return load_nn_model(
+            None,
+            self.config,
+            ensemble_list=self.model_list,
+            device=self.device
+        )
 
     def forward(
         self,
@@ -108,7 +80,7 @@ class EnsembleGenerator(torch.nn.Module):
             # dataset_dict = numpy_to_torch_dict(dataset_dict, device=self.device)
             
             # Generate ensemble weights
-            self._raw_weights = self.wnn_model(dataset_dict['xc_nn_norm'])
+            self._raw_weights = self.nn_model(dataset_dict['xc_nn_norm'])
             self._scale_weights()
 
             # Map weights to individual models
@@ -130,7 +102,7 @@ class EnsembleGenerator(torch.nn.Module):
         else:
             print("Mosaic mode is enabled.")
             # Generate ensemble weights
-            self._raw_weights = self.wnn_model(dataset_dict['xc_nn_norm'])
+            self._raw_weights = self.nn_model(dataset_dict['xc_nn_norm'])
             self._scale_weights()
 
             # Map weights to individual models

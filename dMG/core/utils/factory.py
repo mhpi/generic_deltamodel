@@ -21,7 +21,6 @@ from numpy.typing import NDArray
 
 from core.utils import camel_to_snake
 
-
 #------------------------------------------#
 # If directory structure changes, update these module paths.
 # NOTE: potentially move these to a framework config for easier access.
@@ -183,6 +182,7 @@ def load_loss_func(
 def load_nn_model(
     phy_model: torch.nn.Module,
     config: Dict[str, Dict[str, Any]],
+    ensemble_list: Optional[list] = None,
     device: Optional[str] = None,
 ) -> torch.nn.Module:
     """
@@ -194,6 +194,11 @@ def load_nn_model(
         The physics model.
     config : dict
         The configuration dictionary.
+    ensemble_list : list, optional
+        List of models to ensemble. Default is None. This will result in a
+        weighting nn being initialized.
+    device : str, optional
+        The device to run the model on. Default is None.
 
     Returns
     -------
@@ -202,16 +207,27 @@ def load_nn_model(
     """
     if not device:
         device = config.get('device', 'cpu')
-    
-    n_forcings = len(config['nn_model']['forcings'])
-    n_attributes = len(config['nn_model']['attributes'])
-    n_phy_params = phy_model.learnable_param_count
 
-    # Number of inputs 'x' and outputs 'y' for nn.
+    # Number of inputs 'x' and outputs 'y' for the nn.
+    if ensemble_list:
+        n_forcings = len(config['forcings'])
+        n_attributes = len(config['attributes'])
+        ny = len(ensemble_list)
+
+        hidden_size = config['hidden_size']
+        dr = config['dropout']
+        name = config['model']
+    else:
+        n_forcings = len(config['nn_model']['forcings'])
+        n_attributes = len(config['nn_model']['attributes'])
+        n_phy_params = phy_model.learnable_param_count
+        ny = n_phy_params
+
+        hidden_size = config['nn_model']['hidden_size']
+        dr = config['nn_model']['dropout']
+        name = config['nn_model']['model']
+
     nx = n_forcings + n_attributes
-    ny = n_phy_params
-
-    name = config['nn_model']['model']
     
     # Dynamically retrieve the model
     cls = load_component(
@@ -225,8 +241,8 @@ def load_nn_model(
         model = cls(
             nx=nx,
             ny=ny,
-            hiddenSize=config['nn_model']['hidden_size'],
-            dr=config['nn_model']['dropout'],
+            hiddenSize=hidden_size,
+            dr=dr,
         )
     elif name in ['MLP']:
         model = cls(

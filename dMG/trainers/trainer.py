@@ -138,7 +138,7 @@ class Trainer(BaseTrainer):
             raise ValueError(f"Error initializing optimizer: {e}")
         return self.optimizer
     
-    def init_scheduler(self) -> None:
+    def init_scheduler(self) -> torch.optim.lr_scheduler.LRScheduler:
         """Initialize a learning rate scheduler for the optimizer."""
         name = self.config['dpl_model']['nn_model']['lr_scheduler']
         scheduler_dict = {
@@ -249,10 +249,8 @@ class Trainer(BaseTrainer):
 
         # Track overall predictions and observations
         batch_predictions = []
-        if self.config['test']['evaluation']: 
-            observations = self.eval_dataset['target']
-        else:
-            observations = None
+        observations = self.eval_dataset['target']
+
         # Get start and end indices for each batch.
         n_samples = self.eval_dataset['xc_nn_norm'].shape[1]
         batch_start = np.arange(0, n_samples, self.config['test']['batch_size'])

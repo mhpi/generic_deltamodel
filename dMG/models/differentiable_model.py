@@ -82,7 +82,7 @@ class DeltaModel(torch.nn.Module):
     
     def forward(self, data_dict: Dict[str, torch.Tensor]) -> torch.Tensor:
         """Forward pass for the model."""
-        # Parameterization
+        # NN
         if type(self.nn_model) == LstmMlpModel:
             parameters = self.nn_model(data_dict['xc_nn_norm'], data_dict['c_nn_norm'])
         else:

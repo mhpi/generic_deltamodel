@@ -3,6 +3,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 import torch
+import tqdm
 
 from core.utils import save_model
 from models.criterion.range_bound_loss import RangeBoundLoss
@@ -61,7 +62,7 @@ class ModelHandler(torch.nn.Module):
         self.loss_dict = {key: 0 for key in self.models}
         self.target_name = config['train']['target'][0]
 
-        if self.multimodel_type in ['pnn_parallel']:
+        if self.multimodel_type in ['nn_parallel']:
             self.is_ensemble = True
             self.weights = {}
             self.loss_func_wnn = None
@@ -72,7 +73,7 @@ class ModelHandler(torch.nn.Module):
         """List of models specified in the configuration."""
         models = self.config['dpl_model']['phy_model']['model']
         
-        if self.multimodel_type in ['pnn_parallel']:
+        if self.multimodel_type in ['nn_parallel']:
             # Add ensemble weighting NN to the list.
             models.append('wNN')
         return models
@@ -159,7 +160,7 @@ class ModelHandler(torch.nn.Module):
             # Differentiable model parameters
             self.parameters += list(model.parameters())
         
-        if self.multimodel_type in ['pnn_parallel']:
+        if self.multimodel_type in ['nn_parallel']:
             # Ensemble weighting NN parameters if trained in parallel.
             self.parameters += list(self.ensemble_generator.parameters())
         return self.parameters
@@ -199,7 +200,7 @@ class ModelHandler(torch.nn.Module):
                 model.train()
                 self.output_dict[name] = model(dataset_dict)
 
-        if self.multimodel_type in ['pnn_parallel']:
+        if self.multimodel_type in ['nn_parallel']:
              self._forward_multimodel(dataset_dict, eval)
 
         return self.output_dict
@@ -230,7 +231,7 @@ class ModelHandler(torch.nn.Module):
                     self.output_dict,
                 )
         else:
-            if self.multimodel_type in ['pnn_parallel']:
+            if self.multimodel_type in ['nn_parallel']:
                 ## Training mode for parallel-trained ensemble.
                 self.ensemble_generator.train()
                 self.ensemble_output_dict, self.weights = self.ensemble_generator(
@@ -280,7 +281,7 @@ class ModelHandler(torch.nn.Module):
             self.loss_dict[name] += loss.item()
         
         # Add ensemble loss if applicable (wNN trained in parallel)
-        if self.multimodel_type in ['pnn_parallel']:
+        if self.multimodel_type in ['nn_parallel']:
             loss_combined += self.calc_loss_multimodel(dataset, loss_func)
 
         return loss_combined
@@ -324,7 +325,9 @@ class ModelHandler(torch.nn.Module):
 
         # Range bound loss
         if self.config['multimodel']['use_rb_loss']:
-            rb_loss = self.range_bound_loss(torch.tensor(weights_sum))
+            rb_loss = self.range_bound_loss(
+                weights_sum.clone().detach().requires_grad_(True)
+            )
         else:
             rb_loss = 0.0
 
@@ -339,9 +342,10 @@ class ModelHandler(torch.nn.Module):
 
         if self.verbose:
             if self.config['multimodel']['use_rb_loss']:
-                log.info(f"Ensemble Loss: {ensemble_loss.item()}, Range Bound Loss: {rb_loss.item()}")
+                tqdm.tqdm.write(f"Ensemble loss: {ensemble_loss.item()}, " \
+                                f"Range bound loss: {rb_loss.item()}")
             else:
-                log.info(f"Ensemble Loss: {ensemble_loss.item()}")
+                tqdm.tqdm.write(f"-- Ensemble loss: {ensemble_loss.item()}")
 
         loss_combined = ensemble_loss + rb_loss
         self.loss_dict['wNN'] += loss_combined.item()
