@@ -325,7 +325,7 @@ class PathBuilder(BaseModel):
             warmup = 'WU'
 
         # Set hiddensize for single or multi-NN setups.
-        if config['dpl_model']['nn_model']['model'] == 'LSTMMLP':
+        if config['dpl_model']['nn_model']['model'] == 'LstmMlpModel':
             hidden_size = f"{config['dpl_model']['nn_model']['lstm_hidden_size']}" \
                             f"_{config['dpl_model']['nn_model']['mlp_hidden_size']}"
         else:

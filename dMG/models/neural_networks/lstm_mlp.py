@@ -1,7 +1,9 @@
 import torch
 
 from models.neural_networks.ann import AnnModel
-from models.neural_networks.cudnn_lstm import CudnnLstmModel
+from models.neural_networks.lstm import CudnnLstmModel
+# from models.neural_networks.cudnn_lstm import CudnnLstmModel
+
 
 
 class LstmMlpModel(torch.nn.Module):
@@ -16,8 +18,6 @@ class LstmMlpModel(torch.nn.Module):
 
     def forward(self, z1,z2):
         Lstm_para = self.lstminv(z1) # dim: Time, Gage, Para
-
         Ann_para = self.Ann(z2)
 
-
-        return [ torch.sigmoid(Lstm_para),Ann_para]
+        return [torch.sigmoid(Lstm_para), Ann_para]
