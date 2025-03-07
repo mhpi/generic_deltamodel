@@ -9,9 +9,10 @@ import torch
 from hydroDL2 import load_model as load_from_hydrodl
 from numpy.typing import NDArray
 
-from ...trainers.base import BaseTrainer
-from ..data.loaders.base import BaseLoader
-from ..data.samplers.base import BaseSampler
+from dMG.core.data.loaders.base import BaseLoader
+from dMG.core.data.samplers.base import BaseSampler
+from dMG.trainers.base import BaseTrainer
+
 from . import camel_to_snake
 
 sys.path.append('../dMG/')  # for tutorials
@@ -234,7 +235,7 @@ def load_nn_model(
     )
 
     # Initialize the model with the appropriate parameters
-    if name in ['CudnnLstmModel']:
+    if name in ['CudnnLstmModel', 'LstmModel']:
         model = cls(
             nx=nx,
             ny=ny,

@@ -1,19 +1,23 @@
 import math
-import warnings
 
 import torch
 import torch.nn.functional as F
 from torch.nn import Parameter
 
-from core.calc.dropout import DropMask, createMask
-
-#------------------------------------------#
-# NOTE: Suppress this warning until we can implement a proper pytorch nn.LSTM.
-warnings.filterwarnings("ignore", message=".*weights are not part of single contiguous chunk.*")
-#------------------------------------------#
+from dMG.core.calc.dropout import DropMask, createMask
 
 
-class CudnnLstm(torch.nn.Module):
+class Lstm(torch.nn.Module):
+    """Custom LSTM model using new PyTorch implementation.
+
+    Supports GPU and CPU.
+    
+    This replaces `CudnnLstm`, which used PyTorch rnn backends with no
+    CPU support.
+
+    NOTE: Only mirrors inference functionality of `CudnnLstm`. Not validated
+    for training.
+    """
     def __init__(self, *, inputSize, hiddenSize, dr=0.5, drMethod='drW'):
         super().__init__()
         self.name = 'CudnnLstm'
@@ -83,8 +87,6 @@ class CudnnLstm(torch.nn.Module):
         if cx is None:
             cx = torch.zeros(1, batchSize, self.hiddenSize, device=self.device, requires_grad=False)
 
-        # cuDNN backend - disabled flat weight
-        # handle = torch.backends.cudnn.get_handle()
         if doDrop is True:
             self.reset_mask()
             weight = [
@@ -97,7 +99,8 @@ class CudnnLstm(torch.nn.Module):
             weight = [self.w_ih, self.w_hh, self.b_ih, self.b_hh]
 
         self.lstm.to(self.device)
-
+        
+        # Assign weights and biases
         self.lstm.weight_ih_l0 = torch.nn.Parameter(weight[0])
         self.lstm.weight_hh_l0 = torch.nn.Parameter(weight[1])
         self.lstm.bias_ih_l0 = torch.nn.Parameter(weight[2])
@@ -114,7 +117,17 @@ class CudnnLstm(torch.nn.Module):
         ]
 
 
-class CudnnLstmModel(torch.nn.Module):
+class LstmModel(torch.nn.Module):
+    """Custom LSTM model using new PyTorch implementation.
+    
+    Supports GPU and CPU.
+    
+    This replaces `CudnnLstmModel`, which used PyTorch rnn backends with no
+    CPU support.
+
+    NOTE: Only mirrors inference functionality of `CudnnLstm`. Not validated
+    for training.
+    """
     def __init__(self, *, nx, ny, hiddenSize, dr=0.5):
         super().__init__()
         self.name = 'CudnnLstmModel'
@@ -123,8 +136,9 @@ class CudnnLstmModel(torch.nn.Module):
         self.hiddenSize = hiddenSize
         self.ct = 0
         self.nLayer = 1
+
         self.linearIn = torch.nn.Linear(nx, hiddenSize)
-        self.lstm = CudnnLstm(inputSize=hiddenSize, hiddenSize=hiddenSize, dr=dr)
+        self.lstm = Lstm(inputSize=hiddenSize, hiddenSize=hiddenSize, dr=dr)
         self.linearOut = torch.nn.Linear(hiddenSize, ny)
 
     def forward(self, x, doDropMC=False, dropoutFalse=False):

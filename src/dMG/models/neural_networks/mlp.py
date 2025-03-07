@@ -5,17 +5,18 @@ import torch.nn as nn
 class MlpModel(nn.Module):
     def __init__(self, config):
         super().__init__()
+        self.name = 'MlpModel'
         self.L1 = nn.Linear(
-            len(config["optData"]["varC"]), config["seq_lin_layers"]["hidden_size"]
+            len(config['optData']['varC']), config['seq_lin_layers']['hidden_size']
         )
         self.L2 = nn.Linear(
-            config["seq_lin_layers"]["hidden_size"], config["seq_lin_layers"]["hidden_size"]
+            config['seq_lin_layers']['hidden_size'], config['seq_lin_layers']['hidden_size']
         )
         self.L3 = nn.Linear(
-            config["seq_lin_layers"]["hidden_size"], config["seq_lin_layers"]["hidden_size"]
+            config['seq_lin_layers']['hidden_size'], config['seq_lin_layers']['hidden_size']
         )
 
-        self.L4 = nn.Linear(config["seq_lin_layers"]["hidden_size"], 23)
+        self.L4 = nn.Linear(config['seq_lin_layers']['hidden_size'], 23)
 
         # 6 for alpha and beta of surface/subsurface/groundwater flow
         # 3 for conv bias,
@@ -44,18 +45,19 @@ class MlpModel(nn.Module):
 class MlpMulModel(nn.Module):
     def __init__(self, config, nx, ny):
         super().__init__()
+        self.name = 'MlpMulModel'
         self.config = config
         self.L1 = nn.Linear(
-            nx,  self.config["hidden_size"],
+            nx,  self.config['hidden_size'],
         )
         self.L2 = nn.Linear(
-            self.config["hidden_size"], self.config["hidden_size"]
+            self.config['hidden_size'], self.config['hidden_size']
         )
         self.L3 = nn.Linear(
-            self.config["hidden_size"], self.config["hidden_size"]
+            self.config['hidden_size'], self.config['hidden_size']
         )
 
-        self.L4 = nn.Linear(self.config["hidden_size"], ny)
+        self.L4 = nn.Linear(self.config['hidden_size'], ny)
         self.activation_sigmoid = torch.nn.Sigmoid()
         self.activation_tanh = torch.nn.Tanh()
 

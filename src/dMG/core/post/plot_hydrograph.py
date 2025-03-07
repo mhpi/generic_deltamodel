@@ -6,7 +6,8 @@ import pandas as pd
 import torch
 from numpy.typing import NDArray
 
-from ..data import timestep_resample
+from dMG.core.data import timestep_resample
+
 from . import format_resample_interval
 
 

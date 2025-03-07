@@ -2,8 +2,8 @@ from typing import Any, Dict, Optional
 
 import torch.nn
 
-from ..core.utils.factory import import_phy_model, load_nn_model
-from .neural_networks.lstm_mlp import LstmMlpModel
+from dMG.core.utils.factory import import_phy_model, load_nn_model
+# from dMG.models.neural_networks.lstm_mlp import LstmMlpModel
 
 
 class DeltaModel(torch.nn.Module):
@@ -82,20 +82,20 @@ class DeltaModel(torch.nn.Module):
     
     def forward(self, data_dict: Dict[str, torch.Tensor]) -> torch.Tensor:
         """Forward pass for the model."""
-        try:
-            # TODO: fix dynamic class import. Currently LstmMlpModel won't be recognized 
-            # correctly because of this, so we get
-            # type(self.nn_model) != models.neural_networks.lstm_mlp.LstmMlpModel
-            from LstmMlpModel import LstmMlpModel
-        except:
-            pass
-        # NN
-        if type(self.nn_model) == LstmMlpModel:
-            parameters = self.nn_model(data_dict['xc_nn_norm'], data_dict['c_nn_norm'])
-        else:
-            parameters = self.nn_model(data_dict['xc_nn_norm'])        
+        # try:
+        #     # TODO: fix dynamic class import. Currently LstmMlpModel won't be recognized 
+        #     # correctly because of this, so we get
+        #     # type(self.nn_model) != models.neural_networks.lstm_mlp.LstmMlpModel
+        #     from LstmMlpModel import LstmMlpModel
+        # except:
+        #     pass
+        # # NN
+        # if type(self.nn_model) == LstmMlpModel:
+        #     parameters = self.nn_model(data_dict['xc_nn_norm'], data_dict['c_nn_norm'])
+        # else:
+        parameters = self.nn_model(data_dict['xc_nn_norm'])        
 
-        print(f"DEBUG ----------- LSTM param mean: {parameters[0].mean().item()}")
+        print(f"DEBUG ----------- LSTM param mean: {parameters.mean().item()}")
         
         # Physics model
         predictions = self.phy_model(

@@ -1,13 +1,14 @@
 import torch
 
-from .ann import AnnModel
-from .cudnn_lstm import CudnnLstmModel
+from dMG.models.neural_networks.ann import AnnModel
+from dMG.models.neural_networks.cudnn_lstm import CudnnLstmModel
 
 
 class LstmMlpModel(torch.nn.Module):
     """LSTM-MLP model for multi-scale learning."""
     def __init__(self, *, nx1, ny1,hiddeninv1,nx2, ny2,hiddeninv2,dr1=0.5,dr2=0.5):
         super().__init__()
+        self.name = 'LstmMlpModel'
         self.lstminv = CudnnLstmModel(
             nx=nx1, ny=ny1, hiddenSize=hiddeninv1, dr=dr1)
         

@@ -2,8 +2,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 
-from ...core.utils import find_shared_keys
-from ...core.utils.factory import load_nn_model
+from dMG.core.utils import find_shared_keys
+from dMG.core.utils.factory import load_nn_model
 
 
 class EnsembleGenerator(torch.nn.Module):

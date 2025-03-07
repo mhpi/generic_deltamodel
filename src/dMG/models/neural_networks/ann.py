@@ -6,6 +6,7 @@ from torch.nn import Dropout, Linear
 class AnnModel(torch.nn.Module):
     def __init__(self, *, nx, ny, hiddenSize, dropout_rate=0.5):
         super().__init__()
+        self.name = 'AnnModel'
         self.hiddenSize = hiddenSize
         self.i2h = Linear(nx, hiddenSize)
         self.h2h1 = Linear(hiddenSize, hiddenSize, bias=True)
@@ -47,6 +48,7 @@ class AnnModel(torch.nn.Module):
 class AnnCloseModel(torch.nn.Module):
     def __init__(self, *, nx, ny, hiddenSize, fillObs=True):
         super().__init__()
+        self.name = 'AnnCloseModel'
         self.hiddenSize = hiddenSize
         self.i2h = Linear(nx + 1, hiddenSize)
         self.h2h = Linear(hiddenSize, hiddenSize)

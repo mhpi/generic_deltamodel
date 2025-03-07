@@ -7,12 +7,12 @@ import numpy as np
 import torch
 import tqdm
 
-from ..core.calc.metrics import Metrics
-from ..core.data import create_training_grid
-from ..core.utils import save_outputs, save_train_state
-from ..core.utils.factory import import_data_sampler, load_loss_func
-from ..models.model_handler import ModelHandler
-from .base import BaseTrainer
+from dMG.core.calc.metrics import Metrics
+from dMG.core.data import create_training_grid
+from dMG.core.utils import save_outputs, save_train_state
+from dMG.core.utils.factory import import_data_sampler, load_loss_func
+from dMG.models.model_handler import ModelHandler
+from dMG.trainers.base import BaseTrainer
 
 log = logging.getLogger(__name__)
 

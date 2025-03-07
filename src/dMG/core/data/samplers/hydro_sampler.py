@@ -4,8 +4,8 @@ import numpy as np
 import torch
 from numpy.typing import NDArray
 
-from ..data import random_index
-from .base import BaseSampler
+from dMG.core.data import random_index
+from dMG.core.data.samplers.base import BaseSampler
 
 
 class HydroSampler(BaseSampler):

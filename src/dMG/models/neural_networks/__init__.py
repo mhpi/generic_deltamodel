@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 
 import torch
 
-from ...core.utils.factory import load_component
+from dMG.core.utils.factory import load_component
 
 log = logging.getLogger(__name__)
 

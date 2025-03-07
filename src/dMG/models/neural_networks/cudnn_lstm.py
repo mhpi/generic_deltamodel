@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from torch.nn import Parameter
 
-from ...core.calc.dropout import DropMask, createMask
+from dMG.core.calc.dropout import DropMask, createMask
 
 #------------------------------------------#
 # NOTE: Suppress this warning until we can implement a proper pytorch nn.LSTM.

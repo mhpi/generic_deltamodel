@@ -5,10 +5,10 @@ from typing import Any, Dict, List, Optional
 import torch
 import tqdm
 
-from ..core.utils import save_model
-from .criterion.range_bound_loss import RangeBoundLoss
-from .differentiable_model import DeltaModel
-from .multimodels.ensemble_generator import EnsembleGenerator
+from dMG.core.utils import save_model
+from dMG.models.criterion.range_bound_loss import RangeBoundLoss
+from dMG.models.differentiable_model import DeltaModel
+from dMG.models.multimodels.ensemble_generator import EnsembleGenerator
 
 log = logging.getLogger(__name__)
 
