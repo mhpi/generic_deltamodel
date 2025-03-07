@@ -201,9 +201,10 @@ class ModelHandler(torch.nn.Module):
                 self.output_dict[name] = model(dataset_dict)
 
         if self.multimodel_type in ['nn_parallel']:
-             self._forward_multimodel(dataset_dict, eval)
-
-        return self.output_dict
+            self._forward_multimodel(dataset_dict, eval)
+            return {list(self.model_dict.keys())[0]: self.ensemble_output_dict}
+        else:
+            return self.output_dict
     
     def _forward_multimodel(
         self,

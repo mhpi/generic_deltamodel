@@ -333,7 +333,7 @@ def print_config(config: Dict[str, Any]) -> None:
 
     print("\033[1m" + "Model Parameters" + "\033[0m")
     print(f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}")
-    if config['dpl_model']['nn_model']['model'] != 'LSTMMLP':
+    if config['dpl_model']['nn_model']['model'] != 'LstmMlpModel':
         print(f"  {'Dropout:':<20}{config['dpl_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['dpl_model']['nn_model']['hidden_size']:<20}")
     else:
         print(f"  {'LSTM Dropout:':<20}{config['dpl_model']['nn_model']['lstm_dropout']:<20}{'LSTM Hidden Size:':<20}{config['dpl_model']['nn_model']['lstm_hidden_size']:<20}")

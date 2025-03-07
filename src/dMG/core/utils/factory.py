@@ -41,11 +41,6 @@ def get_dir(dir_name: str) -> Path:
     return dir
 
 
-import importlib.util
-import os
-from typing import Type
-
-
 def load_component(
     class_name: str,
     directory: str,
@@ -84,6 +79,7 @@ def load_component(
         # Dynamically load the module
         spec = importlib.util.spec_from_file_location(class_name, source)
         module = importlib.util.module_from_spec(spec)
+        sys.modules[class_name] = module  # Add to sys.modules
         spec.loader.exec_module(module)
     except FileNotFoundError:
         raise ImportError(f"Component '{class_name}' not found in '{source}'.")
@@ -222,9 +218,11 @@ def load_nn_model(
         n_phy_params = phy_model.learnable_param_count
         ny = n_phy_params
 
-        hidden_size = config['nn_model']['hidden_size']
-        dr = config['nn_model']['dropout']
         name = config['nn_model']['model']
+
+        if name not in ['LstmMlpModel']:
+            hidden_size = config['nn_model']['hidden_size']
+            dr = config['nn_model']['dropout']
 
     nx = n_forcings + n_attributes
     
@@ -252,7 +250,7 @@ def load_nn_model(
     elif name in ['LstmMlpModel']:
         model = cls(
             nx1=nx,
-            ny1=config['phy_model']['nmul'] * n_phy_params,
+            ny1=phy_model.learnable_param_count1,
             hiddeninv1=config['nn_model']['lstm_hidden_size'],
             nx2=n_attributes,
             ny2=phy_model.learnable_param_count2,
