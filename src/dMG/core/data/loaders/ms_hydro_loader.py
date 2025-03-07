@@ -9,7 +9,7 @@ import zarr
 from numpy.typing import NDArray
 from sklearn.exceptions import DataDimensionalityWarning
 
-from core.data.loaders.base import BaseLoader
+from .base import BaseLoader
 
 log = logging.getLogger(__name__)
 

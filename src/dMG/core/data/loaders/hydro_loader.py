@@ -9,8 +9,8 @@ import pandas as pd
 from numpy.typing import NDArray
 from sklearn.exceptions import DataDimensionalityWarning
 
-from core.data import intersect
-from core.data.loaders.base import BaseLoader
+from ..data import intersect
+from .base import BaseLoader
 
 log = logging.getLogger(__name__)
 

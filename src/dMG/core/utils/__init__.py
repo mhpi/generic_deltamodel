@@ -12,8 +12,7 @@ from pydantic import ValidationError
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from dates import Dates
-
-from core.utils.path import PathBuilder
+from path import PathBuilder
 
 log = logging.getLogger(__name__)
 

@@ -9,17 +9,16 @@ import torch
 from hydroDL2 import load_model as load_from_hydrodl
 from numpy.typing import NDArray
 
-from core.data.loaders.base import BaseLoader
-from core.data.samplers.base import BaseSampler
-from trainers.base import BaseTrainer
+from ...trainers.base import BaseTrainer
+from ..data.loaders.base import BaseLoader
+from ..data.samplers.base import BaseSampler
+from . import camel_to_snake
 
 sys.path.append('../dMG/')  # for tutorials
 
 import numpy as np
 import torch
 from numpy.typing import NDArray
-
-from core.utils import camel_to_snake
 
 #------------------------------------------#
 # If directory structure changes, update these module paths.

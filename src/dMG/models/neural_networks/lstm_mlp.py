@@ -1,7 +1,7 @@
 import torch
 
-from models.neural_networks.ann import AnnModel
-from models.neural_networks.cudnn_lstm import CudnnLstmModel
+from .ann import AnnModel
+from .cudnn_lstm import CudnnLstmModel
 
 
 class LstmMlpModel(torch.nn.Module):

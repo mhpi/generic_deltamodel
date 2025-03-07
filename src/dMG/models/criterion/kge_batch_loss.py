@@ -1,7 +1,6 @@
 from typing import Any, Dict, Optional
 
 import torch
-from numpy.typing import NDArray
 
 
 class KgeBatchLoss(torch.nn.Module):

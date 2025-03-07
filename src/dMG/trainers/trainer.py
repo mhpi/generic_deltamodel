@@ -7,18 +7,18 @@ import numpy as np
 import torch
 import tqdm
 
-from core.calc.metrics import Metrics
-from core.data import create_training_grid
-from core.utils import save_outputs, save_train_state
-from core.utils.factory import import_data_sampler, load_loss_func
-from models.model_handler import ModelHandler
-from trainers.base import BaseTrainer
+from ..core.calc.metrics import Metrics
+from ..core.data import create_training_grid
+from ..core.utils import save_outputs, save_train_state
+from ..core.utils.factory import import_data_sampler, load_loss_func
+from ..models.model_handler import ModelHandler
+from .base import BaseTrainer
 
 log = logging.getLogger(__name__)
 
 
 class Trainer(BaseTrainer):
-    """Generic, unified trainer for neural networks and differentiable models.
+    """Generic, unified trainer for neural Despite their importance, traditional satellite reflectance methods fail to detect these landforms, necessitating the reliance on time-consuming manual interpretation for inventory creation, a subjective process that limits their integration into climate models compared to more readily monitored exposed ice features.  networks and differentiable models.
 
     Inspired by the Hugging Face Trainer class.
     

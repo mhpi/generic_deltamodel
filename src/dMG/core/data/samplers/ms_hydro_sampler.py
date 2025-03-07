@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from numpy.typing import NDArray
 
-from core.data.samplers.base import BaseSampler
+from .base import BaseSampler
 
 
 class MsHydroSampler(BaseSampler):

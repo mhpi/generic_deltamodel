@@ -6,10 +6,10 @@ import numpy as np
 import torch
 import tqdm
 
-from core.utils import save_outputs
-from core.utils.factory import import_data_sampler
-from models.model_handler import ModelHandler
-from trainers.base import BaseTrainer
+from ..core.utils import save_outputs
+from ..core.utils.factory import import_data_sampler
+from ..models.model_handler import ModelHandler
+from .base import BaseTrainer
 
 log = logging.getLogger(__name__)
 

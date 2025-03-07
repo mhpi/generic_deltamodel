@@ -9,8 +9,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Union
 
-from pydantic import (BaseModel, Field, ValidationError, field_validator,
-                      model_validator)
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 log = logging.getLogger(__name__)
 

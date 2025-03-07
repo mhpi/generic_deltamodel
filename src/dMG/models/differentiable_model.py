@@ -2,8 +2,8 @@ from typing import Any, Dict, Optional
 
 import torch.nn
 
-from core.utils.factory import import_phy_model, load_nn_model
-from models.neural_networks.lstm_mlp import LstmMlpModel
+from ..core.utils.factory import import_phy_model, load_nn_model
+from .neural_networks.lstm_mlp import LstmMlpModel
 
 
 class DeltaModel(torch.nn.Module):

@@ -1,4 +1,5 @@
 """Main script for running differentiable model experiments."""
+
 import logging
 import time
 
@@ -6,9 +7,9 @@ import hydra
 import torch
 from omegaconf import DictConfig
 
-from core.utils import initialize_config, print_config, set_randomseed
-from core.utils.factory import import_data_loader, import_trainer
-from models.model_handler import ModelHandler as dModel
+from .core.utils import initialize_config, print_config, set_randomseed
+from .core.utils.factory import import_data_loader, import_trainer
+from .models.model_handler import ModelHandler as dModel
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)

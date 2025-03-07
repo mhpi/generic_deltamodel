@@ -1,14 +1,14 @@
 import math
-#------------------------------------------#
-# NOTE: Suppress this warning until we can implement a proper pytorch nn.LSTM.
 import warnings
 
 import torch
 import torch.nn.functional as F
 from torch.nn import Parameter
 
-from core.calc.dropout import DropMask, createMask
+from ...core.calc.dropout import DropMask, createMask
 
+#------------------------------------------#
+# NOTE: Suppress this warning until we can implement a proper pytorch nn.LSTM.
 warnings.filterwarnings("ignore", message=".*weights are not part of single contiguous chunk.*")
 #------------------------------------------#
 
