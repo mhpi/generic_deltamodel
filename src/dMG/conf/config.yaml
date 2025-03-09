@@ -15,7 +15,7 @@ data_loader: base_loader
 data_sampler: base_sampler
 trainer: trainer
 
-save_path: ../results
+save_path: ../../results
 
 
 ## Training ------------------------------#

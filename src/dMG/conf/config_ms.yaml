@@ -9,13 +9,13 @@ mode: predict  # train, test, train_test, predict
 multimodel_type: none
 random_seed: 111111
 device: cuda
-gpu_id: 7
+gpu_id: 4
 
 data_loader: MsHydroLoader
 data_sampler: MsHydroSampler
 trainer: MsTrainer
 
-save_path: ../results
+save_path: ../../results
 trained_model: /projects/mhpi/lglonz/project_silmaril/generic_deltaModel/results/merit_forward_zone/train1980-1995/no_multi/LSTMMLP_E100_R365_B100_H64_n4_noLn_WU_111111/HBV_2_0/RmseLossComb/3dyn/parBETA_parK0_parBETAET/dHBV_2_0_Ep100.pt
 
 

@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 import torch.nn
 
 from dMG.core.utils.factory import import_phy_model, load_nn_model
-# from dMG.models.neural_networks.lstm_mlp import LstmMlpModel
+from dMG.models.neural_networks.lstm_mlp import LstmMlpModel
 
 
 class DeltaModel(torch.nn.Module):
@@ -89,13 +89,13 @@ class DeltaModel(torch.nn.Module):
         #     from LstmMlpModel import LstmMlpModel
         # except:
         #     pass
-        # # NN
-        # if type(self.nn_model) == LstmMlpModel:
-        #     parameters = self.nn_model(data_dict['xc_nn_norm'], data_dict['c_nn_norm'])
-        # else:
-        parameters = self.nn_model(data_dict['xc_nn_norm'])        
+        # NN
+        if type(self.nn_model).__name__ == 'LstmMlpModel':
+            parameters = self.nn_model(data_dict['xc_nn_norm'], data_dict['c_nn_norm'])
+        else:
+            parameters = self.nn_model(data_dict['xc_nn_norm'])        
 
-        print(f"DEBUG ----------- LSTM param mean: {parameters.mean().item()}")
+        print(f"DEBUG ----------- LSTM param mean: {parameters[0].mean().item()}")
         
         # Physics model
         predictions = self.phy_model(
