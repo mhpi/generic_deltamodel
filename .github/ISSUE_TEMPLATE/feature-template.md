@@ -15,8 +15,3 @@ assignees: leoglonz
 ### Actions
 
 -
-
-
-### Considerations
-
--

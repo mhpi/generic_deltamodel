@@ -30,6 +30,7 @@ class RangeBoundLoss(torch.nn.Module):
         self,
         config: Dict[str, Any],
         device: Optional[str] = 'cpu',
+        **kwargs,
     ) -> None:
         super().__init__()
         self.name = 'Range Bound Loss'
