@@ -75,7 +75,7 @@ class EnsembleGenerator(torch.nn.Module):
             Dictionary containing predictions from individual models.
         """
 
-        if self.config['mosaic'] == False:
+        if not self.config['mosaic']:
             # Ensure input data is in the correct format and device.
             # dataset_dict = numpy_to_torch_dict(dataset_dict, device=self.device)
             

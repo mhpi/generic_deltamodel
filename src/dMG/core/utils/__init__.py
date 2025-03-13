@@ -59,7 +59,7 @@ def set_randomseed(seed=0) -> None:
     seed : int, optional
         Random seed to set. If None, a random seed is used. Default is 0.
     """
-    if seed == None:
+    if seed is None:
         # seed = int(np.random.uniform(low=0, high=1e6))
         pass
 
@@ -91,7 +91,7 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
     dict
         Formatted configuration settings.
     """
-    if type(config) == DictConfig:
+    if type(config) is DictConfig:
         try:
             config = OmegaConf.to_container(config, resolve=True)
         except ValidationError as e:
@@ -243,7 +243,7 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
         out_path = PathBuilder(config)
         out_path.write_path(config)
     
-    if type(predictions) == list:
+    if type(predictions) is list:
         # Handle a single model
         for key in predictions[0].keys():
             if len(predictions[0][key].shape) == 3:
@@ -256,7 +256,7 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
 
             np.save(os.path.join(config['out_path'], file_name), c_tensor.numpy())
 
-    elif type(predictions) == dict:
+    elif type(predictions) is dict:
         # Handle multiple models
         models = config['dpl_model']['phy_model']['model']
         for key in predictions[models[0]][0].keys():
@@ -314,7 +314,7 @@ def print_config(config: Dict[str, Any]) -> None:
     print()
     print("\033[1m" + "Current Configuration" + "\033[0m")
     print(f"  {'Experiment Mode:':<20}{config['mode']:<20}")
-    if config['multimodel_type'] != None:
+    if config['multimodel_type'] is not None:
         print(f"  {'Ensemble Mode:':<20}{config['multimodel_type']:<20}")
     for i, mod in enumerate(config['dpl_model']['phy_model']['model']):
         print(f"  {f'Model {i+1}:':<20}{mod:<20}")
@@ -343,7 +343,7 @@ def print_config(config: Dict[str, Any]) -> None:
     print(f"  {'Loss Fn:':<20}{config['loss_function']['model']:<20}")
     print()
 
-    if config['multimodel_type'] != None:
+    if config['multimodel_type'] is not None:
         print("\033[1m" + "Multimodel Parameters" + "\033[0m")
         print(f"  {'Mosaic:':<20}{config['multimodel']['mosaic']:<20}{'Dropout:':<20}{config['multimodel']['dropout']:<20}")
         print(f"  {'Learning Rate:':<20}{config['multimodel']['learning_rate']:<20}{'Hidden Size:':<20}{config['multimodel']['hidden_size']:<20}")

@@ -1,5 +1,6 @@
-import torch
 from typing import Optional
+
+import torch
 import torch.nn.functional as F
 from torch.nn import Dropout, Linear
 

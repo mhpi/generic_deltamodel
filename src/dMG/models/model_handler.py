@@ -78,7 +78,7 @@ class ModelHandler(torch.nn.Module):
     
     def _init_models(self) -> None:
         """Initialize and store models, multimodels, and checkpoints."""
-        if self.multimodel_type == None and len(self.models) > 1:
+        if (self.multimodel_type is None) and (len(self.models) > 1):
             raise ValueError(
                 "Multiple models specified, but ensemble type is 'none'. Check configuration."
             )

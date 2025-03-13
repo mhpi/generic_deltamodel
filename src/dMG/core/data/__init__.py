@@ -177,7 +177,7 @@ def numpy_to_torch_dict(
         The device to move the data to.
     """
     for key, value in data_dict.items():
-        if type(value) != torch.Tensor:
+        if type(value) is torch.Tensor:
             data_dict[key] = torch.tensor(
                 value.copy(),
                 dtype=torch.float32,

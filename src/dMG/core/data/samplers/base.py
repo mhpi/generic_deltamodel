@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 
 class BaseSampler(Dataset, ABC):
     """Base class for data samplers extended from PyTorch Dataset.
-    
+
     All data samplers should inherit from this class to enforce minimum
     requirements for use within dMG.
 
@@ -23,11 +23,11 @@ class BaseSampler(Dataset, ABC):
     ):
         super().__init__()
         # self.config = config
-        
+
         # Set dtype and device from config or provide defaults
         # self.dtype = self.config.get("dtype", torch.float32)
         # self.device = self.config.get("device", torch.device("cpu"))
-        
+
     @abstractmethod
     def load_data(self):
         """Load data from a specific source."""
@@ -54,7 +54,7 @@ class BaseSampler(Dataset, ABC):
         return torch.tensor(
             data, dtype=self.dtype, device=self.device, requires_grad=False
         )
-    
+
     def validate_config(self):
         """Validate the configuration dictionary to ensure required keys."""
         required_keys = ["dtype", "device"]  # Add required keys here

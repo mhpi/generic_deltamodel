@@ -274,7 +274,7 @@ class Metrics(BaseModel):
         self.model_dump_agg_stats(save_path)
 
         # Save raw metrics
-        save_path = os.path.join(path, f'metrics.json')
+        save_path = os.path.join(path, 'metrics.json')
         json_dat = self.model_dump_json(indent=4)
         
         with open(save_path, "w") as f:

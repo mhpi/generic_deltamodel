@@ -77,7 +77,7 @@ class Trainer(BaseTrainer):
             if not self.train_dataset:
                 raise ValueError("'train_dataset' required for training mode.")
             
-            log.info(f"Initializing experiment")
+            log.info("Initializing experiment")
             self.epochs = self.config['train']['epochs']
 
             # Loss function
@@ -213,7 +213,7 @@ class Trainer(BaseTrainer):
                 )
             
                 # Forward pass through model.
-                prediction = self.model(dataset_sample)
+                _ = self.model(dataset_sample)
                 loss = self.model.calc_loss(dataset_sample)
 
                 loss.backward()
@@ -225,7 +225,8 @@ class Trainer(BaseTrainer):
                 if self.verbose:
                     tqdm.tqdm.write(f"Epoch {epoch}, batch {i} | loss: {loss.item()}")
 
-            if self.use_scheduler: self.scheduler.step()
+            if self.use_scheduler:
+                self.scheduler.step()
 
             if self.verbose:
                 log.info(f"\n ---- \n Epoch {epoch} total loss: {self.total_loss}")
@@ -241,7 +242,7 @@ class Trainer(BaseTrainer):
                     scheduler=self.scheduler,
                     clear_prior=True,
                 )
-        log.info(f"Training complete")
+        log.info("Training complete")
 
     def evaluate(self) -> None:
         """Run model evaluation and return both metrics and model outputs."""

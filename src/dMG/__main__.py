@@ -71,7 +71,7 @@ def main(config: DictConfig) -> None:
     except KeyboardInterrupt:
         log.warning("|> Keyboard interrupt received. Exiting gracefully <|")
 
-    except Exception as e:
+    except Exception:
         log.error("|> An error occurred <|", exc_info=True)  # Logs full traceback
     
     finally:

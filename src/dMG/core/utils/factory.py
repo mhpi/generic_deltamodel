@@ -1,7 +1,6 @@
 import importlib.util
 import os
 import sys
-from ast import Dict
 from pathlib import Path
 from typing import Any, Dict, Optional, Type
 
@@ -18,8 +17,6 @@ from . import camel_to_snake
 sys.path.append('../dMG/')  # for tutorials
 
 import numpy as np
-import torch
-from numpy.typing import NDArray
 
 #------------------------------------------#
 # If directory structure changes, update these module paths.
@@ -98,7 +95,7 @@ def import_phy_model(model: str, ver_name: str = None) -> Type:
     """Loads a physical model, either from HydroDL2 (hydrology) or locally."""
     try:
         return load_from_hydrodl(model, ver_name)
-    except:
+    except Exception:
         return load_component(
             model,  # Pass model as name directly
             phy_model_dir,

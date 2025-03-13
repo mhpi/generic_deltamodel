@@ -174,13 +174,13 @@ class MsHydroLoader(BaseLoader):
         try:
             ac_name = self.config['observations']['upstream_area_name']
             ac_array = root_zone['attrs'][ac_name][:]
-        except:
-            raise ValueError(f"Upstream area is not provided. This is needed for high-resolution streamflow model.")
+        except Exception:
+            raise ValueError("Upstream area is not provided. This is needed for high-resolution streamflow model.")
         try:
             elevation_name = self.config['observations']['elevation_name']
             elev_array = root_zone['attrs'][elevation_name][:] 
-        except:
-            raise ValueError(f"Elevation is not provided. This is needed for high-resolution streamflow model.")
+        except Exception:
+            raise ValueError("Elevation is not provided. This is needed for high-resolution streamflow model.")
 
         return [
             ac_array,

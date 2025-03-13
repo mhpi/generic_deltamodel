@@ -37,7 +37,7 @@ class HydroSampler(BaseSampler):
         has_grad: bool = False,
     ) -> torch.Tensor:
         """Select a subset of input tensor."""
-        batch_size, nx, nt = len(i_grid), x.shape[-1], x.shape[0]
+        batch_size, nx, _ = len(i_grid), x.shape[-1], x.shape[0]
 
         # Handle time indexing and create an empty tensor for selection
         if i_t is not None:

@@ -1,5 +1,6 @@
-import torch
 from typing import Optional, Tuple
+
+import torch
 
 from dMG.models.neural_networks.ann import AnnModel
 from dMG.models.neural_networks.cudnn_lstm import CudnnLstmModel
@@ -54,11 +55,8 @@ class LstmMlpModel(torch.nn.Module):
                 nx=nx1, ny=ny1, hidden_size=hiddeninv1, dr=dr1
             )
         else:
-            # Original HydroDL LSTM.
-            # self.lstminv = CudnnLstmModel(
-            #     nx=nx1, ny=ny1, hidden_size=hiddeninv1, dr=dr1
-            # )
-            self.lstminv = LstmModel(
+            # GPU-only HydroDL LSTM.
+            self.lstminv = CudnnLstmModel(
                 nx=nx1, ny=ny1, hidden_size=hiddeninv1, dr=dr1
             )
         

@@ -4,9 +4,8 @@ from typing import Any, Dict
 
 import hydra
 import torch
-from omegaconf import OmegaConf
-
 from core.utils import initialize_config
+from omegaconf import OmegaConf
 
 log = logging.getLogger(__name__)
 
