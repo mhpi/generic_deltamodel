@@ -24,6 +24,24 @@ class Lstm(torch.nn.Module):
         self.inputSize = inputSize
         self.hiddenSize = hiddenSize
         self.dr = dr
+
+        # Initialize new torch LSTM; disable dropout (it's handled manually).
+        self.lstm = torch.nn.LSTM(
+            input_size=self.inputSize,
+            hidden_size=self.hiddenSize,
+            num_layers=1,
+            batch_first=False,
+            bias=True,
+            dropout=0,
+            bidirectional=False,
+        )
+        # Remove default parameters. These are manually assigned in forward().
+        delattr(self.lstm, 'weight_ih_l0')
+        delattr(self.lstm, 'weight_hh_l0')
+        delattr(self.lstm, 'bias_ih_l0')
+        delattr(self.lstm, 'bias_hh_l0')
+
+        # Name parameters to match CudannLstm.
         self.w_ih = Parameter(torch.Tensor(hiddenSize * 4, inputSize))
         self.w_hh = Parameter(torch.Tensor(hiddenSize * 4, hiddenSize))
         self.b_ih = Parameter(torch.Tensor(hiddenSize * 4))
@@ -32,20 +50,6 @@ class Lstm(torch.nn.Module):
         
         self.reset_mask()
         self.reset_parameters()
-
-        self.lstm = torch.nn.LSTM(
-            input_size=self.inputSize,
-            hidden_size=self.hiddenSize,
-            num_layers=1,
-            batch_first=False,
-            bias=True,
-            dropout=0,  # Disable dropout since it's handled manually
-            bidirectional=False,
-        )
-
-    # def _apply(self, fn):
-    #     ret = super()._apply(fn)
-    #     return ret
 
     def __setstate__(self, d):
         super().__setstate__(d)
@@ -57,13 +61,15 @@ class Lstm(torch.nn.Module):
         self._all_weights = [['w_ih', 'w_hh', 'b_ih', 'b_hh']]
 
     def reset_mask(self):
-        self.maskW_ih = createMask(self.w_ih, self.dr)
-        self.maskW_hh = createMask(self.w_hh, self.dr)
+        with torch.no_grad():
+            self.maskW_ih = createMask(self.w_ih, self.dr)
+            self.maskW_hh = createMask(self.w_hh, self.dr)
 
     def reset_parameters(self):
         stdv = 1.0 / math.sqrt(self.hiddenSize)
-        for weight in self.parameters():
-            weight.data.uniform_(-stdv, stdv)
+        for param in self.parameters():
+            if param.requires_grad:
+                param.data.uniform_(-stdv, stdv)
 
     def flatten_parameters(self):
         """This method does nothing, just to bypass non-contiguous memory warning."""
@@ -72,7 +78,7 @@ class Lstm(torch.nn.Module):
     def forward(self, input, hx=None, cx=None, doDropMC=False, dropoutFalse=False):
         self.device = input.device  # TODO: handle this better -- needs to be an argument in def.
 
-        # dropoutFalse: it will ensure doDrop is false, unless doDropMC is true.
+        # Ensure doDrop is False, unless doDropMC is True.
         if dropoutFalse and (not doDropMC):
             doDrop = False
         elif self.dr > 0 and (doDropMC is True or self.training is True):
@@ -100,7 +106,7 @@ class Lstm(torch.nn.Module):
 
         self.lstm.to(self.device)
         
-        # Assign weights and biases
+        # Manually assign parameters to torch LSTM.
         self.lstm.weight_ih_l0 = torch.nn.Parameter(weight[0])
         self.lstm.weight_hh_l0 = torch.nn.Parameter(weight[1])
         self.lstm.bias_ih_l0 = torch.nn.Parameter(weight[2])

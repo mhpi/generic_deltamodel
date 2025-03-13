@@ -9,7 +9,7 @@ mode: predict  # train, test, train_test, predict
 multimodel_type: none
 random_seed: 111111
 device: cuda
-gpu_id: 4
+gpu_id: 1
 
 data_loader: MsHydroLoader
 data_sampler: MsHydroSampler

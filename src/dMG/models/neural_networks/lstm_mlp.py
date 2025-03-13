@@ -30,11 +30,14 @@ class LstmMlpModel(torch.nn.Module):
             nx=nx1, ny=ny1, hiddenSize=hiddeninv1, dr=dr1
         )
         
+
+
+
         # else:
-        #     self.lstminv = CudnnLstmModel(
-        #         nx=nx1, ny=ny1, hiddenSize=hiddeninv1, dr=dr1
-        #     )
-        
+        # self.lstminv = CudnnLstmModel(
+        #     nx=nx1, ny=ny1, hiddenSize=hiddeninv1, dr=dr1
+        # )
+    
         self.Ann = AnnModel(
             nx=nx2, ny=ny2, hiddenSize=hiddeninv2, dropout_rate=dr2)
 
