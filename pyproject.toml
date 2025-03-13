@@ -35,16 +35,16 @@ dependencies = [
     "pydantic>=2.10.6",
     "scikit-learn>=1.6.1",
     "scipy>=1.15.1",
-    "torch>=2.6.0",
-    "torchaudio>=2.6.0",
-    "torchvision>=0.21.0",
+    "torch>=2.5.0",
+    "torchaudio>=2.5.0",
+    "torchvision>=0.20.0",
     "tqdm>=4.67.1",
     "uv>=0.6.6",
     "zarr>=3.0.5",
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: Apache 2.0 License",
+    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
 ]
 
@@ -63,58 +63,10 @@ Repository = "https://github.com/mhpi/generic_deltaModel"
 #     "cupy-cuda12x==13.4.0",
 # ]
 dev = [
-    "mypy",
+    "mypy>=0.910",
     "pytest>=8.3.5",
     "ruff>=0.9.10",
 ]
-
-[tool.uv.sources]
-torch = [
-    { index = "pytorch-cu121", marker = "platform_system != 'Darwin'"},
-]
-torchvision = [
-    { index = "pytorch-cu121", marker = "platform_system != 'Darwin'"},
-]
-
-[[tool.uv.index]]
-name = "pytorch-cu121"
-url = "https://download.pytorch.org/whl/cu121"
-explicit = true
-
-
-# [tool.uv]
-# conflicts = [
-#   [
-#     { extra = "cpu" },
-#     { extra = "cu124" },
-#   ],
-# ]
-
-# [tool.uv.sources]
-# torch = [
-#   { index = "pytorch-cpu", extra = "cpu" },
-#   { index = "pytorch-cuda", extra = "cu124" },
-# ]
-# torchvision = [
-#   { index = "pytorch-cpu", extra = "cpu" },
-#   { index = "pytorch-cuda", extra = "cu124" },
-# ]
-
-# [[tool.uv.index]]
-# name = "pytorch-cpu"
-# url = "https://download.pytorch.org/whl/cpu"
-# explicit = false
-
-# [[tool.uv.index]]
-# name = "pytorch-cuda"
-# url = "https://download.pytorch.org/whl/cu124"
-# explicit = false
-
-# # For NVIDIA packages
-# [[tool.uv.index]]
-# name = "nvidia"
-# url = "https://pypi.nvidia.com"
-# explicit = false
 
 [tool.hatch]
 version.source = "vcs"
