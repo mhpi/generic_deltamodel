@@ -23,17 +23,17 @@ class DeltaModel(torch.nn.Module):
     Parameters
     ----------
     phy_model_name : str, optional
-        The name of the physics model. The default is None. This allows
+        The name of the physics model. Default is None. This allows
         initialization of multiple physics models from the same config dict. If
         not provided, the first model provided in the config dict is used.
     phy_model : torch.nn.Module, optional
-        The physics model. The default is None.
+        The physics model. Default is None.
     nn_model : torch.nn.Module, optional
-        The neural network model. The default is None.
+        The neural network model. Default is None.
     config : dict, optional
-        The configuration dictionary. The default is None.
+        The configuration dictionary. Default is None.
     device : torch.device, optional
-        The device to run the model on. The default is None.
+        The device to run the model on. Default is None.
     """
     def __init__(
         self,

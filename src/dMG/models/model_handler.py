@@ -33,9 +33,6 @@ class ModelHandler(torch.nn.Module):
         Device to run the model on. Default is None.
     verbose : bool, optional
         Whether to print verbose output. Default is False.
-
-    TODO
-    - Add support for wNN lr scheduler.
     """
     def __init__(
         self,
@@ -58,6 +55,7 @@ class ModelHandler(torch.nn.Module):
         self.model_dict = {}
         self.models = self.list_models()
         self._init_models()
+
         self.loss_func = None
         self.loss_dict = {key: 0 for key in self.models}
         self.target_name = config['train']['target'][0]
@@ -80,11 +78,12 @@ class ModelHandler(torch.nn.Module):
     
     def _init_models(self) -> None:
         """Initialize and store models, multimodels, and checkpoints."""
-
         if self.multimodel_type == None and len(self.models) > 1:
             raise ValueError(
                 "Multiple models specified, but ensemble type is 'none'. Check configuration."
             )
+        
+        # Epoch to load
         if self.config['mode'] == 'train':
             load_epoch = self.config['train']['start_epoch']
         elif self.config['mode'] in ['test', 'predict']:
@@ -92,7 +91,7 @@ class ModelHandler(torch.nn.Module):
         else:
             load_epoch = self.config.get('load_epoch', 0)
         
-        # Initialize new models or load from a saved checkpoint
+        # Load models
         try:
             self.load_model(load_epoch)
         except Exception as e:
@@ -137,12 +136,19 @@ class ModelHandler(torch.nn.Module):
                     )
                 if name == 'wNN':
                     self.ensemble_generator.load_state_dict(
-                        torch.load(path, weights_only=False)
-                    )
+                        torch.load(
+                            path,
+                            weights_only=False,
+                            map_location=self.device,
+                        )                    )
                     self.ensemble_generator.to(self.device)
                 else:
                     self.model_dict[name].load_state_dict(
-                        torch.load(path, weights_only=True)
+                        torch.load(
+                            path,
+                            weights_only=True,
+                            map_location=self.device,
+                        )
                     )
                     self.model_dict[name].to(self.device)
                 

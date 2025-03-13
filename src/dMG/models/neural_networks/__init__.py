@@ -60,7 +60,7 @@ def load_nn_model(
         model = cls(
             nx=nx,
             ny=ny,
-            hiddenSize=config['nn_model']['hidden_size'],
+            hidden_size=config['nn_model']['hidden_size'],
             dr=config['nn_model']['dropout'],
         )
     elif name in ['MLP']:

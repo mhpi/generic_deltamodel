@@ -1,4 +1,5 @@
 import math
+from typing import Optional, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -8,27 +9,39 @@ from dMG.core.calc.dropout import DropMask, createMask
 
 
 class Lstm(torch.nn.Module):
-    """Custom LSTM model using new PyTorch implementation.
-
-    Supports GPU and CPU.
+    """LSTM using torch LSTM (GPU + CPU support).
     
-    This replaces `CudnnLstm`, which used PyTorch rnn backends with no
-    CPU support.
+    This replaces the HydroDL `CudnnLstm`, which uses CPU-incompatible
+    torch cudnn_rnn backends.
 
-    NOTE: Only mirrors inference functionality of `CudnnLstm`. Not validated
-    for training.
+    NOTE: Not validated for training.
+
+    Parameters
+    ----------
+    nx : int
+        Number of input features.
+    hidden_size : int
+        Number of hidden units.
+    dr : float, optional
+        Dropout rate. Default is 0.5.
     """
-    def __init__(self, *, inputSize, hiddenSize, dr=0.5, drMethod='drW'):
+    def __init__(
+        self,
+        *,
+        nx: int,
+        hidden_size: int,
+        dr: Optional[float] = 0.5,
+    ) -> None:
         super().__init__()
-        self.name = 'CudnnLstm'
-        self.inputSize = inputSize
-        self.hiddenSize = hiddenSize
+        self.name = 'Lstm'
+        self.nx = nx
+        self.hidden_size = hidden_size
         self.dr = dr
 
         # Initialize new torch LSTM; disable dropout (it's handled manually).
         self.lstm = torch.nn.LSTM(
-            input_size=self.inputSize,
-            hidden_size=self.hiddenSize,
+            input_size=self.nx,
+            hidden_size=self.hidden_size,
             num_layers=1,
             batch_first=False,
             bias=True,
@@ -42,16 +55,16 @@ class Lstm(torch.nn.Module):
         delattr(self.lstm, 'bias_hh_l0')
 
         # Name parameters to match CudannLstm.
-        self.w_ih = Parameter(torch.Tensor(hiddenSize * 4, inputSize))
-        self.w_hh = Parameter(torch.Tensor(hiddenSize * 4, hiddenSize))
-        self.b_ih = Parameter(torch.Tensor(hiddenSize * 4))
-        self.b_hh = Parameter(torch.Tensor(hiddenSize * 4))
+        self.w_ih = Parameter(torch.Tensor(hidden_size * 4, nx))
+        self.w_hh = Parameter(torch.Tensor(hidden_size * 4, hidden_size))
+        self.b_ih = Parameter(torch.Tensor(hidden_size * 4))
+        self.b_hh = Parameter(torch.Tensor(hidden_size * 4))
         self._all_weights = [['w_ih', 'w_hh', 'b_ih', 'b_hh']]
         
         self.reset_mask()
         self.reset_parameters()
 
-    def __setstate__(self, d):
+    def __setstate__(self, d: dict) -> None:
         super().__setstate__(d)
         self.__dict__.setdefault('_data_ptrs', [])
         if 'all_weights' in d:
@@ -62,49 +75,73 @@ class Lstm(torch.nn.Module):
 
     def reset_mask(self):
         with torch.no_grad():
-            self.maskW_ih = createMask(self.w_ih, self.dr)
-            self.maskW_hh = createMask(self.w_hh, self.dr)
+            self.mask_w_ih = createMask(self.w_ih, self.dr)
+            self.mask_w_hh = createMask(self.w_hh, self.dr)
 
     def reset_parameters(self):
-        stdv = 1.0 / math.sqrt(self.hiddenSize)
+        stdv = 1.0 / math.sqrt(self.hidden_size)
         for param in self.parameters():
             if param.requires_grad:
                 param.data.uniform_(-stdv, stdv)
 
-    def flatten_parameters(self):
-        """This method does nothing, just to bypass non-contiguous memory warning."""
-        pass
-
-    def forward(self, input, hx=None, cx=None, doDropMC=False, dropoutFalse=False):
-        self.device = input.device  # TODO: handle this better -- needs to be an argument in def.
-
-        # Ensure doDrop is False, unless doDropMC is True.
-        if dropoutFalse and (not doDropMC):
-            doDrop = False
-        elif self.dr > 0 and (doDropMC is True or self.training is True):
-            doDrop = True
+    def forward(
+        self,
+        input: torch.Tensor,
+        hx: Optional[torch.Tensor] = None,
+        cx: Optional[torch.Tensor] = None,
+        do_drop_mc: bool = False,
+        dr_false: bool = False,
+    ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        """Forward pass.
+        
+        Parameters
+        ----------
+        input : torch.Tensor
+            The input tensor.
+        hx : torch.Tensor, optional
+            Hidden state tensor. Default is None.
+        cx : torch.Tensor, optional
+            Cell state tensor. Default is None.
+        do_drop_mc : bool, optional
+            Flag for applying dropout. Default is False.
+        dr_false : bool, optional
+            Flag for applying dropout. Default is False.
+        """
+        # Ensure do_drop is False, unless do_drop_mc is True.
+        if dr_false and (not do_drop_mc):
+            do_drop = False
+        elif self.dr > 0 and (do_drop_mc is True or self.training is True):
+            do_drop = True
         else:
-            doDrop = False
+            do_drop = False
 
-        batchSize = input.size(1)
+        batch_size = input.size(1)
 
         if hx is None:
-            hx = torch.zeros(1, batchSize, self.hiddenSize, device=self.device, requires_grad=False)
+            hx = input.new_zeros(
+                1,
+                batch_size,
+                self.hidden_size,
+                requires_grad=False,
+            )
         if cx is None:
-            cx = torch.zeros(1, batchSize, self.hiddenSize, device=self.device, requires_grad=False)
+            cx = input.new_zeros(
+                1,
+                batch_size,
+                self.hidden_size,
+                requires_grad=False,
+            )
 
-        if doDrop is True:
+        if do_drop is True:
             self.reset_mask()
             weight = [
-                DropMask.apply(self.w_ih, self.maskW_ih, True),
-                DropMask.apply(self.w_hh, self.maskW_hh, True),
+                DropMask.apply(self.w_ih, self.mask_w_ih, True),
+                DropMask.apply(self.w_hh, self.mask_w_hh, True),
                 self.b_ih,
                 self.b_hh,
             ]
         else:
             weight = [self.w_ih, self.w_hh, self.b_ih, self.b_hh]
-
-        self.lstm.to(self.device)
         
         # Manually assign parameters to torch LSTM.
         self.lstm.weight_ih_l0 = torch.nn.Parameter(weight[0])
@@ -124,32 +161,56 @@ class Lstm(torch.nn.Module):
 
 
 class LstmModel(torch.nn.Module):
-    """Custom LSTM model using new PyTorch implementation.
-    
-    Supports GPU and CPU.
-    
-    This replaces `CudnnLstmModel`, which used PyTorch rnn backends with no
+    """LSTM model using torch LSTM (GPU + CPU support).
+        
+    This replaces `CudnnLstmModel`, which uses torch cudnn_rnn backends with no
     CPU support.
 
-    NOTE: Only mirrors inference functionality of `CudnnLstm`. Not validated
-    for training.
+    NOTE: Not validated for training.
+
+    Parameters
+    ----------
+    nx : int
+        Number of input features.
+    ny : int
+        Number of output features.
+    hidden_size : int
+        Number of hidden units.
+    dr : float, optional
+        Dropout rate. Default is 0.5.
     """
-    def __init__(self, *, nx, ny, hiddenSize, dr=0.5):
+    def __init__(
+        self,
+        *,
+        nx: int,
+        ny: int,
+        hidden_size: int,
+        dr: Optional[float] = 0.5,
+    ) -> None:
         super().__init__()
-        self.name = 'CudnnLstmModel'
+        self.name = 'LstmModel'
         self.nx = nx
         self.ny = ny
-        self.hiddenSize = hiddenSize
+        self.hidden_size = hidden_size
         self.ct = 0
-        self.nLayer = 1
+        self.n_layers = 1
 
-        self.linearIn = torch.nn.Linear(nx, hiddenSize)
-        self.lstm = Lstm(inputSize=hiddenSize, hiddenSize=hiddenSize, dr=dr)
-        self.linearOut = torch.nn.Linear(hiddenSize, ny)
+        self.linear_in = torch.nn.Linear(nx, hidden_size)
+        self.lstm = Lstm(nx=hidden_size, hidden_size=hidden_size, dr=dr)
+        self.linear_out = torch.nn.Linear(hidden_size, ny)
 
-    def forward(self, x, doDropMC=False, dropoutFalse=False):
-        x0 = F.relu(self.linearIn(x))        
-        outLSTM, (hn, cn) = self.lstm(x0, doDropMC=doDropMC, dropoutFalse=dropoutFalse)
-        out = self.linearOut(outLSTM)
-        return out
-    
+        # self.activation_sigmoid = torch.nn.Sigmoid()
+
+    def forward(
+        self,
+        x,
+        do_drop_mc: Optional[bool] = False,
+        dr_false: Optional[bool] = False,
+    ) -> torch.Tensor:
+        x0 = F.relu(self.linear_in(x))        
+        lstm_out, (hn, cn) = self.lstm(
+            x0,
+            do_drop_mc=do_drop_mc,
+            dr_false=dr_false,
+        )
+        return self.linear_out(lstm_out)

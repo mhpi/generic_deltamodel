@@ -239,7 +239,7 @@ def load_nn_model(
         model = cls(
             nx=nx,
             ny=ny,
-            hiddenSize=hidden_size,
+            hidden_size=hidden_size,
             dr=dr,
         )
     elif name in ['MLP']:
@@ -258,6 +258,7 @@ def load_nn_model(
             hiddeninv2=config['nn_model']['mlp_hidden_size'],
             dr1=config['nn_model']['lstm_dropout'],
             dr2=config['nn_model']['mlp_dropout'],
+            device=device,
         )
     else:
         raise ValueError(f"Model {name} is not supported.")
