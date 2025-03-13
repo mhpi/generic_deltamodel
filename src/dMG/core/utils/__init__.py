@@ -17,7 +17,7 @@ from path import PathBuilder
 log = logging.getLogger(__name__)
 
 
-def set_system_spec(cuda_devices: Optional[list] = None) -> Tuple[str, str]:
+def set_system_spec(config: dict) -> Tuple[str, str]:
     """Set the device and data type for the model on user's system.
 
     Parameters
@@ -30,22 +30,23 @@ def set_system_spec(cuda_devices: Optional[list] = None) -> Tuple[str, str]:
     Tuple[str, str]
         The device type and data type for the model.
     """
-    if cuda_devices != []:
+    if config['device'] == 'cpu':
+        device = torch.device('cpu')
+    elif config['device'] == 'mps':
+        if torch.backends.mps.is_available():
+            device = torch.device('mps')
+        else:
+            raise ValueError("MPS is not available on this system.")
+    elif config['device'] == 'cuda':
         # Set the first device as the active device.
-        if torch.cuda.is_available() and cuda_devices < torch.cuda.device_count():
-            device = torch.device(f'cuda:{cuda_devices}')
+        if torch.cuda.is_available() and config['gpu_id'] < torch.cuda.device_count():
+            device = torch.device(f'cuda:{config['gpu_id']}')
             torch.cuda.set_device(device)
         else:
-            raise ValueError(f"Selected CUDA device {cuda_devices} is not available.")  
-    elif torch.cuda.is_available():
-        device = torch.device(f'cuda:{torch.cuda.current_device()}')
-        torch.cuda.set_device(device)
-    elif torch.backends.mps.is_available():
-        # Use Mac M-series ARM architecture.
-        device = torch.device('mps')
+            raise ValueError(f"Selected CUDA device {config['gpu_id']} is not available.")  
     else:
-        device = torch.device('cpu')
-    
+        raise ValueError(f"Invalid device: {config['device']}")
+
     dtype = torch.float32
     return str(device), str(dtype)
 
@@ -97,7 +98,7 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
             log.exception("Configuration validation error", exc_info=e)
             raise e
 
-    config['device'], config['dtype'] = set_system_spec(config['gpu_id'])
+    config['device'], config['dtype'] = set_system_spec(config)
 
     # Convert date ranges to integer values.
     train_time = Dates(config['train'], config['dpl_model']['rho'])

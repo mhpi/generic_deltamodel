@@ -8,7 +8,7 @@ defaults:
 mode: predict  # train, test, train_test, predict
 multimodel_type: none
 random_seed: 111111
-device: cuda
+device: cpu
 gpu_id: 1
 
 data_loader: MsHydroLoader
@@ -45,7 +45,7 @@ test:
 predict:
     start_time: 1980/01/01
     end_time: 2020/12/31
-    batch_size: 400
+    batch_size: 200
 
 
 ## Loss Function -------------------------#
