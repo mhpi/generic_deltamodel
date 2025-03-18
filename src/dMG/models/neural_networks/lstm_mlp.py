@@ -3,7 +3,7 @@ from typing import Optional, Tuple
 import torch
 
 from dMG.models.neural_networks.ann import AnnModel
-from dMG.models.neural_networks.cudnn_lstm import CudnnLstmModel
+from dMG.models.neural_networks.cudnn_lstm_new import CudnnLstmModel
 from dMG.models.neural_networks.lstm import LstmModel
 
 

@@ -195,9 +195,9 @@ class CudnnLstmModel(torch.nn.Module):
         self.ct = 0
         self.n_layers = 1
 
-        self.linearIn = torch.nn.Linear(nx, hidden_size)
+        self.linear_in = torch.nn.Linear(nx, hidden_size)
         self.lstm = CudnnLstm(nx=hidden_size, hidden_size=hidden_size, dr=dr)
-        self.linearOut = torch.nn.Linear(hidden_size, ny)
+        self.linear_out = torch.nn.Linear(hidden_size, ny)
 
         # self.activation_sigmoid = torch.nn.Sigmoid()
 
@@ -207,10 +207,10 @@ class CudnnLstmModel(torch.nn.Module):
         do_drop_mc: Optional[bool] = False,
         dr_false: Optional[bool] = False,
     ) -> torch.Tensor:
-        x0 = F.relu(self.linearIn(x))        
+        x0 = F.relu(self.linear_in(x))        
         lstm_out, (hn, cn) = self.lstm(
             x0,
             do_drop_mc=do_drop_mc,
             dr_false=dr_false,
         )
-        return self.linearOut(lstm_out)
+        return self.linear_out(lstm_out)
