@@ -214,8 +214,7 @@ class PathBuilder(BaseModel):
     def _train_period(config: Dict[str, Any], abbreviate: bool = False) -> str:
         """Training period for an experiment.
 
-        Format is 
-            'trainYYYY-YYYY' or 'trainYY-YY' if abbreviated.
+        Format is 'trainYYYY-YYYY' or 'trainYY-YY' if abbreviated.
         """
         start = config['train']['start_time'][:4]
         end = config['train']['end_time'][:4]
@@ -229,8 +228,7 @@ class PathBuilder(BaseModel):
     def _test_period(config: Dict[str, Any], abbreviate: bool = False) -> str:
         """Testing period for an experiment.
 
-        Format is
-            'testYYYY-YYYY' or 'testYY-YY' if abbreviate.
+        Format is 'testYYYY-YYYY' or 'testYY-YY' if abbreviate.
         """
         start = config['test']['start_time'][:4]
         end = config['test']['end_time'][:4]
@@ -253,7 +251,13 @@ class PathBuilder(BaseModel):
 
     @staticmethod
     def _model_names(config: Dict[str, Any]) -> str:
-        """Names of the models used in an experiment."""
+        """Names of the models used in an experiment.
+        
+        Parameters
+        ----------
+        config
+            Configuration dictionary.
+        """
         models = config['dpl_model']['phy_model']['model']
         return '_'.join(models)
 
@@ -263,7 +267,7 @@ class PathBuilder(BaseModel):
         
         Parameters
         ----------
-        hash : bool
+        hash
             If True, returns a short hash of the dynamic parameters.
 
         Format is
@@ -292,8 +296,13 @@ class PathBuilder(BaseModel):
         
         Parameters
         ----------
-        dynamic_parameters : str
+        dynamic_parameters
             String of dynamic parameters used in the model(s).
+        
+        Returns
+        -------
+        str
+            Flag; returns 'dyn' if dynamic parameters are used, else 'stat'.
         """
         param_count = len(self.dynamic_parameters.split('_'))
         if self.dynamic_parameters == '':
@@ -303,7 +312,18 @@ class PathBuilder(BaseModel):
 
     @staticmethod
     def _loss_function(config: Dict[str, Any]) -> str:
-        """Loss function(s) used in the model(s)."""
+        """Loss function(s) used in the model(s).
+    
+        Parameters
+        ----------
+        config
+            Configuration dictionary.
+        
+        Returns
+        -------
+        str
+            Loss function string.
+        """
         models = config['dpl_model']['phy_model']['model']
         loss_fn = config['loss_function']['model']
         loss_fn_str = '_'.join(
@@ -313,7 +333,18 @@ class PathBuilder(BaseModel):
 
     @staticmethod
     def _hyperparameter_details(config: Dict[str, Any]) -> str:
-        """Details of hyperparameters used in the model(s)."""
+        """Details of hyperparameters used in the model(s).
+        
+        Parameters
+        ----------
+        config
+            Configuration dictionary.
+        
+        Returns
+        -------
+        str
+            Hyperparameter details string.
+        """
         norm = 'noLn'
         norm_list = config['dpl_model']['phy_model']['use_log_norm']
         if norm_list:
