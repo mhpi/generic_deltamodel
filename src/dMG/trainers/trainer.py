@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import torch
 import tqdm
+from numpy.typing import NDArray
 
 from dMG.core.calc.metrics import Metrics
 from dMG.core.data import create_training_grid
@@ -18,7 +19,7 @@ log = logging.getLogger(__name__)
 
 
 class Trainer(BaseTrainer):
-    """Generic, unified trainer for neural Despite their importance, traditional satellite reflectance methods fail to detect these landforms, necessitating the reliance on time-consuming manual interpretation for inventory creation, a subjective process that limits their integration into climate models compared to more readily monitored exposed ice features.  networks and differentiable models.
+    """Generic, unified trainer for neural networks and differentiable models.
 
     Inspired by the Hugging Face Trainer class.
     
@@ -27,25 +28,25 @@ class Trainer(BaseTrainer):
     
     Parameters
     ----------
-    config : dict
+    config
         Configuration settings for the model and experiment.
-    model : torch.nn.Module, optional
+    model
         Learnable model object. If not provided, a new model is initialized.
-    train_dataset : dict, optional
+    train_dataset
         Training dataset dictionary.
-    eval_dataset : dict, optional
+    eval_dataset
         Testing/inference dataset dictionary.
-    inf_dataset : dict, optional
+    dataset
         Inference dataset dictionary.
-    loss_func : torch.nn.Module, optional
+    loss_func
         Loss function object. If not provided, a new loss function is initialized.
-    optimizer : torch.optim.Optimizer, optional
+    optimizer
         Optimizer object for learning model states. If not provided, a new
         optimizer is initialized.
-    scheduler : torch.nn.Module, optional
+    scheduler
         Learning rate scheduler. If not provided, a new scheduler is initialized.
-    verbose : bool, optional
-        Whether to print verbose output. Default is False.
+    verbose
+        Whether to print verbose output.
 
     TODO: Incorporate support for validation loss and early stopping in
     training loop. This will also enable using ReduceLROnPlateau scheduler.
@@ -56,7 +57,7 @@ class Trainer(BaseTrainer):
         model: torch.nn.Module = None,
         train_dataset: Optional[dict] = None,
         eval_dataset: Optional[dict] = None,
-        inf_dataset: Optional[dict] = None,
+        dataset: Optional[dict] = None,
         loss_func: Optional[torch.nn.Module] = None,
         optimizer: Optional[torch.optim.Optimizer] = None,
         scheduler: Optional[torch.nn.Module] = None,
@@ -66,7 +67,7 @@ class Trainer(BaseTrainer):
         self.model = model or ModelHandler(config)
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
-        self.inf_dataset = inf_dataset
+        self.dataset = dataset
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.verbose = verbose
@@ -99,11 +100,10 @@ class Trainer(BaseTrainer):
             # Resume model training by loading prior states.
             self.start_epoch = self.config['train']['start_epoch'] + 1
             if self.start_epoch > 1:
-                log.info(f"Loading trainer states --> Resuming Training from epoch {self.start_epoch}") 
                 self.load_states()
 
     def init_optimizer(self) -> torch.optim.Optimizer:
-        """Initialize a model state optimizer.
+        """Initialize a state optimizer.
         
         Adding additional optimizers is possible by extending the optimizer_dict.
 
@@ -139,7 +139,11 @@ class Trainer(BaseTrainer):
         return self.optimizer
     
     def init_scheduler(self) -> torch.optim.lr_scheduler.LRScheduler:
-        """Initialize a learning rate scheduler for the optimizer."""
+        """Initialize a learning rate scheduler for the optimizer.
+        
+        torch.optim.lr_scheduler.LRScheduler
+            Initialized learning rate scheduler object.
+        """
         name = self.config['dpl_model']['nn_model']['lr_scheduler']
         scheduler_dict = {
             'StepLR': torch.optim.lr_scheduler.StepLR,
@@ -165,22 +169,35 @@ class Trainer(BaseTrainer):
         return self.scheduler
 
     def load_states(self) -> None:
-        """Load model, optimizer, and scheduler states from a checkpoint."""
+        """
+        Load model, optimizer, and scheduler states from a checkpoint to resume
+        training if a checkpoint file exists.
+        """
         path = self.config['model_path']
         for file in os.listdir(path):
-            if 'train_state' and str(self.start_epoch-1) in file:
+            # Check for state checkpoint: looks like `train_state_epoch_XX.pt`.
+            if 'train_state' and (str(self.start_epoch-1) in file):
+                log.info(f"Loading trainer states --> Resuming Training from" /
+                         f" epoch {self.start_epoch}") 
+
                 checkpoint = torch.load(os.path.join(path, file))
+
+                # Restore optimizer states
                 self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
                 if self.scheduler:
                     self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-                continue
-        
-        # raise FileNotFoundError(f"No checkpoint for epoch {self.start_epoch-1}.") ## TODO: Fix resume model training
 
-        # Restore random states
-        torch.set_rng_state(checkpoint['random_state'])
-        if torch.cuda.is_available() and 'cuda_random_state' in checkpoint:
-            torch.cuda.set_rng_state_all(checkpoint['cuda_random_state'])
+                # Restore random states
+                torch.set_rng_state(checkpoint['random_state'])
+                if torch.cuda.is_available() and 'cuda_random_state' in checkpoint:
+                    torch.cuda.set_rng_state_all(checkpoint['cuda_random_state'])
+                return
+            elif 'train_state' in file:
+                raise FileNotFoundError(f"Available checkpoint file {file} does" /
+                                        f" not match start epoch {self.start_epoch-1}.")
+
+        # If no checkpoint file is found for named epoch...
+        raise FileNotFoundError(f"No checkpoint for epoch {self.start_epoch-1}.")
 
     def train(self) -> None:
         """Train the model."""
@@ -252,33 +269,21 @@ class Trainer(BaseTrainer):
         batch_predictions = []
         observations = self.eval_dataset['target']
 
-        # Get start and end indices for each batch.
+        # Get start and end indices for each batch
         n_samples = self.eval_dataset['xc_nn_norm'].shape[1]
         batch_start = np.arange(0, n_samples, self.config['test']['batch_size'])
         batch_end = np.append(batch_start[1:], n_samples)
 
-        # Testing loop
+        # Model forward
         log.info(f"Validating Model: Forwarding {len(batch_start)} batches")
-        for i in tqdm.tqdm(range(len(batch_start)), desc="Testing", leave=False, dynamic_ncols=True):
-            self.current_batch = i
-
-            # Select a batch of data
-            dataset_sample = self.sampler.get_validation_sample(
-                self.eval_dataset,
-                batch_start[i],
-                batch_end[i],
-            )
-
-            prediction = self.model(dataset_sample, eval=True)
-
-            # Save the batch predictions
-            model_name = self.config['dpl_model']['phy_model']['model'][0]
-            prediction = {key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()}
-            batch_predictions.append(prediction)
+        batch_predictions = self._forward_loop(self.eval_dataset, batch_start, batch_end)
 
         # Save predictions and calculate metrics
         log.info("Saving model outputs + Calculating metrics")
         save_outputs(self.config, batch_predictions, observations)
+        self.predictions = self._batch_data(batch_predictions)
+
+        # Calculate metrics
         self.calc_metrics(batch_predictions, observations)
 
     def inference(self) -> None:
@@ -288,29 +293,14 @@ class Trainer(BaseTrainer):
         # Track overall predictions
         batch_predictions = []
 
-        # Get start and end indices for each batch.
-        n_samples = self.inf_dataset['xc_nn_norm'].shape[1]
+        # Get start and end indices for each batch
+        n_samples = self.dataset['xc_nn_norm'].shape[1]
         batch_start = np.arange(0, n_samples, self.config['predict']['batch_size'])
         batch_end = np.append(batch_start[1:], n_samples)
 
-        # Forward loop
+        # Model forward
         log.info(f"Inference: Forwarding {len(batch_start)} batches")
-        for i in tqdm.tqdm(range(len(batch_start)), desc='Inference', leave=False, dynamic_ncols=True):
-            self.current_batch = i
-
-            # Select a batch of data
-            dataset_sample = self.sampler.get_validation_sample(
-                self.inf_dataset,
-                batch_start[i],
-                batch_end[i],
-            )
-
-            prediction = self.model(dataset_sample, eval=True)
-
-            # Save the batch predictions
-            model_name = self.config['dpl_model']['phy_model']['model'][0]
-            prediction = {key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()}
-            batch_predictions.append(prediction)
+        batch_predictions = self._forward_loop(self.dataset, batch_start, batch_end)
 
         # Save predictions
         log.info("Saving model outputs")
@@ -324,7 +314,16 @@ class Trainer(BaseTrainer):
         batch_list: List[Dict[str, torch.Tensor]],
         target_key: str = None,
     ) -> None:
-        """Merge batch data into a single dictionary."""
+        """Merge batch data into a single dictionary.
+        
+        Parameters
+        ----------
+        batch_list
+            List of dictionaries from each forward batch containing inputs and
+            model predictions.
+        target_key
+            Key to extract from each batch dictionary.
+        """
         data = {}
         try:
             if target_key:
@@ -341,10 +340,46 @@ class Trainer(BaseTrainer):
         except Exception as e:
             raise ValueError(f"Error concatenating batch data: {e}")
 
-    def evaluation_loop(self) -> None:
-        """Inference loop used in .evaluate() and .predict() methods."""
-        return NotImplementedError
-    
+    def _forward_loop(
+        self,
+        data: Dict[str, torch.Tensor],
+        batch_start: NDArray,
+        batch_end: NDArray
+    ) -> None:
+        """Forward loop used in model evaluation and inference.
+        
+        Parameters
+        ----------
+        data
+            Dictionary containing model input data.
+        batch_start
+            Start indices for each batch.
+        batch_end
+            End indices for each batch.
+        """
+        # Track predictions accross batches
+        batch_predictions = []
+
+        for i in tqdm.tqdm(range(len(batch_start)), desc='Forwarding', leave=False, dynamic_ncols=True):
+            self.current_batch = i
+
+            # Select a batch of data
+            dataset_sample = self.sampler.get_validation_sample(
+                data,
+                batch_start[i],
+                batch_end[i],
+            )
+
+            prediction = self.model(dataset_sample, eval=True)
+
+            # Save the batch predictions
+            model_name = self.config['dpl_model']['phy_model']['model'][0]
+            prediction = {
+                key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()
+            }
+            batch_predictions.append(prediction)
+        return batch_predictions
+
     def calc_metrics(
         self,
         batch_predictions: List[Dict[str, torch.Tensor]],
@@ -354,9 +389,9 @@ class Trainer(BaseTrainer):
         
         Parameters
         ----------
-        batch_predictions : list
+        batch_predictions
             List of dictionaries containing model predictions.
-        observations : torch.Tensor
+        observations
             Target variable observation data.
         """
         target_name = self.config['train']['target'][0]
@@ -383,7 +418,19 @@ class Trainer(BaseTrainer):
         n_minibatch: int,
         start_time: float,
     ) -> None:
-        """Log statistics after each epoch."""
+        """Log statistics after each epoch.
+        
+        Parameters
+        ----------
+        epoch
+            Current epoch number.
+        loss_dict
+            Dictionary containing loss values.
+        n_minibatch
+            Number of minibatches.
+        start_time
+            Start time of the epoch.
+        """
         avg_loss_dict = {key: value / n_minibatch + 1 for key, value in loss_dict.items()}
         loss = ", ".join(f"{key}: {value:.6f}" for key, value in avg_loss_dict.items())
         elapsed = time.perf_counter() - start_time

@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import torch
 import tqdm
+from numpy.typing import NDArray
 
 from dMG.core.utils import save_outputs
 from dMG.core.utils.factory import import_data_sampler
@@ -24,25 +25,23 @@ class MsTrainer(BaseTrainer):
     
     Parameters
     ----------
-    config : dict
+    config
         Configuration settings for the model and experiment.
-    model : torch.nn.Module, optional
+    model
         Learnable model object. If not provided, a new model is initialized.
-    train_dataset : dict, optional
+    train_dataset
         Training dataset dictionary.
-    eval_dataset : dict, optional
+    eval_dataset
         Testing/inference dataset dictionary.
-    inf_dataset : dict, optional
+    dataset
         Inference dataset dictionary.
-    loss_func : torch.nn.Module, optional
-        Loss function object. If not provided, a new loss function is initialized.
-    optimizer : torch.optim.Optimizer, optional
+    optimizer
         Optimizer object for learning model states. If not provided, a new
         optimizer is initialized.
-    scheduler : torch.nn.Module, optional
+    scheduler
         Learning rate scheduler. If not provided, a new scheduler is initialized.
-    verbose : bool, optional
-        Whether to print verbose output. Default is False.
+    verbose
+        Whether to print verbose output.
 
     TODO: Incorporate support for validation loss and early stopping in
     training loop. This will also enable using ReduceLROnPlateau scheduler.
@@ -54,8 +53,7 @@ class MsTrainer(BaseTrainer):
         model: torch.nn.Module = None,
         train_dataset: Optional[dict] = None,
         eval_dataset: Optional[dict] = None,
-        inf_dataset: Optional[dict] = None,
-        loss_func: Optional[torch.nn.Module] = None,
+        dataset: Optional[dict] = None,
         optimizer: Optional[torch.optim.Optimizer] = None,
         scheduler: Optional[torch.nn.Module] = None,
         verbose: Optional[bool] = False,
@@ -64,7 +62,7 @@ class MsTrainer(BaseTrainer):
         self.model = model or ModelHandler(config)
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
-        self.inf_dataset = inf_dataset
+        self.dataset = dataset
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.verbose = verbose
@@ -73,37 +71,23 @@ class MsTrainer(BaseTrainer):
 
     def init_optimizer(self) -> torch.optim.Optimizer:
         """Initialize a model state optimizer."""
-        raise NotImplementedError("Method not implemented. Multiscale training will be enabled at a later date.")
+        raise NotImplementedError("Method not implemented. Multiscale training"/
+                                  " will be enabled at a later date.")
 
     def init_scheduler(self) -> None:
         """Initialize a learning rate scheduler for the optimizer."""
-        raise NotImplementedError("Method not implemented. Multiscale training will be enabled at a later date.")
-    
-    def load_states(self) -> None:
-        """Load model, optimizer, and scheduler states from a checkpoint."""
-        path = self.config['model_path']
-        for file in os.listdir(path):
-            if 'train_state' and str(self.start_epoch-1) in file:
-                checkpoint = torch.load(os.path.join(path, file))
-                self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-                if self.scheduler:
-                    self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-                continue
-        
-        # raise FileNotFoundError(f"No checkpoint for epoch {self.start_epoch-1}.") ## TODO: Fix resume model training
-
-        # Restore random states
-        torch.set_rng_state(checkpoint['random_state'])
-        if torch.cuda.is_available() and 'cuda_random_state' in checkpoint:
-            torch.cuda.set_rng_state_all(checkpoint['cuda_random_state'])
+        raise NotImplementedError("Method not implemented. Multiscale training"/
+                                  " will be enabled at a later date.")
 
     def train(self) -> None:
         """Entry point for training loop."""
-        raise NotImplementedError("Method not implemented. Multiscale training will be enabled at a later date.")
+        raise NotImplementedError("Method not implemented. Multiscale training"/
+                                  " will be enabled at a later date.")
 
     def evaluate(self) -> None:
         """Run model evaluation and return both metrics and model outputs."""
-        raise NotImplementedError("Method not implemented. Multiscale training will be enabled at a later date.")
+        raise NotImplementedError("Method not implemented. Multiscale training"/
+                                  " will be enabled at a later date.")
 
     def inference(self) -> None:
         """Run batch model inference and save model outputs."""
@@ -113,31 +97,16 @@ class MsTrainer(BaseTrainer):
         batch_predictions = []
 
         # Get start and end indices for each batch.
-        n_samples = self.inf_dataset['xc_nn_norm'].shape[1]
+        n_samples = self.dataset['xc_nn_norm'].shape[1]
         batch_start = np.arange(0, n_samples, self.config['predict']['batch_size'])
         batch_end = np.append(batch_start[1:], n_samples)
 
         # Forward loop
-        log.info(f"Begin forward on {len(batch_start)} batches...")
-        for i in tqdm.tqdm(range(len(batch_start)), desc='Inference', leave=False, dynamic_ncols=True):
-            self.current_batch = i
+        log.info(f"Inference: Forwarding {len(batch_start)} batches")
+        batch_predictions = self._forward_loop(self.dataset, batch_start, batch_end)
 
-            # Select a batch of data
-            dataset_sample = self.sampler.get_validation_sample(
-                self.inf_dataset,
-                batch_start[i],
-                batch_end[i],
-            )
-
-            prediction = self.model(dataset_sample, eval=True)
-
-            # Save the batch predictions
-            model_name = self.config['dpl_model']['phy_model']['model'][0]
-            prediction = {key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()}
-            batch_predictions.append(prediction)
-        
         # Save predictions
-        log.info("Saving model results")
+        log.info("Saving model outputs")
         save_outputs(self.config, batch_predictions)
         self.predictions = self._batch_data(batch_predictions)
         
@@ -148,7 +117,15 @@ class MsTrainer(BaseTrainer):
         batch_list: List[Dict[str, torch.Tensor]],
         target_key: str = None,
     ) -> None:
-        """Merge batch data into a single dictionary."""
+        """Merge batch data into a single dictionary.
+        
+        Parameters
+        ----------
+        batch_list
+            List of dictionaries containing batch data.
+        target_key
+            Key to extract from each batch dictionary.
+        """
         data = {}
         try:
             if target_key:
@@ -165,24 +142,52 @@ class MsTrainer(BaseTrainer):
         except Exception as e:
             raise ValueError(f"Error concatenating batch data: {e}")
 
-    def evaluation_loop(self) -> None:
-        """Inference loop used in .evaluate() and .predict() methods."""
-        return NotImplementedError
-    
-    def calc_metrics(
+    def _forward_loop(
         self,
-        batch_predictions: List[Dict[str, torch.Tensor]],
-        observations: torch.Tensor,
+        data: Dict[str, torch.Tensor],
+        batch_start: NDArray,
+        batch_end: NDArray
     ) -> None:
-        """Calculate and save model performance metrics."""
-        raise NotImplementedError("Method not implemented. Multiscale training will be enabled at a later date.")
+        """Forward loop used in model evaluation and inference.
+        
+        Parameters
+        ----------
+        data
+            Dictionary containing model input data.
+        batch_start
+            Start indices for each batch.
+        batch_end
+            End indices for each batch.
+        """
+        # Track predictions accross batches
+        batch_predictions = []
 
-    def _log_epoch_stats(
-        self,
-        epoch: int,
-        loss_dict: Dict[str, float],
-        n_minibatch: int,
-        start_time: float,
-    ) -> None:
+        for i in tqdm.tqdm(range(len(batch_start)), desc='Forwarding', leave=False, dynamic_ncols=True):
+            self.current_batch = i
+
+            # Select a batch of data
+            dataset_sample = self.sampler.get_validation_sample(
+                data,
+                batch_start[i],
+                batch_end[i],
+            )
+
+            prediction = self.model(dataset_sample, eval=True)
+
+            # Save the batch predictions
+            model_name = self.config['dpl_model']['phy_model']['model'][0]
+            prediction = {
+                key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()
+            }
+            batch_predictions.append(prediction)
+        return batch_predictions
+
+    
+    def calc_metrics(self) -> None:
+        """Calculate and save model performance metrics."""
+        raise NotImplementedError("Method not implemented. Multiscale training"/
+                                  " will be enabled at a later date.")
+    def _log_epoch_stats(self) -> None:
         """Log statistics after each epoch."""
-        raise NotImplementedError("Method not implemented. Multiscale training will be enabled at a later date.")
+        raise NotImplementedError("Method not implemented. Multiscale training"/
+                                  " will be enabled at a later date.")
