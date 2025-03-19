@@ -25,17 +25,20 @@ def load_nn_model(
 
     Parameters
     ----------
-    phy_model : torch.nn.Module
+    phy_model
         The physics model.
-    config : dict
+    config
         The configuration dictionary.
+    device
+        The device to use (e.g., 'cpu' or 'cuda'). If None, the device is
+        determined from the config.
 
     Returns
     -------
     torch.nn.Module
         An initialized neural network.
     """
-    if not device:
+    if device is None:
         device = config.get('device', 'cpu')
     
     n_forcings = len(config['nn_model']['forcings'])

@@ -15,14 +15,14 @@ class EnsembleGenerator(torch.nn.Module):
     
     Parameters
     ----------
-    model_list : list
+    model_list
         List of names of differentiable models to ensemble.
-    config : dict
-        The configuration dictionary.
-    nn_model : torch.nn.Module
+    config
+        Configuration dictionary.
+    nn_model
         The neural network model to learn weights for multimodel ensembling.
         Default is None.
-    device : torch.device, optional
+    device
         The device to run the model on. Default is None.
     """
     def __init__(
@@ -50,7 +50,13 @@ class EnsembleGenerator(torch.nn.Module):
         self.initialized = True
 
     def _init_nn_model(self) -> torch.nn.Module:
-        """Initialize a neural network model."""
+        """Initialize a neural network model.
+        
+        Returns
+        -------
+        nn_model
+            The neural network model.
+        """
         return load_nn_model(
             None,
             self.config,
@@ -69,10 +75,15 @@ class EnsembleGenerator(torch.nn.Module):
 
         Parameters
         ----------
-        dataset_dict : dict
+        dataset_dict
             Dictionary containing input data.
-        predictions : dict
+        predictions
             Dictionary containing predictions from individual models.
+        
+        Returns
+        -------
+        ensemble_predictions
+            Dictionary of ensemble predictions and model weights.
         """
 
         if not self.config['mosaic']:

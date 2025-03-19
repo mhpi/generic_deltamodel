@@ -131,7 +131,7 @@ def import_trainer(name: str) -> Type:
 
 
 def load_loss_func(
-    obs: NDArray[np.float32],
+    y_obs: NDArray[np.float32],
     config: Dict[str, Any],
     name: Optional[str] = None,
     device: Optional[str] = 'cpu',
@@ -140,7 +140,7 @@ def load_loss_func(
 
     Parameters
     ----------
-    obs : NDArray[np.float32]
+    y_obs : NDArray[np.float32]
         The observed data array needed for some loss function initializations.
     config : dict
         The configuration dictionary, including loss function specifications.
@@ -167,9 +167,9 @@ def load_loss_func(
 
     # Initialize (NOTE: any loss function specific settings should be set here).
     try:
-        return cls(obs, config, device)
-    except Exception as e:
-        raise ValueError(f"Error initializing loss function '{name}': {e}")
+        return cls(config, device, y_obs=y_obs)
+    except (ValueError, KeyError) as e:
+        raise Exception(f"'{name}': {e}")
 
 
 def load_nn_model(

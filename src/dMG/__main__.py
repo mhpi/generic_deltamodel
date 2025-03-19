@@ -60,7 +60,7 @@ def main(config: DictConfig) -> None:
             model,
             train_dataset=data_loader.train_dataset,
             eval_dataset=data_loader.eval_dataset,
-            inf_dataset=data_loader.dataset,
+            dataset=data_loader.dataset,
             verbose=True,
         )
 

@@ -10,13 +10,13 @@ class AnnModel(torch.nn.Module):
     
     Parameters
     ----------
-    nx : int
+    nx
         Number of input features.
-    ny : int
+    ny
         Number of output features.
-    hidden_size : int
+    hidden_size
         Number of hidden units.
-    dr : float, optional
+    dr
         Dropout rate. Default is 0.5.
     """
     def __init__(
@@ -45,7 +45,7 @@ class AnnModel(torch.nn.Module):
         
         Parameters
         ----------
-        x : torch.Tensor
+        x
             Input tensor. Assuming x is already in appropriate batch form.
         
         Returns
@@ -83,13 +83,13 @@ class AnnCloseModel(torch.nn.Module):
 
     Parameters
     ----------
-    nx : int
+    nx
         Number of input features.
-    ny : int
+    ny
         Number of output features.
-    hidden_size : int
+    hidden_size
         Number of hidden units.
-    fill_obs : bool, optional
+    fill_obs
         Whether to fill observations. Default is True.
     """
     def __init__(
@@ -115,10 +115,10 @@ class AnnCloseModel(torch.nn.Module):
         
         Parameters
         ----------
-        x : torch.Tensor
+        x
             Input tensor. Assuming x is already in appropriate batch form.
-        y : torch.Tensor, optional
-            Observations tensor. Default is None.
+        y
+            Tensor of observation data.
         
         Returns
         -------

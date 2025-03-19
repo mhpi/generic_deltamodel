@@ -1,12 +1,31 @@
 from dMG.core.utils import find_shared_keys
+from typing import Dict, Any
+import torch
 
 
-def model_average(model_preds_dict, config):
+def model_average(
+    model_preds_dict: Dict[str, torch.Tensor],
+    config: Dict[str, Any],
+) -> Dict[str, Any]:
     """
-    For any number of metrics specified in the input dictionary, calculate composite predictions as the average of multiple models' outputs at each basin for each day.
+    For any number of metrics specified in the input dictionary, calculate
+    composite predictions as the average of multiple models' outputs at each
+    basin for each day.
 
-    Returns: predictions dict with attributes
-        'flow_sim', 'srflow', 'ssflow', 'gwflow', 'AET_hydro', 'PET_hydro', 'flow_sim_no_rout', 'srflow_no_rout', 'ssflow_no_rout', 'gwflow_no_rout', 'BFI_sim'
+    Parameters
+    ----------
+    model_preds_dict
+        Dictionary of model predictions
+
+    config
+        Dictionary of model configuration.
+    Returns
+    -------
+    Dict[str, Any]
+        predictions dict with attributes
+        'flow_sim', 'srflow', 'ssflow', 'gwflow', 'AET_hydro', 'PET_hydro',
+        'flow_sim_no_rout', 'srflow_no_rout', 'ssflow_no_rout', 'gwflow_no_rout',
+        'BFI_sim'
     """
     ensemble_pred = dict()
 

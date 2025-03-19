@@ -19,11 +19,11 @@ class CudnnLstm(torch.nn.Module):
 
     Parameters
     ----------
-    nx : int
+    nx
         Number of input features.
-    hidden_size : int
+    hidden_size
         Number of hidden units.
-    dr : float, optional
+    dr
         Dropout rate. Default is 0.5.
     """
     def __init__(
@@ -79,15 +79,15 @@ class CudnnLstm(torch.nn.Module):
         
         Parameters
         ----------
-        input : torch.Tensor
+        input
             The input tensor.
-        hx : torch.Tensor, optional
+        hx
             Hidden state tensor. Default is None.
-        cx : torch.Tensor, optional
+        cx
             Cell state tensor. Default is None.
-        do_drop_mc : bool, optional
+        do_drop_mc
             Flag for applying dropout. Default is False.
-        dr_false : bool, optional
+        dr_false
             Flag for applying dropout. Default is False.
         """
         # Ensure do_drop is False, unless do_drop_mc is True.
@@ -170,14 +170,14 @@ class CudnnLstmModel(torch.nn.Module):
 
     Parameters
     ----------
-    nx : int
+    nx
         Number of input features.
-    ny : int
+    ny
         Number of output features.
-    hidden_size : int
+    hidden_size
         Number of hidden units.
-    dr : float, optional
-        Dropout rate. Default is 0.5.
+    dr
+        Dropout rate.
     """
     def __init__(
         self,
@@ -195,9 +195,9 @@ class CudnnLstmModel(torch.nn.Module):
         self.ct = 0
         self.n_layers = 1
 
-        self.linearIn = torch.nn.Linear(nx, hidden_size)
+        self.linear_in = torch.nn.Linear(nx, hidden_size)
         self.lstm = CudnnLstm(nx=hidden_size, hidden_size=hidden_size, dr=dr)
-        self.linearOut = torch.nn.Linear(hidden_size, ny)
+        self.linear_out = torch.nn.Linear(hidden_size, ny)
 
         # self.activation_sigmoid = torch.nn.Sigmoid()
 
@@ -207,10 +207,21 @@ class CudnnLstmModel(torch.nn.Module):
         do_drop_mc: Optional[bool] = False,
         dr_false: Optional[bool] = False,
     ) -> torch.Tensor:
-        x0 = F.relu(self.linearIn(x))        
+        """Forward pass.
+        
+        Parameters
+        ----------
+        x
+            The input tensor.
+        do_drop_mc
+            Flag for applying dropout.
+        dr_false
+            Flag for applying dropout.
+        """
+        x0 = F.relu(self.linear_in(x))        
         lstm_out, (hn, cn) = self.lstm(
             x0,
             do_drop_mc=do_drop_mc,
             dr_false=dr_false,
         )
-        return self.linearOut(lstm_out)
+        return self.linear_out(lstm_out)

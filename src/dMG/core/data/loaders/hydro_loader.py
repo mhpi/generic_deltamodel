@@ -115,7 +115,7 @@ class HydroLoader(BaseLoader):
         x_phy, c_phy, x_nn, c_nn, target = self.read_data(scope)
 
         # Normalize nn input data
-        self.load_norm_stats(x_nn, c_nn, target, scope)
+        self.load_norm_stats(x_nn, c_nn, target)
         xc_nn_norm = self.normalize(x_nn, c_nn)
 
         # Build data dict of Torch tensors

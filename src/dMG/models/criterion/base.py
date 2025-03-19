@@ -12,18 +12,19 @@ class BaseCriterion(torch.nn.Module, ABC):
     
     Parameters
     ----------
-    target : torch.Tensor
-        The target data array.
-    config : dict
-        The configuration dictionary.
-    device : str, optional
-        The device to use for the loss function object. The default is 'cpu'.
+    config
+        Configuration dictionary.
+    device
+        The device to run loss function on.
+    **kwargs
+        Additional arguments for loss computation, maintains loss function
+        interchangeability. Not always used.
     """
     def __init__(
         self,
-        target: torch.Tensor,
         config: Dict[str, Any],
         device: Optional[str] = 'cpu',
+        **kwargs: Any,
     ) -> None:
         super().__init__()
         self.config = config
@@ -34,7 +35,23 @@ class BaseCriterion(torch.nn.Module, ABC):
         self,
         y_pred: torch.Tensor,
         y_obs: torch.Tensor,
-        n_samples: torch.Tensor
+        **kwargs: torch.Tensor,
     ) -> torch.Tensor:
-        """Compute loss."""
+        """Compute loss.
+        
+        Parameters
+        ----------
+        y_pred
+            Tensor of predicted target data.
+        y_obs
+            Tensor of target observation data.
+        **kwargs
+            Additional arguments for loss computation, maintains loss function
+            interchangeability. Not always used.
+            
+        Returns
+        -------
+        torch.Tensor
+            The computed loss.
+        """
         pass
