@@ -73,9 +73,9 @@ class RmseCombLoss(torch.nn.Module):
 
         if len(target) > 0:
             # Mask where observations are valid (not NaN).            
-            mask1 = ~torch.isnan(target)
-            p_sub = prediction[mask1]
-            t_sub = target[mask1]
+            mask = ~torch.isnan(target)
+            p_sub = prediction[mask]
+            t_sub = target[mask]
             
             # RMSE
             p_sub1 = torch.log10(torch.sqrt(prediction + self.beta) + 0.1)

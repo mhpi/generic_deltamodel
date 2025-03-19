@@ -66,7 +66,7 @@ class NseBatchLoss(torch.nn.Module):
         **kwargs
             Additional arguments.
 
-            - n_samples: The number of samples in each data batch. (Required)
+            - sample_ids: indices of samples included in batch. (Required)
         
         Returns
         -------
@@ -77,15 +77,15 @@ class NseBatchLoss(torch.nn.Module):
         target = y_obs[:, :, 0]
 
         try:
-            n_samples = kwargs['n_samples'].astype(int)
+            sample_ids = kwargs['sample_ids'].astype(int)
         except KeyError:
-            raise KeyError("'n_samples' is not provided in kwargs")
+            raise KeyError("'sample_ids' is not provided in kwargs")
 
         if len(target) > 0:
             # Prepare grid-based standard deviations for normalization.
             n_timesteps = target.shape[0]
             std_batch = torch.tensor(
-                np.tile(self.std[n_samples].T, (n_timesteps, 1)),
+                np.tile(self.std[sample_ids].T, (n_timesteps, 1)),
                 dtype=torch.float32,
                 requires_grad=False,
                 device=self.device,

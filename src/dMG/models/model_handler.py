@@ -277,7 +277,7 @@ class ModelHandler(torch.nn.Module):
         torch.Tensor
             Combined loss across all models.
 
-        TODO: Add support for different loss functions for each model.
+        TODO: Support different loss functions for each model in ensemble.
         """
         if not self.loss_func and not loss_func:
             raise ValueError("No loss function defined.")
@@ -294,7 +294,7 @@ class ModelHandler(torch.nn.Module):
             loss = loss_func(
                 output,
                 dataset_dict['target'],
-                n_samples=dataset_dict['batch_sample'],
+                sample_ids=dataset_dict['batch_sample'],
             )
             loss_combined += loss
             self.loss_dict[name] += loss.item()
@@ -356,7 +356,7 @@ class ModelHandler(torch.nn.Module):
         ensemble_loss = self.loss_func_wnn(
             output,
             dataset_dict['target'],
-            n_samples=dataset_dict['batch_sample']
+            sample_ids=dataset_dict['batch_sample']
         )
 
         if self.verbose:
