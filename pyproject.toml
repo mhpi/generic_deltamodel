@@ -1,47 +1,158 @@
 [build-system]
 build-backend = "hatchling.build"
 requires = ["hatchling", "hatch-vcs"]
+# requires = ["setuptools>=42", "wheel"]
+# build-backend = "setuptools.build_meta"
 
 [project]
-name = "generic-deltamodel"
-version = "1.2.0"
-description = "Differentiable modeling framework"
+name = "dMG"
+description = "Differentiable modeling framework on PyTorch"
 readme = "README.md"
-requires-python = ">=3.9.0"
 license = {file = "LICENSE"}
 authors = [
-    {name = "Leo Lonzarich"},
-    {name = "Tadd Bindas"},
+    {name = "Leo Lonzarich", email = "lglonzaric@gmail.com"},
+    {name = "Tadd Bindas", email = "taddbindas@gmail.com"},
     {name = "Farshid Rahmani"},
-    {name = "Yalan Song"},
+    {name = "Yalan Song", email = "songyalan1@gmail.com"},
 ]
 maintainers = [
     {name = "Leo Lonzarich", email = "lglonzaric@gmail.com"},
     {name = "Tadd Bindas", email = "taddbindas@gmail.com"},
     {name = "Yalan Song", email = "songyalan1@gmail.com"},
-    {name = "Doaa Aboelyazeed", email = "doaa.barawy@gmail.com"},
     {name = "Chaopeng Shen", email = "shen.chaopeng@gmail.com"}, 
+    {name = "Doaa Aboelyazeed", email = "doaa.barawy@gmail.com"},
+    {name = "Kathryn Lawson", email = "kel33@psu.edu"},
 ]
+requires-python = ">=3.9.0"
+dynamic = ["version"]
 dependencies = [
-    "torch",
-    "numpy",
+    "hydra-core>=1.3.2",
+    "ipykernel>=6.29.5",
+    "matplotlib>=3.10.0",
+    "numpy>=1.22.4",
+    "omegaconf>=2.3.0",
+    "pandas>=1.4.3",
+    "pydantic>=1.8.2",
+    "scikit-learn>=1.0.2",
+    "scipy>=1.7.3",
+    "torch>=1.10.1",
+    "torchaudio>=0.10.1",
+    "torchvision>=0.11.2",
+    "tqdm>=4.67.1",
+    "uv>=0.6.6",
+    "zarr>=3.0.5",
 ]
-dynamic = ["version"]  # Add this line to indicate dynamic versioning
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://mhpi.github.io/codes/frameworks/"
+Repository = "https://github.com/mhpi/generic_deltaModel"
 
 [project.optional-dependencies]
-test = [
-    "pytest",
-    "pytest-cov",
+hydrodl2 = [
+    "hydroDL2 @ git+https://github.com/mhpi/hydroDL2.git@master"
 ]
-[tool.uv.sources]
-torch = [
-    { index = "pytorch-cu121", marker = "platform_system != 'Darwin'"},
-]
-torchvision = [
-    { index = "pytorch-cu121", marker = "platform_system != 'Darwin'"},
+# cpu = [
+#     "torch==2.6.0",
+#     "torchvision==0.21.0",
+# ]
+# cu124 = [
+#     "torch==2.6.0",
+#     "torchvision==0.21.0",
+#     "cupy-cuda12x==13.4.0",
+# ]
+dev = [
+    "mypy>=0.940",
+    "pytest>=7.4.2",
+    "ruff>=0.9.10",
 ]
 
-[[tool.uv.index]]
-name = "pytorch-cu121"
-url = "https://download.pytorch.org/whl/cu121"
-explicit = true
+[tool.hatch]
+version.source = "vcs"
+build.hooks.vcs.version-file = "src/dMG/_version.py"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+xfail_strict = true
+addopts = [
+    "--import-mode=importlib",  # allow using test files with same name
+]
+
+[tool.ruff]
+src = ["src"]
+line-length = 88
+lint.select = [
+    "F",  # Errors detected by Pyflakes
+    "E",  # Error detected by Pycodestyle
+    "W",  # Warning detected by Pycodestyle
+    "I",  # isort
+    "D",  # pydocstyle
+    "B",  # flake8-bugbear
+    "TID",  # flake8-tidy-imports
+    "C4",  # flake8-comprehensions
+    "BLE",  # flake8-blind-except
+    "UP",  # pyupgrade
+    "RUF100",  # Report unused noqa directives
+]
+exclude = [
+    ".git",
+    ".vscode",
+    "archive",
+    "dev",
+]
+lint.ignore = [
+    # line too long -> we accept long comment lines; black gets rid of long code lines
+    "E501",
+    # Do not assign a lambda expression, use a def -> lambda expression assignments are convenient
+    "E731",
+    # allow I, O, l as variable names -> I is the identity matrix
+    "E741",
+    # Missing docstring in public package
+    "D104",
+    # Missing docstring in public module
+    "D100",
+    # Missing docstring in __init__
+    "D107",
+    # Errors from function calls in argument defaults. These are fine when the result is immutable.
+    "B008",
+    # __magic__ methods are are often self-explanatory, allow missing docstrings
+    "D105",
+    # first line should end with a period [Bug: doesn't work with single-line docstrings]
+    "D400",
+    # First line should be in imperative mood; try rephrasing
+    "D401",
+    ## Disable one in each pair of mutually incompatible rules
+    # We don't want a blank line before a class docstring
+    "D203",
+    # We want docstrings to start immediately after the opening triple quote
+    "D213",
+    # Keep standard multi-package import format from isort
+    "I001",
+    # Allow blank lines in docstrings, between code
+    "W293",
+    # Ignore escape sequences used in strings for latex formating
+    "W605",
+    # Ignore extra line requirements at end of docstring and docstring summary
+    "D204",
+    "D205",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"docs/*" = ["I"]
+"tests/*" = ["D"]
+"*/__init__.py" = ["F401"]
