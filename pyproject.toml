@@ -41,7 +41,6 @@ dependencies = [
     "tqdm>=4.67.1",
     "uv>=0.6.6",
     "zarr>=3.0.5",
-    "https://github.com/mhpi/hydroDL2.git@master#egg=hydroDL2",
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -54,6 +53,9 @@ Homepage = "https://mhpi.github.io/codes/frameworks/"
 Repository = "https://github.com/mhpi/generic_deltaModel"
 
 [project.optional-dependencies]
+hydrodl2 = [
+    "hydroDL2 @ git+https://github.com/mhpi/hydroDL2.git@master"
+]
 # cpu = [
 #     "torch==2.6.0",
 #     "torchvision==0.21.0",
