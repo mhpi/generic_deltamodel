@@ -30,5 +30,5 @@ jobs:
         uv venv
         source .venv/bin/activate
         uv pip install -e .
-        uv pip install -e .[dev, hydrodl2]
+        uv pip install -e ".[dev, hydrodl2]"
         pytest
