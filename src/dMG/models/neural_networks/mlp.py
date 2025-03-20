@@ -1,7 +1,7 @@
+from typing import Any
+
 import torch
 import torch.nn as nn
-
-from typing import Dict, Any
 
 
 class MlpModel(nn.Module):
@@ -64,18 +64,18 @@ class MlpModel(nn.Module):
 
 
 class MlpMulModel(nn.Module):
-    def __init__(self, config: Dict[str, Any], nx: int, ny: int) -> None:
-        """Multi-layer perceptron (MLP) model with multiple layers.
-        
-        Parameters
-        ----------
-        config
-            Configuration dictionary with model settings.
-        nx
-            Number of input features.
-        ny
-            Number of output features.
-        """
+    """Multi-layer perceptron (MLP) model with multiple layers.
+    
+    Parameters
+    ----------
+    config
+        Configuration dictionary with model settings.
+    nx
+        Number of input features.
+    ny
+        Number of output features.
+    """
+    def __init__(self, config: dict[str, Any], nx: int, ny: int) -> None:
         super().__init__()
         self.name = 'MlpMulModel'
         self.config = config

@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Dict
+from typing import Any
 
 import hydra
 import torch
@@ -10,7 +10,7 @@ from omegaconf import OmegaConf
 log = logging.getLogger(__name__)
 
 
-def load_config(path: str) -> Dict[str, Any]:
+def load_config(path: str) -> dict[str, Any]:
     """Parse and initialize configuration settings from yaml with Hydra.
     
     This loader is capable of handling config files in nonlinear directory
@@ -43,8 +43,8 @@ def load_config(path: str) -> Dict[str, Any]:
     return config
 
 
-def take_data_sample(config: Dict, dataset_dict: Dict[str, torch.Tensor], days=730,
-                     basins=100) -> Dict[str, torch.Tensor]:
+def take_data_sample(config: dict, dataset_dict: dict[str, torch.Tensor], days=730,
+                     basins=100) -> dict[str, torch.Tensor]:
     """Take sample of data."""
     dataset_sample = {}
     

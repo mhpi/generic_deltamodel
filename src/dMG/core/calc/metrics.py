@@ -2,7 +2,7 @@ import csv
 import json
 import logging
 import os
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional
 
 import numpy as np
 import scipy.stats as stats
@@ -208,7 +208,7 @@ class Metrics(BaseModel):
             raise ValueError(msg)
         return metrics
     
-    def calc_stats(self, *args, **kwargs) -> Dict[str, Dict[str, float]]:
+    def calc_stats(self, *args, **kwargs) -> dict[str, dict[str, float]]:
         """Calculate aggregate statistics of metrics."""
         stats = {}
         model_dict = self.model_dump()
@@ -278,7 +278,7 @@ class Metrics(BaseModel):
         json_dat = self.model_dump_json(indent=4)
         
         with open(save_path, "w") as f:
-            json.dump(json_dat, f)        
+            json.dump(json_dat, f)
 
     def tile_mean(self, data: NDArray[np.float32]) -> NDArray[np.float32]:
         """Calculate mean of target.
@@ -491,7 +491,7 @@ class Metrics(BaseModel):
         pred: NDArray[np.float32],
         target: NDArray[np.float32],
         target_mean: np.float32,
-    ) -> Tuple[np.float32, np.float32]:
+    ) -> tuple[np.float32, np.float32]:
         """Calculate Nash-Sutcliffe Efficiency (NSE) == R^2."""
         sst = np.sum((target - target_mean) ** 2)
         ssres = np.sum((target - pred) ** 2)

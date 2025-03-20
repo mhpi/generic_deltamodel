@@ -3,7 +3,7 @@ import os
 import random
 import re
 import sys
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import torch
@@ -17,17 +17,17 @@ from path import PathBuilder
 log = logging.getLogger(__name__)
 
 
-def set_system_spec(config: dict) -> Tuple[str, str]:
+def set_system_spec(config: dict) -> tuple[str, str]:
     """Set the device and data type for the model on user's system.
 
     Parameters
     ----------
-    cuda_devices : list
+    cuda_devices
         List of CUDA devices to use. If None, the first available device is used.
 
     Returns
     -------
-    Tuple[str, str]
+    tuple[str, str]
         The device type and data type for the model.
     """
     if config['device'] == 'cpu':
@@ -43,7 +43,7 @@ def set_system_spec(config: dict) -> Tuple[str, str]:
             device = torch.device(f'cuda:{config['gpu_id']}')
             torch.cuda.set_device(device)
         else:
-            raise ValueError(f"Selected CUDA device {config['gpu_id']} is not available.")  
+            raise ValueError(f"Selected CUDA device {config['gpu_id']} is not available.")
     else:
         raise ValueError(f"Invalid device: {config['device']}")
 
@@ -74,16 +74,16 @@ def set_randomseed(seed=0) -> None:
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         # torch.use_deterministic_algorithms(True)
-    except Exception as e:
+    except RuntimeError as e:
         log.warning(f"Error fixing randomseed: {e}")
 
 
-def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
+def initialize_config(config: Union[DictConfig, dict]) -> dict[str, Any]:
     """Parse and initialize configuration settings.
     
     Parameters
     ----------
-    config : DictConfig
+    config
         Configuration settings from Hydra.
         
     Returns
@@ -117,13 +117,13 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
         train_time.end_time,
         test_time.start_time,
         test_time.end_time,
-    ) 
+    )
 
     config['train_time'] = [train_time.start_time, train_time.end_time]
     config['test_time'] = [test_time.start_time, test_time.end_time]
     config['predict_time'] = [predict_time.start_time, predict_time.end_time]
     config['experiment_time'] = [exp_time_start, exp_time_end]
-    config['all_time'] = [all_time.start_time, all_time.end_time]   
+    config['all_time'] = [all_time.start_time, all_time.end_time]
 
     # TODO: add this handling directly to the trainer; this is not generalizable in current form.
     # change multimodel_type type to None if none.
@@ -147,7 +147,7 @@ def initialize_config(config: Union[DictConfig, dict]) -> Dict[str, Any]:
 
 
 def save_model(
-    config: Dict[str, Any],
+    config: dict[str, Any],
     model: torch.nn.Module,
     model_name: str,
     epoch: int,
@@ -157,15 +157,15 @@ def save_model(
     
     Parameters
     ----------
-    config : dict
+    config
         Configuration settings.
-    model : torch.nn.Module
+    model
         Model to save.
-    model_name : str
+    model_name
         Name of the model.
-    epoch : int
+    epoch
         Last completed epoch of training.
-    create_dirs : bool, optional
+    create_dirs
         Create directories for saving files. Default is False.
     """
     if create_dirs:
@@ -179,8 +179,8 @@ def save_model(
 
 
 def save_train_state(
-    config: Dict[str, Any],
-    epoch: int, 
+    config: dict[str, Any],
+    epoch: int,
     optimizer:torch.nn.Module,
     scheduler: Optional[torch.nn.Module] = None,
     create_dirs: Optional[bool] = False,
@@ -190,17 +190,17 @@ def save_train_state(
     
     Parameters
     ----------
-    config : dict
+    config
         Configuration settings.
-    epoch : int
+    epoch
         Last completed epoch of training.
-    optimizer : torch.nn.Module
+    optimizer
         Optimizer state dict.
-    scheduler : torch.nn.Module
+    scheduler
         Learning rate scheduler state dict.
-    create_dirs : bool, optional
+    create_dirs
         Create directories for saving files. Default is False.
-    clear_prior : bool, optional
+    clear_prior
         Clear previous saved states. Default is False.
     """
     root = 'train_state'
@@ -252,7 +252,7 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
                 dim = 0
 
             c_tensor = torch.cat([d[key] for d in predictions], dim=dim)
-            file_name = key + ".npy"        
+            file_name = key + ".npy"
 
             np.save(os.path.join(config['out_path'], file_name), c_tensor.numpy())
 
@@ -267,13 +267,13 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
             else:
                 dim = 0
 
-            for model in models: 
+            for model in models:
                 out_dict[model] = torch.cat(
                     [d[key] for d in predictions[model]],
                     dim=dim,
                 ).numpy()
             
-            file_name = key + '.npy'        
+            file_name = key + '.npy'
             np.save(os.path.join(config['out_path'], file_name), out_dict)
 
     else:
@@ -290,23 +290,29 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
 def load_model(config, model_name, epoch):
     """Load trained PyTorch models.
     
-    Args:
-        config (dict): Configuration dictionary with paths and model settings.
-        model_name (str): Name of the model to load.
-        epoch (int): Epoch number to load the specific state of the model.
-        
-    Returns:
-        model (torch.nn.Module): The loaded PyTorch model.
+    Parameters
+    ----------
+    config
+        Configuration dictionary with paths and model settings.
+    model_name
+        Name of the model to load.
+    epoch
+        Epoch number to load the specific state of the model.
+    
+    Returns
+    -------
+    torch.nn.Module
+        An initialized PyTorch model.
     """
     model_name = str(model_name) + '_model_Ep' + str(epoch) + '.pt'
 
 
-def print_config(config: Dict[str, Any]) -> None:
+def print_config(config: dict[str, Any]) -> None:
     """Print the current configuration settings.
 
     Parameters
     ----------
-    config : dict
+    config
         Dictionary of configuration settings.
 
     Adapted from Jiangtao Liu.
@@ -338,7 +344,7 @@ def print_config(config: Dict[str, Any]) -> None:
         print(f"  {'Dropout:':<20}{config['dpl_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['dpl_model']['nn_model']['hidden_size']:<20}")
     else:
         print(f"  {'LSTM Dropout:':<20}{config['dpl_model']['nn_model']['lstm_dropout']:<20}{'LSTM Hidden Size:':<20}{config['dpl_model']['nn_model']['lstm_hidden_size']:<20}")
-        print(f"  {'MLP Dropout:':<20}{config['dpl_model']['nn_model']['mlp_dropout']:<20}{'MLP Hidden Size:':<20}{config['dpl_model']['nn_model']['mlp_hidden_size']:<20}")        
+        print(f"  {'MLP Dropout:':<20}{config['dpl_model']['nn_model']['mlp_dropout']:<20}{'MLP Hidden Size:':<20}{config['dpl_model']['nn_model']['mlp_hidden_size']:<20}")
     print(f"  {'Warmup:':<20}{config['dpl_model']['phy_model']['warm_up']:<20}{'Concurrent Models:':<20}{config['dpl_model']['phy_model']['nmul']:<20}")
     print(f"  {'Loss Fn:':<20}{config['loss_function']['model']:<20}")
     print()
@@ -356,21 +362,21 @@ def print_config(config: Dict[str, Any]) -> None:
     print()
 
 
-def find_shared_keys(*dicts: Dict[str, Any]) -> List[str]:
+def find_shared_keys(*dicts: dict[str, Any]) -> list[str]:
     """Find keys shared between multiple dictionaries.
 
     Parameters
     ----------
-    *dicts : dict
+    *dicts
         Variable number of dictionaries.
 
     Returns
     -------
-    List[str]
+    list[str]
         A list of keys shared between the input dictionaries.
     """
     if len(dicts) == 1:
-        return list()
+        return []
 
     # Start with the keys of the first dictionary.
     shared_keys = set(dicts[0].keys())

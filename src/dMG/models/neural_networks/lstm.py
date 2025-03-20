@@ -1,5 +1,5 @@
 import math
-from typing import Optional, Tuple
+from typing import Optional
 
 import torch
 import torch.nn.functional as F
@@ -65,6 +65,7 @@ class Lstm(torch.nn.Module):
         self.reset_parameters()
 
     def __setstate__(self, d: dict) -> None:
+        """Set state of LSTM."""
         super().__setstate__(d)
         self.__dict__.setdefault('_data_ptrs', [])
         if 'all_weights' in d:
@@ -74,11 +75,13 @@ class Lstm(torch.nn.Module):
         self._all_weights = [['w_ih', 'w_hh', 'b_ih', 'b_hh']]
 
     def reset_mask(self):
+        """Reset dropout mask."""
         with torch.no_grad():
             self.mask_w_ih = createMask(self.w_ih, self.dr)
             self.mask_w_hh = createMask(self.w_hh, self.dr)
 
     def reset_parameters(self):
+        """Initialize parameters."""
         stdv = 1.0 / math.sqrt(self.hidden_size)
         for param in self.parameters():
             if param.requires_grad:
@@ -91,7 +94,7 @@ class Lstm(torch.nn.Module):
         cx: Optional[torch.Tensor] = None,
         do_drop_mc: bool = False,
         dr_false: bool = False,
-    ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    ) -> tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         """Forward pass.
         
         Parameters
@@ -154,6 +157,7 @@ class Lstm(torch.nn.Module):
 
     @property
     def all_weights(self):
+        """Return all weights."""
         return [
             [getattr(self, weight) for weight in weights]
             for weights in self._all_weights
@@ -218,7 +222,7 @@ class LstmModel(torch.nn.Module):
         dr_false
             Flag for applying dropout.
         """
-        x0 = F.relu(self.linear_in(x))        
+        x0 = F.relu(self.linear_in(x))
         lstm_out, (hn, cn) = self.lstm(
             x0,
             do_drop_mc=do_drop_mc,

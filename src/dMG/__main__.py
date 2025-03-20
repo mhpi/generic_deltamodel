@@ -1,4 +1,3 @@
-"""Main script for running differentiable model experiments."""
 import logging
 import time
 
@@ -35,6 +34,7 @@ def run_mode(mode: str, trainer):
     config_name='config',
 )
 def main(config: DictConfig) -> None:
+    """Main function to run differentiable model experiments."""
     try:
         start_time = time.perf_counter()
 
@@ -82,7 +82,7 @@ def main(config: DictConfig) -> None:
         log.info(
             f"| {config['mode']} completed | "
             f"Time Elapsed: {(total_time / 60):.6f} minutes"
-        ) 
+        )
 
 
 if __name__ == '__main__':

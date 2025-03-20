@@ -135,6 +135,15 @@ lint.ignore = [
     "D203",
     # We want docstrings to start immediately after the opening triple quote
     "D213",
+    # Keep standard multi-package import format from isort
+    "I001",
+    # Allow blank lines in docstrings, between code
+    "W293",
+    # Ignore escape sequences used in strings for latex formating
+    "W605",
+    # Ignore extra line requirements at end of docstring and docstring summary
+    "D204",
+    "D205",
 ]
 
 [tool.ruff.lint.pydocstyle]

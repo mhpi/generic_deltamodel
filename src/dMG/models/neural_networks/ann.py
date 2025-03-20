@@ -130,7 +130,7 @@ class AnnCloseModel(torch.nn.Module):
         out = torch.zeros(nt, ngrid, self.ny).cuda()
         for t in range(nt):
             if self.fill_obs is True:
-                yt_obs = y[t, :, :] 
+                yt_obs = y[t, :, :]
                 mask = yt_obs == yt_obs
                 yt[mask] = yt_obs[mask]
             

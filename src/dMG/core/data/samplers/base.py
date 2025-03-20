@@ -19,7 +19,6 @@ class BaseSampler(Dataset, ABC):
 
     def __init__(
         self,
-        # config: Dict
     ):
         super().__init__()
         # self.config = config

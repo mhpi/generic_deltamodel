@@ -1,6 +1,5 @@
 import logging
-import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import numpy as np
 import torch
@@ -49,7 +48,7 @@ class MsTrainer(BaseTrainer):
     """
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         model: torch.nn.Module = None,
         train_dataset: Optional[dict] = None,
         eval_dataset: Optional[dict] = None,
@@ -114,7 +113,7 @@ class MsTrainer(BaseTrainer):
     
     def _batch_data(
         self,
-        batch_list: List[Dict[str, torch.Tensor]],
+        batch_list: list[dict[str, torch.Tensor]],
         target_key: str = None,
     ) -> None:
         """Merge batch data into a single dictionary.
@@ -139,12 +138,12 @@ class MsTrainer(BaseTrainer):
                 data[key] = torch.cat([d[key] for d in batch_list], dim=dim).cpu().numpy()
             return data
         
-        except Exception as e:
-            raise ValueError(f"Error concatenating batch data: {e}")
+        except ValueError as e:
+            raise ValueError(f"Error concatenating batch data: {e}") from e
 
     def _forward_loop(
         self,
-        data: Dict[str, torch.Tensor],
+        data: dict[str, torch.Tensor],
         batch_start: NDArray,
         batch_end: NDArray
     ) -> None:

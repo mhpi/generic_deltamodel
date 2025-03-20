@@ -1,6 +1,6 @@
 import math
 import warnings
-from typing import Optional, Tuple
+from typing import Optional
 
 import torch
 import torch.nn.functional as F
@@ -59,10 +59,12 @@ class CudnnLstm(torch.nn.Module):
         self._all_weights = [['w_ih', 'w_hh', 'b_ih', 'b_hh']]
 
     def reset_mask(self):
+        """Reset dropout mask."""
         self.mask_w_ih = createMask(self.w_ih, self.dr)
         self.mask_w_hh = createMask(self.w_hh, self.dr)
 
     def reset_parameters(self):
+        """Initialize parameters."""
         stdv = 1.0 / math.sqrt(self.hidden_size)
         for weight in self.parameters():
             weight.data.uniform_(-stdv, stdv)
@@ -74,7 +76,7 @@ class CudnnLstm(torch.nn.Module):
         cx: Optional[torch.Tensor] = None,
         do_drop_mc: bool = False,
         dr_false: bool = False,
-    ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    ) -> tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         """Forward pass.
         
         Parameters
@@ -159,6 +161,7 @@ class CudnnLstm(torch.nn.Module):
 
     @property
     def all_weights(self):
+        """Return all weights."""
         return [
             [getattr(self, weight) for weight in weights]
             for weights in self._all_weights
@@ -207,7 +210,18 @@ class CudnnLstmModel(torch.nn.Module):
         do_drop_mc: Optional[bool] = False,
         dr_false: Optional[bool] = False,
     ) -> torch.Tensor:
-        x0 = F.relu(self.linearIn(x))        
+        """Forward pass.
+        
+        Parameters
+        ----------
+        x
+            The input tensor.
+        do_drop_mc
+            Flag for applying dropout.
+        dr_false
+            Flag for applying dropout.
+        """
+        x0 = F.relu(self.linearIn(x))
         lstm_out, (hn, cn) = self.lstm(
             x0,
             do_drop_mc=do_drop_mc,

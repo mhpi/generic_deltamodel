@@ -1,9 +1,11 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import torch
 
+from dMG.models.criterion.base import BaseCriterion
 
-class KgeBatchLoss(torch.nn.Module):
+
+class KgeBatchLoss(BaseCriterion):
     """Kling-Gupta efficiency (KGE) loss function.
     
     The KGE is calculated as:
@@ -27,11 +29,11 @@ class KgeBatchLoss(torch.nn.Module):
     """
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         device: Optional[str] = 'cpu',
         **kwargs: int,
     ) -> None:
-        super().__init__()
+        super().__init__(config, device)
         self.name = 'Batch KGE Loss'
         self.config = config
         self.device = device
@@ -60,10 +62,9 @@ class KgeBatchLoss(torch.nn.Module):
         torch.Tensor
             The loss value.
         """
-        prediction = y_pred.squeeze()
-        target = y_obs[:, :, 0]
+        prediction, target = self._format(y_pred, y_obs)
 
-        # Mask where observations are valid (not NaN).            
+        # Mask where observations are valid (not NaN).
         mask = ~torch.isnan(target)
         p_sub = prediction[mask]
         t_sub = target[mask]

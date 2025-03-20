@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import numpy as np
 import torch
@@ -53,7 +53,7 @@ class Trainer(BaseTrainer):
     """
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         model: torch.nn.Module = None,
         train_dataset: Optional[dict] = None,
         eval_dataset: Optional[dict] = None,
@@ -134,8 +134,8 @@ class Trainer(BaseTrainer):
                 self.model.get_parameters(),
                 lr=learning_rate,
             )
-        except Exception as e:
-            raise ValueError(f"Error initializing optimizer: {e}")
+        except RuntimeError as e:
+            raise RuntimeError(f"Error initializing optimizer: {e}") from e
         return self.optimizer
     
     def init_scheduler(self) -> torch.optim.lr_scheduler.LRScheduler:
@@ -164,8 +164,8 @@ class Trainer(BaseTrainer):
                 self.optimizer,
                 **self.config['dpl_model']['nn_model']['lr_scheduler_params'],
             )
-        except Exception as e:
-            raise ValueError(f"Error initializing scheduler: {e}")
+        except RuntimeError as e:
+            raise RuntimeError(f"Error initializing scheduler: {e}") from e
         return self.scheduler
 
     def load_states(self) -> None:
@@ -177,8 +177,8 @@ class Trainer(BaseTrainer):
         for file in os.listdir(path):
             # Check for state checkpoint: looks like `train_state_epoch_XX.pt`.
             if 'train_state' and (str(self.start_epoch-1) in file):
-                log.info(f"Loading trainer states --> Resuming Training from" /
-                         f" epoch {self.start_epoch}") 
+                log.info("Loading trainer states --> Resuming Training from" /
+                         f" epoch {self.start_epoch}")
 
                 checkpoint = torch.load(os.path.join(path, file))
 
@@ -311,7 +311,7 @@ class Trainer(BaseTrainer):
     
     def _batch_data(
         self,
-        batch_list: List[Dict[str, torch.Tensor]],
+        batch_list: list[dict[str, torch.Tensor]],
         target_key: str = None,
     ) -> None:
         """Merge batch data into a single dictionary.
@@ -337,17 +337,17 @@ class Trainer(BaseTrainer):
                 data[key] = torch.cat([d[key] for d in batch_list], dim=dim).cpu().numpy()
             return data
         
-        except Exception as e:
-            raise ValueError(f"Error concatenating batch data: {e}")
+        except ValueError as e:
+            raise ValueError(f"Error concatenating batch data: {e}") from e
 
     def _forward_loop(
         self,
-        data: Dict[str, torch.Tensor],
+        data: dict[str, torch.Tensor],
         batch_start: NDArray,
         batch_end: NDArray
     ) -> None:
         """Forward loop used in model evaluation and inference.
-        
+
         Parameters
         ----------
         data
@@ -382,11 +382,11 @@ class Trainer(BaseTrainer):
 
     def calc_metrics(
         self,
-        batch_predictions: List[Dict[str, torch.Tensor]],
+        batch_predictions: list[dict[str, torch.Tensor]],
         observations: torch.Tensor,
     ) -> None:
         """Calculate and save model performance metrics.
-        
+
         Parameters
         ----------
         batch_predictions
@@ -414,12 +414,12 @@ class Trainer(BaseTrainer):
     def _log_epoch_stats(
         self,
         epoch: int,
-        loss_dict: Dict[str, float],
+        loss_dict: dict[str, float],
         n_minibatch: int,
         start_time: float,
     ) -> None:
         """Log statistics after each epoch.
-        
+
         Parameters
         ----------
         epoch
@@ -435,7 +435,7 @@ class Trainer(BaseTrainer):
         loss = ", ".join(f"{key}: {value:.6f}" for key, value in avg_loss_dict.items())
         elapsed = time.perf_counter() - start_time
         mem_aloc = int(torch.cuda.memory_reserved(device=self.config['device']) * 0.000001)
-        
+
         log.info(
             f"Loss after epoch {epoch}: {loss} \n"
             f"~ Runtime {elapsed:.2f} s, {mem_aloc} Mb reserved GPU memory"

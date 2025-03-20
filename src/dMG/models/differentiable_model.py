@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import torch.nn
 
@@ -8,7 +8,7 @@ from dMG.core.utils.factory import import_phy_model, load_nn_model
 class DeltaModel(torch.nn.Module):
     """Default class for instantiating a differentiable model.
     
-    Default modality: 
+    Default modality:
         Parameterization neural network (NN) -> Physics Model (phy_model)
 
         - NN: e.g., LSTM, MLP, KNN
@@ -39,7 +39,7 @@ class DeltaModel(torch.nn.Module):
         phy_model_name: Optional[str] = None,
         phy_model: Optional[torch.nn.Module] = None,
         nn_model: Optional[torch.nn.Module] = None,
-        config: Optional[Dict[str, Any]] = None,
+        config: Optional[dict[str, Any]] = None,
         device: Optional[torch.device] = 'cpu',
     ) -> None:
         super().__init__()
@@ -98,7 +98,7 @@ class DeltaModel(torch.nn.Module):
             device=self.device
         )
     
-    def forward(self, data_dict: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(self, data_dict: dict[str, torch.Tensor]) -> torch.Tensor:
         """Forward pass.
         
         Parameters
@@ -115,7 +115,7 @@ class DeltaModel(torch.nn.Module):
         if type(self.nn_model).__name__ == 'LstmMlpModel':
             parameters = self.nn_model(data_dict['xc_nn_norm'], data_dict['c_nn_norm'])
         else:
-            parameters = self.nn_model(data_dict['xc_nn_norm'])        
+            parameters = self.nn_model(data_dict['xc_nn_norm'])
         
         # Physics model
         predictions = self.phy_model(

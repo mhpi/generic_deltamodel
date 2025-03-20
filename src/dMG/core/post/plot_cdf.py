@@ -1,13 +1,11 @@
-from typing import Dict, List
-
 import matplotlib.pyplot as plt
 import numpy as np
 
 
 def plot_cdf(
-    metrics: Dict[str, List[float]],
-    metric_names: List[str],
-    model_labels: List[str] = None,
+    metrics: dict[str, list[float]],
+    metric_names: list[str],
+    model_labels: list[str] = None,
     title: str = "CDF Comparison",
     xlabel: str = "Metric Value",
     figsize: tuple = None,
@@ -24,30 +22,30 @@ def plot_cdf(
 
     Parameters
     ----------
-    metrics : dict
+    metrics
         Dictionary containing metrics data for each model.
-    metric_names : list
+    metric_names
         List of metric names to plot.
-    model_labels : list, optional
+    model_labels
         List of labels for each model. Default is None.
-    title : str, optional
+    title
         Title of the plot. Default is "CDF Comparison".
-    xlabel : str, optional
+    xlabel
         Label for the x-axis. Default is "Metric Value".
-    figsize : tuple, optional
+    figsize
         Size of the figure. Default is None and plt will autosize.
-    xbounds : tuple, optional
+    xbounds
         Bounds for the x-axis. Default is None and plt will autoscale.
-    ybounds : tuple, optional
+    ybounds
         Bounds for the y-axis. Default is None and plt will autoscale.
-    show_arrow : bool, optional
+    show_arrow
         Show an arrow pointing in the direction of better performance. Default
         is False.
-    dpi : int, optional
+    dpi
         Resolution of the figure. Default is 100.
-    fontsize: int, optional
+    fontsize
         Font size for the plot. Default is 12.
-    ticksize: int, optional
+    ticksize
         Font size for the ticks. Default is 10.
     """
     if not metrics or not metric_names:
@@ -111,9 +109,9 @@ def plot_cdf(
         # Add the arrow without text
         plt.annotate(
             "",  # No text
-            xy=(arrow_x_end, arrow_y), 
+            xy=(arrow_x_end, arrow_y),
             xytext=(arrow_x_start, arrow_y),  # Keep the y-coordinate constant
-            arrowprops=dict(facecolor='red', arrowstyle='->', lw=2),
+            arrowprops={'facecolor':'red', 'arrowstyle':'->', 'lw':2},
             fontsize=fontsize,
         )
         

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import torch
 
@@ -19,7 +19,7 @@ class BaseTrainer(ABC):
 
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         model: Optional[torch.nn.Module] = None
     ) -> None:
         self.config = config
@@ -50,12 +50,12 @@ class BaseTrainer(ABC):
     @abstractmethod
     def inference(self) -> None:
         """Run testing loop and save results."""
-        raise NotImplementedError("Derived classes must implement `evaluate` method.")    
+        raise NotImplementedError("Derived classes must implement `evaluate` method.")
 
     @abstractmethod
     def calc_metrics(
         self,
-        batch_predictions: List[Dict[str, torch.Tensor]],
+        batch_predictions: list[dict[str, torch.Tensor]],
         observations: torch.Tensor,
     ) -> None:
         """Calculate metrics for the model.

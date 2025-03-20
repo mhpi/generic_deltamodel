@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import torch
 import tqdm
@@ -36,7 +36,7 @@ class ModelHandler(torch.nn.Module):
     """
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         device: Optional[str] = None,
         verbose=False,
     ) -> None:
@@ -67,12 +67,12 @@ class ModelHandler(torch.nn.Module):
             self.range_bound_loss = RangeBoundLoss(config, device=self.device)
         self.is_ensemble = False
 
-    def list_models(self) -> List[str]:
+    def list_models(self) -> list[str]:
         """List of models specified in the configuration.
         
         Returns
         -------
-        List[str]
+        list[str]
             List of model names.
         """
         models = self.config['dpl_model']['phy_model']['model']
@@ -132,7 +132,7 @@ class ModelHandler(torch.nn.Module):
                 # Leave model uninitialized for training.
                 if self.verbose:
                     log.info(f"Created new model: {name}")
-                continue 
+                continue
             else:
                 # Initialize model from checkpoint state dict.
                 path = os.path.join(self.model_path, f"d{name}_Ep{epoch}.pt")
@@ -165,12 +165,12 @@ class ModelHandler(torch.nn.Module):
                 if self.verbose:
                     log.info(f"Loaded model: {name}, Ep {epoch}")
 
-    def get_parameters(self) -> List[torch.Tensor]:
+    def get_parameters(self) -> list[torch.Tensor]:
         """Return all model parameters.
         
         Returns
         -------
-        List[torch.Tensor]
+        list[torch.Tensor]
             List of model parameters.
         """
         self.parameters = []
@@ -185,11 +185,11 @@ class ModelHandler(torch.nn.Module):
         
     def forward(
         self,
-        dataset_dict: Dict[str, torch.Tensor],
+        dataset_dict: dict[str, torch.Tensor],
         eval: bool = False
-    ) -> Dict[str, torch.Tensor]:        
+    ) -> dict[str, torch.Tensor]:
         """
-        Sequentially forward for one or more differentiable models with an 
+        Sequentially forward for one or more differentiable models with an
         optional weighting NN for multimodel ensembles trained in parallel or
         series (differentiable model parameterization NNs frozen).
 
@@ -226,7 +226,7 @@ class ModelHandler(torch.nn.Module):
     
     def _forward_multimodel(
         self,
-        dataset_dict: Dict[str, torch.Tensor],
+        dataset_dict: dict[str, torch.Tensor],
         eval: bool = False
     ) -> None:
         """
@@ -260,7 +260,7 @@ class ModelHandler(torch.nn.Module):
 
     def calc_loss(
         self,
-        dataset_dict: Dict[str, torch.Tensor],
+        dataset_dict: dict[str, torch.Tensor],
         loss_func: Optional[torch.nn.Module] = None,
     ) -> torch.Tensor:
         """Calculate combined loss across all models.
@@ -292,8 +292,8 @@ class ModelHandler(torch.nn.Module):
             output = output[self.target_name]
 
             loss = loss_func(
-                output,
-                dataset_dict['target'],
+                output.squeeze(),
+                dataset_dict['target'].squeeze(),
                 sample_ids=dataset_dict['batch_sample'],
             )
             loss_combined += loss
@@ -307,7 +307,7 @@ class ModelHandler(torch.nn.Module):
 
     def calc_loss_multimodel(
         self,
-        dataset_dict: Dict[str, torch.Tensor],
+        dataset_dict: dict[str, torch.Tensor],
         loss_func: torch.nn.Module,
     ) -> torch.Tensor:
         """
@@ -354,8 +354,8 @@ class ModelHandler(torch.nn.Module):
 
         # Ensemble predictions loss
         ensemble_loss = self.loss_func_wnn(
-            output,
-            dataset_dict['target'],
+            output.squeeze(),
+            dataset_dict['target'][:, :, 0],
             sample_ids=dataset_dict['batch_sample']
         )
 

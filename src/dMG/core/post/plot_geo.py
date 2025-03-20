@@ -83,11 +83,11 @@ def geoplot_single_metric(
             edgecolor='k',  # Black border around markers
             vmin=0,  # Minimum value for the color scale
             vmax=1   # Maximum value for the color scale
-        )    
+        )
         
     # Add a colorbar
     cbar = plt.colorbar(scatter, orientation='horizontal', pad=0.05)
-    cbar.set_label(f"{metric_name.upper()}", fontsize=12)  
+    cbar.set_label(f"{metric_name.upper()}", fontsize=12)
 
     # Add labels and title
     if title:

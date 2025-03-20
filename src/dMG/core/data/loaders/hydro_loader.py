@@ -2,11 +2,11 @@ import json
 import logging
 import os
 import pickle
-import torch
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
+import torch
 from numpy.typing import NDArray
 from sklearn.exceptions import DataDimensionalityWarning
 
@@ -27,14 +27,14 @@ class HydroLoader(BaseLoader):
 
     The CAMELS dataset is a large-sample watershed-scale hydrometeorological
     dataset for the contiguous USA and includes both meteorological forcings
-    and basin attributes. 
+    and basin attributes.
     
-    CAMELS: 
+    CAMELS:
     - https://ral.ucar.edu/solutions/products/camels
 
     - A. Newman; K. Sampson; M. P. Clark; A. Bock; R. J. Viger; D. Blodgett,
         2014. A large-sample watershed-scale hydrometeorological dataset for the
-        contiguous USA. Boulder, CO: UCAR/NCAR. 
+        contiguous USA. Boulder, CO: UCAR/NCAR.
         https://dx.doi.org/10.5065/D6MW2F4D
 
     Parameters
@@ -51,7 +51,7 @@ class HydroLoader(BaseLoader):
     """
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         test_split: Optional[bool] = False,
         overwrite: Optional[bool] = False,
     ) -> None:
@@ -99,7 +99,7 @@ class HydroLoader(BaseLoader):
     def _preprocess_data(
         self,
         scope: Optional[str],
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Read data, preprocess, and return as tensors for models.
         
         Parameters
@@ -109,7 +109,7 @@ class HydroLoader(BaseLoader):
             
         Returns
         -------
-        Dict[str, torch.Tensor]
+        dict[str, torch.Tensor]
             Dictionary of data tensors for running models.
         """
         x_phy, c_phy, x_nn, c_nn, target = self.read_data(scope)
@@ -129,7 +129,7 @@ class HydroLoader(BaseLoader):
         }
         return dataset
 
-    def read_data(self, scope: Optional[str]) -> Tuple[NDArray[np.float32]]:
+    def read_data(self, scope: Optional[str]) -> tuple[NDArray[np.float32]]:
         """Read data from the data file.
         
         Parameters
@@ -139,7 +139,7 @@ class HydroLoader(BaseLoader):
 
         Returns
         -------
-        Tuple[NDArray[np.float32]]
+        tuple[NDArray[np.float32]]
             Tuple of neural network + physics model inputes, and target data.
         """
         try:
@@ -151,19 +151,19 @@ class HydroLoader(BaseLoader):
                 time = self.config['test_time']
             elif scope == 'predict':
                 data_path = self.config['observations']['test_path']
-                time = self.config['predict_time']                
+                time = self.config['predict_time']
             elif scope == 'all':
                 data_path = self.config['observations']['test_path']
                 time = self.config['all_time']
             else:
                 raise ValueError("Scope must be 'train', 'test', 'predict', or 'all'.")
         except KeyError as e:
-            raise ValueError(f"Key {e} for data path not in dataset config.")
+            raise ValueError(f"Key {e} for data path not in dataset config.") from e
         
         # Get time indicies
         all_time = pd.date_range(
             self.config['all_time'][0],
-            self.config['all_time'][-1], 
+            self.config['all_time'][-1],
             freq='d',
         )
         idx_start = all_time.get_loc(time[0])
@@ -214,7 +214,7 @@ class HydroLoader(BaseLoader):
             subset_path = self.config['observations']['subset_path']
             gage_id_path = self.config['observations']['gage_info']
 
-            with open(subset_path, 'r') as f:
+            with open(subset_path) as f:
                 selected_basins = json.load(f)
             gage_info = np.load(gage_id_path)
 
@@ -281,7 +281,7 @@ class HydroLoader(BaseLoader):
 
         if os.path.isfile(self.out_path) and (not self.overwrite):
             if not self.norm_stats:
-                with open(self.out_path, 'r') as f:
+                with open(self.out_path) as f:
                     self.norm_stats = json.load(f)
         else:
             # Init normalization stats if file doesn't exist or overwrite is True.
@@ -292,7 +292,7 @@ class HydroLoader(BaseLoader):
         x_nn: NDArray[np.float32],
         c_nn: NDArray[np.float32],
         target: NDArray[np.float32],
-    ) -> Dict[str, List[float]]:
+    ) -> dict[str, list[float]]:
         """Compile and save calculations of data normalization statistics.
         
         Parameters
@@ -306,7 +306,7 @@ class HydroLoader(BaseLoader):
         
         Returns
         -------
-        Dict[str, List[float]]
+        dict[str, list[float]]
             Dictionary of normalization statistics for each variable.
         """
         stat_dict = {}
@@ -344,9 +344,9 @@ class HydroLoader(BaseLoader):
 
     def _calc_norm_stats(
         self,
-        x: NDArray[np.float32], 
-        basin_area: NDArray[np.float32] = None, 
-    ) -> List[float]:
+        x: NDArray[np.float32],
+        basin_area: NDArray[np.float32] = None,
+    ) -> list[float]:
         """
         Calculate statistics for normalization with optional basin
         area adjustment.
@@ -360,7 +360,7 @@ class HydroLoader(BaseLoader):
         
         Returns
         -------
-        List[float]
+        list[float]
             List of statistics [10th percentile, 90th percentile, mean, std].
         """
         # Handle invalid values
@@ -399,7 +399,7 @@ class HydroLoader(BaseLoader):
 
         return [p10, p90, mean, max(std, 0.001)]
     
-    def _calc_gamma_stats(self, x: NDArray[np.float32]) -> List[float]:
+    def _calc_gamma_stats(self, x: NDArray[np.float32]) -> list[float]:
         """Calculate gamma statistics for streamflow and precipitation data.
         
         Parameters
@@ -409,7 +409,7 @@ class HydroLoader(BaseLoader):
         
         Returns
         -------
-        List[float]
+        list[float]
             List of statistics [10th percentile, 90th percentile, mean, std].
         """
         a = np.swapaxes(x, 1, 0).flatten()
@@ -473,7 +473,7 @@ class HydroLoader(BaseLoader):
         )
 
         # Remove nans
-        x_nn_norm[x_nn_norm != x_nn_norm] = 0    
+        x_nn_norm[x_nn_norm != x_nn_norm] = 0
         c_nn_norm[c_nn_norm != c_nn_norm] = 0
 
         c_nn_norm = np.repeat(
@@ -490,7 +490,7 @@ class HydroLoader(BaseLoader):
     def _to_norm(
         self,
         data: NDArray[np.float32],
-        vars: List[str],
+        vars: list[str],
     ) -> NDArray[np.float32]:
         """Standard data normalization.
         
@@ -532,7 +532,7 @@ class HydroLoader(BaseLoader):
     def _from_norm(
         self,
         data_scaled: NDArray[np.float32],
-        vars: List[str],
+        vars: list[str],
     ) -> NDArray[np.float32]:
         """De-normalize data.
         

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Optional
+from typing import Optional
 
 import torch
 from numpy.typing import NDArray
@@ -23,7 +23,6 @@ class BaseLoader(Dataset, ABC):
     """
     def __init__(
         self,
-        # config: Dict[str, Any],
         test_split: Optional[bool] = False,
         overwrite: Optional[bool] = False,
     ) -> None:
@@ -33,13 +32,13 @@ class BaseLoader(Dataset, ABC):
 
     @abstractmethod
     def load_dataset(self) -> None:
-        """Load dataset into dictionary of input arrays."""    
+        """Load dataset into dictionary of input arrays."""
         if self.test_split:
             try:
-                train_range = self.config['train_t_range'] 
+                train_range = self.config['train_t_range']
                 test_range = self.config['test_t_range']
-            except KeyError:
-                raise KeyError("Missing train or test time range in configuration.")
+            except KeyError as e:
+                raise KeyError("Missing train or test time range in configuration.") from e
 
             self.train_dataset = self._preprocess_data(train_range)
             self.test_dataset = self._preprocess_data(test_range)
@@ -47,7 +46,7 @@ class BaseLoader(Dataset, ABC):
             self.dataset = self._preprocess_data(self.config['t_range'])
 
     @abstractmethod
-    def _preprocess_data(self, t_range: Dict[str, str]) -> Dict[str, torch.Tensor]:
+    def _preprocess_data(self, t_range: dict[str, str]) -> dict[str, torch.Tensor]:
         """Read, preprocess, and return data as dictionary of torch tensors."""
         pass
 

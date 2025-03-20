@@ -1,9 +1,11 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import torch
 
+from dMG.models.criterion.base import BaseCriterion
 
-class RmseCombLoss(torch.nn.Module):
+
+class RmseCombLoss(BaseCriterion):
     """Combination root mean squared error (RMSE) loss function.
 
     This loss combines the RMSE of the target variable with the RMSE of
@@ -34,11 +36,11 @@ class RmseCombLoss(torch.nn.Module):
     """
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         device: Optional[str] = 'cpu',
         **kwargs: float,
     ) -> None:
-        super().__init__()
+        super().__init__(config, device)
         self.name = 'Combination RMSE Loss'
         self.config = config
         self.device = device
@@ -68,11 +70,10 @@ class RmseCombLoss(torch.nn.Module):
         torch.Tensor
             The combined loss.
         """
-        prediction = y_pred.squeeze()
-        target = y_obs[:, :, 0]
+        prediction, target = self._format(y_pred, y_obs)
 
         if len(target) > 0:
-            # Mask where observations are valid (not NaN).            
+            # Mask where observations are valid (not NaN).
             mask = ~torch.isnan(target)
             p_sub = prediction[mask]
             t_sub = target[mask]

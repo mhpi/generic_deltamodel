@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional
 
 import torch
 
@@ -68,13 +68,13 @@ class LstmMlpModel(torch.nn.Module):
         self,
         z1: torch.Tensor,
         z2: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward pass.
 
         Parameters
         ----------
         z1
-            The LSTM input tensor. 
+            The LSTM input tensor.
         z2
             The MLP input tensor.
         

@@ -2,14 +2,9 @@ from dMG._version import __version__
 from dMG.core import post
 from dMG.core.calc.metrics import Metrics
 from dMG.core.data import loaders, samplers
-from dMG.core.utils.factory import (
-    import_data_loader,
-    import_data_sampler,
-    import_phy_model,
-    import_trainer,
-    load_loss_func,
-    load_nn_model,
-)
+from dMG.core.utils.factory import (import_data_loader, import_data_sampler,
+                                    import_phy_model, import_trainer,
+                                    load_loss_func, load_nn_model)
 from dMG.core.utils.path import PathBuilder
 from dMG.models import criterion, neural_networks, phy_models
 from dMG.models.differentiable_model import DeltaModel

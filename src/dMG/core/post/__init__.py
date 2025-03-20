@@ -1,8 +1,5 @@
-from typing import Dict
-
-
 def print_metrics(
-    metrics: Dict[str, Dict[str, float]],
+    metrics: dict[str, dict[str, float]],
     metric_names: str,
     mode: str = 'median',
     precision: int = 3
@@ -13,13 +10,13 @@ def print_metrics(
 
     Parameters
     ----------
-    metrics : dict
+    metrics
         Dictionary containing the metrics data.
-    metric_names : list
+    metric_names
         List of metric names to process.
-    mode : str, optional
+    mode
         Either "median" or "mean_std". Defaults to "median".
-    precision : int, optional
+    precision
         Number of significant digits after the decimal point. Defaults to 3.
     """
     if mode not in ["median", "mean_std"]:
@@ -54,7 +51,7 @@ def format_resample_interval(resample: str) -> str:
     
     Parameters
     ----------
-    resample: str
+    resample
         The resampling interval (e.g., 'D', 'W', '3D', 'M', 'Y').
 
     Returns

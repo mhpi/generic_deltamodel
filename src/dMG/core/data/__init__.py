@@ -1,7 +1,7 @@
 import datetime as dt
 import json
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -11,7 +11,8 @@ from numpy.typing import NDArray
 log = logging.getLogger(__name__)
 
 
-def intersect(tLst1: List[np.float32], tLst2: List[np.float32]) -> List[int]:
+def intersect(tLst1: list[np.float32], tLst2: list[np.float32]) -> list[int]:
+    """Find the intersection of two lists."""
     C, ind1, ind2 = np.intersect1d(tLst1, tLst2, return_indices=True)
     return ind2
 
@@ -23,10 +24,15 @@ def time_to_date(t: int, hr: bool = False) -> Union[dt.date, dt.datetime]:
     
     Parameters
     ----------
-    t : int, datetime, date
+    t
         Time object to convert.
-    hr : bool
+    hr
         If True, return datetime object.
+    
+    Returns
+    -------
+    Union[dt.date, dt.datetime]
+        The converted date or datetime object.
     """
     tOut = None
 
@@ -49,19 +55,54 @@ def time_to_date(t: int, hr: bool = False) -> Union[dt.date, dt.datetime]:
     return tOut
 
 
-def trange_to_array(tRange, *, step=np.timedelta64(1, "D")):
-    sd = time_to_date(tRange[0])
-    ed = time_to_date(tRange[1])
-    tArray = np.arange(sd, ed, step)
-    return tArray
+def trange_to_array(
+    t_range: NDArray[np.float32],
+    *,
+    step=np.timedelta64(1, "D")
+) -> NDArray[np.float32]:
+    """Convert time range to array of dates.
+    
+    Parameters
+    ----------
+    t_range
+        Time range to convert.
+    step
+        Step size for the array.
+    
+    Returns
+    -------
+    NDArray[np.float32]
+        Array of dates.
+    """
+    sd = time_to_date(t_range[0])
+    ed = time_to_date(t_range[1])
+    return np.arange(sd, ed, step)
 
 
 def random_index(
     ngrid: int,
     nt: int,
-    dim_subset: Tuple[int, int],
+    dim_subset: tuple[int, int],
     warm_up: int = 0
-) -> Tuple[NDArray[np.float32], NDArray[np.float32]]:
+) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
+    """Generate random indices for grid and time.
+    
+    Parameters
+    ----------
+    ngrid
+        Number of grid points.
+    nt
+        Number of time steps.
+    dim_subset
+        Tuple of batch size and rho.
+    warm_up
+        Number of warm-up time steps.
+    
+    Returns
+    -------
+    tuple[NDArray[np.float32], NDArray[np.float32]]
+        Random grid and time indices.
+    """
     batch_size, rho = dim_subset
     i_grid = np.random.randint(0, ngrid, size=batch_size)
     i_t = np.random.randint(0 + warm_up, nt - rho, size=batch_size)
@@ -70,23 +111,23 @@ def random_index(
 
 def create_training_grid(
     x: NDArray[np.float32],
-    config: Dict[str, Any],
+    config: dict[str, Any],
     n_samples: int = None,
-) -> Tuple[int, int, int]:
+) -> tuple[int, int, int]:
     """Define a training grid of samples x iterations per epoch x time.
 
     Parameters
     ----------
-    x : NDArray[np.float32]
+    x
         The input data for a model.
-    config : dict
-        The configuration dictionary.
-    n_samples : int, optional
+    config
+        Configuration dictionary.
+    n_samples
         The number of samples to use in the training grid.
     
     Returns
     -------
-    Tuple[int, int, int]
+    tuple[int, int, int]
         The number of samples, the number of iterations per epoch, and the
         number of timesteps.
     """
@@ -111,7 +152,7 @@ def create_training_grid(
 
 
 def select_subset(
-    config: Dict,
+    config: dict,
     x: NDArray[np.float32],
     i_grid: NDArray[np.float32],
     i_t: NDArray[np.float32],
@@ -122,8 +163,33 @@ def select_subset(
     has_grad: bool = False,
     warm_up: int = 0,
 ) -> torch.Tensor:
-    """
-    Select a subset of input array.
+    """Select a subset of input array.
+
+    Parameters
+    ----------
+    config
+        Configuration dictionary.
+    x
+        Input data.
+    i_grid
+        Grid indices.
+    i_t
+        Time indices.
+    rho
+        Number of time steps.
+    c
+        Optional static data.
+    tuple_out
+        If True, return a tuple of tensors.
+    has_grad
+        If True, create tensors with gradient tracking.
+    warm_up
+        Number of warm-up time steps.
+    
+    Returns
+    -------
+    torch.Tensor
+        The selected subset of the input array.
     """
     nx = x.shape[-1]
     nt = x.shape[0]
@@ -164,17 +230,22 @@ def select_subset(
 
 
 def numpy_to_torch_dict(
-    data_dict: Dict[str, NDArray[np.float32]],
+    data_dict: dict[str, NDArray[np.float32]],
     device: str,
-) -> Dict[str, torch.Tensor]:
+) -> dict[str, torch.Tensor]:
     """Convert numpy data dictionary to torch tensor dictionary.
 
     Parameters
     ----------
-    data_dict : Dict[str, NDArray[np.float32]]
+    data_dict
         The numpy data dictionary.
-    device : str
+    device
         The device to move the data to.
+    
+    Returns
+    -------
+    dict[str, torch.Tensor]
+        The torch tensor dictionary.
     """
     for key, value in data_dict.items():
         if type(value) is torch.Tensor:
@@ -186,26 +257,26 @@ def numpy_to_torch_dict(
     return data_dict
 
 
-def load_json(file_path: str) -> Dict:
+def load_json(file_path: str) -> dict:
     """Load JSON data from a file and return it as a dictionary.
     
     Parameters
     ----------
-    file_path : str
+    file_path
         Path to the JSON file to load.
     
     Returns
     -------
     dict
         Dictionary containing the JSON data.
-    """   
+    """
     try:
-        with open(file_path, 'r') as file:
+        with open(file_path) as file:
             data = json.load(file)
 
             if isinstance(data, str):
                 # If json is still a string, decode again.
-                return json.loads(data) 
+                return json.loads(data)
             return data
     except FileNotFoundError:
         print(f"Error: File '{file_path}' not found.")
@@ -215,9 +286,20 @@ def load_json(file_path: str) -> Dict:
         return None
 
 
-def txt_to_array(txt_path: str):
-    """Load txt file of gage ids to numpy array."""
-    with open(txt_path, 'r') as f:
+def txt_to_array(txt_path: str) -> NDArray[np.float32]:
+    """Load txt file of gage ids to numpy array.
+    
+    Parameters
+    ----------
+    txt_path
+        Path to the txt file to load.
+    
+    Returns
+    -------
+    NDArray[np.float32]
+        Array of txt values converted to int.
+    """
+    with open(txt_path) as f:
         lines = f.read().strip()  # Remove extra whitespace
         lines = lines.replace("[", "").replace("]", "")  # Remove brackets
     return np.array([int(x) for x in lines.split(",")])
@@ -233,11 +315,11 @@ def timestep_resample(
 
     Parameters
     ----------
-    data : Union[pd.DataFrame, NDArray[np.float32]]
+    data
         The data to resample.
-    resolution : str
+    resolution
         The resolution to resample the data to. Default is 'M' (monthly).
-    method : str
+    method
         The resampling method. Default is 'mean'.
 
     Returns

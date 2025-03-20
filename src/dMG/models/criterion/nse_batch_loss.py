@@ -1,10 +1,12 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import torch
 
+from dMG.models.criterion.base import BaseCriterion
 
-class NseBatchLoss(torch.nn.Module):
+
+class NseBatchLoss(BaseCriterion):
     """Normalized squared error (NSE) loss function.
 
     Same as Fredrick 2019, batch NSE loss.
@@ -32,11 +34,11 @@ class NseBatchLoss(torch.nn.Module):
     """
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         device: Optional[str] = 'cpu',
         **kwargs: Union[torch.Tensor, float]
     ) -> None:
-        super().__init__()
+        super().__init__(config, device)
         self.name = 'Batch NSE Loss'
         self.config = config
         self.device = device
@@ -44,8 +46,8 @@ class NseBatchLoss(torch.nn.Module):
         try:
             y_obs = kwargs['y_obs']
             self.std = np.nanstd(y_obs[:, :, 0].cpu().detach().numpy(), axis=0)
-        except KeyError:
-            raise KeyError("'y_obs' is not provided in kwargs")
+        except KeyError as e:
+            raise KeyError("'y_obs' is not provided in kwargs") from e
         
         self.eps = kwargs.get('eps', config.get('eps', 0.1))
 
@@ -73,13 +75,12 @@ class NseBatchLoss(torch.nn.Module):
         torch.Tensor
             The loss value.
         """
-        prediction = y_pred.squeeze()
-        target = y_obs[:, :, 0]
+        prediction, target = self._format(y_pred, y_obs)
 
         try:
             sample_ids = kwargs['sample_ids'].astype(int)
-        except KeyError:
-            raise KeyError("'sample_ids' is not provided in kwargs")
+        except KeyError as e:
+            raise KeyError("'sample_ids' is not provided in kwargs") from e
 
         if len(target) > 0:
             # Prepare grid-based standard deviations for normalization.
@@ -91,7 +92,7 @@ class NseBatchLoss(torch.nn.Module):
                 device=self.device,
             )
 
-            # Mask where observations are valid (not NaN).            
+            # Mask where observations are valid (not NaN).
             mask = ~torch.isnan(target)
             p_sub = prediction[mask]
             t_sub = target[mask]

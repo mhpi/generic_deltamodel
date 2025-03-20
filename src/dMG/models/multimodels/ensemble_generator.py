@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import torch
 
@@ -27,8 +27,8 @@ class EnsembleGenerator(torch.nn.Module):
     """
     def __init__(
         self,
-        model_list: List[str],
-        config: Dict[str, Any],
+        model_list: list[str],
+        config: dict[str, Any],
         nn_model: torch.nn.Module = None,
         device: Optional[torch.device] = None
     ) -> None:
@@ -66,9 +66,9 @@ class EnsembleGenerator(torch.nn.Module):
 
     def forward(
         self,
-        dataset_dict: Dict[str, torch.Tensor],
-        predictions: Dict[str, torch.Tensor],
-    ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
+        dataset_dict: dict[str, torch.Tensor],
+        predictions: dict[str, torch.Tensor],
+    ) -> tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
         """Forward pass for the model.
         
         Generate ensemble weights and ensemble model predictions.
@@ -85,7 +85,6 @@ class EnsembleGenerator(torch.nn.Module):
         ensemble_predictions
             Dictionary of ensemble predictions and model weights.
         """
-
         if not self.config['mosaic']:
             # Ensure input data is in the correct format and device.
             # dataset_dict = numpy_to_torch_dict(dataset_dict, device=self.device)
@@ -140,7 +139,7 @@ class EnsembleGenerator(torch.nn.Module):
             shared_keys = find_shared_keys(*predictions_list)
             
             for key in shared_keys:
-                predictions_tensor = torch.stack([predictions[model][key].squeeze() for model in self.model_list], dim=0)  
+                predictions_tensor = torch.stack([predictions[model][key].squeeze() for model in self.model_list], dim=0)
                 # Shape: [num_models, num_timesteps, num_basins]
 
                 if predictions_tensor.ndim == 2:

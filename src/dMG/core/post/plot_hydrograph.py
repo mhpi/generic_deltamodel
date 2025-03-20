@@ -106,7 +106,7 @@ def plot_hydrograph(
             frameon=True,
         )
 
-    plt.xticks(rotation=45)    
+    plt.xticks(rotation=45)
 
     ax = plt.gca()  # Get the current axis
 

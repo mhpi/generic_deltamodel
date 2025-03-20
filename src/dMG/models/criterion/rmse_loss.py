@@ -1,9 +1,11 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import torch
 
+from dMG.models.criterion.base import BaseCriterion
 
-class RmseLoss(torch.nn.Module):
+
+class RmseLoss(BaseCriterion):
     """Root mean squared error (RMSE) loss function.
 
     The RMSE is calculated as:
@@ -26,11 +28,11 @@ class RmseLoss(torch.nn.Module):
     """
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         device: Optional[str] = 'cpu',
         **kwargs: float,
     ) -> None:
-        super().__init__()
+        super().__init__(config, device)
         self.name = 'RMSE Loss'
         self.config = config
         self.device = device
@@ -60,14 +62,13 @@ class RmseLoss(torch.nn.Module):
         torch.Tensor
             The combined loss.
         """
-        prediction = y_pred.squeeze()
-        target = y_obs[:, :, 0]
+        prediction, target = self._format(y_pred, y_obs)
 
         if len(target) > 0:
-            # Mask where observations are valid (not NaN).            
+            # Mask where observations are valid (not NaN).
             mask = ~torch.isnan(target)
             p_sub = prediction[mask]
-            t_sub = target[mask] 
+            t_sub = target[mask]
             loss = torch.sqrt(((p_sub - t_sub) ** 2).mean())
         else:
             loss = torch.tensor(0.0, device=self.device)

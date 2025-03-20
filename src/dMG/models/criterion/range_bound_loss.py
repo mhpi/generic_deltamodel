@@ -1,9 +1,11 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import torch
 
+from dMG.models.criterion.base import BaseCriterion
 
-class RangeBoundLoss(torch.nn.Module):
+
+class RangeBoundLoss(BaseCriterion):
     """Loss function that penalizes values outside of a specified range.
 
     Adapted from Tadd Bindas.
@@ -25,11 +27,11 @@ class RangeBoundLoss(torch.nn.Module):
     """
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         device: Optional[str] = 'cpu',
         **kwargs,
     ) -> None:
-        super().__init__()
+        super().__init__(config, device)
         self.name = 'Range-bound Loss'
         self.config = config
         self.device = device
@@ -64,10 +66,11 @@ class RangeBoundLoss(torch.nn.Module):
         torch.Tensor
             The range-bound loss.
         """
+        prediction, target = self._format(y_pred, y_obs)
 
         # Calculate the deviation from the bounds
-        upper_bound_loss = torch.relu(y_pred - self.ub)
-        lower_bound_loss = torch.relu(self.lb - y_pred)
+        upper_bound_loss = torch.relu(prediction - self.ub)
+        lower_bound_loss = torch.relu(self.lb - prediction)
 
         # Batch mean loss across all predictions
         loss = self.loss_factor * (upper_bound_loss + lower_bound_loss)

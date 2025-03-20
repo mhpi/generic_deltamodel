@@ -2,7 +2,7 @@ import importlib.util
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional, Type
+from typing import Any, Optional
 
 import torch
 from hydroDL2 import load_model as load_from_hydrodl
@@ -42,18 +42,18 @@ def get_dir(dir_name: str) -> Path:
 def load_component(
     class_name: str,
     directory: str,
-    base_class: Type,
-) -> Type:
+    base_class: type,
+) -> type:
     """
     Generalized loader function to dynamically import components.
 
     Parameters
     ----------
-    class_name : str
+    class_name
         The name of the class to load.
-    directory : str
+    directory
         The subdirectory where the module is located.
-    base_class : Type
+    base_class
         The expected base class type (e.g., torch.nn.Module).
 
     Returns
@@ -79,8 +79,8 @@ def load_component(
         module = importlib.util.module_from_spec(spec)
         sys.modules[class_name] = module  # Add to sys.modules
         spec.loader.exec_module(module)
-    except FileNotFoundError:
-        raise ImportError(f"Component '{class_name}' not found in '{source}'.")
+    except FileNotFoundError as e:
+        raise ImportError(f"Component '{class_name}' not found in '{source}'.") from e
 
     # Confirm class is in the module and matches the base class.
     if hasattr(module, class_name):
@@ -91,11 +91,11 @@ def load_component(
     raise ImportError(f"Class '{class_name}' not found in module '{os.path.relpath(source)}' or does not subclass '{base_class.__name__}'.")
 
 
-def import_phy_model(model: str, ver_name: str = None) -> Type:
+def import_phy_model(model: str, ver_name: str = None) -> type:
     """Loads a physical model, either from HydroDL2 (hydrology) or locally."""
     try:
         return load_from_hydrodl(model, ver_name)
-    except Exception:
+    except ImportError:
         return load_component(
             model,  # Pass model as name directly
             phy_model_dir,
@@ -103,7 +103,7 @@ def import_phy_model(model: str, ver_name: str = None) -> Type:
         )
 
 
-def import_data_loader(name: str) -> Type:
+def import_data_loader(name: str) -> type:
     """Loads a data loader dynamically."""
     return load_component(
         name,
@@ -112,7 +112,7 @@ def import_data_loader(name: str) -> Type:
     )
 
 
-def import_data_sampler(name: str) -> Type:
+def import_data_sampler(name: str) -> type:
     """Loads a data sampler dynamically."""
     return load_component(
         name,
@@ -121,7 +121,7 @@ def import_data_sampler(name: str) -> Type:
     )
 
 
-def import_trainer(name: str) -> Type:
+def import_trainer(name: str) -> type:
     """Loads a trainer dynamically."""
     return load_component(
         name,
@@ -132,7 +132,7 @@ def import_trainer(name: str) -> Type:
 
 def load_loss_func(
     y_obs: NDArray[np.float32],
-    config: Dict[str, Any],
+    config: dict[str, Any],
     name: Optional[str] = None,
     device: Optional[str] = 'cpu',
 ) -> torch.nn.Module:
@@ -140,14 +140,14 @@ def load_loss_func(
 
     Parameters
     ----------
-    y_obs : NDArray[np.float32]
+    y_obs
         The observed data array needed for some loss function initializations.
-    config : dict
+    config
         The configuration dictionary, including loss function specifications.
-    name : str, optional
+    name
         The name of the loss function to load. The default is None, using the
         spec named in config.
-    device : str, optional
+    device
         The device to use for the loss function object. The default is 'cpu'.
 
     Returns
@@ -169,12 +169,12 @@ def load_loss_func(
     try:
         return cls(config, device, y_obs=y_obs)
     except (ValueError, KeyError) as e:
-        raise Exception(f"'{name}': {e}")
+        raise Exception(f"'{name}': {e}") from e
 
 
 def load_nn_model(
     phy_model: torch.nn.Module,
-    config: Dict[str, Dict[str, Any]],
+    config: dict[str, dict[str, Any]],
     ensemble_list: Optional[list] = None,
     device: Optional[str] = None,
 ) -> torch.nn.Module:
@@ -183,14 +183,14 @@ def load_nn_model(
 
     Parameters
     ----------
-    phy_model : torch.nn.Module
+    phy_model
         The physics model.
-    config : dict
+    config
         The configuration dictionary.
-    ensemble_list : list, optional
+    ensemble_list
         List of models to ensemble. Default is None. This will result in a
         weighting nn being initialized.
-    device : str, optional
+    device
         The device to run the model on. Default is None.
 
     Returns
@@ -226,7 +226,7 @@ def load_nn_model(
     
     # Dynamically retrieve the model
     cls = load_component(
-        name, 
+        name,
         nn_model_dir,
         torch.nn.Module
     )

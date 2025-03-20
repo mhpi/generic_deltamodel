@@ -3,14 +3,17 @@ import torch.nn
 
 
 def createMask(x, dr):
+    """Create a dropout mask."""
     mask = x.new().resize_as_(x).bernoulli_(1 - dr).div_(1 - dr).detach_()
     # print('droprate='+str(dr))
     return mask
 
 
 class DropMask(torch.autograd.function.InplaceFunction):
+    """Dropout mask for CudnnLstm weights."""
     @classmethod
     def forward(cls, ctx, input, mask, train=False, inplace=False):
+        """Forward method."""
         ctx.train = train
         ctx.inplace = inplace
         ctx.mask = mask
@@ -30,6 +33,7 @@ class DropMask(torch.autograd.function.InplaceFunction):
 
     @staticmethod
     def backward(ctx, grad_output):
+        """Backward method."""
         if ctx.train:
             return grad_output * ctx.mask, None, None, None
         else:

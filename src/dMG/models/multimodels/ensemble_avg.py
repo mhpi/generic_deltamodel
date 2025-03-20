@@ -1,12 +1,14 @@
-from dMG.core.utils import find_shared_keys
-from typing import Dict, Any
+from typing import Any
+
 import torch
+
+from dMG.core.utils import find_shared_keys
 
 
 def model_average(
-    model_preds_dict: Dict[str, torch.Tensor],
-    config: Dict[str, Any],
-) -> Dict[str, Any]:
+    model_preds_dict: dict[str, torch.Tensor],
+    config: dict[str, Any],
+) -> dict[str, Any]:
     """
     For any number of metrics specified in the input dictionary, calculate
     composite predictions as the average of multiple models' outputs at each
@@ -19,15 +21,16 @@ def model_average(
 
     config
         Dictionary of model configuration.
+        
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         predictions dict with attributes
         'flow_sim', 'srflow', 'ssflow', 'gwflow', 'AET_hydro', 'PET_hydro',
         'flow_sim_no_rout', 'srflow_no_rout', 'ssflow_no_rout', 'gwflow_no_rout',
         'BFI_sim'
     """
-    ensemble_pred = dict()
+    ensemble_pred = {}
 
     # Get prediction shared between all models.
     mod_dicts = [model_preds_dict[mod] for mod in config['hydro_models']]
@@ -57,3 +60,4 @@ def model_average(
         ensemble_pred[key] = ensemble_pred[key] / len(config['hydro_models'])
 
     return ensemble_pred
+

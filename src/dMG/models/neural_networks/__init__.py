@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import torch
 
@@ -17,7 +17,7 @@ nn_model_dir = 'models/neural_networks'
 
 def load_nn_model(
     phy_model: torch.nn.Module,
-    config: Dict[str, Dict[str, Any]],
+    config: dict[str, dict[str, Any]],
     device: Optional[str] = None,
 ) -> torch.nn.Module:
     """
@@ -53,7 +53,7 @@ def load_nn_model(
     
     # Dynamically retrieve the model
     cls = load_component(
-        name, 
+        name,
         nn_model_dir,
         torch.nn.Module
     )

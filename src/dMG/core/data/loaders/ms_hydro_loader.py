@@ -1,11 +1,11 @@
 import json
 import logging
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
-import torch
 import numpy as np
 import pandas as pd
+import torch
 import zarr
 from numpy.typing import NDArray
 from sklearn.exceptions import DataDimensionalityWarning
@@ -35,7 +35,7 @@ class MsHydroLoader(BaseLoader):
     """
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         test_split: Optional[bool] = False,
         overwrite: Optional[bool] = False,
     ) -> None:
@@ -45,7 +45,7 @@ class MsHydroLoader(BaseLoader):
         self.overwrite = overwrite
         self.supported_data = ['merit_forward']
         self.data_name = config['observations']['name']
-        self.nn_attributes = config['dpl_model']['nn_model'].get('attributes', [])
+        self.nn_ = config['dpl_model']['nn_model'].get('attributes', [])
         self.nn_forcings = config['dpl_model']['nn_model'].get('forcings', [])
         self.phy_attributes = config['dpl_model']['phy_model'].get('attributes', [])
         self.phy_forcings = config['dpl_model']['phy_model'].get('forcings', [])
@@ -83,7 +83,7 @@ class MsHydroLoader(BaseLoader):
     def _preprocess_data(
         self,
         scope: Optional[str],
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Read data, preprocess, and return as tensors for models.
         
         Parameters
@@ -93,7 +93,7 @@ class MsHydroLoader(BaseLoader):
             
         Returns
         -------
-        Dict[str, torch.Tensor]
+        dict[str, torch.Tensor]
             Dictionary of data tensors for running models.
         """
         ac_all, elev_all, subbasin_id_all, x_nn, x_phy, c_nn = self.read_data(scope)
@@ -127,7 +127,7 @@ class MsHydroLoader(BaseLoader):
         }
         return dataset
 
-    def read_data(self, scope: Optional[str]) -> Tuple[NDArray[np.float32]]:
+    def read_data(self, scope: Optional[str]) -> tuple[NDArray[np.float32]]:
         """Read data from the data file.
                 
         Parameters
@@ -137,7 +137,7 @@ class MsHydroLoader(BaseLoader):
 
         Returns
         -------
-        Tuple[NDArray[np.float32]]
+        tuple[NDArray[np.float32]]
             Tuple of neural network + physics model inputes, and target data.
         """
         try:
@@ -146,18 +146,18 @@ class MsHydroLoader(BaseLoader):
             elif scope == 'test':
                 time = self.config['test_time']
             elif scope == 'predict':
-                time = self.config['predict_time']                
+                time = self.config['predict_time']
             elif scope == 'all':
                 time = self.config['all_time']
             else:
                 raise ValueError("Scope must be 'train', 'test', 'predict', or 'all'.")
         except KeyError as e:
-            raise ValueError(f"Key {e} for data path not in dataset config.")
+            raise ValueError(f"Key {e} for data path not in dataset config.") from e
         
         # Get time indicies
         all_time = pd.date_range(
             self.config['all_time'][0],
-            self.config['all_time'][-1], 
+            self.config['all_time'][-1],
             freq='d',
         )
         idx_start = all_time.get_loc(time[0])
@@ -177,7 +177,7 @@ class MsHydroLoader(BaseLoader):
             if forc not in self.all_forcings:
                 raise ValueError(f"Forcing {forc} not listed in available forcings.")
             if i == 0:
-                forc_array = np.expand_dims(root_zone[forc][:, idx_start:idx_end], -1) 
+                forc_array = np.expand_dims(root_zone[forc][:, idx_start:idx_end], -1)
             else:
                 forc_array = np.concatenate((
                     forc_array,
@@ -201,13 +201,13 @@ class MsHydroLoader(BaseLoader):
         try:
             ac_name = self.config['observations']['upstream_area_name']
             ac_array = root_zone['attrs'][ac_name][:]
-        except Exception:
-            raise ValueError("Upstream area is not provided. This is needed for high-resolution streamflow model.")
+        except ValueError as e:
+            raise ValueError("Upstream area is not provided. This is needed for high-resolution streamflow model.") from e
         try:
             elevation_name = self.config['observations']['elevation_name']
-            elev_array = root_zone['attrs'][elevation_name][:] 
-        except Exception:
-            raise ValueError("Elevation is not provided. This is needed for high-resolution streamflow model.")
+            elev_array = root_zone['attrs'][elevation_name][:]
+        except ValueError as e:
+            raise ValueError("Elevation is not provided. This is needed for high-resolution streamflow model.") from e
 
         return [
             ac_array,
@@ -230,7 +230,7 @@ class MsHydroLoader(BaseLoader):
 
         if os.path.isfile(self.out_path) and not self.overwrite:
             if not self.norm_stats:
-                with open(self.out_path, 'r') as f:
+                with open(self.out_path) as f:
                     self.norm_stats = json.load(f)
         else:
             # Init normalization stats if file doesn't exist or overwrite is True.
@@ -262,7 +262,7 @@ class MsHydroLoader(BaseLoader):
         c_nn_norm = self._to_norm(c_nn, self.nn_attributes)
 
         # Remove nans
-        x_nn_norm[x_nn_norm != x_nn_norm] = 0    
+        x_nn_norm[x_nn_norm != x_nn_norm] = 0
         c_nn_norm[c_nn_norm != c_nn_norm] = 0
 
         c_nn_norm_repeat = np.repeat(
@@ -279,7 +279,7 @@ class MsHydroLoader(BaseLoader):
     def _to_norm(
         self,
         data: NDArray[np.float32],
-        vars: List[str],
+        vars: list[str],
     ) -> NDArray[np.float32]:
         """Standard data normalization.
         
@@ -321,7 +321,7 @@ class MsHydroLoader(BaseLoader):
     def _from_norm(
         self,
         data_scaled: NDArray[np.float32],
-        vars: List[str],
+        vars: list[str],
     ) -> NDArray[np.float32]:
         """De-normalize data.
         

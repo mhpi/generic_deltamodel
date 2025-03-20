@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Optional
 
 import numpy as np
 import torch
@@ -8,10 +8,17 @@ from dMG.core.data.samplers.base import BaseSampler
 
 
 class MsHydroSampler(BaseSampler):
+    """Multiscale hydrological data sampler.
+    
+    Parameters
+    ----------
+    config
+        Configuration dictionary.
+    """
     def __init__(
         self,
-        config: Dict,
-    ):
+        config: dict,
+    ) -> None:
         super().__init__()
         self.config = config
         self.device = config['device']
@@ -41,19 +48,19 @@ class MsHydroSampler(BaseSampler):
 
     def get_training_sample(
         self,
-        dataset: Dict[str, NDArray[np.float32]],
+        dataset: dict[str, NDArray[np.float32]],
         ngrid_train: int,
         nt: int
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Generate a training batch."""
         raise NotImplementedError("Method not implemented. Multiscale training with sampler will be enabled at a later date.")
 
     def get_validation_sample(
         self,
-        dataset: Dict[str, torch.Tensor],
+        dataset: dict[str, torch.Tensor],
         i_s: int,
         i_e: int,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Generate batch for model forwarding only."""
         dataset_sample = {}
         for key, value in dataset.items():

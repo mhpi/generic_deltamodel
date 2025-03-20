@@ -1,9 +1,11 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import torch
 
+from dMG.models.criterion.base import BaseCriterion
 
-class MSELoss(torch.nn.Module):
+
+class MSELoss(BaseCriterion):
     """Mean Squared Error (MSE) loss function.
     
     The MSE is calculated as:
@@ -22,11 +24,11 @@ class MSELoss(torch.nn.Module):
     """
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         device: Optional[str] = 'cpu',
         **kwargs: Any,
     ) -> None:
-        super().__init__()
+        super().__init__(config, device)
         self.name = 'MSE Loss'
         self.config = config
         self.device = device
@@ -53,8 +55,8 @@ class MSELoss(torch.nn.Module):
         torch.Tensor
             The combined loss.
         """
-        prediction = y_pred.squeeze()
-        target = y_obs[:, :, 0]
+        prediction, target = self._format(y_pred, y_obs)
+
 
         if len(target) > 0:
             mask = ~torch.isnan(target)

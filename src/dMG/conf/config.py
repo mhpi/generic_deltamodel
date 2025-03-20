@@ -7,9 +7,10 @@ import os
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Union
 
-from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
+from pydantic import (BaseModel, Field, ValidationError, field_validator,
+                      model_validator)
 
 log = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ def check_path(v: str) -> Path:
 
 
 class ModeEnum(str, Enum):
+    """Enumeration for different modes of operation."""
     train = 'train'
     test = 'test'
     train_test = 'train_test'
@@ -32,14 +34,16 @@ class ModeEnum(str, Enum):
 
 
 class LossFunctionConfig(BaseModel):
+    """Configuration class for loss functions."""
     model: str = Field(..., description="The name of the loss function.")
     weight: float = Field(default=1.0, description="Weight of the loss function.")
 
 
 class TrainingConfig(BaseModel):
+    """Configuration class for training."""
     start_time: str
     end_time: str
-    target: List[str]
+    target: list[str]
     optimizer: str
     batch_size: int
     epochs: int
@@ -49,6 +53,7 @@ class TrainingConfig(BaseModel):
 
     @model_validator(mode='after')
     def validate_training_times(cls, values):
+        """Validates the training start and end times."""
         start_time = datetime.strptime(values.start_time, '%Y/%m/%d')
         end_time = datetime.strptime(values.end_time, '%Y/%m/%d')
         if start_time >= end_time:
@@ -57,13 +62,15 @@ class TrainingConfig(BaseModel):
 
     @field_validator('target')
     @classmethod
-    def validate_targets(cls, v: List[str]) -> List[str]:
+    def validate_targets(cls, v: list[str]) -> list[str]:
+        """Validates the training target."""
         if not v:
             raise ValueError("Training target cannot be empty.")
         return v
 
 
 class TestingConfig(BaseModel):
+    """Configuration class for testing."""
     start_time: str
     end_time: str
     batch_size: int
@@ -71,6 +78,7 @@ class TestingConfig(BaseModel):
 
     @model_validator(mode='after')
     def validate_testing_times(cls, values):
+        """Validates the testing start and end times."""
         start_time = datetime.strptime(values.start_time, '%Y/%m/%d')
         end_time = datetime.strptime(values.end_time, '%Y/%m/%d')
         if start_time >= end_time:
@@ -79,47 +87,53 @@ class TestingConfig(BaseModel):
 
 
 class PhyModelConfig(BaseModel):
-    model: List[str]
+    """Configuration class for the physics-based model."""
+    model: list[str]
     nmul: int
     warm_up: int
-    dynamic_params: Dict[str, List[str]]
-    forcings: List[str] = Field(default_factory=list, description="List of dynamic input variables.")
-    attributes: List[str] = Field(default_factory=list, description="List of static input variables.")
+    dynamic_params: dict[str, list[str]]
+    forcings: list[str] = Field(default_factory=list, description="List of dynamic input variables.")
+    attributes: list[str] = Field(default_factory=list, description="List of static input variables.")
 
 
 class NeuralNetworkModelConfig(BaseModel):
+    """Configuration class for the neural network model."""
     model: str = Field(..., description="The type of neural network model (e.g., LSTM).")
     dropout: float = Field(..., ge=0.0, le=1.0, description="Dropout rate.")
     hidden_size: int = Field(..., gt=0, description="Number of hidden units.")
     learning_rate: float = Field(..., gt=0, description="Learning rate.")
-    forcings: List[str] = Field(default_factory=list, description="List of dynamic input variables.")
-    attributes: List[str] = Field(default_factory=list, description="List of static input variables.")
+    forcings: list[str] = Field(default_factory=list, description="List of dynamic input variables.")
+    attributes: list[str] = Field(default_factory=list, description="List of static input variables.")
 
 
 class DPLModelConfig(BaseModel):
+    """Configuration class for the DPL model."""
     rho: int
     phy_model: PhyModelConfig
     nn_model: NeuralNetworkModelConfig
 
 
 class ObservationConfig(BaseModel):
+    """Configuration class for observations."""
     name: str = 'not_defined'
     train_path: str = 'not_defined'
     test_path: str = 'not_defined'
     start_time: str = 'not_defined'
     end_time_all: str = 'not_defined'
-    forcings_all: List[str] = Field(default_factory=list, description="List of dynamic input variables.")
-    attributes_all: List[str] = Field(default_factory=list, description="List of static input variables.")
+    forcings_all: list[str] = Field(default_factory=list, description="List of dynamic input variables.")
+    attributes_all: list[str] = Field(default_factory=list, description="List of static input variables.")
 
     @field_validator('train_path', 'test_path')
     @classmethod
     def validate_dir(cls, v: str) -> Union[Path, str]:
+        """Validates the directory paths."""
         if v == 'not_defined':
             return v
         return check_path(v)
 
     @model_validator(mode='after')
     def validate_dataset_times(cls, values):
+        """Validates the dataset start and end times."""
         if values.start_time_all == 'not_defined' and values.end_time_all == 'not_defined':
             return values
         elif values.start_time_all == 'not_defined' or values.end_time_all == 'not_defined':
@@ -132,6 +146,7 @@ class ObservationConfig(BaseModel):
             return values
 
 class Config(BaseModel):
+    """Configuration class for the model."""
     mode: ModeEnum = Field(default=ModeEnum.train_test)
     multimodel_type: str = 'none'
     random_seed: int = 0

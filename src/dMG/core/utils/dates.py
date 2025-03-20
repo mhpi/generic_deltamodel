@@ -40,7 +40,7 @@ class Dates(BaseModel):
     numerical_time_range: Optional[NDArray[np.float32]] = np.empty(0)
 
     def __init__(self, time_range, rho):
-        super(Dates, self).__init__(
+        super().__init__(
             start_time=time_range['start_time'],
             end_time=time_range['end_time'],
             rho = rho,
