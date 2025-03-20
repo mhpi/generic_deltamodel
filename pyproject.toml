@@ -29,18 +29,19 @@ dependencies = [
     "hydra-core>=1.3.2",
     "ipykernel>=6.29.5",
     "matplotlib>=3.10.0",
-    "numpy>=2.2.3",
+    "numpy>=1.22.4",
     "omegaconf>=2.3.0",
-    "pandas>=2.2.3",
-    "pydantic>=2.10.6",
-    "scikit-learn>=1.6.1",
-    "scipy>=1.15.1",
-    "torch>=2.5.0",
-    "torchaudio>=2.5.0",
-    "torchvision>=0.20.0",
+    "pandas>=1.4.3",
+    "pydantic>=1.8.2",
+    "scikit-learn>=1.0.2",
+    "scipy>=1.7.3",
+    "torch>=1.10.1",
+    "torchaudio>=0.10.1",
+    "torchvision>=0.11.2",
     "tqdm>=4.67.1",
     "uv>=0.6.6",
     "zarr>=3.0.5",
+    "https://github.com/mhpi/hydroDL2.git@master#egg=hydroDL2",
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -63,8 +64,8 @@ Repository = "https://github.com/mhpi/generic_deltaModel"
 #     "cupy-cuda12x==13.4.0",
 # ]
 dev = [
-    "mypy>=0.910",
-    "pytest>=8.3.5",
+    "mypy>=0.940",
+    "pytest>=7.4.2",
     "ruff>=0.9.10",
 ]
 
