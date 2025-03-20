@@ -57,7 +57,7 @@ class ModelHandler(torch.nn.Module):
         self._init_models()
 
         self.loss_func = None
-        self.loss_dict = {key: 0 for key in self.models}
+        self.loss_dict = dict.fromkeys(self.models, 0)
         self.target_name = config['train']['target'][0]
 
         if self.multimodel_type in ['nn_parallel']:
