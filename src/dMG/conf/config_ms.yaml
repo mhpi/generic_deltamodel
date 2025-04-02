@@ -8,15 +8,15 @@ defaults:
 mode: predict  # train, test, train_test, predict
 multimodel_type: none
 random_seed: 111111
-device: cpu
-gpu_id: 1
+device: cuda
+gpu_id: 5
 
 data_loader: MsHydroLoader
 data_sampler: MsHydroSampler
 trainer: MsTrainer
 
-save_path: ../../results
-trained_model: /projects/mhpi/lglonz/project_silmaril/generic_deltaModel/results/merit_forward_zone/train1980-1995/no_multi/LSTMMLP_E100_R365_B100_H64_n4_noLn_WU_111111/HBV_2_0/RmseLossComb/3dyn/parBETA_parK0_parBETAET/dHBV_2_0_Ep100.pt
+save_path: results
+trained_model: '' #/projects/mhpi/leoglonz/project_silmaril/dMG/results/merit_forward/train1980-1995/no_multi/LstmMlpModel_E100_R365_B100_H64_4096_n4_noLn_WU_111111/HBV_2_0/RmseCombLoss/3dyn/parBETA_parK0_parBETAET/dHBV_2_0_Ep100_original.pt
 
 
 ## Training ------------------------------#
@@ -44,7 +44,7 @@ test:
 ## Inference -------------------------------#
 predict:
     start_time: 1980/01/01
-    end_time: 2020/12/31
+    end_time: 1985/12/31
     batch_size: 200
 
 
@@ -59,13 +59,13 @@ dpl_model:
     
     phy_model:
         model: [HBV_2_0]  # HBV, HBV_1_1p, HBV_adj
-        nmul: 4
+        nmul: 2
         warm_up: 0
         warm_up_states: True
         dy_drop: 0.0
         dynamic_params:
             HBV: [parBETA, parBETAET]
-            HBV_adj: [parBETA,parFC, parBETAET]
+            HBV_adj: [parBETA, parFC, parBETAET]
             HBV_1_1p: [parBETA, parK0, parBETAET]
             HBV_2_0: [parBETA, parK0, parBETAET]
 

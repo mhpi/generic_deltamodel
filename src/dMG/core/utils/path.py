@@ -27,6 +27,7 @@ class PathBuilder(BaseModel):
     phy_model_inputs: str = ''
     train_period: str = ''
     test_period: str = ''
+    predict_period: str = ''
     multimodel_state: str = ''
     model_names: str = ''
     dynamic_parameters: str = ''
@@ -49,6 +50,7 @@ class PathBuilder(BaseModel):
 
         self.train_period = self._train_period(self.config, abbreviate=False)
         self.test_period = self._test_period(self.config, abbreviate=False)
+        self.predict_period = self._predict_period(self.config, abbreviate=False)
 
         self.multimodel_state = self._multimodel_state(self.config)
 
@@ -97,16 +99,21 @@ class PathBuilder(BaseModel):
         str
             Path to the output directory.
         """
-        if model_path:
+        if not model_path:
+            model_path = self.build_path_model()
+        
+        if 'test' in self.config['mode']:
             return os.path.join(
                 model_path,
                 self.test_period,
             )
-        else:
+        elif self.config['mode'] == 'predict':
             return os.path.join(
-                self.build_path_model(),
-                self.test_period,
+                model_path,
+                self.predict_period,
             )
+        else:
+            raise ValueError(f"Invalid mode: {self.config['mode']}")
 
     def write_path (self, config: dict[str, Any]) -> dict:
         """Create directory where model and outputs will be saved.
@@ -244,6 +251,26 @@ class PathBuilder(BaseModel):
         else:
             return f"test{start}-{end}" + test_epoch
 
+    @staticmethod
+    def _predict_period(config: dict[str, Any], abbreviate: bool = False) -> str:
+        """Prediction period for an experiment.
+
+        Format is 'testYYYY-YYYY' or 'testYY-YY' if abbreviate.
+        """
+        start = config['predict']['start_time'][:4]
+        end = config['predict']['end_time'][:4]
+        test_epoch = config['test'].get('test_epoch', '')
+
+        if test_epoch:
+            test_epoch = f"_Ep{test_epoch}"
+        else:
+            test_epoch = ''
+
+        if abbreviate:
+            return f"predict{start[-2:]}-{end[-2:]}" + test_epoch
+        else:
+            return f"predict{start}-{end}" + test_epoch
+        
     @staticmethod
     def _multimodel_state(config: dict[str, Any]) -> str:
         """Name multimodel state for an experiment."""
