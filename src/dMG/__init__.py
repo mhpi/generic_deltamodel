@@ -1,5 +1,5 @@
 from dMG._version import __version__
-from dMG.core import post
+from dMG.core import post, utils
 from dMG.core.calc.metrics import Metrics
 from dMG.core.data import loaders, samplers
 from dMG.core.utils.factory import (import_data_loader, import_data_sampler,
@@ -21,6 +21,7 @@ __all__ = [
     'loaders',
     'samplers',
     'post',
+    'utils',
     'PathBuilder',
     'import_phy_model',
     'import_data_loader',

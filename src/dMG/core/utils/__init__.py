@@ -51,12 +51,12 @@ def set_system_spec(config: dict) -> tuple[str, str]:
     return str(device), str(dtype)
 
 
-def set_randomseed(seed=0) -> None:
+def set_randomseed(seed: int = 0) -> None:
     """Fix random seeds for reproducibility.
 
     Parameters
     ----------
-    seed : int, optional
+    seed
         Random seed to set. If None, a random seed is used. Default is 0.
     """
     if seed is None:
@@ -78,7 +78,7 @@ def set_randomseed(seed=0) -> None:
         log.warning(f"Error fixing randomseed: {e}")
 
 
-def initialize_config(config: Union[DictConfig, dict]) -> dict[str, Any]:
+def initialize_config(config: Union[DictConfig, dict], write_path=False) -> dict[str, Any]:
     """Parse and initialize configuration settings.
     
     Parameters
@@ -137,11 +137,13 @@ def initialize_config(config: Union[DictConfig, dict]) -> dict[str, Any]:
         config['trained_model'] = ''
 
     # Create output directories and add path to config.
-    out_path = PathBuilder(config)
-    config = out_path.write_path(config)
+    if write_path:
+        out_path = PathBuilder(config)
+        config = out_path.write_path(config)
 
     # Convert string back to data type.
     config['dtype'] = eval(config['dtype'])
+    config['dpl_model']['phy_model']['nearzero'] = eval(config['dpl_model']['phy_model']['nearzero'])
 
     return config
 

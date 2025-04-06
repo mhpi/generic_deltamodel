@@ -39,7 +39,7 @@ def main(config: DictConfig) -> None:
         start_time = time.perf_counter()
 
         ### Initializations ###
-        config = initialize_config(config)
+        config = initialize_config(config, write_path=True)
         set_randomseed(config['random_seed'])
 
         log.info(f"Running mode: {config['mode']}")
