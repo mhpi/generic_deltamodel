@@ -40,7 +40,7 @@ def set_system_spec(config: dict) -> tuple[str, str]:
     elif config['device'] == 'cuda':
         # Set the first device as the active device.
         if torch.cuda.is_available() and config['gpu_id'] < torch.cuda.device_count():
-            device = torch.device(f'cuda:{config['gpu_id']}')
+            device = torch.device(f"cuda:{config['gpu_id']}")
             torch.cuda.set_device(device)
         else:
             raise ValueError(f"Selected CUDA device {config['gpu_id']} is not available.")
