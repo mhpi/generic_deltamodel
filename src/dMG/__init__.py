@@ -15,7 +15,7 @@ from dMG.trainers.trainer import Trainer
 
 from dMG.core.data.loaders.hydro_loader import HydroLoader
 from dMG.core.data.samplers.hydro_sampler import HydroSampler
-from dMG.core.utils import print_config
+from dMG.core.utils import print_config, save_model
 from dMG.core.data import create_training_grid, load_json,txt_to_array
 from dMG.core.post import print_metrics
 from dMG.core.post.plot_cdf import plot_cdf
@@ -58,4 +58,5 @@ __all__ = [
     'geoplot_single_metric',
     'plot_hydrograph',
     'Dates',
+    'save_model',
 ]
