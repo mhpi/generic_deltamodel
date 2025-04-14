@@ -13,6 +13,17 @@ from dMG.trainers.base import BaseTrainer
 from dMG.trainers.ms_trainer import MsTrainer
 from dMG.trainers.trainer import Trainer
 
+from dMG.core.data.loaders.hydro_loader import HydroLoader
+from dMG.core.data.samplers.hydro_sampler import HydroSampler
+from dMG.core.utils import print_config
+from dMG.core.data import create_training_grid, load_json,txt_to_array
+from dMG.core.post import print_metrics
+from dMG.core.post.plot_cdf import plot_cdf
+from dMG.core.post.plot_geo import geoplot_single_metric
+from dMG.core.post.plot_hydrograph import plot_hydrograph
+from dMG.core.utils.dates import Dates
+
+
 # In case setuptools scm says version is 0.0.0
 assert not __version__.startswith('0.0.0')
 
@@ -36,4 +47,15 @@ __all__ = [
     'BaseTrainer',
     'Trainer',
     'MsTrainer',
+    'HydroLoader',
+    'HydroSampler',
+    'print_config',
+    'create_training_grid',
+    'load_json',
+    'txt_to_array',
+    'print_metrics',
+    'plot_cdf',
+    'geoplot_single_metric',
+    'plot_hydrograph',
+    'Dates',
 ]
