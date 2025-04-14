@@ -177,7 +177,10 @@ predictions = self.phy_model(
 )
 ```
 
-See [examples](https://github.com/mhpi/generic_deltaModel/blob/master/example/differentiable_hydrology/dhbv_tutorial.ipynb) in the `generic_deltaModel` repository for this and other tutorials.
+See [examples](https://github.com/mhpi/generic_deltaModel/tree/master/example/hydrology) for this and other tutorials.
+
+See [here](https://colab.research.google.com/drive/19PRLrI-L7cGeYzkk2tOetULzQK8s_W7v#scrollTo=UAGUBIMMJtOO) for an interactive Colab Notebook for a dHBV 1.0 example.
+
 
 Note, the [Config GUI](https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/config_builder_gui/Config+Builder+GUI.zip) can be used to create/edit additional config files for use with these examples (see [usage instructions](https://github.com/mhpi/GUI-Config-builder/blob/main/README.md))
 
