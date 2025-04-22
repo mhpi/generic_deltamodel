@@ -25,7 +25,7 @@ loader_dir = 'core/data/loaders'
 sampler_dir = 'core/data/samplers'
 trainer_dir = 'trainers'
 loss_func_dir = 'models/criterion'
-phy_model_dir = 'models/physics_models'
+phy_model_dir = 'models/phy_models'
 nn_model_dir = 'models/neural_networks'
 #------------------------------------------#
 

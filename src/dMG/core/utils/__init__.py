@@ -143,7 +143,7 @@ def initialize_config(config: Union[DictConfig, dict], write_path=False) -> dict
 
     # Convert string back to data type.
     config['dtype'] = eval(config['dtype'])
-    config['dpl_model']['phy_model']['nearzero'] = eval(config['dpl_model']['phy_model']['nearzero'])
+    config['dpl_model']['phy_model']['nearzero'] = eval(str(config['dpl_model']['phy_model']['nearzero']))
 
     return config
 
