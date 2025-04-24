@@ -6,9 +6,8 @@ import pandas as pd
 import torch
 from numpy.typing import NDArray
 
-from dMG.core.data import timestep_resample
-
-from . import format_resample_interval
+from dMG.core.data.data import timestep_resample
+from dMG.core.utils.utils import format_resample_interval
 
 
 def plot_hydrograph(

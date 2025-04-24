@@ -6,8 +6,8 @@ import torch
 import tqdm
 from numpy.typing import NDArray
 
-from dMG.core.utils import save_outputs
 from dMG.core.utils.factory import import_data_sampler
+from dMG.core.utils.utils import save_outputs
 from dMG.models.model_handler import ModelHandler
 from dMG.trainers.base import BaseTrainer
 

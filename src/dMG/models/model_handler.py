@@ -7,7 +7,7 @@ import tqdm
 
 from dMG.core.utils import save_model
 from dMG.models.criterion.range_bound_loss import RangeBoundLoss
-from dMG.models.differentiable_model import DeltaModel
+from dMG.models.deltamodel.dpl_model import DplModel
 from dMG.models.multimodels.ensemble_generator import EnsembleGenerator
 
 log = logging.getLogger(__name__)
@@ -121,8 +121,9 @@ class ModelHandler(torch.nn.Module):
                     device=self.device
                 )
             else:
-                # Differentiable model
-                self.model_dict[name] = DeltaModel(
+                # Differentiable model (dPL modality)
+                # TODO: make dynamic import for other modalities.
+                self.model_dict[name] = DplModel(
                     phy_model_name=name,
                     config=self.config['dpl_model'],
                     device=self.device
@@ -135,7 +136,9 @@ class ModelHandler(torch.nn.Module):
                 continue
             else:
                 # Initialize model from checkpoint state dict.
-                path = os.path.join(self.model_path, f"d{name}_Ep{epoch}.pt")
+                path = self.model_path
+                if f"d{name}_Ep" not in path:
+                    path = os.path.join(path, f"d{name}_Ep{epoch}.pt")
                 if not os.path.exists(path):
                     raise FileNotFoundError(
                         f"{path} not found for model {name}."

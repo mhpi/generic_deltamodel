@@ -8,11 +8,7 @@ import torch
 from hydroDL2 import load_model as load_from_hydrodl
 from numpy.typing import NDArray
 
-from dMG.core.data.loaders.base import BaseLoader
-from dMG.core.data.samplers.base import BaseSampler
-from dMG.trainers.base import BaseTrainer
-
-from . import camel_to_snake
+from dMG.core.utils.utils import camel_to_snake
 
 sys.path.append('../dMG/')  # for tutorials
 
@@ -25,7 +21,7 @@ loader_dir = 'core/data/loaders'
 sampler_dir = 'core/data/samplers'
 trainer_dir = 'trainers'
 loss_func_dir = 'models/criterion'
-phy_model_dir = 'models/physics_models'
+phy_model_dir = 'models/phy_models'
 nn_model_dir = 'models/neural_networks'
 #------------------------------------------#
 
@@ -105,6 +101,7 @@ def import_phy_model(model: str, ver_name: str = None) -> type:
 
 def import_data_loader(name: str) -> type:
     """Loads a data loader dynamically."""
+    from dMG.core.data.loaders.base import BaseLoader
     return load_component(
         name,
         loader_dir,
@@ -114,6 +111,7 @@ def import_data_loader(name: str) -> type:
 
 def import_data_sampler(name: str) -> type:
     """Loads a data sampler dynamically."""
+    from dMG.core.data.samplers.base import BaseSampler
     return load_component(
         name,
         sampler_dir,
@@ -123,6 +121,7 @@ def import_data_sampler(name: str) -> type:
 
 def import_trainer(name: str) -> type:
     """Loads a trainer dynamically."""
+    from dMG.trainers.base import BaseTrainer
     return load_component(
         name,
         trainer_dir,

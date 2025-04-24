@@ -2,7 +2,7 @@ from typing import Any
 
 import torch
 
-from dMG.core.utils import find_shared_keys
+from dMG.core.utils.utils import find_shared_keys
 
 
 def model_average(

@@ -10,7 +10,7 @@ import torch
 from numpy.typing import NDArray
 from sklearn.exceptions import DataDimensionalityWarning
 
-from dMG.core.data import intersect
+from dMG.core.data.data import intersect
 from dMG.core.data.loaders.base import BaseLoader
 
 log = logging.getLogger(__name__)

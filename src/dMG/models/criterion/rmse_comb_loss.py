@@ -79,15 +79,12 @@ class RmseCombLoss(BaseCriterion):
             t_sub = target[mask]
             
             # RMSE
-            p_sub1 = torch.log10(torch.sqrt(prediction + self.beta) + 0.1)
-            t_sub1 = torch.log10(torch.sqrt(target + self.beta) + 0.1)
-            loss1 = torch.sqrt(((p_sub - t_sub) ** 2).mean())  # RMSE item
+            loss1 = torch.sqrt(((p_sub - t_sub) ** 2).mean())
 
             # Log-Sqrt RMSE
-            mask2 = ~torch.isnan(t_sub1)
-            p_sub2 = p_sub1[mask2]
-            t_sub2 = t_sub1[mask2]
-            loss2 = torch.sqrt(((p_sub2 - t_sub2) ** 2).mean())
+            p_sub1 = torch.log10(torch.sqrt(p_sub + self.beta) + 0.1)
+            t_sub1 = torch.log10(torch.sqrt(t_sub + self.beta) + 0.1)
+            loss2 = torch.sqrt(((p_sub1 - t_sub1) ** 2).mean())
 
             # Combined losses
             loss = (1.0 - self.alpha) * loss1 + self.alpha * loss2

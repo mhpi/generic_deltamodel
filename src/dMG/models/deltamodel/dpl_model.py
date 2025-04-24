@@ -5,8 +5,8 @@ import torch.nn
 from dMG.core.utils.factory import import_phy_model, load_nn_model
 
 
-class DeltaModel(torch.nn.Module):
-    """Default class for instantiating a differentiable model.
+class DplModel(torch.nn.Module):
+    """Default class for instantiating a differentiable parameter learning model.
     
     Default modality:
         Parameterization neural network (NN) -> Physics Model (phy_model)

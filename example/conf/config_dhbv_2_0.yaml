@@ -1,5 +1,5 @@
-# This configuration file is specifically for the high-resolution, differentiable, hydrologic model, dHBV2.0UH, from Song et al., 2024. If you find this code is useful to your work, please cite this paper below:
-# Yalan Song, Tadd Bindas, Chaopeng Shen, et al. High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning. ESS Open Archive. 26 September 2024. https://doi.org/10.22541/essoar.172736277.74497104/v1.
+# This configuration file is specifically for the high-resolution, differentiable, hydrologic model, dHBV2.0UH, from Song et al., 2025. If you find this code is useful to your work, please cite this paper below:
+# Yalan Song, Tadd Bindas, Chaopeng Shen, et al. High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning. Water Resources Research. 18 March 2025. https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2024WR038928
 
 defaults:
     - _self_
@@ -61,7 +61,7 @@ dpl_model:
     
     phy_model:
         ## Citations ##
-        # HBV 2.0 (HBV_2_0): Yalan Song, Tadd Bindas, Chaopeng Shen, et al. High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning. ESS Open Archive. September 26, 2024. https://doi.org/10.22541/essoar.172736277.74497104/v1.
+        # HBV 2.0 (HBV_2_0): Yalan Song, Tadd Bindas, Chaopeng Shen, et al. High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning. Water Resources Research. 18 March, 2025. https://doi.org/10.22541/essoar.172736277.74497104/v1.
 
         model: [HBV_2_0]
         nmul: 4

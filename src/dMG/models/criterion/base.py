@@ -69,8 +69,11 @@ class BaseCriterion(torch.nn.Module, ABC):
             raise ValueError("y_obs must be a numpy array or torch tensor.")
         
         # Check dimensionality -> [n_timesteps, n_samples]
-        prediction, target = prediction.squeeze(), target.squeeze()
-
+        if prediction.ndim > 2:
+            prediction = prediction.squeeze()
+        if target.ndim > 2:
+            target = target.squeeze()
+        
         if prediction.ndim != 2 or target.ndim != 2:
             raise ValueError("Input tensors must have 2 dimensions.")
         if prediction.shape != target.shape:

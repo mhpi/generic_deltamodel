@@ -45,7 +45,7 @@ class MsHydroLoader(BaseLoader):
         self.overwrite = overwrite
         self.supported_data = ['merit_forward']
         self.data_name = config['observations']['name']
-        self.nn_ = config['dpl_model']['nn_model'].get('attributes', [])
+        self.nn_attributes = config['dpl_model']['nn_model'].get('attributes', [])
         self.nn_forcings = config['dpl_model']['nn_model'].get('forcings', [])
         self.phy_attributes = config['dpl_model']['phy_model'].get('attributes', [])
         self.phy_forcings = config['dpl_model']['phy_model'].get('forcings', [])
@@ -103,7 +103,7 @@ class MsHydroLoader(BaseLoader):
         x_phy[x_phy != x_phy] = 0
 
         # Normalize nn input data
-        self.load_norm_stats(x_nn, c_nn, scope)
+        self.load_norm_stats()
         xc_nn_norm, c_nn_norm = self.normalize(x_nn, c_nn)
 
         # Build data dict of Torch tensors
@@ -219,10 +219,7 @@ class MsHydroLoader(BaseLoader):
         ]
         
     def load_norm_stats(self) -> None:
-        """Load or calculate normalization statistics if necessary.
-        
-        A different normalization file is loaded for training and testing data.
-        """
+        """Load or calculate normalization statistics if necessary."""
         self.out_path = os.path.join(
             self.config['model_path'],
             'normalization_statistics.json',
@@ -235,7 +232,7 @@ class MsHydroLoader(BaseLoader):
         else:
             # Init normalization stats if file doesn't exist or overwrite is True.
             # NOTE: will be supported with release of multiscale training code.
-            raise ValueError("Normalization statistics not found. Confirm" /
+            raise ValueError("Normalization statistics not found. Confirm" \
                              "`normalization_statistics.json` is in your model directory.")
 
     def normalize(
