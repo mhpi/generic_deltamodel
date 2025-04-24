@@ -1,3 +1,15 @@
+from dMG.core.post.plot_cdf import plot_cdf
+from dMG.core.post.plot_geo import geoplot_single_metric
+from dMG.core.post.plot_hydrograph import plot_hydrograph
+
+__all__ = [
+    'plot_cdf',
+    'geoplot_single_metric',
+    'plot_hydrograph',
+    'print_metrics',
+]
+
+
 def print_metrics(
     metrics: dict[str, dict[str, float]],
     metric_names: str,
@@ -44,49 +56,3 @@ def print_metrics(
         else:
             print(f"{name.capitalize()}: Metric not found")
     print("-" * 40)
-
-
-def format_resample_interval(resample: str) -> str:
-    """Formats the resampling interval into a human-readable string.
-    
-    Parameters
-    ----------
-    resample
-        The resampling interval (e.g., 'D', 'W', '3D', 'M', 'Y').
-
-    Returns
-    -------
-    str
-        A formatted string describing the resampling interval.
-    """
-    # Check if the interval contains a number (e.g., "3D")
-    if any(char.isdigit() for char in resample):
-        # Extract the numeric part and the unit part
-        num = ''.join(filter(str.isdigit, resample))
-        unit = ''.join(filter(str.isalpha, resample))
-        
-        # Map units to human-readable names
-        if num == '1':
-            unit_map = {
-                'D': 'daily',
-                'W': 'weekly',
-                'M': 'monthly',
-                'Y': 'yearly',
-            }
-        else:
-            unit_map = {
-                'D': 'days',
-                'W': 'weeks',
-                'M': 'months',
-                'Y': 'years',
-            }
-        return f"{num} {unit_map.get(unit, unit)}"
-    else:
-        # Single-character intervals (e.g., "D", "W")
-        unit_map = {
-            'D': 'daily',
-            'W': 'weekly',
-            'M': 'monthly',
-            'Y': 'yearly',
-        }
-        return unit_map.get(resample, resample)

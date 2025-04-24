@@ -7,8 +7,7 @@ import torch
 from numpy.typing import NDArray
 
 from dMG.core.data import timestep_resample
-
-from . import format_resample_interval
+from dMG.core.utils import format_resample_interval
 
 
 def plot_hydrograph(

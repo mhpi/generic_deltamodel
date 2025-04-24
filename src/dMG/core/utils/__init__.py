@@ -1,3 +1,25 @@
+
+from dMG.core.utils.dates import Dates
+from dMG.core.utils.factory import (import_data_loader, import_data_sampler,
+                                    import_phy_model, import_trainer,
+                                    load_loss_func, load_nn_model)
+from dMG.core.utils.path import PathBuilder
+
+__all__ = [
+    'import_data_loader',
+    'import_data_sampler',
+    'import_phy_model',
+    'import_trainer',
+    'load_loss_func',
+    'load_nn_model',
+    'PathBuilder',
+    'Dates',
+    'print_config',
+    'save_model',
+    'format_resample_interval',
+]
+
+
 import logging
 import os
 import random
@@ -11,8 +33,7 @@ from omegaconf import DictConfig, OmegaConf
 from pydantic import ValidationError
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from dates import Dates
-from path import PathBuilder
+
 
 log = logging.getLogger(__name__)
 
@@ -403,3 +424,49 @@ def camel_to_snake(camel_str):
     consecutive uppercase letters (e.g., 'DiracDF' -> 'dirac_df').
     """
     return re.sub(r'([a-z])([A-Z])', r'\1_\2', camel_str).lower()
+
+
+def format_resample_interval(resample: str) -> str:
+    """Formats the resampling interval into a human-readable string.
+    
+    Parameters
+    ----------
+    resample
+        The resampling interval (e.g., 'D', 'W', '3D', 'M', 'Y').
+
+    Returns
+    -------
+    str
+        A formatted string describing the resampling interval.
+    """
+    # Check if the interval contains a number (e.g., "3D")
+    if any(char.isdigit() for char in resample):
+        # Extract the numeric part and the unit part
+        num = ''.join(filter(str.isdigit, resample))
+        unit = ''.join(filter(str.isalpha, resample))
+        
+        # Map units to human-readable names
+        if num == '1':
+            unit_map = {
+                'D': 'daily',
+                'W': 'weekly',
+                'M': 'monthly',
+                'Y': 'yearly',
+            }
+        else:
+            unit_map = {
+                'D': 'days',
+                'W': 'weeks',
+                'M': 'months',
+                'Y': 'years',
+            }
+        return f"{num} {unit_map.get(unit, unit)}"
+    else:
+        # Single-character intervals (e.g., "D", "W")
+        unit_map = {
+            'D': 'daily',
+            'W': 'weekly',
+            'M': 'monthly',
+            'Y': 'yearly',
+        }
+        return unit_map.get(resample, resample)
