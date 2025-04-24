@@ -8,11 +8,7 @@ import torch
 from hydroDL2 import load_model as load_from_hydrodl
 from numpy.typing import NDArray
 
-from dMG.core.data.loaders.base import BaseLoader
-from dMG.core.data.samplers.base import BaseSampler
-from dMG.trainers.base import BaseTrainer
-
-from . import camel_to_snake
+from dMG.core.utils.utils import camel_to_snake
 
 sys.path.append('../dMG/')  # for tutorials
 
@@ -105,6 +101,7 @@ def import_phy_model(model: str, ver_name: str = None) -> type:
 
 def import_data_loader(name: str) -> type:
     """Loads a data loader dynamically."""
+    from dMG.core.data.loaders.base import BaseLoader
     return load_component(
         name,
         loader_dir,
@@ -114,6 +111,7 @@ def import_data_loader(name: str) -> type:
 
 def import_data_sampler(name: str) -> type:
     """Loads a data sampler dynamically."""
+    from dMG.core.data.samplers.base import BaseSampler
     return load_component(
         name,
         sampler_dir,
@@ -123,6 +121,7 @@ def import_data_sampler(name: str) -> type:
 
 def import_trainer(name: str) -> type:
     """Loads a trainer dynamically."""
+    from dMG.trainers.base import BaseTrainer
     return load_component(
         name,
         trainer_dir,
@@ -172,4 +171,92 @@ def load_loss_func(
         raise Exception(f"'{name}': {e}") from e
 
 
-s
+def load_nn_model(
+    phy_model: torch.nn.Module,
+    config: dict[str, dict[str, Any]],
+    ensemble_list: Optional[list] = None,
+    device: Optional[str] = None,
+) -> torch.nn.Module:
+    """
+    Initialize a neural network.
+
+    Parameters
+    ----------
+    phy_model
+        The physics model.
+    config
+        The configuration dictionary.
+    ensemble_list
+        List of models to ensemble. Default is None. This will result in a
+        weighting nn being initialized.
+    device
+        The device to run the model on. Default is None.
+
+    Returns
+    -------
+    torch.nn.Module
+        An initialized neural network.
+    """
+    if not device:
+        device = config.get('device', 'cpu')
+
+    # Number of inputs 'x' and outputs 'y' for the nn.
+    if ensemble_list:
+        n_forcings = len(config['forcings'])
+        n_attributes = len(config['attributes'])
+        ny = len(ensemble_list)
+
+        hidden_size = config['hidden_size']
+        dr = config['dropout']
+        name = config['model']
+    else:
+        n_forcings = len(config['nn_model']['forcings'])
+        n_attributes = len(config['nn_model']['attributes'])
+        n_phy_params = phy_model.learnable_param_count
+        ny = n_phy_params
+
+        name = config['nn_model']['model']
+
+        if name not in ['LstmMlpModel']:
+            hidden_size = config['nn_model']['hidden_size']
+            dr = config['nn_model']['dropout']
+
+    nx = n_forcings + n_attributes
+    
+    # Dynamically retrieve the model
+    cls = load_component(
+        name,
+        nn_model_dir,
+        torch.nn.Module
+    )
+
+    # Initialize the model with the appropriate parameters
+    if name in ['CudnnLstmModel', 'LstmModel']:
+        model = cls(
+            nx=nx,
+            ny=ny,
+            hidden_size=hidden_size,
+            dr=dr,
+        )
+    elif name in ['MLP']:
+        model = cls(
+            config,
+            nx=nx,
+            ny=ny,
+        )
+    elif name in ['LstmMlpModel']:
+        model = cls(
+            nx1=nx,
+            ny1=phy_model.learnable_param_count1,
+            hiddeninv1=config['nn_model']['lstm_hidden_size'],
+            nx2=n_attributes,
+            ny2=phy_model.learnable_param_count2,
+            hiddeninv2=config['nn_model']['mlp_hidden_size'],
+            dr1=config['nn_model']['lstm_dropout'],
+            dr2=config['nn_model']['mlp_dropout'],
+            device=device,
+        )
+    else:
+        raise ValueError(f"Model {name} is not supported.")
+    
+    return model.to(device)

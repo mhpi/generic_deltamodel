@@ -1,5 +1,6 @@
 from dMG._version import __version__
 from dMG.core import calc, data, post, utils
+from dMG.core.data import loaders, samplers
 from dMG.models import criterion, deltamodel, neural_networks, phy_models
 from dMG.models.model_handler import ModelHandler
 
@@ -12,6 +13,8 @@ __all__ = [
     'data',
     'post',
     'utils',
+    'loaders',
+    'samplers',
     'criterion',
     'deltamodel',
     'neural_networks',

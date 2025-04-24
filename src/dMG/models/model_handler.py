@@ -7,7 +7,7 @@ import tqdm
 
 from dMG.core.utils import save_model
 from dMG.models.criterion.range_bound_loss import RangeBoundLoss
-from dMG.models.deltamodel.dpl_model import DeltaModel
+from dMG.models.deltamodel.dpl_model import DplModel
 from dMG.models.multimodels.ensemble_generator import EnsembleGenerator
 
 log = logging.getLogger(__name__)

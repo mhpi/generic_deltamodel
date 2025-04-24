@@ -1,6 +1,6 @@
-from dMG.trainers.base import BaseTrainer
-from dMG.trainers.ms_trainer import MSTrainer
-from dMG.trainers.trainer import Trainer
+from .base import BaseTrainer
+from .ms_trainer import MSTrainer
+from .trainer import Trainer
 
 __all__ = [
     'BaseTrainer',
