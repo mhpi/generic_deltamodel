@@ -23,6 +23,7 @@ While differentiable models are powerful and have many desirable characteristics
 This package is maintained by the [MHPI group](http://water.engr.psu.edu/shen/) advised by Dr. Chaopeng Shen. If this work is of use to you, please cite the following paper for now (we will have more dedicated citations later):
 - Shen, C., et al. (2023). Differentiable modelling to unify machine learning and physical models for geosciences. Nature Reviews Earth & Environment, 4(8), 552–567. https://doi.org/10.1038/s43017-023-00450-9
 
+
 <br>
 
 
@@ -34,6 +35,7 @@ This package is maintained by the [MHPI group](http://water.engr.psu.edu/shen/) 
 - **Config GUI ([`GUI-Config-builder`](https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/config_builder_gui/Config+Builder+GUI.zip))([Source](https://github.com/mhpi/GUI-Config-builder))**: An intuitive, user-friendly tool designed to simplify the creation and editing of configuration files for model setup and development.
 - **Differentiable Ecosystem modeling ([`diffEcosys (dev version only)`](https://github.com/hydroPKDN/diffEcosys/))**: A physics-informed machine learning system for ecosystem modeling, demonstrated using the photosynthesis process representation within the Functionally Assembled Terrestrial Ecosystem Simulator (FATES) model. This model is coupled to neural networks that learn parameters from observations of photosynthesis rates.
 - **Concurrent development activities**: We are working on these efforts connected to 𝛿MG: (i) numerical PDE solvers on Torch; (ii) [adjoint](https://doi.org/10.5194/hess-28-3051-2024) sensitivity; (iii) extremely efficient and highly accurate surrogate models; (iv) data assimilation; (v) downscaled and bias corrected climate data; (vi) mysteriously powerful neural networks, and more ...
+
 
 <br>
 
@@ -47,7 +49,8 @@ This package is maintained by the [MHPI group](http://water.engr.psu.edu/shen/) 
 
 - **Benchmarking**: All in one place. 𝛿MG + hydroDL2 will enable rapid deployment and replication of key published MHPI results.
 
-- **NextGen-ready**: 𝛿MG is designed to be [CSDMS BMI](https://csdms.colorado.edu/wiki/BMI)-compliant, and our differentiable hydrology models in hydroDL2 come with a prebuilt BMI allowing seamless compatibility with [NOAA-OWP](https://water.noaa.gov/about/owp)'s [NextGen National Water Modelling Framework](https://github.com/NOAA-OWP/ngen). Incidentally, this capability also enables 𝛿MG to be easily interfaced with other applications.
+- **NextGen-ready**: 𝛿MG is designed to be [CSDMS BMI](https://csdms.colorado.edu/wiki/BMI)-compliant, and our differentiable hydrology models in hydroDL2 come with a prebuilt BMI allowing seamless compatibility with [NOAA-OWP](https://water.noaa.gov/about/owp)'s [NextGen National Water Modelling Framework](https://github.com/NOAA-OWP/ngen). (See NextGen-operations ready [𝛿HBV2.0](https://github.com/mhpi/dHBV2.0) for an example with a dMG-supported BMI). Incidentally, this capability also enables 𝛿MG to be easily interfaced with other applications.
+
 
 <br>
 
@@ -56,7 +59,7 @@ This package is maintained by the [MHPI group](http://water.engr.psu.edu/shen/) 
 
 ### Hydrologic modeling
 This package includes the lumped differentiable rainfall-runoff model [𝛿HBV1.0](https://agupubs.onlinelibrary.wiley.com/doi/epdf/10.1029/2022WR032404), improved [𝛿HBV1.1p](https://essopenarchive.org/doi/full/10.22541/essoar.172304428.82707157), 𝛿PRMS, and 𝛿SAC-SMA. 
-This package powers the global- and  [national-scale water model](https://doi.org/10.22541/essoar.172736277.74497104/v1) that provide high-quality seamless hydrologic [simulations](https://mhpi.github.io/datasets/CONUS/) across US and the world. 
+This package powers the global- and  [national-scale water model](https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2024WR038928) that provide high-quality seamless hydrologic [simulations](https://mhpi.github.io/datasets/CONUS/) across US and the world. 
 It also hosts [global-scale ecosystem](https://doi.org/10.22541/au.173101418.87755465/v1) learning and simulations.
 Many other use cases are being developed concurrently.
 
@@ -66,7 +69,7 @@ In the unseen extreme event spatial test, we used water years with a 5-year or l
 ![Alt text](./docs/images/extreme_temporal.png)
 
 #### 2. National-scale water modeling using 𝛿HBV2.0
-This is a national-scale water modeling study on approximately 180,000 river reaches (with a median length of 7 km) across the contiguous US, using a high-resolution, differentiable, national-scale water model. More details and results can be found in [Song, Bindas, et al. (2024)](https://doi.org/10.22541/essoar.172736277.74497104/v1) and 𝛿HBV2.0.
+This is a national-scale water modeling study on approximately 180,000 river reaches (with a median length of 7 km) across the contiguous US, using a high-resolution, differentiable, national-scale water model. More details and results can be found in [Song, Bindas, et al. (2025)](https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2024WR038928) and 𝛿HBV2.0.
 
 ![Alt text](./docs/images/CONUS_dataset.jpg)
 
@@ -76,6 +79,7 @@ This is a national-scale water modeling study on approximately 180,000 river rea
 More details and results can be found in [Aboelyazeed et al. (2024)](https://doi.org/10.22541/au.173101418.87755465/v1). 
 
 ![Alt text](./docs/images/Vcmax25_learnt_global_combined_2011_2020.png)
+
 
 <br>
 
@@ -92,16 +96,17 @@ According to this schema, we define these core classes from the bottom up:
 - **phy_model**: A physical (process-based) model written in PyTorch (or potentially another interoperable differentiable platform) that takes learnable outputs from the `nn` model(s) and returns a prediction of some target variable(s). This can also be a wrapper holding several physical models.
 - **DeltaModel**: Holds (one or multiple) `nn` objects and a `phy_model` object, and describes how they are coupled; connection to ODE packages.
 - **ModelHandler**: Manages multimodeling, multi-GPU computation, and data assimilation or streaming. Can contain its own optimizers. Acts as an interface to CSDMS BMI or other interfaces.
-- **DataSampler**: Samples data according to data format and training/testing requirements.
 - **Trainer**: Manages model training and testing, and connects data to models.
+- **DataSampler**: Samples data according to data format and training/testing requirements.
 - **DataLoader**: Preprocesses data to be used in training, testing, and simulations.
+
 
 <br>
 
 
 ## Repository Structure:
     .
-    ├── deltaModel/
+    ├── src/dMG/
     │   ├── __main__.py                 # Runs the framework; model experiments
     │   ├── conf/                       # Configuration repository
     │   │   ├── config.py
@@ -113,14 +118,17 @@ According to this schema, we define these core classes from the bottom up:
     │   │   ├── data/                   # Data loaders and samplers
     │   │   └── utils/                  # Helper functions
     │   ├── models/                     
-    │   │   ├── differentiable_model.py # Differentiable model (dPL modality)
-    │   │   ├── model_handler.py        # High-level model manager
-    │   │   ├── loss_functions/         # Custom loss functions
-    │   │   └── neural_networks/        # Neural network architectures
-    │   └── trainers/                   # Training routines
+    │   │   ├── criterion               # Custom loss functions  
+    │   │   ├── deltamodel              # Differentiable model modalities
+    │   │   ├── multimodels             # Support for multi-model mosaics/ensembles
+    │   │   ├── neural_networks/        # Neural network architectures
+    │   │   ├── phy_models/             # Physical Models
+    │   │   └── model_handler.py        # High-level model manager
+    │   └── trainers/                   # Model training routines
     ├── docs/                           
     ├── envs/                           # Environment configuration files
-    └── example/                        # Example and tutorial scripts
+    └── example/                        # Tutorial scripts
+
 
 <br>
 
@@ -144,7 +152,7 @@ CONFIG_PATH = '../example/conf/config_dhbv1_1p.yaml'
 config = load_config(CONFIG_PATH)
 
 # 2. Set up a dataset dictionary of NN and physics model inputs.
-dataset = HydroDataLoader(config, test_split=True).eval_dataset
+dataset = HydroLoader(config, test_split=True).eval_dataset
 dataset_sample = take_sample(config, dataset, days=730, basins=100)
 
 # 3. Initialize physical model and NN.
@@ -181,7 +189,9 @@ See [examples](https://github.com/mhpi/generic_deltaModel/blob/master/example/di
 
 Note, the [Config GUI](https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/config_builder_gui/Config+Builder+GUI.zip) can be used to create/edit additional config files for use with these examples (see [usage instructions](https://github.com/mhpi/GUI-Config-builder/blob/main/README.md))
 
+
 <br>
+
 
 ### Contributing:
 We welcome contributions! Please submit changes via a fork and pull requests. For more details, refer to docs/CONTRIBUTING.md.

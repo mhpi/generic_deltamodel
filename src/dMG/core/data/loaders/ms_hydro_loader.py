@@ -219,10 +219,7 @@ class MsHydroLoader(BaseLoader):
         ]
         
     def load_norm_stats(self) -> None:
-        """Load or calculate normalization statistics if necessary.
-        
-        A different normalization file is loaded for training and testing data.
-        """
+        """Load or calculate normalization statistics if necessary."""
         self.out_path = os.path.join(
             self.config['model_path'],
             'normalization_statistics.json',
