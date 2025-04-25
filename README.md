@@ -1,7 +1,7 @@
 # 𝛿MG: The Generic, Scalable Differentiable Modeling Framework on PyTorch
 
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue)]()
-[![tests](https://github.com/mhpi/generic_deltaModel/actions/workflows/pytest.yaml/badge.svg)](https://github.com/mhpi/generic_deltaModel/actions/workflows/pytest.yaml/pytest.yaml)
+[![tests](https://github.com/mhpi/generic_deltaModel/actions/workflows/pytest.yaml/badge.svg)](https://github.com/mhpi/generic_deltaModel/actions/workflows/pytest.yaml)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 [![image](https://img.shields.io/github/license/saltstack/salt)](https://github.com/mhpi/generic_deltaModel/blob/master/LICENSE)
