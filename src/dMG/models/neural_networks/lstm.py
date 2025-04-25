@@ -60,7 +60,7 @@ class Lstm(torch.nn.Module):
         self.b_ih = Parameter(torch.Tensor(hidden_size * 4))
         self.b_hh = Parameter(torch.Tensor(hidden_size * 4))
         self._all_weights = [['w_ih', 'w_hh', 'b_ih', 'b_hh']]
-        
+
         self.reset_mask()
         self.reset_parameters()
 
@@ -145,7 +145,7 @@ class Lstm(torch.nn.Module):
             ]
         else:
             weight = [self.w_ih, self.w_hh, self.b_ih, self.b_hh]
-        
+
         # Manually assign parameters to torch LSTM.
         self.lstm.weight_ih_l0 = torch.nn.Parameter(weight[0])
         self.lstm.weight_hh_l0 = torch.nn.Parameter(weight[1])

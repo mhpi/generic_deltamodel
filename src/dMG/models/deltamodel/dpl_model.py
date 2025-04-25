@@ -59,7 +59,7 @@ class DplModel(torch.nn.Module):
                              " configuration dictionary is required.")
 
         self.initialized = True
-    
+
     def _init_phy_model(self, phy_model_name) -> torch.nn.Module:
         """Initialize a physics model.
         
@@ -83,7 +83,7 @@ class DplModel(torch.nn.Module):
 
         model = import_phy_model(model_name)
         return model(self.config['phy_model'], device=self.device)
-    
+
     def _init_nn_model(self) -> torch.nn.Module:
         """Initialize a neural network model.
         
@@ -97,7 +97,7 @@ class DplModel(torch.nn.Module):
             self.config,
             device=self.device
         )
-    
+
     def forward(self, data_dict: dict[str, torch.Tensor]) -> torch.Tensor:
         """Forward pass.
         
@@ -116,11 +116,11 @@ class DplModel(torch.nn.Module):
             parameters = self.nn_model(data_dict['xc_nn_norm'], data_dict['c_nn_norm'])
         else:
             parameters = self.nn_model(data_dict['xc_nn_norm'])
-        
+
         # Physics model
         predictions = self.phy_model(
             data_dict,
             parameters,
         )
-        
+
         return predictions

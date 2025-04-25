@@ -37,14 +37,14 @@ class EnsembleGenerator(torch.nn.Module):
         self.config = config
         self.model_list = model_list
         self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        
+
         if nn_model:
             self.nn_model = nn_model
         elif config:
             self.nn_model = self._init_nn_model()
         else:
             raise ValueError("A (1) neural network or (2) configuration dictionary is required.")
-        
+
         self.weights = {}
         self.ensemble_predictions = {}
         self.initialized = True
@@ -88,7 +88,7 @@ class EnsembleGenerator(torch.nn.Module):
         if not self.config['mosaic']:
             # Ensure input data is in the correct format and device.
             # dataset_dict = numpy_to_torch_dict(dataset_dict, device=self.device)
-            
+
             # Generate ensemble weights
             self._raw_weights = self.nn_model(dataset_dict['xc_nn_norm'])
             self._scale_weights()
@@ -103,7 +103,7 @@ class EnsembleGenerator(torch.nn.Module):
             # Linearly combine individual model predictions.
             predictions_list = [predictions[model] for model in self.model_list]
             shared_keys = find_shared_keys(*predictions_list)
-            
+
             for key in shared_keys:
                 self.ensemble_predictions[key] = sum(
                     self.weights[model] * predictions[model][key].squeeze()
@@ -132,12 +132,12 @@ class EnsembleGenerator(torch.nn.Module):
             # Create a one-hot mask
             mask = torch.zeros_like(weights_tensor, dtype=torch.bool)
             mask.scatter_(0, best_model_idx.unsqueeze(0), True)  # Shape: [num_models, num_timesteps, num_basins]
-            
+
             # Step 3: Use the mask to select predictions
             # Linearly combine individual model predictions.
             predictions_list = [predictions[model] for model in self.model_list]
             shared_keys = find_shared_keys(*predictions_list)
-            
+
             for key in shared_keys:
                 predictions_tensor = torch.stack([predictions[model][key].squeeze() for model in self.model_list], dim=0)
                 # Shape: [num_models, num_timesteps, num_basins]
@@ -149,12 +149,12 @@ class EnsembleGenerator(torch.nn.Module):
                 else:
                     # Skip BFI key with shape 1.
                     continue
-            
+
                 final_predictions = torch.gather(predictions_tensor, 0, best_model_idx.unsqueeze(0)).squeeze(0)
 
                 self.ensemble_predictions[key] = final_predictions
 
-                
+
                 # # Mask out all but the best model's predictions
                 # selected_predictions = predictions_tensor * mask  # Shape: [num_models, num_timesteps, num_basins]
 

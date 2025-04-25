@@ -33,14 +33,14 @@ def geoplot_single_metric(
     # Ensure the required columns are present in the GeoDataFrame
     if 'lat' not in gdf.columns or 'lon' not in gdf.columns:
         raise ValueError("The GeoDataFrame must include 'lat' and 'lon' columns.")
-    
+
     if metric_name not in gdf.columns:
         raise ValueError(f"The GeoDataFrame does not contain the column '{metric_name}'.")
-    
+
     # Extract latitude and longitude bounds for the map
     min_lat, max_lat = gdf['lat'].min() - 5, gdf['lat'].max() + 5
     min_lon, max_lon = gdf['lon'].min() - 5, gdf['lon'].max() + 5
-    
+
     # Create the figure with Cartopy
     fig, ax = plt.subplots(figsize=(12, 8), subplot_kw={'projection': ccrs.Mercator()})
     ax.set_extent([min_lon, max_lon, min_lat, max_lat], crs=ccrs.PlateCarree())

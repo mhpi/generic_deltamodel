@@ -61,7 +61,7 @@ def plot_hydrograph(
     data = timestep_resample(data, resolution=resample, method='mean')
 
     plt.rcParams.update({'font.size': fontsize})
-    
+
     # Create the figure.
     plt.figure(figsize=figsize, dpi=dpi)
     plt.plot(
@@ -80,7 +80,7 @@ def plot_hydrograph(
             marker='o',
             color='b',
         )
-    
+
     plt.title(title)
     # plt.xlabel('Time')
     plt.xlabel(f"Time ({format_resample_interval(resample)})")
@@ -111,7 +111,7 @@ def plot_hydrograph(
 
     if minor_ticks:
         ax.minorticks_on()
-        
+
     # Align minor ticks with major ticks
     # ax.xaxis.set_minor_locator(AutoMinorLocator(2))  # One minor tick between major ticks
 

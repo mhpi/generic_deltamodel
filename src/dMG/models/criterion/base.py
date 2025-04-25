@@ -31,7 +31,7 @@ class BaseCriterion(torch.nn.Module, ABC):
         super().__init__()
         self.config = config
         self.device = device
-    
+
     def _format(
         self,
         y_pred: Union[NDArray, torch.Tensor],
@@ -60,27 +60,27 @@ class BaseCriterion(torch.nn.Module, ABC):
             prediction = y_pred.to(self.device)
         else:
             raise ValueError("y_pred must be a numpy array or torch tensor.")
-        
+
         if isinstance(y_obs, np.ndarray):
             target = torch.from_numpy(y_obs).to(self.device)
         elif isinstance(y_obs, torch.Tensor):
             target = y_obs.to(self.device)
         else:
             raise ValueError("y_obs must be a numpy array or torch tensor.")
-        
+
         # Check dimensionality -> [n_timesteps, n_samples]
         if prediction.ndim > 2:
             prediction = prediction.squeeze()
         if target.ndim > 2:
             target = target.squeeze()
-        
+
         if prediction.ndim != 2 or target.ndim != 2:
             raise ValueError("Input tensors must have 2 dimensions.")
         if prediction.shape != target.shape:
             raise ValueError("Input tensors must have the same shape.")
-        
+
         return prediction, target
-    
+
     @abstractmethod
     def forward(
         self,

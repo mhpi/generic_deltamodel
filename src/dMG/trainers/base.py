@@ -46,7 +46,7 @@ class BaseTrainer(ABC):
     def evaluate(self) -> None:
         """Run testing loop and save results."""
         raise NotImplementedError("Derived classes must implement `evaluate` method.")
-    
+
     @abstractmethod
     def inference(self) -> None:
         """Run testing loop and save results."""

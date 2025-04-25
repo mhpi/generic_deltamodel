@@ -48,7 +48,7 @@ class Metrics(BaseModel):
 
     kge: NDArray[np.float32] = np.ndarray([])
     kge_12: NDArray[np.float32] = np.ndarray([])
-    
+
     rmse_low: NDArray[np.float32] = np.ndarray([])
     rmse_mid: NDArray[np.float32] = np.ndarray([])
     rmse_high: NDArray[np.float32] = np.ndarray([])
@@ -140,7 +140,7 @@ class Metrics(BaseModel):
                 low_target = target_sort[:index_low]
                 mid_target = target_sort[index_low:index_high]
                 high_target = target_sort[index_high:]
-                
+
                 self.flv[i] = self._pbias(low_pred, low_target, offset=0.0001)
                 self.fhv[i] = self._pbias(high_pred, high_target)
                 self.pbias[i] = self._pbias(pred, target)
@@ -150,7 +150,7 @@ class Metrics(BaseModel):
                 self.fhv_abs[i] = self._pbias_abs(high_pred, high_target)
                 self.pbias_abs[i] = self._pbias_abs(pred, target)
                 self.pbias_abs_mid[i] = self._pbias_abs(mid_pred, mid_target)
-                
+
                 self.rmse_low[i] = self._rmse(low_pred, low_target, axis=0)
                 self.rmse_mid[i] = self._rmse(mid_pred, mid_target, axis=0)
                 self.rmse_high[i] = self._rmse(high_pred, high_target, axis=0)
@@ -176,7 +176,7 @@ class Metrics(BaseModel):
                     self.kge_12[i] = self._kge_12(
                         _pred_mean, _target_mean, _pred_std, _target_std, self.corr[i]
                     )
-                    
+
                     self.nse[i] = self.r2[i] = self._nse_r2(pred, target, _target_mean)
 
         return super().model_post_init(__context)
@@ -207,7 +207,7 @@ class Metrics(BaseModel):
             log.exception(msg)
             raise ValueError(msg)
         return metrics
-    
+
     def calc_stats(self, *args, **kwargs) -> dict[str, dict[str, float]]:
         """Calculate aggregate statistics of metrics."""
         stats = {}
@@ -234,7 +234,7 @@ class Metrics(BaseModel):
             Path to save file.
         """
         stats = self.calc_stats()
-        
+
         if path.endswith('.json'):
             with open(path, 'w') as f:
                 json.dump(stats, f, indent=4)
@@ -246,7 +246,7 @@ class Metrics(BaseModel):
                     writer.writerow([metric, values['median'], values['mean'], values['std']])
         else:
             raise ValueError("Provide either a .json or .csv file path.")
-    
+
     def model_dump_json(self, *args, **kwargs) -> str:
         """Dump raw metrics to json."""
         model_dict = self.model_dump()
@@ -260,7 +260,7 @@ class Metrics(BaseModel):
             del self.target
 
         return super().model_dump_json(*args, **kwargs)
-    
+
     def dump_metrics(self, path: str) -> None:
         """Dump all metrics and aggregate statistics (median, mean, std) to json.
         
@@ -276,7 +276,7 @@ class Metrics(BaseModel):
         # Save raw metrics
         save_path = os.path.join(path, 'metrics.json')
         json_dat = self.model_dump_json(indent=4)
-        
+
         with open(save_path, "w") as f:
             json.dump(json_dat, f)
 
@@ -294,17 +294,17 @@ class Metrics(BaseModel):
             Mean of data.
         """
         return np.tile(np.nanmean(data, axis=1), (self.nt, 1)).transpose()
-    
+
     @property
     def ngrid(self) -> int:
         """Calculate number of items in grid."""
         return self.pred.shape[0]
-    
+
     @property
     def nt(self) -> int:
         """Calculate number of time steps."""
         return self.pred.shape[1]
-    
+
     @staticmethod
     def _bias(
         pred: NDArray[np.float32],
@@ -336,7 +336,7 @@ class Metrics(BaseModel):
     ) -> np.float32:
         """Calculate percent bias."""
         return np.sum(pred - target) / (np.sum(target) + offset) * 100
-    
+
     @staticmethod
     def _pbias_abs(
         pred: NDArray[np.float32],
@@ -354,7 +354,7 @@ class Metrics(BaseModel):
     ) -> NDArray[np.float32]:
         """Calculate root mean square error."""
         return np.sqrt(np.nanmean((pred - target) ** 2, axis=axis))
-    
+
     def _rmse_ub(
         self,
         pred: NDArray[np.float32],
@@ -366,7 +366,7 @@ class Metrics(BaseModel):
         pred_anom = self.pred - pred_mean
         target_anom = self.target - target_mean
         return self._rmse(pred_anom, target_anom)
-    
+
     def _rmse_fdc(
         self,
         pred: NDArray[np.float32],
@@ -385,7 +385,7 @@ class Metrics(BaseModel):
     ) -> NDArray[np.float32]:
         """Calculate mean absolute error."""
         return np.nanmean(np.abs(pred - target), axis=axis)
-    
+
     def _calc_fdc(
         self,
         data: NDArray[np.float32],
@@ -395,20 +395,20 @@ class Metrics(BaseModel):
         for i in range(self.ngrid):
             data_slice = data[i]
             non_nan_data_slice = data_slice[~np.isnan(data_slice)]
-            
+
             if len(non_nan_data_slice) == 0:
                 non_nan_data_slice = np.full(self.nt, 0)
-           
+
             sorted_data = np.sort(non_nan_data_slice)[::-1]
             Nlen = len(non_nan_data_slice)
             ind = (np.arange(100) / 100 * Nlen).astype(int)
             fdc_flow = sorted_data[ind]
-            
+
             if len(fdc_flow) != 100:
                 raise Exception("Unknown assimilation variable")
             else:
                 fdc_100[i] = fdc_flow
-        
+
         return fdc_100
 
     @staticmethod
@@ -439,7 +439,7 @@ class Metrics(BaseModel):
         else:
             pass
         return np.nanmax(pred[idx_max - lb:idx_max + ub])
-    
+
     @staticmethod
     def _corr(
         pred: NDArray[np.float32], target: NDArray[np.float32]

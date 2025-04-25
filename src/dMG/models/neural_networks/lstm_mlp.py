@@ -48,7 +48,7 @@ class LstmMlpModel(torch.nn.Module):
     ) -> None:
         super().__init__()
         self.name = 'LstmMlpModel'
-        
+
         if device == 'cpu':
             # CPU-compatible LSTM model.
             self.lstminv = LstmModel(
@@ -59,7 +59,7 @@ class LstmMlpModel(torch.nn.Module):
             self.lstminv = CudnnLstmModel(
                 nx=nx1, ny=ny1, hidden_size=hiddeninv1, dr=dr1
             )
-        
+
         self.ann = AnnModel(
             nx=nx2, ny=ny2, hidden_size=hiddeninv2, dr=dr2
         )

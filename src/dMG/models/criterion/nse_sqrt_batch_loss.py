@@ -51,7 +51,6 @@ class NseSqrtBatchLoss(BaseCriterion):
         except KeyError as e:
             raise KeyError("'y_obs' is not provided in kwargs") from e
 
-            
         self.eps = kwargs.get('eps', config.get('eps', 0.1))
         self.beta = kwargs.get('beta', config.get('beta', 1e-6))
 
@@ -96,7 +95,7 @@ class NseSqrtBatchLoss(BaseCriterion):
                 requires_grad=False,
                 device=self.device
             )
-            
+
             mask = ~torch.isnan(target)
             p_sub = prediction[mask]
             t_sub = target[mask]

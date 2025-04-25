@@ -56,7 +56,7 @@ class MsHydroLoader(BaseLoader):
         self.log_norm_vars = config['dpl_model']['phy_model']['use_log_norm']
         self.device = config['device']
         self.dtype = config['dtype']
-        
+
         self.train_dataset = None
         self.eval_dataset = None
         self.dataset = None
@@ -97,7 +97,7 @@ class MsHydroLoader(BaseLoader):
             Dictionary of data tensors for running models.
         """
         ac_all, elev_all, subbasin_id_all, x_nn, x_phy, c_nn = self.read_data(scope)
-    
+
         # Remove nan
         x_phy = np.swapaxes(x_phy, 1, 0)
         x_phy[x_phy != x_phy] = 0
@@ -153,7 +153,7 @@ class MsHydroLoader(BaseLoader):
                 raise ValueError("Scope must be 'train', 'test', 'predict', or 'all'.")
         except KeyError as e:
             raise ValueError(f"Key {e} for data path not in dataset config.") from e
-        
+
         # Get time indicies
         all_time = pd.date_range(
             self.config['all_time'][0],
@@ -196,7 +196,7 @@ class MsHydroLoader(BaseLoader):
                     attr_array,
                     np.expand_dims(root_zone['attrs'][attr][:], -1)
                 ), axis = -1)
-        
+
         # Get upstream area and elevation
         try:
             ac_name = self.config['observations']['upstream_area_name']
@@ -217,7 +217,7 @@ class MsHydroLoader(BaseLoader):
             forc_array.copy(),
             attr_array,
         ]
-        
+
     def load_norm_stats(self) -> None:
         """Load or calculate normalization statistics if necessary."""
         self.out_path = os.path.join(
@@ -307,7 +307,7 @@ class MsHydroLoader(BaseLoader):
                 data_norm[:, k] = (data[:, k] - stat[2]) / stat[3]
             else:
                 raise DataDimensionalityWarning("Data dimension must be 2 or 3.")
-            
+
         # NOTE: Should be external, except altering order of first two dims
         # augments normalization...
         if len(data_norm.shape) < 3:
@@ -335,7 +335,7 @@ class MsHydroLoader(BaseLoader):
             De-normalized data.
         """
         data = np.zeros(data_scaled.shape)
-                
+
         for k, var in enumerate(vars):
             stat = self.norm_stats[var]
             if len(data_scaled.shape) == 3:
@@ -355,7 +355,7 @@ class MsHydroLoader(BaseLoader):
             return np.swapaxes(data, 1, 0)
 
     def _fill_nan(self, array: NDArray[np.float32]) -> NDArray[np.float32]:
-        """Fill NaN values in a 3D array with linear interpolation."
+        """Fill NaN values in a 3D array with linear interpolation.
         
         Parameters
         ----------
