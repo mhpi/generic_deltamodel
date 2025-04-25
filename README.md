@@ -8,7 +8,6 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14868671.svg)](https://doi.org/10.5281/zenodo.14868671)
 
 
-
 A domain-agnostic, PyTorch-based framework for developing trainable [differentiable models](https://www.nature.com/articles/s43017-023-00450-9) that merge neural networks
 with process-based equations. "Differentiable" means that gradient calculations can be achieved efficiently at a large
 scale throughout the model, so process-based equations can be trained together with NNs on big data, on GPU. 
