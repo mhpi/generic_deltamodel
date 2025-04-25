@@ -1,6 +1,7 @@
 import geopandas as gpd
 import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 
 
 def geoplot_single_metric(
@@ -40,60 +41,39 @@ def geoplot_single_metric(
     min_lat, max_lat = gdf['lat'].min() - 5, gdf['lat'].max() + 5
     min_lon, max_lon = gdf['lon'].min() - 5, gdf['lon'].max() + 5
     
-    # Create a Basemap instance
-    plt.figure(figsize=(12, 8))
-    m = Basemap(
-        llcrnrlon=min_lon, llcrnrlat=min_lat,  # Lower-left corner
-        urcrnrlon=max_lon, urcrnrlat=max_lat,  # Upper-right corner
-        resolution='i',  # Intermediate resolution
-        projection='merc',  # Mercator projection
-        lat_0=(min_lat + max_lat) / 2, lon_0=(min_lon + max_lon) / 2
-    )
-    
-    # Draw map features
-    m.drawcoastlines(linewidth=0.5)
-    m.drawcountries(linewidth=0.5)
-    m.drawstates(linewidth=0.2)
+    # Create the figure with Cartopy
+    fig, ax = plt.subplots(figsize=(12, 8), subplot_kw={'projection': ccrs.Mercator()})
+    ax.set_extent([min_lon, max_lon, min_lat, max_lat], crs=ccrs.PlateCarree())
+
+    # Add map features
+    ax.add_feature(cfeature.COASTLINE.with_scale('50m'), linewidth=0.5)
+    ax.add_feature(cfeature.BORDERS.with_scale('50m'), linewidth=0.5)
+    ax.add_feature(cfeature.STATES.with_scale('50m'), linewidth=0.2)
+    ax.add_feature(cfeature.BACKGROUND())
+    ax.add_feature(cfeature.LAND, facecolor='white')
+    ax.add_feature(cfeature.OCEAN, facecolor='white')
 
     if draw_rivers:
-        m.drawrivers(linewidth=0.1, color='blue')
+        ax.add_feature(cfeature.RIVERS.with_scale('50m'), linewidth=0.3, edgecolor='blue')
 
-    m.drawmapboundary(fill_color='white')
-    
-    # Convert lat/lon to map projection coordinates
-    x, y = m(gdf['lon'].values, gdf['lat'].values)
-    
-    # Plot the scatter points
-    if dynamic_colorbar:
-        scatter = m.scatter(
-            x, y,
-            c=gdf[metric_name],
-            cmap='coolwarm',
-            s=marker_size,  # Marker size
-            alpha=0.95,  # Transparency
-            edgecolor='k'  # Black border around markers
-        )
-    else:
-        scatter = m.scatter(
-            x, y,
-            c=gdf[metric_name],
-            cmap='coolwarm',
-            s=marker_size,  # Marker size
-            alpha=0.95,  # Transparency
-            edgecolor='k',  # Black border around markers
-            vmin=0,  # Minimum value for the color scale
-            vmax=1   # Maximum value for the color scale
-        )
-        
+    # Plot the metric data
+    scatter = ax.scatter(
+        gdf['lon'], gdf['lat'],
+        c=gdf[metric_name],
+        s=marker_size,
+        cmap='coolwarm',
+        alpha=0.95,
+        edgecolor='k',
+        transform=ccrs.PlateCarree(),
+        vmin=(None if dynamic_colorbar else 0),
+        vmax=(None if dynamic_colorbar else 1),
+    )
+
     # Add a colorbar
-    cbar = plt.colorbar(scatter, orientation='horizontal', pad=0.05)
+    cbar = plt.colorbar(scatter, orientation='horizontal', pad=0.05, ax=ax)
     cbar.set_label(f"{metric_name.upper()}", fontsize=12)
 
     # Add labels and title
-    if title:
-        plt.title(title, fontsize=14)
-    else:
-        plt.title(f"Spatial Map of {metric_name.upper()}", fontsize=14)
-    
-    # Show the plot
+    plt.title(title or f"Spatial Map of {metric_name.upper()}", fontsize=14)
+    plt.tight_layout()
     plt.show()
