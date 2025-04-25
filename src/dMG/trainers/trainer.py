@@ -10,8 +10,8 @@ from numpy.typing import NDArray
 
 from dMG.core.calc.metrics import Metrics
 from dMG.core.data import create_training_grid
-from dMG.core.utils.utils import save_outputs, save_train_state
 from dMG.core.utils.factory import import_data_sampler, load_loss_func
+from dMG.core.utils.utils import save_outputs, save_train_state
 from dMG.models.model_handler import ModelHandler
 from dMG.trainers.base import BaseTrainer
 

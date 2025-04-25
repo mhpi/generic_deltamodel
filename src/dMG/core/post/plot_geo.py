@@ -1,7 +1,7 @@
-import geopandas as gpd
-import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+import geopandas as gpd
+import matplotlib.pyplot as plt
 
 
 def geoplot_single_metric(
