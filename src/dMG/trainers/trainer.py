@@ -10,8 +10,8 @@ from numpy.typing import NDArray
 
 from dMG.core.calc.metrics import Metrics
 from dMG.core.data import create_training_grid
-from dMG.core.utils.utils import save_outputs, save_train_state
 from dMG.core.utils.factory import import_data_sampler, load_loss_func
+from dMG.core.utils.utils import save_outputs, save_train_state
 from dMG.models.model_handler import ModelHandler
 from dMG.trainers.base import BaseTrainer
 
@@ -77,7 +77,7 @@ class Trainer(BaseTrainer):
         if 'train' in config['mode']:
             if not self.train_dataset:
                 raise ValueError("'train_dataset' required for training mode.")
-            
+
             log.info("Initializing experiment")
             self.epochs = self.config['train']['epochs']
 
@@ -137,7 +137,7 @@ class Trainer(BaseTrainer):
         except RuntimeError as e:
             raise RuntimeError(f"Error initializing optimizer: {e}") from e
         return self.optimizer
-    
+
     def init_scheduler(self) -> torch.optim.lr_scheduler.LRScheduler:
         """Initialize a learning rate scheduler for the optimizer.
         
@@ -157,7 +157,7 @@ class Trainer(BaseTrainer):
         if cls is None:
             raise ValueError(f"Scheduler '{name}' not recognized. "
                                 f"Available options are: {list(scheduler_dict.keys())}")
-        
+
         # Initialize
         try:
             self.scheduler = cls(
@@ -228,7 +228,7 @@ class Trainer(BaseTrainer):
                     n_samples,
                     n_timesteps,
                 )
-            
+
                 # Forward pass through model.
                 _ = self.model(dataset_sample)
                 loss = self.model.calc_loss(dataset_sample)
@@ -308,7 +308,7 @@ class Trainer(BaseTrainer):
         self.predictions = self._batch_data(batch_predictions)
 
         return self.predictions
-    
+
     def _batch_data(
         self,
         batch_list: list[dict[str, torch.Tensor]],
@@ -336,7 +336,7 @@ class Trainer(BaseTrainer):
                     dim = 0
                 data[key] = torch.cat([d[key] for d in batch_list], dim=dim).cpu().numpy()
             return data
-        
+
         except ValueError as e:
             raise ValueError(f"Error concatenating batch data: {e}") from e
 

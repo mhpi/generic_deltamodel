@@ -26,7 +26,7 @@ def run_mode(mode: str, trainer):
         trainer.inference()
     else:
         raise ValueError(f"Invalid mode: {mode}")
-    
+
 
 @hydra.main(
     version_base='1.3',
@@ -66,18 +66,18 @@ def main(config: DictConfig) -> None:
 
         ### Run mode ###
         run_mode(config['mode'], trainer)
-        
+
     except KeyboardInterrupt:
         log.warning("|> Keyboard interrupt received. Exiting gracefully <|")
 
     except Exception:
         log.error("|> An error occurred <|", exc_info=True)  # Logs full traceback
-    
+
     finally:
         log.info("Cleaning up resources...")
         torch.cuda.synchronize()
         torch.cuda.empty_cache()
-    
+
         total_time = time.perf_counter() - start_time
         log.info(
             f"| {config['mode']} completed | "

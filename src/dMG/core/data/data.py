@@ -338,7 +338,7 @@ def timestep_resample(
         data['time'] = pd.to_datetime(data['time'])
     else:
         raise ValueError(f"Data type not supported: {type(data)}")
-    
+
     data.set_index('time', inplace=True)
     data_resample = data.resample(resolution).agg(method)
 

@@ -62,7 +62,7 @@ class PathBuilder(BaseModel):
         self.hyperparameter_detail = self._hyperparameter_details(self.config)
 
         return super().model_post_init(__context)
-    
+
     @field_validator('config')
     def validate_config(cls, value) -> dict[str, Any]:
         """Validate the configuration dictionary."""
@@ -71,7 +71,7 @@ class PathBuilder(BaseModel):
             if key not in value:
                 raise ValueError(f"Missing required configuration key: {key}")
         return value
-    
+
     def build_path_model(self) -> str:
         """Build path to model object from individual root paths."""
         return os.path.join(
@@ -101,7 +101,7 @@ class PathBuilder(BaseModel):
         """
         if not model_path:
             model_path = self.build_path_model()
-        
+
         if 'test' in self.config['mode']:
             return os.path.join(
                 model_path,
@@ -136,7 +136,7 @@ class PathBuilder(BaseModel):
         else:
             model_path = self.build_path_model()
             out_path = self.build_path_out(model_path)
-        
+
         # Create dirs
         if config['mode'] not in ['test', 'predict']:
             os.makedirs(model_path, exist_ok=True)
@@ -149,12 +149,12 @@ class PathBuilder(BaseModel):
         # Append the output paths to the config.
         config['model_path'] = model_path
         config['out_path'] = out_path
-        
+
         # Save config
         if config['mode'] in ['train', 'train_test']:
             serializable_config = self.make_json_serializable(config)
             self.save_config(model_path, serializable_config)
-        
+
         return config
 
     def make_json_serializable(self, obj: Any) -> Any:
@@ -172,7 +172,7 @@ class PathBuilder(BaseModel):
             return self.make_json_serializable(vars(obj))
         else:
             return obj  # Return as is for natively serializable types
-        
+
     @staticmethod
     def save_config(path: str, config: dict[str, Any]) -> None:
         """Save the configuration metadata to the output directory.
@@ -182,7 +182,7 @@ class PathBuilder(BaseModel):
         config_path = os.path.join(path, 'config.json')
         with open(config_path, 'w') as f:
             json.dump(config, f, indent=4)
-        
+
     @staticmethod
     def validate_base_path(base_path: Any) -> Any:
         """Check that the base path exists. If not, attempt to create it.
@@ -199,7 +199,7 @@ class PathBuilder(BaseModel):
                 os.makedirs(base_path)
             except ValueError as e:
                 raise ValueError(f"Error creating base save path from config: {e}") from e
-    
+
     @staticmethod
     def _dataset_name(config: dict[str, Any]) -> str:
         """Name of the dataset used."""
@@ -216,7 +216,7 @@ class PathBuilder(BaseModel):
         if attributes == []:
             attributes = 0
         return f"{config['dpl_model']['phy_model']['forcings']}dy_{attributes}st_in"
-    
+
     @staticmethod
     def _train_period(config: dict[str, Any], abbreviate: bool = False) -> str:
         """Training period for an experiment.
@@ -270,7 +270,7 @@ class PathBuilder(BaseModel):
             return f"predict{start[-2:]}-{end[-2:]}" + test_epoch
         else:
             return f"predict{start}-{end}" + test_epoch
-        
+
     @staticmethod
     def _multimodel_state(config: dict[str, Any]) -> str:
         """Name multimodel state for an experiment."""
@@ -317,7 +317,7 @@ class PathBuilder(BaseModel):
         if hash:
             return hashlib.md5(param_str.encode()).hexdigest()[:8]
         return param_str
-        
+
     def _dynamic_state(self) -> str:
         """Identify if any physical model parameters are dynamic.
         
@@ -377,7 +377,7 @@ class PathBuilder(BaseModel):
         if norm_list:
             vars = '_'.join(norm_list)
             norm = f"Ln_{vars}"
-        
+
         warmup = 'noWU'
         if config['dpl_model']['phy_model']['warm_up_states']:
             warmup = 'WU'

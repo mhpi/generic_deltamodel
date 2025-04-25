@@ -156,7 +156,7 @@ def load_loss_func(
     """
     if not name:
         name = config['model']
-    
+
     # Load the loss function dynamically using the factory.
     cls = load_component(
         name,
@@ -222,7 +222,7 @@ def load_nn_model(
             dr = config['nn_model']['dropout']
 
     nx = n_forcings + n_attributes
-    
+
     # Dynamically retrieve the model
     cls = load_component(
         name,
@@ -258,5 +258,5 @@ def load_nn_model(
         )
     else:
         raise ValueError(f"Model {name} is not supported.")
-    
+
     return model.to(device)

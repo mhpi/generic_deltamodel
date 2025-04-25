@@ -239,11 +239,11 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
     """Save outputs from a model."""
     if torch.is_tensor(y_obs):
         y_obs = y_obs.cpu().numpy()
-        
+
     if create_dirs:
         out_path = PathBuilder(config)
         out_path.write_path(config)
-    
+
     if type(predictions) is list:
         # Handle a single model
         for key in predictions[0].keys():
@@ -273,13 +273,13 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
                     [d[key] for d in predictions[model]],
                     dim=dim,
                 ).numpy()
-            
+
             file_name = key + '.npy'
             np.save(os.path.join(config['out_path'], file_name), out_dict)
 
     else:
         raise ValueError("Invalid output format.")
-    
+
     # Reading flow observation
     if  y_obs is not None:
         for var in config['train']['target']:
@@ -424,7 +424,7 @@ def format_resample_interval(resample: str) -> str:
         # Extract the numeric part and the unit part
         num = ''.join(filter(str.isdigit, resample))
         unit = ''.join(filter(str.isalpha, resample))
-        
+
         # Map units to human-readable names
         if num == '1':
             unit_map = {

@@ -35,7 +35,7 @@ def model_average(
     # Get prediction shared between all models.
     mod_dicts = [model_preds_dict[mod] for mod in config['hydro_models']]
     shared_keys = find_shared_keys(*mod_dicts)
-    
+
      # TODO: identify why 'flow_sim_no_rout' calculation returns shape [365,1]
     # vs [365, 100] which breaks the ensemble loop at point of matrix mul below. (weights_dict[mod]
     # takes shape [365, 100].) Look at `QSIM` comprout vs no comprout in HBVmul.py. For now, remove it.

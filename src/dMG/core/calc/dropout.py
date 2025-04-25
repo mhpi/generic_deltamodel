@@ -28,7 +28,7 @@ class DropMask(torch.autograd.function.InplaceFunction):
                 output = input.clone()
 
             output = output * ctx.mask  # Avoid using inplace mul_
-            
+
         return output
 
     @staticmethod

@@ -42,7 +42,7 @@ def config():
                 'forcings': ['precip', 'tmean', 'pet'],
             },
             'nn_model': {
-                'model': 'CudnnLstmModel',
+                'model': 'LstmModel',
                 'dropout': 0.5,
                 'hidden_size': 32,
                 'learning_rate': 0.001,

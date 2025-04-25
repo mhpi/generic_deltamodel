@@ -48,7 +48,7 @@ class NseBatchLoss(BaseCriterion):
             self.std = np.nanstd(y_obs[:, :, 0].cpu().detach().numpy(), axis=0)
         except KeyError as e:
             raise KeyError("'y_obs' is not provided in kwargs") from e
-        
+
         self.eps = kwargs.get('eps', config.get('eps', 0.1))
 
     def forward(
@@ -97,7 +97,7 @@ class NseBatchLoss(BaseCriterion):
             p_sub = prediction[mask]
             t_sub = target[mask]
             std_sub = std_batch[mask]
-            
+
             # Compute the normalized residuals.
             sq_res = (p_sub - t_sub)**2
             norm_res = sq_res / (std_sub + self.eps)**2

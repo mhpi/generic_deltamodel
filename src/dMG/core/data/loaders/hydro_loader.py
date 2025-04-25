@@ -72,7 +72,7 @@ class HydroLoader(BaseLoader):
         self.log_norm_vars = config['dpl_model']['phy_model']['use_log_norm']
         self.device = config['device']
         self.dtype = config['dtype']
-        
+
         self.train_dataset = None
         self.eval_dataset = None
         self.dataset = None
@@ -159,7 +159,7 @@ class HydroLoader(BaseLoader):
                 raise ValueError("Scope must be 'train', 'test', 'predict', or 'all'.")
         except KeyError as e:
             raise ValueError(f"Key {e} for data path not in dataset config.") from e
-        
+
         # Get time indicies
         all_time = pd.date_range(
             self.config['all_time'][0],
@@ -181,7 +181,7 @@ class HydroLoader(BaseLoader):
             if forc not in self.all_forcings:
                 raise ValueError(f"Forcing {forc} not listed in available forcings.")
             phy_forc_idx.append(self.all_forcings.index(forc))
-        
+
         # Attribute subset for phy model
         phy_attr_idx = []
         for attr in self.phy_attributes:
@@ -230,7 +230,7 @@ class HydroLoader(BaseLoader):
         target = self._flow_conversion(c_nn, target)
 
         return x_phy, c_phy, x_nn, c_nn, target
-    
+
     def _flow_conversion(
         self,
         c_nn: NDArray[np.float32],
@@ -256,7 +256,7 @@ class HydroLoader(BaseLoader):
                     (10 ** 3) * target_temp * 0.0283168 * 3600 * 24 / (area * (10 ** 6))
                 )
         return target
-        
+
     def load_norm_stats(
         self,
         x_nn: NDArray[np.float32],
@@ -286,7 +286,7 @@ class HydroLoader(BaseLoader):
         else:
             # Init normalization stats if file doesn't exist or overwrite is True.
             self.norm_stats = self._init_norm_stats(x_nn, c_nn, target)
-    
+
     def _init_norm_stats(
         self,
         x_nn: NDArray[np.float32],
@@ -339,7 +339,7 @@ class HydroLoader(BaseLoader):
 
         with open(self.out_path, 'w') as f:
             json.dump(stat_dict, f, indent=4)
-        
+
         return stat_dict
 
     def _calc_norm_stats(
@@ -398,7 +398,7 @@ class HydroLoader(BaseLoader):
         std = np.std(transformed).astype(float)
 
         return [p10, p90, mean, max(std, 0.001)]
-    
+
     def _calc_gamma_stats(self, x: NDArray[np.float32]) -> list[float]:
         """Calculate gamma statistics for streamflow and precipitation data.
         
@@ -421,7 +421,7 @@ class HydroLoader(BaseLoader):
         std = np.std(b).astype(float)
 
         return [p10, p90, mean, max(std, 0.001)]
-    
+
     def _get_basin_area(self, c_nn: NDArray[np.float32]) -> NDArray[np.float32]:
         """Get basin area from attributes.
         
@@ -549,7 +549,7 @@ class HydroLoader(BaseLoader):
             De-normalized data.
         """
         data = np.zeros(data_scaled.shape)
-                
+
         for k, var in enumerate(vars):
             stat = self.norm_stats[var]
             if len(data_scaled.shape) == 3:
