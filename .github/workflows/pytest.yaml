@@ -44,4 +44,4 @@ jobs:
 
     - name: Run tests
       run: |
-        pytest --tb=short --maxfail=3
+        pytest
