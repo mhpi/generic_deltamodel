@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any, Optional
 
 import torch
-from hydroDL2 import load_model as load_from_hydrodl
 from numpy.typing import NDArray
 
 from dMG.core.utils.utils import camel_to_snake
@@ -90,8 +89,10 @@ def load_component(
 def import_phy_model(model: str, ver_name: str = None) -> type:
     """Loads a physical model, either from HydroDL2 (hydrology) or locally."""
     try:
+        from hydroDL2 import load_model as load_from_hydrodl
         return load_from_hydrodl(model, ver_name)
     except ImportError:
+        print("HydroDL2 not found. Continuing without it.")
         return load_component(
             model,  # Pass model as name directly
             phy_model_dir,

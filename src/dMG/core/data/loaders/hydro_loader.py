@@ -65,8 +65,8 @@ class HydroLoader(BaseLoader):
         self.nn_forcings = config['dpl_model']['nn_model'].get('forcings', [])
         self.phy_attributes = config['dpl_model']['phy_model'].get('attributes', [])
         self.phy_forcings = config['dpl_model']['phy_model'].get('forcings', [])
-        self.all_forcings = self.config['observations']['forcings_all']
-        self.all_attributes = self.config['observations']['attributes_all']
+        self.forcing_names = self.config['observations']['forcings_all']
+        self.attribute_names = self.config['observations']['attributes_all']
 
         self.target = config['train']['target']
         self.log_norm_vars = config['dpl_model']['phy_model']['use_log_norm']
@@ -178,30 +178,30 @@ class HydroLoader(BaseLoader):
         # Forcing subset for phy model
         phy_forc_idx = []
         for forc in self.phy_forcings:
-            if forc not in self.all_forcings:
+            if forc not in self.forcing_names:
                 raise ValueError(f"Forcing {forc} not listed in available forcings.")
-            phy_forc_idx.append(self.all_forcings.index(forc))
+            phy_forc_idx.append(self.forcing_names.index(forc))
         
         # Attribute subset for phy model
         phy_attr_idx = []
         for attr in self.phy_attributes:
-            if attr not in self.all_attributes:
+            if attr not in self.attribute_names:
                 raise ValueError(f"Attribute {attr} not in the list of all attributes.")
-            phy_attr_idx.append(self.all_attributes.index(attr))
+            phy_attr_idx.append(self.attribute_names.index(attr))
 
         # Forcings subset for nn model
         nn_forc_idx = []
         for forc in self.nn_forcings:
-            if forc not in self.all_forcings:
+            if forc not in self.forcing_names:
                 raise ValueError(f"Forcing {forc} not in the list of all forcings.")
-            nn_forc_idx.append(self.all_forcings.index(forc))
+            nn_forc_idx.append(self.forcing_names.index(forc))
 
         # Attribute subset for nn model
         nn_attr_idx = []
         for attr in self.nn_attributes:
-            if attr not in self.all_attributes:
+            if attr not in self.attribute_names:
                 raise ValueError(f"Attribute {attr} not in the list of all attributes.")
-            nn_attr_idx.append(self.all_attributes.index(attr))
+            nn_attr_idx.append(self.attribute_names.index(attr))
 
         x_phy = forcings[:,:, phy_forc_idx]
         c_phy = attributes[:, phy_attr_idx]
@@ -263,17 +263,7 @@ class HydroLoader(BaseLoader):
         c_nn: NDArray[np.float32],
         target: NDArray[np.float32],
     ) -> None:
-        """Load or calculate normalization statistics if necessary.
-        
-        Parameters
-        ----------
-        x_nn
-            Neural network dynamic data.
-        c_nn
-            Neural network static data.
-        target
-            Target variable data.
-        """
+        """Load or calculate normalization statistics if necessary."""
         self.out_path = os.path.join(
             self.config['model_path'],
             'normalization_statistics.json',
@@ -286,7 +276,7 @@ class HydroLoader(BaseLoader):
         else:
             # Init normalization stats if file doesn't exist or overwrite is True.
             self.norm_stats = self._init_norm_stats(x_nn, c_nn, target)
-    
+
     def _init_norm_stats(
         self,
         x_nn: NDArray[np.float32],

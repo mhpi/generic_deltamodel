@@ -44,14 +44,14 @@ class HydroSampler(BaseSampler):
         has_grad: bool = False,
     ) -> torch.Tensor:
         """Select a subset of input tensor."""
-        batch_size, nx, _ = len(i_grid), x.shape[-1], x.shape[0]
+        batch_size, nx = len(i_grid), x.shape[-1]
 
         # Handle time indexing and create an empty tensor for selection
         if i_t is not None:
             x_tensor = torch.zeros(
                 [self.rho + self.warm_up, batch_size, nx],
                 device=self.device,
-                requires_grad=has_grad
+                requires_grad=has_grad,
             )
             for k in range(batch_size):
                 x_tensor[:, k:k + 1, :] = x[i_t[k] - self.warm_up:i_t[k] + self.rho, i_grid[k]:i_grid[k] + 1, :]

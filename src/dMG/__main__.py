@@ -5,8 +5,9 @@ import hydra
 import torch
 from omegaconf import DictConfig
 
-from dMG.core.utils import initialize_config, print_config, set_randomseed
 from dMG.core.utils.factory import import_data_loader, import_trainer
+from dMG.core.utils.utils import (initialize_config, print_config,
+                                  set_randomseed)
 from dMG.models.model_handler import ModelHandler as dModel
 
 log = logging.getLogger(__name__)

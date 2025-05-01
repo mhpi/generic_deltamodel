@@ -145,7 +145,8 @@ def create_training_grid(
         np.ceil(
             np.log(0.01)
             / np.log(1 - config['train']['batch_size'] * rho / n_samples
-                     / (n_t - config['dpl_model']['phy_model']['warm_up']))
+                     / (n_t - config['dpl_model']['phy_model'].get('warm_up', 0))
+            )
         )
     )
     return n_samples, n_iter_ep, n_t,

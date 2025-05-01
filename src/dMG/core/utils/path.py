@@ -102,7 +102,7 @@ class PathBuilder(BaseModel):
         if not model_path:
             model_path = self.build_path_model()
         
-        if 'test' in self.config['mode']:
+        if ('test' in self.config['mode']) or ('train' in self.config['mode']):
             return os.path.join(
                 model_path,
                 self.test_period,
@@ -130,7 +130,7 @@ class PathBuilder(BaseModel):
 
         # Build paths
         if os.path.exists(config.get('trained_model', '')):
-            # Use user defined model path if it exists
+            # Use user-defined model path if it exists.
             model_path = os.path.dirname(config['trained_model'])
             out_path = self.build_path_out(model_path)
         else:

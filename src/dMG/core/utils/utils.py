@@ -79,7 +79,10 @@ def set_randomseed(seed=0) -> None:
         log.warning(f"Error fixing randomseed: {e}")
 
 
-def initialize_config(config: Union[DictConfig, dict]) -> dict[str, Any]:
+def initialize_config(
+    config: Union[DictConfig, dict],
+    write_path: bool = True,
+) -> dict[str, Any]:
     """Parse and initialize configuration settings.
     
     Parameters
@@ -139,8 +142,9 @@ def initialize_config(config: Union[DictConfig, dict]) -> dict[str, Any]:
 
     # Create output directories and add path to config.
     out_path = PathBuilder(config)
-    config = out_path.write_path(config)
-
+    if write_path:
+        config = out_path.write_path(config)
+    
     # Convert string back to data type.
     config['dtype'] = eval(config['dtype'])
 
@@ -346,7 +350,7 @@ def print_config(config: dict[str, Any]) -> None:
     else:
         print(f"  {'LSTM Dropout:':<20}{config['dpl_model']['nn_model']['lstm_dropout']:<20}{'LSTM Hidden Size:':<20}{config['dpl_model']['nn_model']['lstm_hidden_size']:<20}")
         print(f"  {'MLP Dropout:':<20}{config['dpl_model']['nn_model']['mlp_dropout']:<20}{'MLP Hidden Size:':<20}{config['dpl_model']['nn_model']['mlp_hidden_size']:<20}")
-    print(f"  {'Warmup:':<20}{config['dpl_model']['phy_model']['warm_up']:<20}{'Concurrent Models:':<20}{config['dpl_model']['phy_model']['nmul']:<20}")
+    print(f"  {'Warmup:':<20}{config['dpl_model']['phy_model'].get('warm_up', '0'):<20}{'Concurrent Models:':<20}{config['dpl_model']['phy_model']['nmul']:<20}")
     print(f"  {'Loss Fn:':<20}{config['loss_function']['model']:<20}")
     print()
 
