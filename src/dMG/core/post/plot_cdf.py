@@ -88,14 +88,14 @@ def plot_cdf(
     if len(model_labels) > 1:
         # No need to show legend if only one model.
         plt.legend(loc="best")
-    
+
     plt.grid(True)
-    
+
     if xbounds:
         plt.xlim(xbounds)
     if ybounds:
         plt.ylim(ybounds)
-    
+
     # Add an arrow annotation if requested
     if show_arrow:
         # Get the axis limits
@@ -114,8 +114,8 @@ def plot_cdf(
             arrowprops={'facecolor':'red', 'arrowstyle':'->', 'lw':2},
             fontsize=fontsize,
         )
-        
+
         plt.text(arrow_x_start - 0.1, arrow_y, "Better", fontsize=12, color='black', ha='left', va='center')
-    
+
     # Show the plot
     plt.show()

@@ -55,22 +55,22 @@ class AnnModel(torch.nn.Module):
         """
         ht = F.relu(self.i2h(x))
         ht = self.dropout(ht)  # Apply dropout after each hidden layer activation.
-        
+
         ht1 = F.relu(self.h2h1(ht))
         ht1 = self.dropout(ht1)
-        
+
         ht2 = F.relu(self.h2h2(ht1))
         ht2 = self.dropout(ht2)
-        
+
         ht3 = F.relu(self.h2h3(ht2))
         ht3 = self.dropout(ht3)
-        
+
         ht4 = F.relu(self.h2h4(ht3))
         ht4 = self.dropout(ht4)
-        
+
         ht5 = F.relu(self.h2h5(ht4))
         ht5 = self.dropout(ht5)
-        
+
         ht6 = F.relu(self.h2h6(ht5))
         ht6 = self.dropout(ht6)
 
@@ -133,7 +133,7 @@ class AnnCloseModel(torch.nn.Module):
                 yt_obs = y[t, :, :]
                 mask = yt_obs == yt_obs
                 yt[mask] = yt_obs[mask]
-            
+
             xt = torch.cat((x[t, :, :], yt), 1)
             ht = F.relu(self.i2h(xt))
             ht2 = self.h2h(ht)

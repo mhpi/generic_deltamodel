@@ -1,0 +1,30 @@
+name: dmg
+channels:
+  - conda-forge
+  - defaults
+  - pytorch
+  - nvidia
+dependencies:
+  - python=3.12
+  - pip=24.2
+  - pytorch::pytorch=2.7.0
+  - pytorch::pytorch-cuda=12.1
+  - pytorch::pytorch-mutex=1.0
+  - pytorch::torchaudio=2.7.0
+  - pytorch::torchvision=0.22.0
+  - numpy
+  - pandas
+  - geopandas
+  - pydantic
+  - scipy
+  - ipykernel
+  - tqdm
+  - conda-forge::hydra-core
+  - conda-forge::zarr
+  - matplotlib
+  - scikit-learn
+  - cartopy
+  - omegaconf
+  - uv
+  - pytest
+  - ruff

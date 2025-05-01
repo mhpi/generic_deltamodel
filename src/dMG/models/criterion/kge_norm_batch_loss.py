@@ -40,7 +40,7 @@ class KgeNormBatchLoss(BaseCriterion):
         self.device = device
 
         self.eps = kwargs.get('eps', config.get('eps', 0.1))
-    
+
     def forward(
         self,
         y_pred: torch.Tensor,

@@ -108,9 +108,9 @@ class MsTrainer(BaseTrainer):
         log.info("Saving model outputs")
         save_outputs(self.config, batch_predictions)
         self.predictions = self._batch_data(batch_predictions)
-        
+
         return self.predictions
-    
+
     def _batch_data(
         self,
         batch_list: list[dict[str, torch.Tensor]],
@@ -137,7 +137,7 @@ class MsTrainer(BaseTrainer):
                     dim = 0
                 data[key] = torch.cat([d[key] for d in batch_list], dim=dim).cpu().numpy()
             return data
-        
+
         except ValueError as e:
             raise ValueError(f"Error concatenating batch data: {e}") from e
 
@@ -181,7 +181,7 @@ class MsTrainer(BaseTrainer):
             batch_predictions.append(prediction)
         return batch_predictions
 
-    
+
     def calc_metrics(self) -> None:
         """Calculate and save model performance metrics."""
         raise NotImplementedError("Method not implemented. Multiscale training"/

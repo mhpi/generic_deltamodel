@@ -77,7 +77,7 @@ class RmseCombLoss(BaseCriterion):
             mask = ~torch.isnan(target)
             p_sub = prediction[mask]
             t_sub = target[mask]
-            
+
             # RMSE
             loss1 = torch.sqrt(((p_sub - t_sub) ** 2).mean())
 

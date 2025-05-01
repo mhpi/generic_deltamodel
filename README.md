@@ -1,12 +1,11 @@
 # 𝛿MG: The Generic, Scalable Differentiable Modeling Framework on PyTorch
 
-[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)]()
-
-[![tests](https://github.com/mhpi/generic_deltaModel/actions/workflows/pytest.yaml/badge.svg)](https://github.com/mhpi/generic_deltaModel/actions/workflows/pytest.yaml/pytest.yaml)
+[![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue)]()
+[![tests](https://github.com/mhpi/generic_deltaModel/actions/workflows/pytest.yaml/badge.svg?branch=master)](https://github.com/mhpi/generic_deltaModel/actions/workflows/pytest.yaml)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
 [![image](https://img.shields.io/github/license/saltstack/salt)](https://github.com/mhpi/generic_deltaModel/blob/master/LICENSE)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14868671.svg)](https://doi.org/10.5281/zenodo.14868671)
-
 
 
 A domain-agnostic, PyTorch-based framework for developing trainable [differentiable models](https://www.nature.com/articles/s43017-023-00450-9) that merge neural networks
@@ -34,7 +33,7 @@ This package is maintained by the [MHPI group](http://water.engr.psu.edu/shen/) 
 - **HydroData ([`hydro_data_dev`](https://github.com/mhpi/hydro_data_dev))**: Data extraction, processing, and management tools optimized for geospatial datasets. (In development)
 - **Config GUI ([`GUI-Config-builder`](https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/config_builder_gui/Config+Builder+GUI.zip))([Source](https://github.com/mhpi/GUI-Config-builder))**: An intuitive, user-friendly tool designed to simplify the creation and editing of configuration files for model setup and development.
 - **Differentiable Ecosystem modeling ([`diffEcosys (dev version only)`](https://github.com/hydroPKDN/diffEcosys/))**: A physics-informed machine learning system for ecosystem modeling, demonstrated using the photosynthesis process representation within the Functionally Assembled Terrestrial Ecosystem Simulator (FATES) model. This model is coupled to neural networks that learn parameters from observations of photosynthesis rates.
-- **Concurrent development activities**: We are working on these efforts connected to 𝛿MG: (i) numerical PDE solvers on Torch; (ii) [adjoint](https://doi.org/10.5194/hess-28-3051-2024) sensitivity; (iii) extremely efficient and highly accurate surrogate models; (iv) data assimilation; (v) downscaled and bias corrected climate data; (vi) mysteriously powerful neural networks, and more ...
+- **Concurrent development activities**: We are working on these efforts connected to 𝛿MG: (i) numerical PDE solvers on PyTorch; (ii) [adjoint](https://doi.org/10.5194/hess-28-3051-2024) sensitivity; (iii) extremely efficient and highly accurate surrogate models for process-based equations; (iv) data assimilation methods; (v) downscaled and bias-corrected climate data; (vi) mysteriously powerful neural networks, and more ...
 
 
 <br>
@@ -185,7 +184,10 @@ predictions = self.phy_model(
 )
 ```
 
-See [examples](https://github.com/mhpi/generic_deltaModel/blob/master/example/differentiable_hydrology/dhbv_tutorial.ipynb) in the `generic_deltaModel` repository for this and other tutorials.
+See [examples](https://github.com/mhpi/generic_deltaModel/tree/master/example/hydrology) for this and other tutorials.
+
+See [here](https://colab.research.google.com/drive/19PRLrI-L7cGeYzkk2tOetULzQK8s_W7v?usp=sharing) for an interactive Colab Notebook for a dHBV 1.0 example.
+
 
 Note, the [Config GUI](https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/config_builder_gui/Config+Builder+GUI.zip) can be used to create/edit additional config files for use with these examples (see [usage instructions](https://github.com/mhpi/GUI-Config-builder/blob/main/README.md))
 
