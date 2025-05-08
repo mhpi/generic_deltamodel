@@ -18,7 +18,7 @@ data_sampler: HydroSampler
 trainer: Trainer
 
 save_path: ./output
-trained_model: ./path/to/your/model/  # The trained dHBV 1.1p model can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_1_1p_trained.zip
+trained_model: ./path/to/your/model/  # Pretrained dHBV 1.1p can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_1_1p_trained.zip
 
 
 ## Training ------------------------------#

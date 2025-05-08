@@ -1,6 +1,5 @@
 name: camels_531
-train_path: /projects/mhpi/leoglonz/data/extracted/CAMELS/camels_daymetv2
-test_path: /projects/mhpi/leoglonz/data/extracted/CAMELS/camels_daymetv2
+data_path: /projects/mhpi/leoglonz/data/extracted/CAMELS/camels_daymetv2
 
 gage_info: /projects/mhpi/leoglonz/data/extracted/CAMELS/gage_id.npy
 subset_path: /projects/mhpi/leoglonz/data/extracted/CAMELS/531sub_id.txt

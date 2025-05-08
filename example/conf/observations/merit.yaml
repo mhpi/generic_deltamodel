@@ -1,7 +1,8 @@
-# Data extraction and trained model can be downloaded from: https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/cxs1024_psu_edu/Eqi1NuJ3d2pMpEJpVu0EGSoBigi-VCWVHgOYIRoTeuGiOw?e=HaNNeA
+# MERIT data extraction
+# Download: https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/cxs1024_psu_edu/Eqi1NuJ3d2pMpEJpVu0EGSoBigi-VCWVHgOYIRoTeuGiOw?e=HaNNeA
 
 name: merit
-subbasin_data_path: your/path/to/merit_71_0
+subbasin_data_path: ./your/path/to/merit_71_0/
 
 subbasin_id_name: COMID
 upstream_area_name: uparea

@@ -18,7 +18,7 @@ data_sampler: MsHydroSampler
 trainer: MsTrainer
 
 save_path: ./output
-trained_model: ./path/to/your/model/  # The trained dHBV 2.0 model (+ input data) can be downloaded from: https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/cxs1024_psu_edu/Eqi1NuJ3d2pMpEJpVu0EGSoBigi-VCWVHgOYIRoTeuGiOw?e=HaNNeA
+trained_model: ./path/to/your/model/  # Pretrained dHBV 2.0 (+ input data) can be downloaded from: https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/cxs1024_psu_edu/Eqi1NuJ3d2pMpEJpVu0EGSoBigi-VCWVHgOYIRoTeuGiOw?e=HaNNeA
 
 
 ## Training ------------------------------#

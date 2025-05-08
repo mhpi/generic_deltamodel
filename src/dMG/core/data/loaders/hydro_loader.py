@@ -143,17 +143,26 @@ class HydroLoader(BaseLoader):
             Tuple of neural network + physics model inputes, and target data.
         """
         try:
+            if self.config['observations']['data_path']:
+                data_path = self.config['observations']['data_path']
+            
             if scope == 'train':
-                data_path = self.config['observations']['train_path']
+                if not data_path:
+                    # NOTE: still including 'train_path' etc. for backwards
+                    # compatibility until all code is updated to use 'data_path'.
+                    data_path = self.config['observations']['train_path']
                 time = self.config['train_time']
             elif scope == 'test':
-                data_path = self.config['observations']['test_path']
+                if not data_path:
+                    data_path = self.config['observations']['test_path']
                 time = self.config['test_time']
             elif scope == 'predict':
-                data_path = self.config['observations']['test_path']
+                if not data_path:
+                    data_path = self.config['observations']['test_path']
                 time = self.config['predict_time']
             elif scope == 'all':
-                data_path = self.config['observations']['test_path']
+                if not data_path:
+                    data_path = self.config['observations']['test_path']
                 time = self.config['all_time']
             else:
                 raise ValueError("Scope must be 'train', 'test', 'predict', or 'all'.")
