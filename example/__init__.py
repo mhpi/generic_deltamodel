@@ -5,6 +5,7 @@ from typing import Any
 import hydra
 import torch
 from omegaconf import OmegaConf
+
 from dMG.core.utils import initialize_config
 
 log = logging.getLogger(__name__)

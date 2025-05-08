@@ -295,7 +295,7 @@ class Trainer(BaseTrainer):
 
         # Get start and end indices for each batch
         n_samples = self.dataset['xc_nn_norm'].shape[1]
-        batch_start = np.arange(0, n_samples, self.config['predict']['batch_size'])
+        batch_start = np.arange(0, n_samples, self.config['simulation']['batch_size'])
         batch_end = np.append(batch_start[1:], n_samples)
 
         # Model forward

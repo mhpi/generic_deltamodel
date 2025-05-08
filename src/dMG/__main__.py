@@ -23,7 +23,7 @@ def run_mode(mode: str, trainer):
     elif mode == 'train_test':
         trainer.train()
         trainer.evaluate()
-    elif mode == 'predict':
+    elif mode == 'simulation':
         trainer.inference()
     else:
         raise ValueError(f"Invalid mode: {mode}")

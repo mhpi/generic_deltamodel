@@ -5,7 +5,7 @@ defaults:
 
 
 ## General -------------------------------#
-mode: predict  # train, test, train_test, predict
+mode: simulation  # train, test, train_test, simulation
 multimodel_type: none
 random_seed: 111111
 device: cuda
@@ -15,7 +15,7 @@ data_loader: MsHydroLoader
 data_sampler: MsHydroSampler
 trainer: MsTrainer
 
-save_path: ./results
+save_path: ./output
 trained_model: '' #/projects/mhpi/leoglonz/project_silmaril/dMG/results/merit_forward/train1980-1995/no_multi/LstmMlpModel_E100_R365_B100_H64_4096_n4_noLn_WU_111111/HBV_2_0/RmseCombLoss/3dyn/parBETA_parK0_parBETAET/dHBV_2_0_Ep100_original.pt
 
 
@@ -42,7 +42,7 @@ test:
 
 
 ## Inference -------------------------------#
-predict:
+simulation:
     start_time: 1980/01/01
     end_time: 1985/12/31
     batch_size: 200

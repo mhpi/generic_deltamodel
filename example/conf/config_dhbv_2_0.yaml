@@ -8,7 +8,7 @@ defaults:
 
 
 ## General -------------------------------#
-mode: predict
+mode: simulation
 random_seed: 111111
 device: cuda
 gpu_id: 0
@@ -17,7 +17,10 @@ data_loader: MsHydroLoader
 data_sampler: MsHydroSampler
 trainer: MsTrainer
 
-save_path: ./output
+save_path: ./output  
+    # NOTE: The output path is relative to the current working directory. 
+    #       If you want to save the output in a different directory, please specify the absolute path.
+    #       * If a valid trained_model path is specified, save_path will be set to trained_model.
 trained_model: ./path/to/your/model/  # Pretrained dHBV 2.0 (+ input data) can be downloaded from: https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/cxs1024_psu_edu/Eqi1NuJ3d2pMpEJpVu0EGSoBigi-VCWVHgOYIRoTeuGiOw?e=HaNNeA
 
 
@@ -44,7 +47,7 @@ test:
 
 
 ## Inference -------------------------------#
-predict:
+simulation:
     start_time: 1980/01/01
     end_time: 2020/12/31
     batch_size: 400

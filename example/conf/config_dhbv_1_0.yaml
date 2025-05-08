@@ -8,7 +8,7 @@ defaults:
 
 
 ## General -------------------------------#
-mode: train  # train, test, train_test, predict
+mode: train  # train, test, train_test, simulation
 random_seed: 111111
 device: cuda
 gpu_id: 0
@@ -18,6 +18,9 @@ data_sampler: HydroSampler
 trainer: Trainer
 
 save_path: ./output
+    # NOTE: The output path is relative to the current working directory. 
+    #       If you want to save the output in a different directory, please specify the absolute path.
+    #       * If a valid trained_model path is specified, save_path will be set to trained_model.
 trained_model: ./path/to/your/model/  # Prerained dHBV 1.0 can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_1_0_trained.zip
 
 
@@ -42,7 +45,7 @@ test:
 
 
 ## Inference -------------------------------#
-predict:
+simulation:
     start_time: 2012/10/01
     end_time: 2014/09/30
     batch_size: 25

@@ -107,7 +107,7 @@ def initialize_config(
     # Convert date ranges to integer values.
     train_time = Dates(config['train'], config['dpl_model']['rho'])
     test_time = Dates(config['test'], config['dpl_model']['rho'])
-    predict_time = Dates(config['predict'], config['dpl_model']['rho'])
+    sim_time = Dates(config['simulation'], config['dpl_model']['rho'])
     all_time = Dates(config['observations'], config['dpl_model']['rho'])
 
     exp_time_start = min(
@@ -125,7 +125,7 @@ def initialize_config(
 
     config['train_time'] = [train_time.start_time, train_time.end_time]
     config['test_time'] = [test_time.start_time, test_time.end_time]
-    config['predict_time'] = [predict_time.start_time, predict_time.end_time]
+    config['sim_time'] = [sim_time.start_time, sim_time.end_time]
     config['experiment_time'] = [exp_time_start, exp_time_end]
     config['all_time'] = [all_time.start_time, all_time.end_time]
 
@@ -337,8 +337,8 @@ def print_config(config: dict[str, Any]) -> None:
         print(f"  {'Train Range :':<20}{config['train']['start_time']:<20}{config['train']['end_time']:<20}")
     if 'test' in config['mode']:
         print(f"  {'Test Range :':<20}{config['test']['start_time']:<20}{config['test']['end_time']:<20}")
-    if 'predict' in config['mode']:
-        print(f"  {'Predict Range :':<20}{config['predict']['start_time']:<20}{config['predict']['end_time']:<20}")
+    if 'simulation' in config['mode']:
+        print(f"  {'Simulation Range :':<20}{config['simulation']['start_time']:<20}{config['simulation']['end_time']:<20}")
     if config['train']['start_epoch'] > 0 and 'train' in config['mode']:
         print(f"  {'Resume training from epoch:':<20}{config['train']['start_epoch']:<20}")
     print()

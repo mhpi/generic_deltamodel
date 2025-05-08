@@ -27,7 +27,7 @@ class PathBuilder(BaseModel):
     phy_model_inputs: str = ''
     train_period: str = ''
     test_period: str = ''
-    predict_period: str = ''
+    sim_period: str = ''
     multimodel_state: str = ''
     model_names: str = ''
     dynamic_parameters: str = ''
@@ -50,7 +50,7 @@ class PathBuilder(BaseModel):
 
         self.train_period = self._train_period(self.config, abbreviate=False)
         self.test_period = self._test_period(self.config, abbreviate=False)
-        self.predict_period = self._predict_period(self.config, abbreviate=False)
+        self.sim_period = self._sim_period(self.config, abbreviate=False)
 
         self.multimodel_state = self._multimodel_state(self.config)
 
@@ -107,10 +107,10 @@ class PathBuilder(BaseModel):
                 model_path,
                 self.test_period,
             )
-        elif self.config['mode'] == 'predict':
+        elif self.config['mode'] == 'simulation':
             return os.path.join(
                 model_path,
-                self.predict_period,
+                self.sim_period,
             )
         else:
             raise ValueError(f"Invalid mode: {self.config['mode']}")
@@ -125,20 +125,19 @@ class PathBuilder(BaseModel):
         dict
             The original config with path modifications.
         """
-        # Check base path
-        self.validate_base_path(config['save_path'])
-
         # Build paths
         if os.path.exists(config.get('trained_model', '')):
-            # Use user-defined model path if it exists.
+            # Set user-defined model path if it exists.
             model_path = os.path.dirname(config['trained_model'])
             out_path = self.build_path_out(model_path)
         else:
+            # Check base path
+            self.validate_base_path(config['save_path'])
             model_path = self.build_path_model()
             out_path = self.build_path_out(model_path)
 
         # Create dirs
-        if config['mode'] not in ['test', 'predict']:
+        if config['mode'] not in ['test', 'simulation']:
             os.makedirs(model_path, exist_ok=True)
             os.makedirs(out_path, exist_ok=True)
         elif os.path.exists(model_path):
@@ -252,13 +251,13 @@ class PathBuilder(BaseModel):
             return f"test{start}-{end}" + test_epoch
 
     @staticmethod
-    def _predict_period(config: dict[str, Any], abbreviate: bool = False) -> str:
-        """Prediction period for an experiment.
+    def _sim_period(config: dict[str, Any], abbreviate: bool = False) -> str:
+        """Simulation period for an experiment.
 
         Format is 'testYYYY-YYYY' or 'testYY-YY' if abbreviate.
         """
-        start = config['predict']['start_time'][:4]
-        end = config['predict']['end_time'][:4]
+        start = config['simulation']['start_time'][:4]
+        end = config['simulation']['end_time'][:4]
         test_epoch = config['test'].get('test_epoch', '')
 
         if test_epoch:
@@ -267,9 +266,9 @@ class PathBuilder(BaseModel):
             test_epoch = ''
 
         if abbreviate:
-            return f"predict{start[-2:]}-{end[-2:]}" + test_epoch
+            return f"sim{start[-2:]}-{end[-2:]}" + test_epoch
         else:
-            return f"predict{start}-{end}" + test_epoch
+            return f"sim{start}-{end}" + test_epoch
 
     @staticmethod
     def _multimodel_state(config: dict[str, Any]) -> str:

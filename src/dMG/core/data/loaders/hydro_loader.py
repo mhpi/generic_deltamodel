@@ -86,8 +86,8 @@ class HydroLoader(BaseLoader):
     def load_dataset(self) -> None:
         """Load data into dictionary of nn and physics model input tensors."""
         mode = self.config['mode']
-        if mode == 'predict':
-            self.dataset = self._preprocess_data(scope='predict')
+        if mode == 'simulation':
+            self.dataset = self._preprocess_data(scope='simulation')
         elif self.test_split:
             self.train_dataset = self._preprocess_data(scope='train')
             self.eval_dataset = self._preprocess_data(scope='test')
@@ -156,16 +156,16 @@ class HydroLoader(BaseLoader):
                 if not data_path:
                     data_path = self.config['observations']['test_path']
                 time = self.config['test_time']
-            elif scope == 'predict':
+            elif scope == 'simulation':
                 if not data_path:
                     data_path = self.config['observations']['test_path']
-                time = self.config['predict_time']
+                time = self.config['sim_time']
             elif scope == 'all':
                 if not data_path:
                     data_path = self.config['observations']['test_path']
                 time = self.config['all_time']
             else:
-                raise ValueError("Scope must be 'train', 'test', 'predict', or 'all'.")
+                raise ValueError("Scope must be 'train', 'test', 'simulation', or 'all'.")
         except KeyError as e:
             raise ValueError(f"Key {e} for data path not in dataset config.") from e
 
