@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 
 from dMG.core.calc.metrics import Metrics
 from dMG.core.data import create_training_grid
-from dMG.core.utils.factory import import_data_sampler, load_loss_func
+from dMG.core.utils.factory import import_data_sampler, load_criterion
 from dMG.core.utils.utils import save_outputs, save_train_state
 from dMG.models.model_handler import ModelHandler
 from dMG.trainers.base import BaseTrainer
@@ -82,7 +82,7 @@ class Trainer(BaseTrainer):
             self.epochs = self.config['train']['epochs']
 
             # Loss function
-            self.loss_func = loss_func or load_loss_func(
+            self.loss_func = loss_func or load_criterion(
                 self.train_dataset['target'],
                 config['loss_function'],
                 device=config['device'],

@@ -7,12 +7,11 @@
 [![image](https://img.shields.io/github/license/saltstack/salt)](https://github.com/mhpi/generic_deltaModel/blob/master/LICENSE)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14868671.svg)](https://doi.org/10.5281/zenodo.14868671)
 
-
 A domain-agnostic, PyTorch-based framework for developing trainable [differentiable models](https://www.nature.com/articles/s43017-023-00450-9) that merge neural networks
 with process-based equations. "Differentiable" means that gradient calculations can be achieved efficiently at a large
-scale throughout the model, so process-based equations can be trained together with NNs on big data, on GPU. 
+scale throughout the model, so process-based equations can be trained together with NNs on big data, on GPU.
 Following as a generalization of `HydroDL`, 𝛿MG (`generic_deltaModel`) aims to expand differentiable modeling and
-learning capabilities to a wide variety of domains where prior equations can bring in benefits. 
+learning capabilities to a wide variety of domains where prior equations can bring in benefits.
 
 𝛿MG is not a particular model. Rather, it is a generic framework that supports many models across various domains (some from HydroDL2.0) in a uniform way, while integrating lots of ecosystem tools. Although the packages contain some basic examples for the learner's convenience, the deployment models are supposed to exist in separate repositories and couple to the 𝛿MG framework. 𝛿MG has been generalized and formalized after years of experience in working with various differentiable models across domains.
 Most of the differentiable modeling efforts in our research group will be using 𝛿MG. 𝛿MG can be configured to run through a configuration file and it should be easy and clear for beginners to learn. We even include a Graphical User Interface that allows easy job customization. The framework will closely synergize with advanced deep learning tools like foundation models and the scale advantage of PyTorch. According to our peer-reviewed, published benchmarks, well-tuned differentiable models can match deep networks in performance while extrapolating better in data-scarce regions or extreme scenarios and outputting untrained variables with causal, physical interpretability.

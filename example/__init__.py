@@ -5,10 +5,14 @@ from typing import Any
 import hydra
 import torch
 from omegaconf import OmegaConf
-
 from dMG.core.utils import initialize_config
 
 log = logging.getLogger(__name__)
+
+__all__ = [
+    'load_config',
+    'take_data_sample',
+]
 
 
 def load_config(path: str) -> dict[str, Any]:
@@ -19,7 +23,7 @@ def load_config(path: str) -> dict[str, Any]:
 
     Parameters
     ----------
-    config_path : str
+    config_path
         Path to the configuration file.
     
     Returns
@@ -44,9 +48,30 @@ def load_config(path: str) -> dict[str, Any]:
     return config
 
 
-def take_data_sample(config: dict, dataset_dict: dict[str, torch.Tensor], days=730,
-                     basins=100) -> dict[str, torch.Tensor]:
-    """Take sample of data."""
+def take_data_sample(
+    config: dict,
+    dataset_dict: dict[str, torch.Tensor],
+    days: int = 730,
+    basins: int = 100
+) -> dict[str, torch.Tensor]:
+    """Take sample of data.
+    
+    Parameters
+    ----------
+    config
+        Configuration settings.
+    dataset_dict
+        Dictionary containing dataset tensors.
+    days
+        Number of days to sample.
+    basins
+        Number of basins to sample.
+    
+    Returns
+    -------
+    dict
+        Dictionary containing sampled dataset tensors.
+    """
     dataset_sample = {}
 
     for key, value in dataset_dict.items():

@@ -141,4 +141,4 @@ To run dMG as a framework or package, it must be installed as a package. This ca
 
 ---
 
-*Please submit an [issue](https://github.com/mhpi/generic_deltaModel/issues) if you encounter any trouble in setup.*
+*Please submit an [issue](https://github.com/mhpi/generic_deltaModel/issues) on GitHub to report any questions, concerns, bugs, etc.*

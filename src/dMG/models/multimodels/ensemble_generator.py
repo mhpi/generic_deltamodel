@@ -94,7 +94,7 @@ class EnsembleGenerator(torch.nn.Module):
             self._scale_weights()
 
             # Map weights to individual models
-            diff = dataset_dict['xc_nn_norm'].shape[0] - predictions[self.model_list[0]]['flow_sim'].shape[0]
+            diff = dataset_dict['xc_nn_norm'].shape[0] - predictions[self.model_list[0]]['streamflow'].shape[0]
             self.weights = {
                 model: self.weights_scaled[diff:, :, i]
                 for i, model in enumerate(self.model_list)

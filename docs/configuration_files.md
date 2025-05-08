@@ -74,4 +74,6 @@ After your configuration files are initialized as a dictionary:
 
 - Settings in your observations data config or other type (see [here](#adding-configurations)) can be accessed as subdictionaries like `config['observations'][<setting_name>]` or `config['config_type'][<setting_name>]`.
 
-*Please submit an [issue](https://github.com/mhpi/generic_deltaModel/issues) if you encounter any trouble in setup.*
+---
+
+*Please submit an [issue](https://github.com/mhpi/generic_deltaModel/issues) on GitHub to report questions, concerns, bugs, etc.*

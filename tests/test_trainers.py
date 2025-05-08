@@ -27,7 +27,7 @@ def config():
         'data_loader': 'HydroLoader',
         'data_sampler': 'HydroLoader',
         'train': {
-            'target': ['flow_sim'],
+            'target': ['streamflow'],
             'epochs': 2,
             'start_epoch': 0,
             'save_epoch': 1,

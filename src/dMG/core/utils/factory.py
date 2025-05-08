@@ -130,7 +130,7 @@ def import_trainer(name: str) -> type:
     )
 
 
-def load_loss_func(
+def load_criterion(
     y_obs: NDArray[np.float32],
     config: dict[str, Any],
     name: Optional[str] = None,

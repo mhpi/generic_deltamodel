@@ -1,10 +1,11 @@
-# CAMELS 671-basin data extraction (with 531-basin indexing file) can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/camels/camels_data.zip
+# CAMELS 671-basin data extraction
+# Download: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/camels/camels_data.zip
 
 name: camels_671
-train_path: your/path/to/camels/training_file
-test_path: your/path/to/camels/validation_file
+train_path: ./your/path/to/camels/training_file
+test_path: ./your/path/to/camels/validation_file
 
-gage_info: your/path/to/camels/gage_ids.npy
+gage_info: ./your/path/to/camels/gage_ids.npy
 
 area_name: area_gages2
 

@@ -15,7 +15,7 @@ data_loader: MsHydroLoader
 data_sampler: MsHydroSampler
 trainer: MsTrainer
 
-save_path: results
+save_path: ./results
 trained_model: '' #/projects/mhpi/leoglonz/project_silmaril/dMG/results/merit_forward/train1980-1995/no_multi/LstmMlpModel_E100_R365_B100_H64_4096_n4_noLn_WU_111111/HBV_2_0/RmseCombLoss/3dyn/parBETA_parK0_parBETAET/dHBV_2_0_Ep100_original.pt
 
 
@@ -25,7 +25,7 @@ train:
     # Training code will be released at a later time.
     start_time: 1980/10/01
     end_time: 1995/09/30
-    target: [flow_sim]
+    target: [streamflow]
     optimizer: Adadelta
     batch_size: 100
     epochs: 100

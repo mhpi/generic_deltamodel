@@ -1,8 +1,8 @@
-from . import criterion, deltamodel, neural_networks, phy_models
+from . import criterion, delta_models, neural_networks, phy_models
 
 __all__ = [
     'criterion',
-    'deltamodel',
+    'delta_models',
     'neural_networks',
     'phy_models',
     'ModelHandler',
