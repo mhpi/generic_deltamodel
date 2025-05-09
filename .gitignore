@@ -167,7 +167,6 @@ cython_debug/
 
 # Scratch / development / old / and other temporary files
 *scratch*
-*_dev*
 *_old*
 temp/
 tmp/
@@ -179,5 +178,3 @@ tmp/
 # Other Directories
 archive/
 validation/
-
-
