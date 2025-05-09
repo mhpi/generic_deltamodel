@@ -48,7 +48,7 @@ Pip and Conda are also supported, though UV is recommended. See [setup](./docs/s
 
 </br>
 
-## Quick Start:
+## Quick Start
 
 See [how to run](./docs/how_to_run.md).
 
