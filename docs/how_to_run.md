@@ -4,6 +4,10 @@ This doc gives details on how to *run* dMG once [setup](./setup.md) steps are co
 
 For a breakdown of how to *code* with dMG, we encourage you to check the [hydrology example](../example/hydrology/).
 
+</br>
+
+</br>
+
 ## 1. Command Line
 
 Thanks to dMG's framework-package duality, there are two ways to run dMG from the command line. Assuming your ENV is active (see [setup](./setup.md)), these are
@@ -22,6 +26,10 @@ python -m dMG --config-name <config_name>
 
 where 'config_name' is the file name of your master configuration less the yaml extension. This option comes from Hydra, which is used for parsing the yaml configuration files in dMG. See [here](https://hydra.cc/docs/advanced/hydra-command-line-flags/) for more details and available options.
 
+</br>
+
+</br>
+
 ## 2. Usage
 
 ### 2.1 MHPI Hydrology Models
@@ -35,6 +43,8 @@ If you have installed dMG to use differentiable hydrology models developed by MH
 ```bash
 python -m dMG --config-name config_dhbv_1_0.yaml
 ```
+
+</br>
 
 ### 2.2 Custom Model Development
 
@@ -67,6 +77,8 @@ To use dMG to build and experiment with your own differentiable model, a few thi
     python -m dMG --config-name config_dhbv_1_0.yaml
     ```
 
+</br>
+
 ---
 
-*Please submit an [issue](https://github.com/mhpi/generic_deltaModel/issues) on GitHub to report any questions, concerns, bugs, etc.*
+*Please submit an [issue](https://github.com/mhpi/generic_deltamodel/issues) on GitHub to report any questions, concerns, bugs, etc.*

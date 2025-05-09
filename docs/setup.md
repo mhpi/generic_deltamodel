@@ -1,11 +1,15 @@
 # *dMG* Setup
 
+</br>
+
 ## 1. System Requirements
 
 dMG uses PyTorch models requiring CUDA support only available with NVIDIA GPUs. Therefore, this package requires
 
 - Windows or Linux
 - NVIDIA GPU(s) supporting CUDA (>12.0 recommended)
+
+</br>
 
 ## 2. Steps for Setup
 
@@ -15,15 +19,21 @@ To run dMG as a framework or package, it must be installed as a package. This ca
 
 - Open a terminal on your system, navigate to the directory where dMG will be stored, and clone:
   
-    ```shell
-    git clone https://github.com/mhpi/generic_deltamodel.git
-    ```
+  ```shell
+  git clone https://github.com/mhpi/generic_deltamodel.git
+  ```
 
 - Your install directory should now look like:
 
+    ```text
     .
-    ├── generic_deltaModel/
-    └── hydroDL2/   *(optional, see [here](#install-optional-dependencies))*
+    ├── generic_deltamodel/
+    └── hydroDL2/   *
+    ```
+
+  **(optional, see [here](#install-optional-dependencies))*
+
+</br>
 
 ### Create a New ENV and Install
 
@@ -32,13 +42,13 @@ To run dMG as a framework or package, it must be installed as a package. This ca
   - A yaml setup file is included for Conda setups:
 
     ```shell
-    conda env create --file ./generic_deltaModel/env/dmg_env.yaml
+    conda env create --file ./generic_deltamodel/env/dmg_env.yaml
     ```
 
     or
   
     ```shell
-    conda env create --prefix path/to/env --file ./generic_deltaModel/env/dmg_env.yaml
+    conda env create --prefix path/to/env --file ./generic_deltamodel/env/dmg_env.yaml
     ```
 
   - Then the ENV can be activated like `conda activate dmg`.
@@ -139,6 +149,8 @@ To run dMG as a framework or package, it must be installed as a package. This ca
 
   If you wish to install with conda, you will need to manually install 'dev' packages (e.g., ruff, pytest) listed in `./generic_deltamodel/pyproject.toml`.
 
+</br>
+
 ---
 
-*Please submit an [issue](https://github.com/mhpi/generic_deltaModel/issues) on GitHub to report any questions, concerns, bugs, etc.*
+*Please submit an [issue](https://github.com/mhpi/generic_deltamodel/issues) on GitHub to report any questions, concerns, bugs, etc.*

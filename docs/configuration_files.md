@@ -2,6 +2,8 @@
 
 Every model built in dMG is designed to run on a pair of configuration files to isolate experiment, model, and data settings. These are handled by [Hydra config manager](https://hydra.cc/docs/intro/).
 
+</br>
+
 ## Configurations
 
 1. **(Master) Model/experiment**: `./generic_deltamodel/conf/<config_name>.yaml`
@@ -10,7 +12,7 @@ Every model built in dMG is designed to run on a pair of configuration files to 
 
     - A minimal required implementation is given in `/config.yaml`; *all settings here are required by the framework*.
 
-2. ***Data***: `./generic_deltamodel/conf/observations/<dataset_name>.yaml`
+2. **Data**: `./generic_deltamodel/conf/observations/<dataset_name>.yaml`
 
     - This contains settings specific to a dataset (multiple may be present for different datasets) you wish to use for your model, and includes directory paths, temporal ranges, and constituent variables.
 
@@ -29,6 +31,8 @@ Every model built in dMG is designed to run on a pair of configuration files to 
 
 See the [configuration glossary](./configuration_glossary.md) for definitions of standard and hydrology-specific keys used in dMG.
 
+</br>
+
 ## Adding Configurations
 
 If you wish to use additional configuration files to store distinguished settings not related to the above:
@@ -46,6 +50,8 @@ If you wish to use additional configuration files to store distinguished setting
   ```
 
   where *config_file_name* reflects the `name` attribute of the config file.
+
+</br>
 
 ## Initializing Configuration Files in *dMG*
 
@@ -68,6 +74,8 @@ where *config* is the name of the main `config.yaml` file. Hydra builds and pass
 
 This processing can be done without the decorator, but this is generally the most straightforward way to do it and *needs to be included* in any other scripts used to run your models.
 
+</br>
+
 ## Accessing Settings in the Config Dictionary
 
 After your configuration files are initialized as a dictionary:
@@ -76,6 +84,8 @@ After your configuration files are initialized as a dictionary:
 
 - Settings in your observations data config or other type (see [here](#adding-configurations)) can be accessed as subdictionaries like `config['observations'][<setting_name>]` or `config['config_type'][<setting_name>]`.
 
+</br>
+
 ---
 
-*Please submit an [issue](https://github.com/mhpi/generic_deltaModel/issues) on GitHub to report questions, concerns, bugs, etc.*
+*Please submit an [issue](https://github.com/mhpi/generic_deltamodel/issues) on GitHub to report questions, concerns, bugs, etc.*
