@@ -173,10 +173,11 @@ temp/
 tmp/
 *.tmp
 
-*results*
-*runs*
+# Model outputs
 *output*
 
 # Other Directories
 archive/
 validation/
+
+
