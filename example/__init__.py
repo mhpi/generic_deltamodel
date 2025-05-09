@@ -81,7 +81,7 @@ def take_data_sample(
             if key in ['x_phy', 'xc_nn_norm']:
                 warm_up = 0
             else:
-                warm_up = config['dpl_model']['phy_model']['warm_up']
+                warm_up = config['delta_model']['phy_model']['warm_up']
 
             # Clone and detach the tensor to avoid the warning
             dataset_sample[key] = value[warm_up:days, :basins, :].clone().detach().to(
@@ -96,12 +96,12 @@ def take_data_sample(
             raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
 
     # Adjust the 'target' tensor based on the configuration
-    if ('HBV1_1p' in config['dpl_model']['phy_model']['model'] and
-        config['dpl_model']['phy_model']['use_warmup_mode'] and
+    if ('HBV1_1p' in config['delta_model']['phy_model']['model'] and
+        config['delta_model']['phy_model']['use_warmup_mode'] and
         config['multimodel_type'] == 'none'):
         pass  # Keep 'warmup' days for dHBV1.1p
     else:
-        warm_up = config['dpl_model']['phy_model']['warm_up']
+        warm_up = config['delta_model']['phy_model']['warm_up']
         dataset_sample['target'] = dataset_sample['target'][warm_up:days, :basins]
 
     return dataset_sample

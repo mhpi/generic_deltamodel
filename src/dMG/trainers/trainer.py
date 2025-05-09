@@ -91,7 +91,7 @@ class Trainer(BaseTrainer):
 
             # Optimizer and learning rate scheduler
             self.optimizer = optimizer or self.init_optimizer()
-            if config['dpl_model']['nn_model']['lr_scheduler']:
+            if config['delta_model']['nn_model']['lr_scheduler']:
                 self.use_scheduler = True
                 self.scheduler = scheduler or self.init_scheduler()
             else:
@@ -113,7 +113,7 @@ class Trainer(BaseTrainer):
             Initialized optimizer object.
         """
         name = self.config['train']['optimizer']
-        learning_rate = self.config['dpl_model']['nn_model']['learning_rate']
+        learning_rate = self.config['delta_model']['nn_model']['learning_rate']
         optimizer_dict = {
             # 'SGD': torch.optim.SGD,
             # 'Adam': torch.optim.Adam,
@@ -144,7 +144,7 @@ class Trainer(BaseTrainer):
         torch.optim.lr_scheduler.LRScheduler
             Initialized learning rate scheduler object.
         """
-        name = self.config['dpl_model']['nn_model']['lr_scheduler']
+        name = self.config['delta_model']['nn_model']['lr_scheduler']
         scheduler_dict = {
             'StepLR': torch.optim.lr_scheduler.StepLR,
             'ExponentialLR': torch.optim.lr_scheduler.ExponentialLR,
@@ -162,7 +162,7 @@ class Trainer(BaseTrainer):
         try:
             self.scheduler = cls(
                 self.optimizer,
-                **self.config['dpl_model']['nn_model']['lr_scheduler_params'],
+                **self.config['delta_model']['nn_model']['lr_scheduler_params'],
             )
         except RuntimeError as e:
             raise RuntimeError(f"Error initializing scheduler: {e}") from e
@@ -373,7 +373,7 @@ class Trainer(BaseTrainer):
             prediction = self.model(dataset_sample, eval=True)
 
             # Save the batch predictions
-            model_name = self.config['dpl_model']['phy_model']['model'][0]
+            model_name = self.config['delta_model']['phy_model']['model'][0]
             prediction = {
                 key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()
             }
@@ -399,8 +399,8 @@ class Trainer(BaseTrainer):
         target = np.expand_dims(observations[:, :, 0].cpu().numpy(), 2)
 
         # Remove warm-up data
-        # if self.config['dpl_model']['phy_model']['warm_up_states']:  # NOTE: remove if bug does not reoccur
-        target = target[self.config['dpl_model']['phy_model']['warm_up']:, :]
+        # if self.config['delta_model']['phy_model']['warm_up_states']:  # NOTE: remove if bug does not reoccur
+        target = target[self.config['delta_model']['phy_model']['warm_up']:, :]
 
         # Compute metrics
         metrics = Metrics(

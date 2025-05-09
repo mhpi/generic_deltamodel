@@ -23,8 +23,8 @@ class HydroSampler(BaseSampler):
         super().__init__()
         self.config = config
         self.device = config['device']
-        self.warm_up = config['dpl_model']['phy_model']['warm_up']
-        self.rho = config['dpl_model']['rho']
+        self.warm_up = config['delta_model']['phy_model']['warm_up']
+        self.rho = config['delta_model']['rho']
 
     def load_data(self):
         """Custom implementation for loading data."""

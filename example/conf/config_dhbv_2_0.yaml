@@ -21,7 +21,7 @@ save_path: ./output
     # NOTE: The output path is relative to the current working directory. 
     #       If you want to save the output in a different directory, please specify the absolute path.
     #       * If a valid trained_model path is specified, save_path will be set to trained_model.
-trained_model: ./path/to/your/model/  # Pretrained dHBV 2.0 (+ input data) can be downloaded from: https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/cxs1024_psu_edu/Eqi1NuJ3d2pMpEJpVu0EGSoBigi-VCWVHgOYIRoTeuGiOw?e=HaNNeA
+trained_model: ./path/to/your/model/  # Pretrained dHBV 2.0 (+ input data) can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_2_0_trained.zip
 
 
 ## Training ------------------------------#
@@ -58,8 +58,8 @@ loss_function:
     model: RmseCombLoss
 
 
-## dPL Model -----------------------------#
-dpl_model:
+## Differentiable Model -----------------------------#
+delta_model:
     rho: 365
     
     phy_model:

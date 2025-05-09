@@ -66,7 +66,7 @@ class PathBuilder(BaseModel):
     @field_validator('config')
     def validate_config(cls, value) -> dict[str, Any]:
         """Validate the configuration dictionary."""
-        required_keys = ['save_path', 'train', 'test', 'dpl_model']
+        required_keys = ['save_path', 'train', 'test', 'delta_model']
         for key in required_keys:
             if key not in value:
                 raise ValueError(f"Missing required configuration key: {key}")
@@ -211,10 +211,10 @@ class PathBuilder(BaseModel):
         TODO: needs more thought (e.g. what is same count, different inputs?)
         ...maybe use hash.
         """
-        attributes = config['dpl_model']['phy_model'].get('attributes', '')
+        attributes = config['delta_model']['phy_model'].get('attributes', '')
         if attributes == []:
             attributes = 0
-        return f"{config['dpl_model']['phy_model']['forcings']}dy_{attributes}st_in"
+        return f"{config['delta_model']['phy_model']['forcings']}dy_{attributes}st_in"
 
     @staticmethod
     def _train_period(config: dict[str, Any], abbreviate: bool = False) -> str:
@@ -284,7 +284,7 @@ class PathBuilder(BaseModel):
         config
             Configuration dictionary.
         """
-        models = config['dpl_model']['phy_model']['model']
+        models = config['delta_model']['phy_model']['model']
         return '_'.join(models)
 
     @staticmethod
@@ -304,8 +304,8 @@ class PathBuilder(BaseModel):
 
             'abc12345' if hash.
         """
-        models = config['dpl_model']['phy_model']['model']
-        parameters = config['dpl_model']['phy_model']['dynamic_params']
+        models = config['delta_model']['phy_model']['model']
+        parameters = config['delta_model']['phy_model']['dynamic_params']
 
         param_str = '_'.join(
             param for model in models for param in parameters.get(model, [])
@@ -350,7 +350,7 @@ class PathBuilder(BaseModel):
         str
             Loss function string.
         """
-        models = config['dpl_model']['phy_model']['model']
+        models = config['delta_model']['phy_model']['model']
         loss_fn = config['loss_function']['model']
         loss_fn_str = '_'.join(
             loss_fn for model in models
@@ -372,29 +372,29 @@ class PathBuilder(BaseModel):
             Hyperparameter details string.
         """
         norm = 'noLn'
-        norm_list = config['dpl_model']['phy_model']['use_log_norm']
+        norm_list = config['delta_model']['phy_model']['use_log_norm']
         if norm_list:
             vars = '_'.join(norm_list)
             norm = f"Ln_{vars}"
 
         warmup = 'noWU'
-        if config['dpl_model']['phy_model']['warm_up_states']:
+        if config['delta_model']['phy_model']['warm_up_states']:
             warmup = 'WU'
 
         # Set hiddensize for single or multi-NN setups.
-        if config['dpl_model']['nn_model']['model'] == 'LstmMlpModel':
-            hidden_size = f"{config['dpl_model']['nn_model']['lstm_hidden_size']}" \
-                            f"_{config['dpl_model']['nn_model']['mlp_hidden_size']}"
+        if config['delta_model']['nn_model']['model'] == 'LstmMlpModel':
+            hidden_size = f"{config['delta_model']['nn_model']['lstm_hidden_size']}" \
+                            f"_{config['delta_model']['nn_model']['mlp_hidden_size']}"
         else:
-            hidden_size = config['dpl_model']['nn_model']['hidden_size']
+            hidden_size = config['delta_model']['nn_model']['hidden_size']
 
         return (
-            f"{config['dpl_model']['nn_model']['model']}_"
+            f"{config['delta_model']['nn_model']['model']}_"
             f"E{config['train']['epochs']}_"
-            f"R{config['dpl_model']['rho']}_"
+            f"R{config['delta_model']['rho']}_"
             f"B{config['train']['batch_size']}_"
             f"H{hidden_size}_"
-            f"n{config['dpl_model']['phy_model']['nmul']}_"
+            f"n{config['delta_model']['phy_model']['nmul']}_"
             f"{norm}_"
             f"{warmup}_"
             f"{config['random_seed']}"

@@ -174,7 +174,7 @@ class MsTrainer(BaseTrainer):
             prediction = self.model(dataset_sample, eval=True)
 
             # Save the batch predictions
-            model_name = self.config['dpl_model']['phy_model']['model'][0]
+            model_name = self.config['delta_model']['phy_model']['model'][0]
             prediction = {
                 key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()
             }

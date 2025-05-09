@@ -11,12 +11,12 @@ area_name: area_gages2
 start_time: 1980/10/01
 end_time: 2014/09/30
 
-forcings_all: [
+all_forcings: [
     prcp,
     tmean,
     pet,
 ]
-attributes_all: [
+all_attributes: [
     p_mean,
     pet_mean,
     p_seasonality,

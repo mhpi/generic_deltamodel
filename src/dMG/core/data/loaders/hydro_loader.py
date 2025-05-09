@@ -61,15 +61,15 @@ class HydroLoader(BaseLoader):
         self.overwrite = overwrite
         self.supported_data = ['camels_671', 'camels_531', 'prism_671', 'prism_531']
         self.data_name = config['observations']['name']
-        self.nn_attributes = config['dpl_model']['nn_model'].get('attributes', [])
-        self.nn_forcings = config['dpl_model']['nn_model'].get('forcings', [])
-        self.phy_attributes = config['dpl_model']['phy_model'].get('attributes', [])
-        self.phy_forcings = config['dpl_model']['phy_model'].get('forcings', [])
-        self.forcing_names = self.config['observations']['forcings_all']
-        self.attribute_names = self.config['observations']['attributes_all']
+        self.nn_attributes = config['delta_model']['nn_model'].get('attributes', [])
+        self.nn_forcings = config['delta_model']['nn_model'].get('forcings', [])
+        self.phy_attributes = config['delta_model']['phy_model'].get('attributes', [])
+        self.phy_forcings = config['delta_model']['phy_model'].get('forcings', [])
+        self.forcing_names = self.config['observations']['all_forcings']
+        self.attribute_names = self.config['observations']['all_attributes']
 
         self.target = config['train']['target']
-        self.log_norm_vars = config['dpl_model']['phy_model']['use_log_norm']
+        self.log_norm_vars = config['delta_model']['phy_model']['use_log_norm']
         self.device = config['device']
         self.dtype = config['dtype']
 

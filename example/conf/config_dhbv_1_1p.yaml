@@ -1,6 +1,14 @@
 # This configuration file is specifically for the differentiable hydrologic model dHBV 1.1p from Song et al. (2025). If you find this code is useful to your work, please cite the paper below:
 # Yalan Song, Kamlesh Sawadekar, Jonathan Frame, et al. "Physics-informed, Differentiable Hydrologic  Models for Capturing Unseen Extreme Events." ESS Open Archive (2025). https://doi.org/10.22541/essoar.172304428.82707157/v2.
 
+# This config replicates the CAMELS 531-basin, 10-year benchmark. 
+# To setup for CAMELS 671-basin, 15-year benchmark, set the following...
+#   1. observations: camels_671
+#   2. train: start_time: 1980/10/01
+#   3. train: end_time: 1995/09/30
+#   4. test/simulation: start_time: 1995/10/01
+#   5. test/simulation: end_time: 2010/09/30
+
 defaults:
     - _self_
     - hydra: settings
@@ -56,8 +64,8 @@ loss_function:
     model: NseBatchLoss
 
 
-## dPL Model -----------------------------#
-dpl_model:
+## Differentiable Model -----------------------------#
+delta_model:
     rho: 365
     
     phy_model:

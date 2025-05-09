@@ -138,14 +138,14 @@ def create_training_grid(
         n_samples = x.shape[1]
 
     t = trange_to_array(t_range)
-    rho = min(t.shape[0], config['dpl_model']['rho'])
+    rho = min(t.shape[0], config['delta_model']['rho'])
 
     # Calculate number of iterations per epoch.
     n_iter_ep = int(
         np.ceil(
             np.log(0.01)
             / np.log(1 - config['train']['batch_size'] * rho / n_samples
-                     / (n_t - config['dpl_model']['phy_model'].get('warm_up', 0))
+                     / (n_t - config['delta_model']['phy_model'].get('warm_up', 0))
             )
         )
     )

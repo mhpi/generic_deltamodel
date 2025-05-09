@@ -1,4 +1,4 @@
-name: merit_forward
+name: merit
 subbasin_data_path: /projects/mhpi/yxs275/model/generic_deltaModel_dhbv2.0/data/71_0
 
 subbasin_id_name: COMID
@@ -9,12 +9,12 @@ elevation_name: meanelevation
 start_time: 1980/01/01
 end_time: 2020/12/31
 
-forcings_all: [
+all_forcings: [
     P,
     Temp,
     PET,
 ]
-attributes_all: [
+all_attributes: [
     aridity, 
     meanP,
     ETPOT_Hargr,

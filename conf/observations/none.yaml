@@ -1,15 +1,18 @@
-name: None
-train_path: /path/to/training/data
-test_path: /path/to/validation/data
+# Default Observation Configuration
+#
+# Note this is a template and will not run unless modified.
+# See ./docs/configuration_glossary.md for definitions and options.
+name: none
+data_path: ./your/path/to/data
 
 start_time: 2000/01/01
 end_time: 2024/12/31
 
-forcings_all: [
+all_forcings: [
     x1_var,
-    x2_var
+    x2_var,
 ]
-attributes_all: [
+all_attributes: [
     attr1,
-    attr2
+    attr2,
 ]

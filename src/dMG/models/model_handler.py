@@ -75,7 +75,7 @@ class ModelHandler(torch.nn.Module):
         list[str]
             List of model names.
         """
-        models = self.config['dpl_model']['phy_model']['model']
+        models = self.config['delta_model']['phy_model']['model']
 
         if self.multimodel_type in ['nn_parallel']:
             # Add ensemble weighting NN to the list.
@@ -125,7 +125,7 @@ class ModelHandler(torch.nn.Module):
                 # TODO: make dynamic import for other modalities.
                 self.model_dict[name] = DplModel(
                     phy_model_name=name,
-                    config=self.config['dpl_model'],
+                    config=self.config['delta_model'],
                     device=self.device
                 )
 

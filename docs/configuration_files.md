@@ -4,7 +4,7 @@ Every model built in dMG is designed to run on a pair of configuration files to 
 
 ## Configurations
 
-1. **(Main) Model/experiment**: `./generic_deltamodel/conf/<config_name>.yaml`
+1. **(Master) Model/experiment**: `./generic_deltamodel/conf/<config_name>.yaml`
 
     - This will govern model training/testing/prediction settings, in addition to differentiable model, neural network, and physical model-specific settings.
 
@@ -26,6 +26,8 @@ Every model built in dMG is designed to run on a pair of configuration files to 
         ```
 
     - There are **no** requirements for this except that the config have the *name* attribute. All settings here are intended to be minimally exposed within your data loader, so it's up to you what you want to include.
+
+See the [configuration glossary](./configuration_glossary.md) for definitions of standard and hydrology-specific keys used in dMG.
 
 ## Adding Configurations
 
@@ -70,7 +72,7 @@ This processing can be done without the decorator, but this is generally the mos
 
 After your configuration files are initialized as a dictionary:
 
-- Any settings in the main config can be accessed like `config['mode']` or `config['train']['start_time']` for subsettings in the config.yaml (headers like *train* and *dpl_model* create subdictionaries).
+- Any settings in the main config can be accessed like `config['mode']` or `config['train']['start_time']` for subsettings in the config.yaml (headers like *train* and *delta_model* create subdictionaries).
 
 - Settings in your observations data config or other type (see [here](#adding-configurations)) can be accessed as subdictionaries like `config['observations'][<setting_name>]` or `config['config_type'][<setting_name>]`.
 

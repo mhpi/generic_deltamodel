@@ -1,3 +1,11 @@
+"""There are two ways to run dMG in command line...
+
+1. python -m dMG (Uses default config.yaml)
+2. python src/dMG/__main__.py (Uses default config.yaml)
+
+Add opt `--config-name <config_name>` to (1) or (2) to use a different config.
+"""
+
 import logging
 import time
 
@@ -31,8 +39,8 @@ def run_mode(mode: str, trainer):
 
 @hydra.main(
     version_base='1.3',
-    config_path='conf/',
-    config_name='config',
+    config_path='./../../conf/',
+    config_name='default',
 )
 def main(config: DictConfig) -> None:
     """Main function to run differentiable model experiments."""

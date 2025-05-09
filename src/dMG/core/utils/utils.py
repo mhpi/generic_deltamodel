@@ -105,10 +105,10 @@ def initialize_config(
     config['device'], config['dtype'] = set_system_spec(config)
 
     # Convert date ranges to integer values.
-    train_time = Dates(config['train'], config['dpl_model']['rho'])
-    test_time = Dates(config['test'], config['dpl_model']['rho'])
-    sim_time = Dates(config['simulation'], config['dpl_model']['rho'])
-    all_time = Dates(config['observations'], config['dpl_model']['rho'])
+    train_time = Dates(config['train'], config['delta_model']['rho'])
+    test_time = Dates(config['test'], config['delta_model']['rho'])
+    sim_time = Dates(config['simulation'], config['delta_model']['rho'])
+    all_time = Dates(config['observations'], config['delta_model']['rho'])
 
     exp_time_start = min(
         train_time.start_time,
@@ -134,8 +134,8 @@ def initialize_config(
     if config.get('multimodel_type', '')  in ['none', 'None', '']:
         config['multimodel_type'] = None
 
-    if config['dpl_model']['nn_model'].get('lr_scheduler', '') in ['none', 'None', '']:
-        config['dpl_model']['nn_model']['lr_scheduler'] = None
+    if config['delta_model']['nn_model'].get('lr_scheduler', '') in ['none', 'None', '']:
+        config['delta_model']['nn_model']['lr_scheduler'] = None
 
     if config.get('trained_model', '') in ['none', 'None', '']:
         config['trained_model'] = ''
@@ -263,7 +263,7 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
 
     elif type(predictions) is dict:
         # Handle multiple models
-        models = config['dpl_model']['phy_model']['model']
+        models = config['delta_model']['phy_model']['model']
         for key in predictions[models[0]][0].keys():
             out_dict = {}
 
@@ -327,7 +327,7 @@ def print_config(config: dict[str, Any]) -> None:
     print(f"  {'Experiment Mode:':<20}{config['mode']:<20}")
     if config['multimodel_type'] is not None:
         print(f"  {'Ensemble Mode:':<20}{config['multimodel_type']:<20}")
-    for i, mod in enumerate(config['dpl_model']['phy_model']['model']):
+    for i, mod in enumerate(config['delta_model']['phy_model']['model']):
         print(f"  {f'Model {i+1}:':<20}{mod:<20}")
     print()
 
@@ -345,12 +345,12 @@ def print_config(config: dict[str, Any]) -> None:
 
     print("\033[1m" + "Model Parameters" + "\033[0m")
     print(f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}")
-    if config['dpl_model']['nn_model']['model'] != 'LstmMlpModel':
-        print(f"  {'Dropout:':<20}{config['dpl_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['dpl_model']['nn_model']['hidden_size']:<20}")
+    if config['delta_model']['nn_model']['model'] != 'LstmMlpModel':
+        print(f"  {'Dropout:':<20}{config['delta_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['delta_model']['nn_model']['hidden_size']:<20}")
     else:
-        print(f"  {'LSTM Dropout:':<20}{config['dpl_model']['nn_model']['lstm_dropout']:<20}{'LSTM Hidden Size:':<20}{config['dpl_model']['nn_model']['lstm_hidden_size']:<20}")
-        print(f"  {'MLP Dropout:':<20}{config['dpl_model']['nn_model']['mlp_dropout']:<20}{'MLP Hidden Size:':<20}{config['dpl_model']['nn_model']['mlp_hidden_size']:<20}")
-    print(f"  {'Warmup:':<20}{config['dpl_model']['phy_model'].get('warm_up', '0'):<20}{'Concurrent Models:':<20}{config['dpl_model']['phy_model']['nmul']:<20}")
+        print(f"  {'LSTM Dropout:':<20}{config['delta_model']['nn_model']['lstm_dropout']:<20}{'LSTM Hidden Size:':<20}{config['delta_model']['nn_model']['lstm_hidden_size']:<20}")
+        print(f"  {'MLP Dropout:':<20}{config['delta_model']['nn_model']['mlp_dropout']:<20}{'MLP Hidden Size:':<20}{config['delta_model']['nn_model']['mlp_hidden_size']:<20}")
+    print(f"  {'Warmup:':<20}{config['delta_model']['phy_model'].get('warm_up', '0'):<20}{'Concurrent Models:':<20}{config['delta_model']['phy_model']['nmul']:<20}")
     print(f"  {'Loss Fn:':<20}{config['loss_function']['model']:<20}")
     print()
 

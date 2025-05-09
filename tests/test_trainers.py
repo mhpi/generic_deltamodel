@@ -32,7 +32,7 @@ def config():
             'start_epoch': 0,
             'save_epoch': 1,
         },
-        'dpl_model': {
+        'delta_model': {
             'phy_model': {
                 'model': ['HBV'],
                 'warm_up': 0,
