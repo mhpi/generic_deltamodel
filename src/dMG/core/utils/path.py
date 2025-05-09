@@ -27,7 +27,7 @@ class PathBuilder(BaseModel):
     phy_model_inputs: str = ''
     train_period: str = ''
     test_period: str = ''
-    predict_period: str = ''
+    sim_period: str = ''
     multimodel_state: str = ''
     model_names: str = ''
     dynamic_parameters: str = ''
@@ -50,7 +50,7 @@ class PathBuilder(BaseModel):
 
         self.train_period = self._train_period(self.config, abbreviate=False)
         self.test_period = self._test_period(self.config, abbreviate=False)
-        self.predict_period = self._predict_period(self.config, abbreviate=False)
+        self.sim_period = self._sim_period(self.config, abbreviate=False)
 
         self.multimodel_state = self._multimodel_state(self.config)
 
@@ -66,7 +66,7 @@ class PathBuilder(BaseModel):
     @field_validator('config')
     def validate_config(cls, value) -> dict[str, Any]:
         """Validate the configuration dictionary."""
-        required_keys = ['save_path', 'train', 'test', 'dpl_model']
+        required_keys = ['save_path', 'train', 'test', 'delta_model']
         for key in required_keys:
             if key not in value:
                 raise ValueError(f"Missing required configuration key: {key}")
@@ -101,16 +101,16 @@ class PathBuilder(BaseModel):
         """
         if not model_path:
             model_path = self.build_path_model()
-
-        if 'test' in self.config['mode']:
+        
+        if ('test' in self.config['mode']) or ('train' in self.config['mode']):
             return os.path.join(
                 model_path,
                 self.test_period,
             )
-        elif self.config['mode'] == 'predict':
+        elif self.config['mode'] == 'simulation':
             return os.path.join(
                 model_path,
-                self.predict_period,
+                self.sim_period,
             )
         else:
             raise ValueError(f"Invalid mode: {self.config['mode']}")
@@ -125,20 +125,19 @@ class PathBuilder(BaseModel):
         dict
             The original config with path modifications.
         """
-        # Check base path
-        self.validate_base_path(config['save_path'])
-
         # Build paths
         if os.path.exists(config.get('trained_model', '')):
-            # Use user defined model path if it exists
+            # Set user-defined model path if it exists.
             model_path = os.path.dirname(config['trained_model'])
             out_path = self.build_path_out(model_path)
         else:
+            # Check base path
+            self.validate_base_path(config['save_path'])
             model_path = self.build_path_model()
             out_path = self.build_path_out(model_path)
 
         # Create dirs
-        if config['mode'] not in ['test', 'predict']:
+        if config['mode'] not in ['test', 'simulation']:
             os.makedirs(model_path, exist_ok=True)
             os.makedirs(out_path, exist_ok=True)
         elif os.path.exists(model_path):
@@ -212,10 +211,10 @@ class PathBuilder(BaseModel):
         TODO: needs more thought (e.g. what is same count, different inputs?)
         ...maybe use hash.
         """
-        attributes = config['dpl_model']['phy_model'].get('attributes', '')
+        attributes = config['delta_model']['phy_model'].get('attributes', '')
         if attributes == []:
             attributes = 0
-        return f"{config['dpl_model']['phy_model']['forcings']}dy_{attributes}st_in"
+        return f"{config['delta_model']['phy_model']['forcings']}dy_{attributes}st_in"
 
     @staticmethod
     def _train_period(config: dict[str, Any], abbreviate: bool = False) -> str:
@@ -252,13 +251,13 @@ class PathBuilder(BaseModel):
             return f"test{start}-{end}" + test_epoch
 
     @staticmethod
-    def _predict_period(config: dict[str, Any], abbreviate: bool = False) -> str:
-        """Prediction period for an experiment.
+    def _sim_period(config: dict[str, Any], abbreviate: bool = False) -> str:
+        """Simulation period for an experiment.
 
         Format is 'testYYYY-YYYY' or 'testYY-YY' if abbreviate.
         """
-        start = config['predict']['start_time'][:4]
-        end = config['predict']['end_time'][:4]
+        start = config['simulation']['start_time'][:4]
+        end = config['simulation']['end_time'][:4]
         test_epoch = config['test'].get('test_epoch', '')
 
         if test_epoch:
@@ -267,9 +266,9 @@ class PathBuilder(BaseModel):
             test_epoch = ''
 
         if abbreviate:
-            return f"predict{start[-2:]}-{end[-2:]}" + test_epoch
+            return f"sim{start[-2:]}-{end[-2:]}" + test_epoch
         else:
-            return f"predict{start}-{end}" + test_epoch
+            return f"sim{start}-{end}" + test_epoch
 
     @staticmethod
     def _multimodel_state(config: dict[str, Any]) -> str:
@@ -285,7 +284,7 @@ class PathBuilder(BaseModel):
         config
             Configuration dictionary.
         """
-        models = config['dpl_model']['phy_model']['model']
+        models = config['delta_model']['phy_model']['model']
         return '_'.join(models)
 
     @staticmethod
@@ -305,8 +304,8 @@ class PathBuilder(BaseModel):
 
             'abc12345' if hash.
         """
-        models = config['dpl_model']['phy_model']['model']
-        parameters = config['dpl_model']['phy_model']['dynamic_params']
+        models = config['delta_model']['phy_model']['model']
+        parameters = config['delta_model']['phy_model']['dynamic_params']
 
         param_str = '_'.join(
             param for model in models for param in parameters.get(model, [])
@@ -351,7 +350,7 @@ class PathBuilder(BaseModel):
         str
             Loss function string.
         """
-        models = config['dpl_model']['phy_model']['model']
+        models = config['delta_model']['phy_model']['model']
         loss_fn = config['loss_function']['model']
         loss_fn_str = '_'.join(
             loss_fn for model in models
@@ -373,29 +372,29 @@ class PathBuilder(BaseModel):
             Hyperparameter details string.
         """
         norm = 'noLn'
-        norm_list = config['dpl_model']['phy_model']['use_log_norm']
+        norm_list = config['delta_model']['phy_model']['use_log_norm']
         if norm_list:
             vars = '_'.join(norm_list)
             norm = f"Ln_{vars}"
 
         warmup = 'noWU'
-        if config['dpl_model']['phy_model']['warm_up_states']:
+        if config['delta_model']['phy_model']['warm_up_states']:
             warmup = 'WU'
 
         # Set hiddensize for single or multi-NN setups.
-        if config['dpl_model']['nn_model']['model'] == 'LstmMlpModel':
-            hidden_size = f"{config['dpl_model']['nn_model']['lstm_hidden_size']}" \
-                            f"_{config['dpl_model']['nn_model']['mlp_hidden_size']}"
+        if config['delta_model']['nn_model']['model'] == 'LstmMlpModel':
+            hidden_size = f"{config['delta_model']['nn_model']['lstm_hidden_size']}" \
+                            f"_{config['delta_model']['nn_model']['mlp_hidden_size']}"
         else:
-            hidden_size = config['dpl_model']['nn_model']['hidden_size']
+            hidden_size = config['delta_model']['nn_model']['hidden_size']
 
         return (
-            f"{config['dpl_model']['nn_model']['model']}_"
+            f"{config['delta_model']['nn_model']['model']}_"
             f"E{config['train']['epochs']}_"
-            f"R{config['dpl_model']['rho']}_"
+            f"R{config['delta_model']['rho']}_"
             f"B{config['train']['batch_size']}_"
             f"H{hidden_size}_"
-            f"n{config['dpl_model']['phy_model']['nmul']}_"
+            f"n{config['delta_model']['phy_model']['nmul']}_"
             f"{norm}_"
             f"{warmup}_"
             f"{config['random_seed']}"

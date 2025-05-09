@@ -30,7 +30,7 @@ class ModeEnum(str, Enum):
     train = 'train'
     test = 'test'
     train_test = 'train_test'
-    predict = 'predict'
+    simulation = 'simulation'
 
 
 class LossFunctionConfig(BaseModel):
@@ -106,7 +106,7 @@ class NeuralNetworkModelConfig(BaseModel):
     attributes: list[str] = Field(default_factory=list, description="List of static input variables.")
 
 
-class DPLModelConfig(BaseModel):
+class DeltaModelConfig(BaseModel):
     """Configuration class for the DPL model."""
     rho: int
     phy_model: PhyModelConfig
@@ -120,8 +120,8 @@ class ObservationConfig(BaseModel):
     test_path: str = 'not_defined'
     start_time: str = 'not_defined'
     end_time_all: str = 'not_defined'
-    forcings_all: list[str] = Field(default_factory=list, description="List of dynamic input variables.")
-    attributes_all: list[str] = Field(default_factory=list, description="List of static input variables.")
+    all_forcings: list[str] = Field(default_factory=list, description="List of dynamic input variables.")
+    all_attributes: list[str] = Field(default_factory=list, description="List of static input variables.")
 
     @field_validator('train_path', 'test_path')
     @classmethod
@@ -159,7 +159,7 @@ class Config(BaseModel):
     train: TrainingConfig
     test: TestingConfig
     loss_function: LossFunctionConfig
-    dpl_model: DPLModelConfig
+    delta_model: DeltaModelConfig
     observations: ObservationConfig
 
     @field_validator('save_path')
@@ -223,7 +223,7 @@ if __name__ == '__main__':
             loss_function={
                 'model': 'RmseLossComb',
             },
-            dpl_model={
+            delta_model={
                 'rho': 365,
                 'phy_model': {
                     'model': ['None_model'],
@@ -250,8 +250,8 @@ if __name__ == '__main__':
                 'test_path': '.',
                 'start_time_all': '2000/01/01',
                 'end_time_all': '2024/12/31',
-                'forcings_all': ['x1_var', 'x2_var'],
-                'attributes_all': ['attr1', 'attr2'],
+                'all_forcings': ['x1_var', 'x2_var'],
+                'all_attributes': ['attr1', 'attr2'],
             },
         )
         print("Configuration is valid.")

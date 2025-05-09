@@ -43,17 +43,17 @@ class MsHydroLoader(BaseLoader):
         self.config = config
         self.test_split = test_split
         self.overwrite = overwrite
-        self.supported_data = ['merit_forward']
+        self.supported_data = ['merit']  # Add new supported observation names here.
         self.data_name = config['observations']['name']
-        self.nn_attributes = config['dpl_model']['nn_model'].get('attributes', [])
-        self.nn_forcings = config['dpl_model']['nn_model'].get('forcings', [])
-        self.phy_attributes = config['dpl_model']['phy_model'].get('attributes', [])
-        self.phy_forcings = config['dpl_model']['phy_model'].get('forcings', [])
-        self.all_forcings = self.config['observations']['forcings_all']
-        self.all_attributes = self.config['observations']['attributes_all']
+        self.nn_attributes = config['delta_model']['nn_model'].get('attributes', [])
+        self.nn_forcings = config['delta_model']['nn_model'].get('forcings', [])
+        self.phy_attributes = config['delta_model']['phy_model'].get('attributes', [])
+        self.phy_forcings = config['delta_model']['phy_model'].get('forcings', [])
+        self.all_forcings = self.config['observations']['all_forcings']
+        self.all_attributes = self.config['observations']['all_attributes']
 
         self.target = config['train']['target']
-        self.log_norm_vars = config['dpl_model']['phy_model']['use_log_norm']
+        self.log_norm_vars = config['delta_model']['phy_model']['use_log_norm']
         self.device = config['device']
         self.dtype = config['dtype']
 
@@ -70,8 +70,8 @@ class MsHydroLoader(BaseLoader):
     def load_dataset(self) -> None:
         """Load dataset into dictionary of nn and physics model input arrays."""
         mode = self.config['mode']
-        if mode == 'predict':
-            self.dataset = self._preprocess_data(scope='predict')
+        if mode == 'simulation':
+            self.dataset = self._preprocess_data(scope='simulation')
         elif self.test_split:
             self.train_dataset = self._preprocess_data(scope='train')
             self.eval_dataset = self._preprocess_data(scope='test')
@@ -145,12 +145,12 @@ class MsHydroLoader(BaseLoader):
                 time = self.config['train_time']
             elif scope == 'test':
                 time = self.config['test_time']
-            elif scope == 'predict':
-                time = self.config['predict_time']
+            elif scope == 'simulation':
+                time = self.config['sim_time']
             elif scope == 'all':
                 time = self.config['all_time']
             else:
-                raise ValueError("Scope must be 'train', 'test', 'predict', or 'all'.")
+                raise ValueError("Scope must be 'train', 'test', 'simulation', or 'all'.")
         except KeyError as e:
             raise ValueError(f"Key {e} for data path not in dataset config.") from e
 
@@ -232,7 +232,7 @@ class MsHydroLoader(BaseLoader):
         else:
             # Init normalization stats if file doesn't exist or overwrite is True.
             # NOTE: will be supported with release of multiscale training code.
-            raise ValueError("Normalization statistics not found. Confirm" \
+            raise ValueError("Normalization statistics not found. Confirm " \
                              "`normalization_statistics.json` is in your model directory.")
 
     def normalize(

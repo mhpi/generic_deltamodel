@@ -7,7 +7,7 @@ import tqdm
 
 from dMG.core.utils import save_model
 from dMG.models.criterion.range_bound_loss import RangeBoundLoss
-from dMG.models.deltamodel.dpl_model import DplModel
+from dMG.models.delta_models.dpl_model import DplModel
 from dMG.models.multimodels.ensemble_generator import EnsembleGenerator
 
 log = logging.getLogger(__name__)
@@ -75,7 +75,7 @@ class ModelHandler(torch.nn.Module):
         list[str]
             List of model names.
         """
-        models = self.config['dpl_model']['phy_model']['model']
+        models = self.config['delta_model']['phy_model']['model']
 
         if self.multimodel_type in ['nn_parallel']:
             # Add ensemble weighting NN to the list.
@@ -92,7 +92,7 @@ class ModelHandler(torch.nn.Module):
         # Epoch to load
         if self.config['mode'] == 'train':
             load_epoch = self.config['train']['start_epoch']
-        elif self.config['mode'] in ['test', 'predict']:
+        elif self.config['mode'] in ['test', 'simulation']:
             load_epoch = self.config['test']['test_epoch']
         else:
             load_epoch = self.config.get('load_epoch', 0)
@@ -125,7 +125,7 @@ class ModelHandler(torch.nn.Module):
                 # TODO: make dynamic import for other modalities.
                 self.model_dict[name] = DplModel(
                     phy_model_name=name,
-                    config=self.config['dpl_model'],
+                    config=self.config['delta_model'],
                     device=self.device
                 )
 

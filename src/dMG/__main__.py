@@ -1,3 +1,11 @@
+"""There are two ways to run dMG in command line...
+
+1. python -m dMG (Uses default config.yaml)
+2. python src/dMG/__main__.py (Uses default config.yaml)
+
+Add opt `--config-name <config_name>` to (1) or (2) to use a different config.
+"""
+
 import logging
 import time
 
@@ -5,8 +13,9 @@ import hydra
 import torch
 from omegaconf import DictConfig
 
-from dMG.core.utils import initialize_config, print_config, set_randomseed
 from dMG.core.utils.factory import import_data_loader, import_trainer
+from dMG.core.utils.utils import (initialize_config, print_config,
+                                  set_randomseed)
 from dMG.models.model_handler import ModelHandler as dModel
 
 log = logging.getLogger(__name__)
@@ -22,7 +31,7 @@ def run_mode(mode: str, trainer):
     elif mode == 'train_test':
         trainer.train()
         trainer.evaluate()
-    elif mode == 'predict':
+    elif mode == 'simulation':
         trainer.inference()
     else:
         raise ValueError(f"Invalid mode: {mode}")
@@ -30,8 +39,8 @@ def run_mode(mode: str, trainer):
 
 @hydra.main(
     version_base='1.3',
-    config_path='conf/',
-    config_name='config',
+    config_path='./../../conf/',
+    config_name='default',
 )
 def main(config: DictConfig) -> None:
     """Main function to run differentiable model experiments."""

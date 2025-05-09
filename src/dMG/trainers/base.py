@@ -104,7 +104,7 @@ class BaseTrainer(ABC):
 
     def validate_config(self) -> None:
         """Ensure the configuration contains required keys."""
-        required_keys = ["train", "test", "dpl_model"]
+        required_keys = ["train", "test", "delta_model"]
         missing_keys = [key for key in required_keys if key not in self.config]
         if missing_keys:
             raise ValueError(f"Configuration is missing required keys: {missing_keys}")

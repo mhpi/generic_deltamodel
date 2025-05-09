@@ -1,5 +1,13 @@
-# This configuration file is specifically for the multi-scale, differentiable, hydrologic model dHBV 1.1p from Song et al., 2024. If you find this code is useful to your work, please cite this paper below:
-# Yalan Song, Kamlesh Sawadekar, Jonathan Frame, et al. Improving physics-informed, differentiable hydrologic models for capturing unseen extreme events. ESS Open Archive. 7 August 2024. https://doi.org/10.22541/essoar.172304428.82707157/v1.
+# This configuration file is specifically for the differentiable hydrologic model dHBV 1.1p from Song et al. (2025). If you find this code is useful to your work, please cite the paper below:
+# Yalan Song, Kamlesh Sawadekar, Jonathan Frame, et al. "Physics-informed, Differentiable Hydrologic  Models for Capturing Unseen Extreme Events." ESS Open Archive (2025). https://doi.org/10.22541/essoar.172304428.82707157/v2.
+
+# This config replicates the CAMELS 531-basin, 10-year benchmark. 
+# To setup for CAMELS 671-basin, 15-year benchmark, set the following...
+#   1. observations: camels_671
+#   2. train: start_time: 1980/10/01
+#   3. train: end_time: 1995/09/30
+#   4. test/simulation: start_time: 1995/10/01
+#   5. test/simulation: end_time: 2010/09/30
 
 defaults:
     - _self_
@@ -8,7 +16,7 @@ defaults:
 
 
 ## General -------------------------------#
-mode: train  # train, test, train_test, predict
+mode: train  # train, test, train_test, simulation
 random_seed: 111111
 device: cuda
 gpu_id: 0
@@ -17,15 +25,18 @@ data_loader: HydroLoader
 data_sampler: HydroSampler
 trainer: Trainer
 
-save_path: ../results
-trained_model: path/to/your/model/  # The trained dHBV 1.1p model can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_1_1p_trained.zip
+save_path: ./output
+    # NOTE: The output path is relative to the current working directory. 
+    #       If you want to save the output in a different directory, please specify the absolute path.
+    #       * If a valid trained_model path is specified, save_path will be set to trained_model.
+trained_model: ./path/to/your/model/  # Pretrained dHBV 1.1p can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_1_1p_trained.zip
 
 
 ## Training ------------------------------#
 train:
     start_time: 1999/10/01
     end_time: 2008/09/30
-    target: [flow_sim]
+    target: [streamflow]
     optimizer: Adadelta
     batch_size: 100
     epochs: 100
@@ -42,7 +53,7 @@ test:
 
 
 ## Inference -------------------------------#
-predict:
+simulation:
     start_time: 2012/10/01
     end_time: 2014/09/30
     batch_size: 25
@@ -53,13 +64,13 @@ loss_function:
     model: NseBatchLoss
 
 
-## dPL Model -----------------------------#
-dpl_model:
+## Differentiable Model -----------------------------#
+delta_model:
     rho: 365
     
     phy_model:
         ## Citations ##
-        # HBV 1.1p (HBV_1_1p): Yalan Song, Kamlesh Sawadekar, Jonathan M Frame, Ming Pan, Martyn Clark, Wouter J M Knoben, Andrew W Wood, Trupesh Patel, Chaopeng Shen. "Improving physics-informed, differentiable hydrologic models for capturing unseen extreme events." ESS Open Archive (2024). https://doi.org/10.22541/essoar.172304428.82707157/v1.
+        # HBV 1.1p (HBV_1_1p): Yalan Song, Kamlesh Sawadekar, Jonathan Frame, et al. "Physics-informed, Differentiable Hydrologic  Models for Capturing Unseen Extreme Events." ESS Open Archive (2025). https://doi.org/10.22541/essoar.172304428.82707157/v2.
 
         model: [HBV_1_1p]
         nmul: 16

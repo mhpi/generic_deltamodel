@@ -1,14 +1,14 @@
-# This configuration file is specifically for the high-resolution, differentiable, hydrologic model, dHBV2.0UH, from Song et al., 2025. If you find this code is useful to your work, please cite this paper below:
-# Yalan Song, Tadd Bindas, Chaopeng Shen, et al. High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning. Water Resources Research. 18 March 2025. https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2024WR038928
+# This configuration file is specifically for the high-resolution, multiscale, differentiable hydrologic model, dHBV2.0UH, from Song et al. (2025). If you find this code is useful to your work, please cite the paper below:
+# Yalan Song, Tadd Bindas, Chaopeng Shen, et al. "High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning." Water Resources Research (2025). https://doi.org/10.1029/2024WR038928.
 
 defaults:
     - _self_
     - hydra: settings
-    - observations: merit_forward
+    - observations: merit
 
 
 ## General -------------------------------#
-mode: predict
+mode: simulation
 random_seed: 111111
 device: cuda
 gpu_id: 0
@@ -17,8 +17,11 @@ data_loader: MsHydroLoader
 data_sampler: MsHydroSampler
 trainer: MsTrainer
 
-save_path: ../../results
-trained_model: path/to/your/model/  # The trained dHBV 2.0 model (+ input data) can be downloaded from: https://pennstateoffice365-my.sharepoint.com/:f:/g/personal/cxs1024_psu_edu/Eqi1NuJ3d2pMpEJpVu0EGSoBigi-VCWVHgOYIRoTeuGiOw?e=HaNNeA
+save_path: ./output  
+    # NOTE: The output path is relative to the current working directory. 
+    #       If you want to save the output in a different directory, please specify the absolute path.
+    #       * If a valid trained_model path is specified, save_path will be set to trained_model.
+trained_model: ./path/to/your/model/  # Pretrained dHBV 2.0 (+ input data) can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_2_0_trained.zip
 
 
 ## Training ------------------------------#
@@ -27,7 +30,7 @@ train:
     # Training code will be released at a later time.
     start_time: 1980/10/01
     end_time: 1995/09/30
-    target: [flow_sim]
+    target: [streamflow]
     optimizer: Adadelta
     batch_size: 100
     epochs: 100
@@ -44,7 +47,7 @@ test:
 
 
 ## Inference -------------------------------#
-predict:
+simulation:
     start_time: 1980/01/01
     end_time: 2020/12/31
     batch_size: 400
@@ -55,13 +58,13 @@ loss_function:
     model: RmseCombLoss
 
 
-## dPL Model -----------------------------#
-dpl_model:
+## Differentiable Model -----------------------------#
+delta_model:
     rho: 365
     
     phy_model:
         ## Citations ##
-        # HBV 2.0 (HBV_2_0): Yalan Song, Tadd Bindas, Chaopeng Shen, et al. High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning. Water Resources Research. 18 March, 2025. https://doi.org/10.22541/essoar.172736277.74497104/v1.
+        # HBV 2.0 (HBV_2_0): Yalan Song, Tadd Bindas, Chaopeng Shen, et al. "High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning." Water Resources Research (2025). https://doi.org/10.1029/2024WR038928.
 
         model: [HBV_2_0]
         nmul: 4

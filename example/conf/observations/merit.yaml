@@ -1,5 +1,8 @@
-name: merit_forward
-subbasin_data_path: /projects/mhpi/yxs275/model/generic_deltaModel_dhbv2.0/data/71_0
+# MERIT data extraction
+# Download: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_2_0_trained.zip
+
+name: merit
+subbasin_data_path: ./your/path/to/merit_71_0/
 
 subbasin_id_name: COMID
 upstream_area_name: uparea
@@ -9,12 +12,12 @@ elevation_name: meanelevation
 start_time: 1980/01/01
 end_time: 2020/12/31
 
-forcings_all: [
+all_forcings: [
     P,
     Temp,
     PET,
 ]
-attributes_all: [
+all_attributes: [
     aridity, 
     meanP,
     ETPOT_Hargr,

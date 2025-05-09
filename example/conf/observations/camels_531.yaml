@@ -1,29 +1,23 @@
-# CAMELS 671-basin data extraction (with 531-basin indexing file) can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/camels/camels_data.zip
+# CAMELS 671-basin data extraction (with 531-basin indexing)
+# Download: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/camels/camels_data.zip
 
 name: camels_531
-train_path: #your/path/to/camels/training_file
-test_path: #your/path/to/camels/validation_file
+data_path: ./your/path/to/camels_dataset
 
-gage_info: #your/path/to/camels/gage_ids.npy
-subset_path: #your/path/to/camels/531_subset.txt
-
-train_path: /projects/mhpi/leoglonz/data/extracted/CAMELS/camels_daymetv2
-test_path: /projects/mhpi/leoglonz/data/extracted/CAMELS/camels_daymetv2
-
-gage_info: /projects/mhpi/leoglonz/data/extracted/CAMELS/gage_id.npy
-subset_path: /projects/mhpi/leoglonz/data/extracted/CAMELS/531sub_id.txt
+gage_info: ./your/path/to/gage_id.npy
+subset_path: ./your/path/to/531sub_id.txt
 
 area_name: area_gages2
 
 start_time: 1980/10/01
 end_time: 2014/09/30
 
-forcings_all: [
+all_forcings: [
     prcp,
     tmean,
     pet,
 ]
-attributes_all: [
+all_attributes: [
     p_mean,
     pet_mean,
     p_seasonality,

@@ -6,7 +6,9 @@ from dMG.core.utils.factory import import_phy_model, load_nn_model
 
 
 class DplModel(torch.nn.Module):
-    """Default class for instantiating a differentiable parameter learning model.
+    """Differentiable parameter learning (dPL) model.
+
+    Learn parameters for a physics model using a neural network (NN).
     
     Default modality:
         Parameterization neural network (NN) -> Physics Model (phy_model)
@@ -14,16 +16,15 @@ class DplModel(torch.nn.Module):
         - NN: e.g., LSTM, MLP, KNN
             Learns parameters for the physics model.
 
-        - phy_model: e.g., HBV 1.0, HBV 1.1p
+        - phy_model: e.g., HBV 1.0, HBV 1.1p.
             A parameterized physics model that ingests NN-generated parameters
-            and produces some target output. This output is compared to some
-            observation to calculate a loss used to train the NN.
+            and produces some target output. This model must be implemented in a differentiable way to facilitate PyTorch auto-differentiation.
 
     Parameters
     ----------
     phy_model_name
-        The name of the physics model. This allows initialization of multiple
-        physics models from the same config dict. If not provided, the first
+        The name of the physical model. This allows initialization of multiple
+        physics models from the same config. If not specified, the first
         model provided in the config is used.
     phy_model
         The physics model.
@@ -43,7 +44,7 @@ class DplModel(torch.nn.Module):
         device: Optional[torch.device] = 'cpu',
     ) -> None:
         super().__init__()
-        self.name = 'Differentiable Model'
+        self.name = 'dPL Model'
         self.config = config
         self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

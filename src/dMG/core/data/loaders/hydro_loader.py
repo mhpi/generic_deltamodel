@@ -61,15 +61,15 @@ class HydroLoader(BaseLoader):
         self.overwrite = overwrite
         self.supported_data = ['camels_671', 'camels_531', 'prism_671', 'prism_531']
         self.data_name = config['observations']['name']
-        self.nn_attributes = config['dpl_model']['nn_model'].get('attributes', [])
-        self.nn_forcings = config['dpl_model']['nn_model'].get('forcings', [])
-        self.phy_attributes = config['dpl_model']['phy_model'].get('attributes', [])
-        self.phy_forcings = config['dpl_model']['phy_model'].get('forcings', [])
-        self.all_forcings = self.config['observations']['forcings_all']
-        self.all_attributes = self.config['observations']['attributes_all']
+        self.nn_attributes = config['delta_model']['nn_model'].get('attributes', [])
+        self.nn_forcings = config['delta_model']['nn_model'].get('forcings', [])
+        self.phy_attributes = config['delta_model']['phy_model'].get('attributes', [])
+        self.phy_forcings = config['delta_model']['phy_model'].get('forcings', [])
+        self.forcing_names = self.config['observations']['all_forcings']
+        self.attribute_names = self.config['observations']['all_attributes']
 
         self.target = config['train']['target']
-        self.log_norm_vars = config['dpl_model']['phy_model']['use_log_norm']
+        self.log_norm_vars = config['delta_model']['phy_model']['use_log_norm']
         self.device = config['device']
         self.dtype = config['dtype']
 
@@ -86,8 +86,8 @@ class HydroLoader(BaseLoader):
     def load_dataset(self) -> None:
         """Load data into dictionary of nn and physics model input tensors."""
         mode = self.config['mode']
-        if mode == 'predict':
-            self.dataset = self._preprocess_data(scope='predict')
+        if mode == 'simulation':
+            self.dataset = self._preprocess_data(scope='simulation')
         elif self.test_split:
             self.train_dataset = self._preprocess_data(scope='train')
             self.eval_dataset = self._preprocess_data(scope='test')
@@ -143,20 +143,29 @@ class HydroLoader(BaseLoader):
             Tuple of neural network + physics model inputes, and target data.
         """
         try:
+            if self.config['observations']['data_path']:
+                data_path = self.config['observations']['data_path']
+            
             if scope == 'train':
-                data_path = self.config['observations']['train_path']
+                if not data_path:
+                    # NOTE: still including 'train_path' etc. for backwards
+                    # compatibility until all code is updated to use 'data_path'.
+                    data_path = self.config['observations']['train_path']
                 time = self.config['train_time']
             elif scope == 'test':
-                data_path = self.config['observations']['test_path']
+                if not data_path:
+                    data_path = self.config['observations']['test_path']
                 time = self.config['test_time']
-            elif scope == 'predict':
-                data_path = self.config['observations']['test_path']
-                time = self.config['predict_time']
+            elif scope == 'simulation':
+                if not data_path:
+                    data_path = self.config['observations']['test_path']
+                time = self.config['sim_time']
             elif scope == 'all':
-                data_path = self.config['observations']['test_path']
+                if not data_path:
+                    data_path = self.config['observations']['test_path']
                 time = self.config['all_time']
             else:
-                raise ValueError("Scope must be 'train', 'test', 'predict', or 'all'.")
+                raise ValueError("Scope must be 'train', 'test', 'simulation', or 'all'.")
         except KeyError as e:
             raise ValueError(f"Key {e} for data path not in dataset config.") from e
 
@@ -178,30 +187,30 @@ class HydroLoader(BaseLoader):
         # Forcing subset for phy model
         phy_forc_idx = []
         for forc in self.phy_forcings:
-            if forc not in self.all_forcings:
+            if forc not in self.forcing_names:
                 raise ValueError(f"Forcing {forc} not listed in available forcings.")
-            phy_forc_idx.append(self.all_forcings.index(forc))
-
+            phy_forc_idx.append(self.forcing_names.index(forc))
+        
         # Attribute subset for phy model
         phy_attr_idx = []
         for attr in self.phy_attributes:
-            if attr not in self.all_attributes:
+            if attr not in self.attribute_names:
                 raise ValueError(f"Attribute {attr} not in the list of all attributes.")
-            phy_attr_idx.append(self.all_attributes.index(attr))
+            phy_attr_idx.append(self.attribute_names.index(attr))
 
         # Forcings subset for nn model
         nn_forc_idx = []
         for forc in self.nn_forcings:
-            if forc not in self.all_forcings:
+            if forc not in self.forcing_names:
                 raise ValueError(f"Forcing {forc} not in the list of all forcings.")
-            nn_forc_idx.append(self.all_forcings.index(forc))
+            nn_forc_idx.append(self.forcing_names.index(forc))
 
         # Attribute subset for nn model
         nn_attr_idx = []
         for attr in self.nn_attributes:
-            if attr not in self.all_attributes:
+            if attr not in self.attribute_names:
                 raise ValueError(f"Attribute {attr} not in the list of all attributes.")
-            nn_attr_idx.append(self.all_attributes.index(attr))
+            nn_attr_idx.append(self.attribute_names.index(attr))
 
         x_phy = forcings[:,:, phy_forc_idx]
         c_phy = attributes[:, phy_attr_idx]
@@ -263,17 +272,7 @@ class HydroLoader(BaseLoader):
         c_nn: NDArray[np.float32],
         target: NDArray[np.float32],
     ) -> None:
-        """Load or calculate normalization statistics if necessary.
-        
-        Parameters
-        ----------
-        x_nn
-            Neural network dynamic data.
-        c_nn
-            Neural network static data.
-        target
-            Target variable data.
-        """
+        """Load or calculate normalization statistics if necessary."""
         self.out_path = os.path.join(
             self.config['model_path'],
             'normalization_statistics.json',
@@ -286,6 +285,7 @@ class HydroLoader(BaseLoader):
         else:
             # Init normalization stats if file doesn't exist or overwrite is True.
             self.norm_stats = self._init_norm_stats(x_nn, c_nn, target)
+
 
     def _init_norm_stats(
         self,

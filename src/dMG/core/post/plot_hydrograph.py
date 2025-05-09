@@ -16,7 +16,7 @@ def plot_hydrograph(
     obs: Union[NDArray[np.float32], torch.Tensor] = None,
     resample: Literal['D','W', 'M', 'Y'] = 'D',
     title = None,
-    ylabel: str = 'Streamflow (ft$^3$/s)',
+    ylabel: str = 'Streamflow (mm/day)',
     minor_ticks: bool = False,
     figsize: tuple = (12, 6),
     fontsize: int = 12,
@@ -26,24 +26,26 @@ def plot_hydrograph(
 
     Parameters
     ----------
-    timesteps : pd.DatetimeIndex
+    timesteps
         The timesteps of the predictions.
-    predictions : Union[NDArray[np.float32], torch.Tensor]
+    predictions
         The model predictions.
-    obs : Union[NDArray[np.float32], torch.Tensor], optional
-        The observed streamflow values. Default is None.
-    resample : Literal['D','W', 'M', 'Y'], optional
-        The resampling interval for the data. Default is 'D'.
-    title : str, optional
-        The title of the plot. Default is None.
-    ylabel : str, optional
-        The y-axis label. Default is 'Streamflow (ft$^3$/s)'.
-    minor_ticks : bool, optional
-        Whether to show minor ticks on the plot. Default is False.
-    figsize : tuple, optional
-        The figure size. Default is (12, 6).
-    fontsize : int, optional
-        The font size of the plot. Default is 12.
+    obs
+        The observed streamflow values.
+    resample
+        The resampling interval for the data.
+    title
+        The title of the plot.
+    ylabel
+        The y-axis label.
+    minor_ticks
+        Whether to show minor ticks on the plot.
+    figsize
+        The figure size.
+    fontsize
+        The font size of the plot.
+    dpi
+        The resolution of the plot.
     """
     if isinstance(predictions, torch.Tensor):
         predictions = predictions.detach().cpu().numpy()

@@ -79,7 +79,10 @@ def set_randomseed(seed=0) -> None:
         log.warning(f"Error fixing randomseed: {e}")
 
 
-def initialize_config(config: Union[DictConfig, dict]) -> dict[str, Any]:
+def initialize_config(
+    config: Union[DictConfig, dict],
+    write_path: bool = True,
+) -> dict[str, Any]:
     """Parse and initialize configuration settings.
     
     Parameters
@@ -102,10 +105,10 @@ def initialize_config(config: Union[DictConfig, dict]) -> dict[str, Any]:
     config['device'], config['dtype'] = set_system_spec(config)
 
     # Convert date ranges to integer values.
-    train_time = Dates(config['train'], config['dpl_model']['rho'])
-    test_time = Dates(config['test'], config['dpl_model']['rho'])
-    predict_time = Dates(config['predict'], config['dpl_model']['rho'])
-    all_time = Dates(config['observations'], config['dpl_model']['rho'])
+    train_time = Dates(config['train'], config['delta_model']['rho'])
+    test_time = Dates(config['test'], config['delta_model']['rho'])
+    sim_time = Dates(config['simulation'], config['delta_model']['rho'])
+    all_time = Dates(config['observations'], config['delta_model']['rho'])
 
     exp_time_start = min(
         train_time.start_time,
@@ -122,7 +125,7 @@ def initialize_config(config: Union[DictConfig, dict]) -> dict[str, Any]:
 
     config['train_time'] = [train_time.start_time, train_time.end_time]
     config['test_time'] = [test_time.start_time, test_time.end_time]
-    config['predict_time'] = [predict_time.start_time, predict_time.end_time]
+    config['sim_time'] = [sim_time.start_time, sim_time.end_time]
     config['experiment_time'] = [exp_time_start, exp_time_end]
     config['all_time'] = [all_time.start_time, all_time.end_time]
 
@@ -131,16 +134,17 @@ def initialize_config(config: Union[DictConfig, dict]) -> dict[str, Any]:
     if config.get('multimodel_type', '')  in ['none', 'None', '']:
         config['multimodel_type'] = None
 
-    if config['dpl_model']['nn_model'].get('lr_scheduler', '') in ['none', 'None', '']:
-        config['dpl_model']['nn_model']['lr_scheduler'] = None
+    if config['delta_model']['nn_model'].get('lr_scheduler', '') in ['none', 'None', '']:
+        config['delta_model']['nn_model']['lr_scheduler'] = None
 
     if config.get('trained_model', '') in ['none', 'None', '']:
         config['trained_model'] = ''
 
     # Create output directories and add path to config.
     out_path = PathBuilder(config)
-    config = out_path.write_path(config)
-
+    if write_path:
+        config = out_path.write_path(config)
+    
     # Convert string back to data type.
     config['dtype'] = eval(config['dtype'])
 
@@ -259,7 +263,7 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
 
     elif type(predictions) is dict:
         # Handle multiple models
-        models = config['dpl_model']['phy_model']['model']
+        models = config['delta_model']['phy_model']['model']
         for key in predictions[models[0]][0].keys():
             out_dict = {}
 
@@ -323,7 +327,7 @@ def print_config(config: dict[str, Any]) -> None:
     print(f"  {'Experiment Mode:':<20}{config['mode']:<20}")
     if config['multimodel_type'] is not None:
         print(f"  {'Ensemble Mode:':<20}{config['multimodel_type']:<20}")
-    for i, mod in enumerate(config['dpl_model']['phy_model']['model']):
+    for i, mod in enumerate(config['delta_model']['phy_model']['model']):
         print(f"  {f'Model {i+1}:':<20}{mod:<20}")
     print()
 
@@ -333,20 +337,20 @@ def print_config(config: dict[str, Any]) -> None:
         print(f"  {'Train Range :':<20}{config['train']['start_time']:<20}{config['train']['end_time']:<20}")
     if 'test' in config['mode']:
         print(f"  {'Test Range :':<20}{config['test']['start_time']:<20}{config['test']['end_time']:<20}")
-    if 'predict' in config['mode']:
-        print(f"  {'Predict Range :':<20}{config['predict']['start_time']:<20}{config['predict']['end_time']:<20}")
+    if 'simulation' in config['mode']:
+        print(f"  {'Simulation Range :':<20}{config['simulation']['start_time']:<20}{config['simulation']['end_time']:<20}")
     if config['train']['start_epoch'] > 0 and 'train' in config['mode']:
         print(f"  {'Resume training from epoch:':<20}{config['train']['start_epoch']:<20}")
     print()
 
     print("\033[1m" + "Model Parameters" + "\033[0m")
     print(f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}")
-    if config['dpl_model']['nn_model']['model'] != 'LstmMlpModel':
-        print(f"  {'Dropout:':<20}{config['dpl_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['dpl_model']['nn_model']['hidden_size']:<20}")
+    if config['delta_model']['nn_model']['model'] != 'LstmMlpModel':
+        print(f"  {'Dropout:':<20}{config['delta_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['delta_model']['nn_model']['hidden_size']:<20}")
     else:
-        print(f"  {'LSTM Dropout:':<20}{config['dpl_model']['nn_model']['lstm_dropout']:<20}{'LSTM Hidden Size:':<20}{config['dpl_model']['nn_model']['lstm_hidden_size']:<20}")
-        print(f"  {'MLP Dropout:':<20}{config['dpl_model']['nn_model']['mlp_dropout']:<20}{'MLP Hidden Size:':<20}{config['dpl_model']['nn_model']['mlp_hidden_size']:<20}")
-    print(f"  {'Warmup:':<20}{config['dpl_model']['phy_model']['warm_up']:<20}{'Concurrent Models:':<20}{config['dpl_model']['phy_model']['nmul']:<20}")
+        print(f"  {'LSTM Dropout:':<20}{config['delta_model']['nn_model']['lstm_dropout']:<20}{'LSTM Hidden Size:':<20}{config['delta_model']['nn_model']['lstm_hidden_size']:<20}")
+        print(f"  {'MLP Dropout:':<20}{config['delta_model']['nn_model']['mlp_dropout']:<20}{'MLP Hidden Size:':<20}{config['delta_model']['nn_model']['mlp_hidden_size']:<20}")
+    print(f"  {'Warmup:':<20}{config['delta_model']['phy_model'].get('warm_up', '0'):<20}{'Concurrent Models:':<20}{config['delta_model']['phy_model']['nmul']:<20}")
     print(f"  {'Loss Fn:':<20}{config['loss_function']['model']:<20}")
     print()
 
