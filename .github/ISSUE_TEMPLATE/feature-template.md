@@ -9,8 +9,6 @@ assignees: leoglonz
 
 ### Summary
 
-- 
-
 
 ### Actions
 
