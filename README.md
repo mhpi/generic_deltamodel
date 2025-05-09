@@ -30,9 +30,10 @@ Differentiable modeling introduces more modeling choices than traditional deep l
 
 </br>
 
-Mantained by [MHPI](http://water.engr.psu.edu/shen/), advised by [Dr. Chaopeng Shen](https://water.engr.psu.edu/shen/). If you find this work useful, please cite (dedicated citations are coming):
+This work is mantained by [MHPI](http://water.engr.psu.edu/shen/) and advised by [Dr. Chaopeng Shen](https://water.engr.psu.edu/shen/). If you find it useful, please cite (dedicated citations are coming):
 
-Shen, C., et al. (2023). Differentiable modelling to unify machine learning and physical models for geosciences. Nature Reviews Earth & Environment, 4(8), 552–567. <https://doi.org/10.1038/s43017-023-00450-9>.
+    Shen, C., et al. (2023). Differentiable modelling to unify machine learning and physical models for geosciences. Nature Reviews Earth & Environment, 4(8), 552–567. <https://doi.org/10.1038/s43017-023-00450-9>.
+
 </br>
 
 ## Installation
