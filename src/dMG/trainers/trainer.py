@@ -18,6 +18,13 @@ from dMG.trainers.base import BaseTrainer
 log = logging.getLogger(__name__)
 
 
+# try:
+#     from ray import tune
+#     from ray.air import Checkpoint
+# except ImportError:
+#     log.warning('Ray Tune is not installed or is misconfigured. Tuning will be disabled.')
+
+
 class Trainer(BaseTrainer):
     """Generic, unified trainer for neural networks and differentiable models.
 
@@ -101,7 +108,7 @@ class Trainer(BaseTrainer):
             self.start_epoch = self.config['train']['start_epoch'] + 1
             if self.start_epoch > 1:
                 self.load_states()
-
+    
     def init_optimizer(self) -> torch.optim.Optimizer:
         """Initialize a state optimizer.
         
@@ -209,57 +216,90 @@ class Trainer(BaseTrainer):
             self.config,
         )
 
-        # Training loop
         log.info(f"Training model: Beginning {self.start_epoch} of {self.epochs} epochs")
+        
+        # Training loop
         for epoch in range(self.start_epoch, self.epochs + 1):
-            start_time = time.perf_counter()
-            prog_str = f"Epoch {epoch}/{self.epochs}"
+            self.train_one_epoch(
+                epoch,
+                n_samples,
+                n_minibatch,
+                n_timesteps,
+            )
 
-            self.current_epoch = epoch
-            self.total_loss = 0.0
+    def train_one_epoch(self, epoch, n_samples, n_minibatch, n_timesteps) -> None:
+        """Train model for one epoch.
+        
+        Parameters
+        ----------
+        epoch
+            Current epoch number.
+        n_samples
+            Number of samples in the training dataset.
+        n_minibatch
+            Number of minibatches in the training dataset.
+        n_timesteps
+            Number of timesteps in the training dataset.
+        """
+        start_time = time.perf_counter()
+        prog_str = f"Epoch {epoch}/{self.epochs}"
 
-            # Iterate through epoch in minibatches.
-            for i in tqdm.tqdm(range(1, n_minibatch + 1), desc=prog_str,
-                               leave=False, dynamic_ncols=True):
-                self.current_batch = i
+        self.current_epoch = epoch
+        self.total_loss = 0.0
 
-                dataset_sample = self.sampler.get_training_sample(
-                    self.train_dataset,
-                    n_samples,
-                    n_timesteps,
-                )
+        # Iterate through epoch in minibatches.
+        for i in tqdm.tqdm(range(1, n_minibatch + 1), desc=prog_str,
+                            leave=False, dynamic_ncols=True):
+            self.current_batch = i
 
-                # Forward pass through model.
-                _ = self.model(dataset_sample)
-                loss = self.model.calc_loss(dataset_sample)
+            dataset_sample = self.sampler.get_training_sample(
+                self.train_dataset,
+                n_samples,
+                n_timesteps,
+            )
 
-                loss.backward()
-                self.optimizer.step()
-                self.optimizer.zero_grad()
+            # Forward pass through model.
+            _ = self.model(dataset_sample)
+            loss = self.model.calc_loss(dataset_sample)
 
-                self.total_loss += loss.item()
+            loss.backward()
+            self.optimizer.step()
+            self.optimizer.zero_grad()
 
-                if self.verbose:
-                    tqdm.tqdm.write(f"Epoch {epoch}, batch {i} | loss: {loss.item()}")
-
-            if self.use_scheduler:
-                self.scheduler.step()
+            self.total_loss += loss.item()
 
             if self.verbose:
-                log.info(f"\n ---- \n Epoch {epoch} total loss: {self.total_loss}")
-            self._log_epoch_stats(epoch, self.model.loss_dict, n_minibatch, start_time)
+                tqdm.tqdm.write(f"Epoch {epoch}, batch {i} | loss: {loss.item()}")
 
-            # Save model and trainer states.
-            if epoch % self.config['train']['save_epoch'] == 0:
-                self.model.save_model(epoch)
-                save_train_state(
-                    self.config,
-                    epoch=epoch,
-                    optimizer=self.optimizer,
-                    scheduler=self.scheduler,
-                    clear_prior=True,
-                )
-        log.info("Training complete")
+        if self.use_scheduler:
+            self.scheduler.step()
+
+        if self.verbose:
+            log.info(f"\n ---- \n Epoch {epoch} total loss: {self.total_loss}")
+        self._log_epoch_stats(epoch, self.model.loss_dict, n_minibatch, start_time)
+
+        # Save model and trainer states.
+        if epoch % self.config['train']['save_epoch'] == 0:
+            self.model.save_model(epoch)
+            save_train_state(
+                self.config,
+                epoch=epoch,
+                optimizer=self.optimizer,
+                scheduler=self.scheduler,
+                clear_prior=True,
+            )
+        
+            # if self.config['do_tune']:
+            #     # Create temporary checkpoint if needed
+            #     chkpt = None
+            #     if epoch % self.calc_metricsconfig['tune']['save_epoch'] == 0:
+            #         with tempfile.TemporaryDirectory() as temp_dir:
+            #             model_path = os.path.join(temp_dir, "model_ep{epoch}.pt")
+            #             torch.save(self.model.state_dict(), model_path)
+            #             chkpt = Checkpoint.from_directory(temp_dir)
+
+            #     # Report to Ray Tune
+            #     tune.report(loss=self.total_loss, checkpoint=chkpt)
 
     def evaluate(self) -> None:
         """Run model evaluation and return both metrics and model outputs."""

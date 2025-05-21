@@ -5,7 +5,6 @@
 
 Add opt `--config-name <config_name>` to (1) or (2) to use a different config.
 """
-
 import logging
 import time
 
@@ -13,6 +12,7 @@ import hydra
 import torch
 from omegaconf import DictConfig
 
+from dMG.core.tune.utils import run_tuning
 from dMG.core.utils.factory import import_data_loader, import_trainer
 from dMG.core.utils.utils import (initialize_config, print_config,
                                   set_randomseed)
@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-def run_mode(mode: str, trainer):
+def run_mode(mode, trainer) -> None:
     """Execute the appropriate mode for training, testing, or inference."""
     if mode == 'train':
         trainer.train()
@@ -51,6 +51,11 @@ def main(config: DictConfig) -> None:
         config = initialize_config(config, write_path=True)
         set_randomseed(config['random_seed'])
 
+        ### Do model tuning ###
+        if config.get('do_tune', False):
+            run_tuning(config)
+            exit()
+            
         log.info(f"Running mode: {config['mode']}")
         print_config(config)
 
@@ -61,7 +66,7 @@ def main(config: DictConfig) -> None:
         log.info("Processing datasets...")
         data_loader_cls = import_data_loader(config['data_loader'])
         data_loader = data_loader_cls(config, test_split=True, overwrite=False)
-
+        
         ### Create trainer object ###
         trainer_cls = import_trainer(config['trainer'])
         trainer = trainer_cls(

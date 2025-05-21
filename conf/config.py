@@ -148,6 +148,7 @@ class ObservationConfig(BaseModel):
 class Config(BaseModel):
     """Configuration class for the model."""
     mode: ModeEnum = Field(default=ModeEnum.train_test)
+    do_tune: bool = False
     multimodel_type: str = 'none'
     random_seed: int = 0
     device: str = 'cpu'
