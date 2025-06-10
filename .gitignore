@@ -181,3 +181,14 @@ validation/
 
 # Model optimization config with RayTune
 !tune/
+
+# hidden files
+*/transformer/advanced_encoders.py
+*/transformer/mask.py
+*/transformer/MFFormer.py
+*/transformer/MFFormerNewEmbedding.py
+src/dmg/models/neural_networks/transformer/advanced_encoders.py
+src/dmg/models/neural_networks/transformer/mask.py
+src/dmg/models/neural_networks/transformer/MFFormer.py
+src/dmg/models/neural_networks/transformer/MFFormerTFT.py
+conf/
