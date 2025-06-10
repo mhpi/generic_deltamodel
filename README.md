@@ -1,4 +1,4 @@
-# δMG: Generic Differentiable Modeling Framework
+# 𝛿MG: Generic Differentiable Modeling Framework
 
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.7.0-EE4C2C?logo=pytorch)](https://pytorch.org/)
@@ -10,19 +10,19 @@
 
 ---
 
-A generic framework for building [differentiable models](https://www.nature.com/articles/s43017-023-00450-9). dMG enables seamless coupling of neural networks with differentiable process-based equations, leveraging PyTorch's auto-differentiation for efficient, large-scale optimization on GPU. The spiritual successor to [HydroDL](https://github.com/zhonghu17/HydroDL), dMG generalizes differentiable modeling for cross-domain application while also imposing basic standardizations for research-to-operations pipelines.
+A generic framework for building [differentiable models](https://www.nature.com/articles/s43017-023-00450-9). 𝛿MG enables seamless coupling of neural networks with differentiable process-based equations, leveraging PyTorch's auto-differentiation for efficient, large-scale optimization on GPU. The spiritual successor to [HydroDL](https://github.com/zhonghu17/HydroDL), 𝛿MG generalizes differentiable modeling for cross-domain application while also imposing basic standardizations for research-to-operations pipelines.
 
 ### Key Features
 
 - 🤝 **Hybrid Modeling**: Combine neural networks with process-based equations for enhanced interpretability and generalizability. Instead of manual model parameter calibration, for instance, use neural networks to directly learn robust and interpretable parameters ([Tsai et al., 2021](https://doi.org/10.1038/s41467-021-26107-z)).
 - 🔁 **PyTorch Integration**: Scale with PyTorch for efficient training and compatibility with modern ML tools and numerical solvers.
 - 🧩 **Modular Plugin Architecture**: Swap in domain-specific components and configurations with ease.
-- ⚡ **Benchmarking**: All in one place. dMG + hydrodl2 will enable rapid deployment and replication of key published MHPI results.
-- 🌊 **NextGen-ready**: Designed for [CSDMS BMI](https://csdms.colorado.edu/wiki/BMI) compliance to support differentiable hydrological models in [NOAA-OWP](https://water.noaa.gov/about/owp)'s [NextGen National Water Modeling Framework](https://github.com/NOAA-OWP/ngen). (See the NextGen-ready [𝛿HBV2.0](https://github.com/mhpi/dHBV2.0) for an example with a dMG-supported BMI).
+- ⚡ **Benchmarking**: All in one place. 𝛿MG + hydroDL2 will enable rapid deployment and replication of key published MHPI results.
+- 🌊 **NextGen-ready**: Designed for [CSDMS BMI](https://csdms.colorado.edu/wiki/BMI) compliance to support differentiable hydrological models in [NOAA-OWP](https://water.noaa.gov/about/owp)'s [NextGen National Water Modeling Framework](https://github.com/NOAA-OWP/ngen). See the NextGen-ready [𝛿HBV2.0](https://github.com/mhpi/dHBV2.0) with 𝛿MG-supported BMI for an example.
 
 </br>
 
-dMG is designed to scale with modern deep learning tools (e.g., foundation models) while maintaining physical interpretability. Our peer-reviewed and published [benchmarks](https://mhpi.github.io/benchmarks/#10-year-training-comparison) show that well-tuned differentiable models can match deep networks in performance—while better extrapolating to extreme or data-scarce conditions and predicting physically meaningful variables.
+𝛿MG is designed to scale with modern deep learning tools (e.g., foundation models) while maintaining physical interpretability. Our peer-reviewed and published [benchmarks](https://mhpi.github.io/benchmarks/#10-year-training-comparison) show that well-tuned differentiable models can match deep networks in performance—while better extrapolating to extreme or data-scarce conditions and predicting physically meaningful variables.
 
 Differentiable modeling introduces more modeling choices than traditional deep learning due to its physical constraints. This includes learning parameters, missing process representations, corrections, or other enhancements for physical models.
 
@@ -38,7 +38,7 @@ This work is mantained by [MHPI](http://water.engr.psu.edu/shen/) and advised by
 
 ## Installation
 
-To install dMG, clone the repo and install in developer mode with [Astral UV](https://docs.astral.sh/uv/):
+To install 𝛿MG, clone the repo and install in developer mode with [Astral UV](https://docs.astral.sh/uv/):
 
     ```bash
     git clone git@github.com:mhpi/generic_deltamodel.git
@@ -137,7 +137,7 @@ Currently in development. Find more details and results in [Aboelyazeed et al. (
 
 </br>
 
-## dMG Architecture
+## 𝛿MG Architecture
 
 - **Data Loaders**: Bulk data preprocessors customized per dataset.
 - **Data Samplers**: Dataset samplers for minibatching during model training and inference.
