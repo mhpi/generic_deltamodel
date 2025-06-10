@@ -1,0 +1,23 @@
+# Basic config for model tuning.
+# Tuning options and search space rules belong here. Keys should match those in
+# master config.
+name: raytune
+
+metric: mean_accuracy  # val_loss, mean_accuracy
+mode: min
+num_samples: 20
+scheduler: ASHAScheduler
+search_alg: OptunaSearch
+search_alg_params:
+  n_trials: 10
+  time_budget: 60
+  metric: mean_accuracy
+  mode: min
+
+save_epoch: 1
+
+rules:
+  delta_model:
+    nn_model:
+      hidden_size: [128, 256, 512]
+      learning_rate: [1.0, 0.5]

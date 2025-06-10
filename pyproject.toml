@@ -5,44 +5,46 @@ requires = ["hatchling", "hatch-vcs"]
 # build-backend = "setuptools.build_meta"
 
 [project]
-name = "dMG"
+name = "dmg"
 description = "Differentiable modeling framework on PyTorch"
 readme = "README.md"
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 authors = [
-    {name = "Leo Lonzarich", email = "lglonzaric@gmail.com"},
-    {name = "Tadd Bindas", email = "taddbindas@gmail.com"},
-    {name = "Farshid Rahmani"},
-    {name = "Yalan Song", email = "songyalan1@gmail.com"},
+    { name = "Leo Lonzarich", email = "lglonzaric@gmail.com" },
+    { name = "Tadd Bindas", email = "taddbindas@gmail.com" },
+    { name = "Farshid Rahmani", email = "farshid368@gmail.com" },
+    { name = "Yalan Song", email = "songyalan1@gmail.com" },
 ]
 maintainers = [
-    {name = "Leo Lonzarich", email = "lglonzaric@gmail.com"},
-    {name = "Tadd Bindas", email = "taddbindas@gmail.com"},
-    {name = "Yalan Song", email = "songyalan1@gmail.com"},
-    {name = "Chaopeng Shen", email = "shen.chaopeng@gmail.com"}, 
-    {name = "Doaa Aboelyazeed", email = "doaa.barawy@gmail.com"},
-    {name = "Kathryn Lawson", email = "kel33@psu.edu"},
+    { name = "Leo Lonzarich", email = "lglonzaric@gmail.com" },
+    { name = "Tadd Bindas", email = "taddbindas@gmail.com" },
+    { name = "Yalan Song", email = "songyalan1@gmail.com" },
+    { name = "Chaopeng Shen", email = "shen.chaopeng@gmail.com" }, 
+    { name = "Doaa Aboelyazeed", email = "doaa.barawy@gmail.com" },
+    { name = "Kathryn Lawson", email = "kel33@psu.edu" },
 ]
 requires-python = ">=3.12.0"
 dynamic = ["version"]
 dependencies = [
     "cartopy>=0.24.1",
-    "geopandas>=1.0.1",
+    "geopandas>=1.1.0",
     "hydra-core>=1.3.2",
     "ipykernel>=6.29.5",
     "matplotlib>=3.10.3",
-    "numpy>=2.2.5",
+    "numpy>=2.3.0",
     "omegaconf>=2.3.0",
-    "pandas>=2.2.3",
-    "pydantic>=2.11.4",
-    "scikit-learn>=1.6.1",
+    "pandas>=2.3.0",
+    "pre-commit>=4.2.0",
+    "pydantic>=2.11.5",
+    "ray[tune]>=2.46.0",
+    "scikit-learn>=1.7.0",
     "scipy>=1.15.3",
-    "torch>=2.7.0",
-    "torchaudio>=2.7.0",
-    "torchvision>=0.22.0",
+    "torch>=2.7.1",
+    "torchaudio>=2.7.1",
+    "torchvision>=0.22.1",
     "tqdm>=4.67.1",
-    "uv>=0.7.3",
-    "zarr>=3.0.7",
+    "uv>=0.7.12",
+    "zarr>=3.0.8",
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -56,16 +58,17 @@ Repository = "https://github.com/mhpi/generic_deltamodel"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.3.5",
-    "ruff>=0.11.9",
+    "ipywidgets>=8.1.7",
+    "pytest>=8.4.0",
+    "ruff>=0.11.13",
 ]
 hydrodl2 = [
-    "hydroDL2 @ git+https://github.com/mhpi/hydroDL2.git@master"
+    "hydrodl2 @ git+https://github.com/mhpi/hydrodl2.git@master"
 ]
 
 [tool.hatch]
 version.source = "vcs"
-build.hooks.vcs.version-file = "src/dMG/_version.py"
+build.hooks.vcs.version-file = "src/dmg/_version.py"
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -92,6 +95,7 @@ lint.select = [
     "BLE",  # flake8-blind-except
     "UP",  # pyupgrade
     "RUF100",  # Report unused noqa directives
+    "COM812",  # Missing trailing comma
 ]
 exclude = [
     ".git",

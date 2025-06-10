@@ -1,4 +1,4 @@
-"""Test loss functions in dMG/models/criterion/."""
+"""Test loss functions in dmg/models/criterion/."""
 import sys
 from pathlib import Path
 
@@ -8,12 +8,12 @@ import numpy as np
 import pytest
 import torch
 
-from dMG.models.criterion.base import BaseCriterion
+from dmg.models.criterion.base import BaseCriterion
 from tests import get_available_classes
 
 # Path to loss functions
-PATH = Path(__file__).parent.parent / 'src' / 'dMG' / 'models' / 'criterion'
-PKG_PATH = 'dMG.models.criterion'
+PATH = Path(__file__).parent.parent / 'src' / 'dmg' / 'models' / 'criterion'
+PKG_PATH = 'dmg.models.criterion'
 
 
 @pytest.fixture(params=get_available_classes(PATH, PKG_PATH, BaseCriterion))
@@ -29,7 +29,7 @@ def config():
         'eps': 0.1,
         'beta': 4e2,
         'device': 'cpu',
-        'other_param': 42
+        'other_param': 42,
     }
 
 
@@ -37,7 +37,7 @@ def config():
 def prediction_data():
     """Fixture for prediction tensor data."""
     return torch.tensor(
-        [[[2.0], [7.0], [1.0], [4.0]], [[9.0], [7.0], [2.0], [6.0]]]
+        [[[2.0], [7.0], [1.0], [4.0]], [[9.0], [7.0], [2.0], [6.0]]],
     )
 
 
@@ -45,7 +45,7 @@ def prediction_data():
 def target_data():
     """Fixture for target tensor data."""
     return torch.tensor(
-        [[[3.0], [1.0], [4.0], [np.nan]], [[1.0], [5.0], [9.0], [2.0]]]
+        [[[3.0], [1.0], [4.0], [np.nan]], [[1.0], [5.0], [9.0], [2.0]]],
     )
 
 @pytest.fixture

@@ -70,15 +70,18 @@ delta_model:
     
     phy_model:
         ## Citations ##
-        # HBV 1.1p (HBV_1_1p): Yalan Song, Kamlesh Sawadekar, Jonathan Frame, et al. "Physics-informed, Differentiable Hydrologic  Models for Capturing Unseen Extreme Events." ESS Open Archive (2025). https://doi.org/10.22541/essoar.172304428.82707157/v2.
+        # HBV 1.1p: Yalan Song, Kamlesh Sawadekar, Jonathan Frame, et al.
+        # "Physics-informed, Differentiable Hydrologic  Models for Capturing
+        # Unseen Extreme Events." ESS Open Archive (2025).
+        # https://doi.org/10.22541/essoar.172304428.82707157/v2.
 
-        model: [HBV_1_1p]
+        model: [Hbv_1_1p]
         nmul: 16
         warm_up: 365
         warm_up_states: False
         dy_drop: 0.0
         dynamic_params:
-            HBV_1_1p: [parBETA, parK0, parBETAET]
+            Hbv_1_1p: [parBETA, parK0, parBETAET]
 
         routing: True
         use_log_norm: []

@@ -1,4 +1,4 @@
-"""Test trainers in dMG/trainers/."""
+"""Test trainers in dmg/trainers/."""
 import sys
 from pathlib import Path
 
@@ -7,12 +7,12 @@ sys.path.append(str(Path(__file__).parent.parent))
 import pytest
 import torch
 
-from dMG.trainers.base import BaseTrainer
+from dmg.trainers.base import BaseTrainer
 from tests import get_available_classes
 
 # Path to module directory
-PATH = Path(__file__).parent.parent / 'src' / 'dMG' / 'trainers'
-PKG_PATH = 'dMG.trainers'
+PATH = Path(__file__).parent.parent / 'src' / 'dmg' / 'trainers'
+PKG_PATH = 'dmg.trainers'
 
 
 loaders = get_available_classes(PATH, PKG_PATH, BaseTrainer)
@@ -37,7 +37,7 @@ def config():
                 'model': ['HBV'],
                 'warm_up': 0,
                 'dynamic_params': {
-                    'HBV': ['parBETA', 'parBETAET']
+                    'HBV': ['parBETA', 'parBETAET'],
                 },
                 'forcings': ['precip', 'tmean', 'pet'],
             },

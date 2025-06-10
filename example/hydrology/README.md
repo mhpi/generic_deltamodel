@@ -2,9 +2,9 @@
 
 This directory contains notebooks to train/test/forward 3 published differentiable hydrologic models in order of development:
 
-1. δHBV 1.0 -- `example_dhbv_1_0.ipynb`
+1. δHBV 1.0 -- `example_dhbv.ipynb`
 2. δHBV 1.1p -- `example_dhbv_1_1p.ipynb`
-3. δHBV HBV 2.0UH -- `example_dhbv_2_0.ipynb` (Forward simulation only)
+3. δHBV HBV 2.0UH -- `example_dhbv_2.ipynb` (Forward simulation only)
 
 We encourage you to check δHBV 1.0 first for detailed on differentiable modeling and dMG methods.
 

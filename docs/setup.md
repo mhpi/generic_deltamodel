@@ -28,7 +28,7 @@ To run dMG as a framework or package, it must be installed as a package. This ca
     ```text
     .
     ├── generic_deltamodel/
-    └── hydroDL2/   *
+    └── hydrodl2/   *
     ```
 
   **(optional, see [here](#install-optional-dependencies))*
@@ -102,9 +102,9 @@ To run dMG as a framework or package, it must be installed as a package. This ca
 
 ### Install Optional Dependencies
 
-- HydroDL 2.0
+- hydrodl2
 
-  - To work with hydrological models like δHBV, δHBV 2.0, etc. developed by MHPI, the [HydroDL 2.0 repository](https://github.com/mhpi/hydroDL2) of physical hydrological models (to be coupled with NNs in dMG) will need to be installed alongside dMG (again, in your ENV of choice). There are two ways to do this depending on your intentions. To simply use the models, you can run
+  - To work with hydrological models like δHBV, δHBV 2.0, etc. developed by MHPI, the [hydrodl2 repository](https://github.com/mhpi/hydrodl2) of physical hydrological models (to be coupled with NNs in dMG) will need to be installed alongside dMG (again, in your ENV of choice). There are two ways to do this depending on your intentions. To simply use the models, you can run
 
   ```bash
   pip install "./generic_deltamodel[hydrodl2]"
@@ -118,20 +118,20 @@ To run dMG as a framework or package, it must be installed as a package. This ca
 
   For conda installations, it is most straightforward to use pip as illustrated above.
 
-  If you wish to develop in or contribute to HydroDL 2.0, clone the [HydroDL 2.0 master branch](https://github.com/mhpi/hydroDL2) from GitHub and install in developer mode (similar to dMG):
+  If you would like to develop in or contribute to hydrodl2, clone the [hydrodl2 master branch](https://github.com/mhpi/hydrodl2) from GitHub and install in developer mode (similar to dMG):
 
   ```bash
-  git clone git@github.com:mhpi/hydroDL2.git
-  pip install -e ./hydroDL2
+  git clone git@github.com:mhpi/hydrodl2.git
+  pip install -e ./hydrodl2
   ```
 
   or
 
   ```bash
-  uv pip install -e ./hydroDL2
+  uv pip install -e ./hydrodl2
   ```
 
-  Note, developer mode will ensure hydroDL2 won't need to be reinstalled whenever you make changes.
+  Note, developer mode will ensure hydrodl2 won't need to be reinstalled whenever you make changes.
 
 - Development
 

@@ -40,10 +40,10 @@ This work is mantained by [MHPI](http://water.engr.psu.edu/shen/) and advised by
 
 To install 𝛿MG, clone the repo and install in developer mode with [Astral UV](https://docs.astral.sh/uv/):
 
-```bash
-git clone git@github.com:mhpi/generic_deltamodel.git
-uv pip install -e ./generic_deltamodel
-```
+    ```bash
+    git clone git@github.com:mhpi/generic_deltamodel.git
+    uv pip install -e ./generic_deltamodel
+    ```
 
 Pip and Conda are also supported, though UV is recommended. See [setup](./docs/setup.md) for further details.
 
@@ -55,49 +55,49 @@ See [how to run](./docs/how_to_run.md).
 
 **Example -- Differentiable Parameter Learning**: Use an LSTM to learn parameters for the [HBV](https://en.wikipedia.org/wiki/HBV_hydrology_model) hydrological model.
 
-```python
-from hydroDL2.models.hbv.hbv import HBV
+    ```python
+    from hydrodl2.models.hbv.hbv import Hbv
 
-from dMG.core.data.loaders import HydroLoader
-from dMG.core.utils import load_nn_model, print_config, set_randomseed
-from dMG.models.delta_models import DplModel
-from example import load_config, take_data_sample
+    from dmg.core.data.loaders import HydroLoader
+    from dmg.core.utils import load_nn_model, print_config, set_randomseed
+    from dmg.models.delta_models import DplModel
+    from example import load_config, take_data_sample
 
-CONFIG_PATH = '../example/conf/config_dhbv_1_0.yaml'
+    CONFIG_PATH = '../example/conf/config_dhbv_1_0.yaml'
 
 
-# Model configuration
-config = load_config(CONFIG_PATH)
+    # Model configuration
+    config = load_config(CONFIG_PATH)
 
-# Initialize physical model and NN.
-phy_model = HBV(config['delta_model']['phy_model'])
-nn = load_nn_model(phy_model, config['delta_model'])
+    # Initialize physical model and NN.
+    phy_model = Hbv(config['delta_model']['phy_model'])
+    nn = load_nn_model(phy_model, config['delta_model'])
 
-# Create differentiable model dHBV: a torch.nn.Module that describes how 
-# the NN is linked to the physical model HBV.
-dpl_model = DplModel(phy_model=phy_model, nn_model=nn)
+    # Create differentiable model dHBV: a torch.nn.Module that describes how 
+    # the NN is linked to the physical model HBV.
+    dpl_model = DplModel(phy_model=phy_model, nn_model=nn)
 
-# Load dataset of NN and HBV inputs.
-dataset = HydroLoader(config).dataset
-dataset_sample = take_data_sample(config, dataset, days=730, basins=100)
+    # Load dataset of NN and HBV inputs.
+    dataset = HydroLoader(config).dataset
+    dataset_sample = take_data_sample(config, dataset, days=730, basins=100)
 
-output = dpl_model(dataset_sample)
-```
+    output = dpl_model(dataset_sample)
+    ```
 
 This exposes a key characteristic of the differentiable model `DplModel`: composition of a physical model, `phy_model`, and a neural network, `nn`. Internally, `DplModel` looks like
 
-```python
-# NN forward
-parameters = self.nn_model(dataset_sample['xc_nn_norm'])        
+    ```python
+    # NN forward
+    parameters = self.nn_model(dataset_sample['xc_nn_norm'])        
 
-# Physics model forward
-predictions = self.phy_model(
-    dataset_sample,
-    parameters,
-)
-```
+    # Physics model forward
+    predictions = self.phy_model(
+        dataset_sample,
+        parameters,
+    )
+    ```
 
-Check out [examples](https://github.com/mhpi/generic_deltamodel/tree/master/example/hydrology) to see model training/testing/simulation in detail. We recommend starting [here](./example/hydrology/example_dhbv_1_0.ipynb), which is a continuation of the above. A [Colab Notebook](https://colab.research.google.com/drive/19PRLrI-L7cGeYzkk2tOetULzQK8s_W7v?usp=sharing) for this δHBV example is also available.
+Check out [examples](https://github.com/mhpi/generic_deltamodel/tree/master/example/hydrology) to see model training/testing/simulation in detail. We recommend starting with the [δHBV 1.0 tutorial](./example/hydrology/example_dhbv_1_0.ipynb), which can also be run in a [Colab Notebook](https://colab.research.google.com/drive/19PRLrI-L7cGeYzkk2tOetULzQK8s_W7v?usp=sharing) to leverage online compute.
 
 </br>
 
@@ -129,7 +129,7 @@ Currently in development. Find more details and results in [Aboelyazeed et al. (
 
 ## Ecosystem Integration
 
-- **HydroDL 2.0 ([`hydroDL2`](https://github.com/mhpi/hydroDL2))**: Home to MHPI's suite of process-based hydrology models and differentiable model augmentations.
+- **HydroDL 2.0 ([`hydrodl2`](https://github.com/mhpi/hydrodl2))**: Home to MHPI's suite of process-based hydrology models and differentiable model augmentations.
 <!-- - **HydroData ([`hydro_data_dev`](https://github.com/mhpi/hydro_data_dev))**: Data extraction, processing, and management tools optimized for geospatial datasets. (In development) -->
 <!-- - **Config GUI ([`GUI-Config-builder`](https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/config_builder_gui/Config+Builder+GUI.zip))([Source](https://github.com/mhpi/GUI-Config-builder))**: An intuitive, user-friendly tool designed to simplify the creation and editing of configuration files for model setup and development. -->
 - **Differentiable Ecosystem Modeling ([`diffEcosys (dev version only)`](https://github.com/hydroPKDN/diffEcosys/))**: A physics-informed machine learning system for ecosystem modeling, demonstrated using the photosynthesis process representation within the Functionally Assembled Terrestrial Ecosystem Simulator (FATES) model. This model is coupled to NNs that learn parameters from observations of photosynthesis rates.
@@ -151,8 +151,8 @@ Currently in development. Find more details and results in [Aboelyazeed et al. (
 
     ```text
     .
-    ├── src/dMG/
-    │   ├── __main__.py                 # Runs 𝛿MG; models, experiments
+    ├── src/dmg/
+    │   ├── __main__.py                 # Runs dMG; models, experiments
     │   ├── core/                       
     │   │   ├── calc/                   # Calculation utilities
     │   │   ├── data/                   # Data loaders and samplers

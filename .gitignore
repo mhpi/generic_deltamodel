@@ -178,3 +178,6 @@ tmp/
 # Other Directories
 archive/
 validation/
+
+# Model optimization config with RayTune
+!tune/
