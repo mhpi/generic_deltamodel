@@ -50,11 +50,11 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 **gpu_id**: [0] If `device = cuda`, the index of the GPU in your system to run models on. Index 0 will always be available.
 
-**data_loader**: Class name of the data loader to use. E.g., *HydroLoader* located in `./generic_deltamodel/src/dMG/core/data/loaders/hydro_loader.py`. Note class name must be Camel-case w/o spaces corresponding to the file name.
+**data_loader**: Class name of the data loader to use. E.g., *HydroLoader* located in `./generic_deltamodel/src/dmg/core/data/loaders/hydro_loader.py`. Note class name must be Camel-case w/o spaces corresponding to the file name.
 
-**data_sampler**: Class name of the data sampler used in training/inference. E.g., *HydroSampler* located in `./generic_deltamodel/src/dMG/core/data/samplers/hydro_sampler.py`. Follows same convention as data_loader.
+**data_sampler**: Class name of the data sampler used in training/inference. E.g., *HydroSampler* located in `./generic_deltamodel/src/dmg/core/data/samplers/hydro_sampler.py`. Follows same convention as data_loader.
 
-**trainer**: Class name of the trainer used in training/inference. E.g., *Trainer* located in `./generic_deltamodel/src/dMG/trainers/trainer.py`. Follows same convention as data_loader.
+**trainer**: Class name of the trainer used in training/inference. E.g., *Trainer* located in `./generic_deltamodel/src/dmg/trainers/trainer.py`. Follows same convention as data_loader.
 
 **save_path**: [./output] root path to which model weights, outputs, statistics, and metrics will be saved.
 
@@ -116,7 +116,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 **loss_function**:
 
-- **model**: [KgeBatchLoss, KgeNormBatchLoss, MseLoss, NseBatchLoss, NseSqrtBatchLoss, RmseCombLoss, RmseLoss] Loss function for training. See `./generic_deltamodel/src/dMG/models/criterion/` for all available loss functions. You can add custom criterion, but they must follow Class-File convention as illustrated for `data_loader`, etc.
+- **model**: [KgeBatchLoss, KgeNormBatchLoss, MseLoss, NseBatchLoss, NseSqrtBatchLoss, RmseCombLoss, RmseLoss] Loss function for training. See `./generic_deltamodel/src/dmg/models/criterion/` for all available loss functions. You can add custom criterion, but they must follow Class-File convention as illustrated for `data_loader`, etc.
 
 </br>
 
@@ -132,7 +132,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
     - `HBV_adj`: δHBV with adjoint method.
     - `HBV_1_1p`: δHBV 1.1p
     - `HBV_2_0`: δHBV 2.0
-    - `custom_model`: If you create and add a physical to [phy_model/](../src/dMG/models/phy_models/), this will be the class name. Note it must follow the Class-File convention as illustrated for `data_loader`, etc.
+    - `custom_model`: If you create and add a physical to [phy_model/](../src/dmg/models/phy_models/), this will be the class name. Note it must follow the Class-File convention as illustrated for `data_loader`, etc.
 
   - *nmul*: Number of parallel parameter sets to use. These will be averaged for single physical model output.
 
@@ -214,7 +214,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 - *scaling_function*: [sigmoid, softmax] Method to use for scaling learned weights.
 
-- *loss_function*: [KgeBatchLoss, KgeNormBatchLoss, MseLoss, NseBatchLoss, NseSqrtBatchLoss, RmseCombLoss, RmseLoss] Loss function for training. See `./generic_deltamodel/src/dMG/models/criterion/` for all available loss functions. You can add custom criterion, but they must follow Class-File convention as illustrated for `data_loader`, etc.
+- *loss_function*: [KgeBatchLoss, KgeNormBatchLoss, MseLoss, NseBatchLoss, NseSqrtBatchLoss, RmseCombLoss, RmseLoss] Loss function for training. See `./generic_deltamodel/src/dmg/models/criterion/` for all available loss functions. You can add custom criterion, but they must follow Class-File convention as illustrated for `data_loader`, etc.
 
 - *use_rb_loss*: [bool] If True, include range-bound loss regularization. Penalize learned weights when their sum exceeds specific bounds.
 

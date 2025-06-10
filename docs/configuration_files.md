@@ -57,7 +57,7 @@ If you wish to use additional configuration files to store distinguished setting
 
 Configuration file managment is handled by the Hydra config manager (see above). Essentially, at the start of a model experiment, Hydra will load configs into a single Python dictionary object of all settings that can be accessed throughout the framework.
 
-You can see this demonstrated in the main dMG run file, `./generic_deltamodel/src/dMG/__main__.py`, at the start of the main function we call the decorator
+You can see this demonstrated in the main dMG run file, `./generic_deltamodel/src/dmg/__main__.py`, at the start of the main function we call the decorator
 
 ```python
 @hydra.main(

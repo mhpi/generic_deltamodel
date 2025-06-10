@@ -243,7 +243,7 @@ if __name__ == '__main__':
                     'learning_rate': 1.0,
                     'forcings': ['x1_var', 'x2_var'],
                     'attributes': ['attr1', 'attr2'],
-                }
+                },
             },
             observations={
                 'name': 'example',

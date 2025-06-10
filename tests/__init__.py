@@ -8,7 +8,7 @@ import torch
 def get_available_classes(
     path: Path,
     pkg_path: str,
-    base_class: type
+    base_class: type,
 ) -> list[type]:
     """Dynamically import all modules from the specified directory.
         

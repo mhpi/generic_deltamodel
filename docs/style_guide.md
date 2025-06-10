@@ -8,7 +8,7 @@ particular order. Recommendations are welcome.
 1. Configuration files should be handled as a dict with named keys like so:
     - For a config with key name `random_seed`, the key value should be called as `config['random_seed']`.
 
-2. Docstrings should use the NumPy docstring standard (see [here](https://numpydoc.readthedocs.io/en/latest/format.html)
+2. Docstrings should use the NumPy docstring standard (see [docs](https://numpydoc.readthedocs.io/en/latest/format.html)
 and extended [example](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html)) with form
 
     ```python

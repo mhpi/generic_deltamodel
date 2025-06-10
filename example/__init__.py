@@ -6,7 +6,7 @@ import hydra
 import torch
 from omegaconf import OmegaConf
 
-from dMG.core.utils import initialize_config
+from dmg.core.utils import initialize_config
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ def take_data_sample(
     config: dict,
     dataset_dict: dict[str, torch.Tensor],
     days: int = 730,
-    basins: int = 100
+    basins: int = 100,
 ) -> dict[str, torch.Tensor]:
     """Take sample of data.
     
