@@ -1,7 +1,7 @@
-# from .tune import ray_train
+from .tune import RayTrainable
 
-# # from .utils import
+# from .utils import
 
-# __all__ = [
-#     'ray_train',
-# ]
+__all__ = [
+    'RayTrainable',
+]

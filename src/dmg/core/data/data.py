@@ -280,7 +280,7 @@ def load_json(file_path: str) -> dict:
                 return json.loads(data)
             return data
     except FileNotFoundError as e:
-        raise FileNotFoundError(f"Error: File '{file_path}' not found.") from e 
+        raise FileNotFoundError(f"Error: File '{file_path}' not found.") from e
     except json.JSONDecodeError as e:
         raise json.JSONDecodeError(f"Error: Failed to decode JSON from file '{file_path}'.") from e
 
