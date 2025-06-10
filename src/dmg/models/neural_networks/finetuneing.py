@@ -217,7 +217,6 @@ class FineTuner(nn.Module):
                 batch_c, feature_order=self.model_config['static_variables']
             )
             
-            # Save original embeddings for residual connections (YOUR EXACT PATTERN)
             orig_time_features = batch_x
             orig_static_features = batch_c
             
@@ -229,7 +228,6 @@ class FineTuner(nn.Module):
             hidden_states = self.pretrained_model.enc_2_dec_embedding(hidden_states)
             hidden_states = hidden_states[:, :batch_x.size(1), :]
             
-            # Apply adapter (preserving your exact call signature)
             if self.model_config['adapter_type'] == 'dual_residual':
                 adapted = self.adapter(hidden_states, orig_time_features, orig_static_features)
             elif self.model_config['adapter_type'] == 'feedforward':
@@ -238,7 +236,6 @@ class FineTuner(nn.Module):
             else:
                 adapted = self.adapter(hidden_states)
             
-            # Apply LSTM with your exact residual pattern
             if self.model_config['use_residual_lstm']:
                 outputs = self._decode_with_residual_lstm(adapted, orig_time_features, orig_static_features)
             else:
@@ -253,7 +250,6 @@ class FineTuner(nn.Module):
             return outputs
     
     def _decode_with_residual_lstm(self, adapted, orig_time_features, orig_static_features):
-        # YOUR EXACT RESIDUAL LSTM PATTERN
         # Prepare LSTM input with residual connections
         static_expanded = orig_static_features.unsqueeze(1).expand(-1, adapted.size(1), -1)
         
@@ -276,7 +272,6 @@ class FineTuner(nn.Module):
         # Convert back to [batch, seq, features]
         lstm_output = lstm_output.permute(1, 0, 2)
         
-        # Add final residual connections
         # Reintroduce time series and static information
         post_lstm_combined = torch.cat([lstm_output, orig_time_features, static_expanded], dim=-1)
         
