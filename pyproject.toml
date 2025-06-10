@@ -36,6 +36,7 @@ dependencies = [
     "pandas>=2.3.0",
     "pre-commit>=4.2.0",
     "pydantic>=2.11.5",
+    "ray[tune]>=2.46.0",
     "scikit-learn>=1.7.0",
     "scipy>=1.15.3",
     "torch>=2.7.1",
@@ -57,6 +58,7 @@ Repository = "https://github.com/mhpi/generic_deltamodel"
 
 [project.optional-dependencies]
 dev = [
+    "ipywidgets>=8.1.7",
     "pytest>=8.4.0",
     "ruff>=0.11.13",
 ]

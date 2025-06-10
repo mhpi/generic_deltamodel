@@ -248,9 +248,9 @@ class Trainer(BaseTrainer):
         self.total_loss = 0.0
 
         # Iterate through epoch in minibatches.
-        for i in tqdm.tqdm(range(1, n_minibatch + 1), desc=prog_str,
+        for mb in tqdm.tqdm(range(1, n_minibatch + 1), desc=prog_str,
                             leave=False, dynamic_ncols=True):
-            self.current_batch = i
+            self.current_batch = mb
 
             dataset_sample = self.sampler.get_training_sample(
                 self.train_dataset,
@@ -269,7 +269,7 @@ class Trainer(BaseTrainer):
             self.total_loss += loss.item()
 
             if self.verbose:
-                tqdm.tqdm.write(f"Epoch {epoch}, batch {i} | loss: {loss.item()}")
+                tqdm.tqdm.write(f"Epoch {epoch}, batch {mb} | loss: {loss.item()}")
 
         if self.use_scheduler:
             self.scheduler.step()

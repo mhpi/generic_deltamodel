@@ -279,12 +279,10 @@ def load_json(file_path: str) -> dict:
                 # If json is still a string, decode again.
                 return json.loads(data)
             return data
-    except FileNotFoundError:
-        print(f"Error: File '{file_path}' not found.")
-        return None
-    except json.JSONDecodeError:
-        print(f"Error: Failed to decode JSON from file '{file_path}'.")
-        return None
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"Error: File '{file_path}' not found.") from e 
+    except json.JSONDecodeError as e:
+        raise json.JSONDecodeError(f"Error: Failed to decode JSON from file '{file_path}'.") from e
 
 
 def txt_to_array(txt_path: str) -> NDArray[np.float32]:

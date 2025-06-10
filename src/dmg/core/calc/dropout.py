@@ -5,7 +5,6 @@ import torch.nn
 def createMask(x, dr):
     """Create a dropout mask."""
     mask = x.new().resize_as_(x).bernoulli_(1 - dr).div_(1 - dr).detach_()
-    # print('droprate='+str(dr))
     return mask
 
 
