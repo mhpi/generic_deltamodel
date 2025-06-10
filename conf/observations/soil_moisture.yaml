@@ -1,0 +1,58 @@
+
+name: gmd_dataset
+#fake for unnesscary 
+train_path: /storage/home/nrk5343/scratch/Data/GMD_Data_train.pkl
+test_path: /storage/home/nrk5343/scratch/Data/GMD_Data_test.pkl
+gage_info: /storage/home/nrk5343/scratch/Data/gmd_gageid.npy
+area_name: area_gmd
+station_ids: /storage/home/nrk5343/work/30.MFFormer/MFFormer/datasets/Soilmoisture/GMD_ids.txt
+#this is true 
+start_time: 2015/04/01
+end_time: 2020/12/31
+
+all_forcings: [
+  Albedo_BSA,
+  Albedo_WSA, 
+  GPM, 
+  LST_Day, 
+  LST_Night,
+  MSWEP, 
+  SMAP_9km_AM, 
+  forecast_albedo,
+  leaf_area_index_high_vegetation, 
+  leaf_area_index_low_vegetation,
+  soil_temperature_level_1, 
+  surface_pressure,
+  surface_solar_radiation_downwards, 
+  temperature_2m,
+  total_evaporation, 
+  total_precipitation,
+  u_component_of_wind_10m, 
+  v_component_of_wind_10m,
+  volumetric_soil_water_layer_1
+]
+all_attributes: [
+  lat, 
+  lon, 
+  slope, 
+  T_SAND, 
+  AVERAGE_LST_10km_LST_Day, 
+  Urban,
+  landcover_ESA_2018, 
+  AVERAGE_Albedo_10km_Albedo_WSA,
+  T_CLAY, 
+  AVERAGE_LST_10km_LST_Night, 
+  T_TEXTURE,
+  Open_Water, 
+  AVERAGE_NDVI_p05, 
+  pcurv, 
+  T_BULK_DEN,
+  AVERAGE_Albedo_10km_Albedo_BSA, 
+  aspectcosine,
+  roughness, 
+  Snow_Ice, 
+  T_SILT, 
+  AVERAGE_SMAP_9km_AM,
+  elevation
+]
+target: [soil_moisture]

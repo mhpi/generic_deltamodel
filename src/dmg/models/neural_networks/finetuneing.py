@@ -44,7 +44,8 @@ class FineTuner(nn.Module):
             'pretrained_type': nn_config.get('pretrained_type', 'mfformer'),
             'freeze_pretrained': nn_config.get('freeze_pretrained', True),
             'adapter_type': nn_config.get('adapter_type', 'none'),
-            'use_residual_lstm': nn_config.get('use_residual_lstm', False)
+            'use_residual_lstm': nn_config.get('use_residual_lstm', False),
+            'adapter_params': nn_config.get('adapter_params', {})
         }
         
         missing_configs = []
@@ -119,25 +120,55 @@ class FineTuner(nn.Module):
     
     def _initialize_adapter(self):
         adapter_type = self.model_config['adapter_type']
+        d_model = self.model_config['d_model']
+        n_time_features = len(self.model_config['time_series_variables'])
+        n_static_features = len(self.model_config['static_variables'])
+        adapter_params = self.model_config['adapter_params']
         
         if adapter_type == 'dual_residual':
-            from models.neural_networks.adapters import DualResidualAdapter
-            d_model = self.model_config['d_model']
-            n_time_features = len(self.model_config['time_series_variables'])
-            n_static_features = len(self.model_config['static_variables'])
+            from models.neural_networks.adapters.dual_residual_adapter import DualResidualAdapter
             return DualResidualAdapter(d_model, n_time_features, n_static_features)
+            
+        elif adapter_type == 'gated':
+            from models.neural_networks.adapters.gated_adapter import GatedAdapter
+            return GatedAdapter(d_model, n_time_features)
+            
         elif adapter_type == 'feedforward':
-            d_model = self.model_config['d_model']
-            n_features = len(self.model_config['time_series_variables'])
+            from models.neural_networks.adapters.feedforward_adapter import FeedforwardAdapter
+            hidden_multiplier = adapter_params.get('hidden_multiplier', 2)
+            return FeedforwardAdapter(d_model, n_time_features, hidden_multiplier)
+            
+        elif adapter_type == 'conv':
+            from models.neural_networks.adapters.conv_adapter import ConvAdapter
+            kernel_size = adapter_params.get('kernel_size', 3)
+            return ConvAdapter(d_model, n_time_features, kernel_size)
+            
+        elif adapter_type == 'attention':
+            from models.neural_networks.adapters.attention_adapter import AttentionAdapter
+            num_heads = adapter_params.get('num_heads', 4)
+            return AttentionAdapter(d_model, n_time_features, num_heads)
+            
+        elif adapter_type == 'bottleneck':
+            from models.neural_networks.adapters.bottleneck_adapter import BottleneckAdapter
+            bottleneck_size = adapter_params.get('bottleneck_size', 64)
+            return BottleneckAdapter(d_model, n_time_features, bottleneck_size)
+            
+        elif adapter_type == 'moe':
+            from models.neural_networks.adapters.moe_adapter import MoEAdapter
+            num_experts = adapter_params.get('num_experts', 4)
+            expert_size = adapter_params.get('expert_size', d_model)
+            return MoEAdapter(d_model, n_time_features, num_experts, expert_size)
+            
+        elif adapter_type == 'none':
+            return nn.Identity()
+            
+        else:
+            # Fallback to inline feedforward for backward compatibility
             return nn.Sequential(
-                nn.Linear(d_model + n_features, d_model * 2),
+                nn.Linear(d_model + n_time_features, d_model * 2),
                 nn.ReLU(),
                 nn.Linear(d_model * 2, d_model)
             )
-        elif adapter_type == 'none':
-            return nn.Identity()
-        else:
-            raise ValueError(f"Unknown adapter_type: {adapter_type}")
     
     def _load_pretrained_weights(self, model):
         pretrained_model_path = self.model_config['pretrained_model']
@@ -228,13 +259,8 @@ class FineTuner(nn.Module):
             hidden_states = self.pretrained_model.enc_2_dec_embedding(hidden_states)
             hidden_states = hidden_states[:, :batch_x.size(1), :]
             
-            if self.model_config['adapter_type'] == 'dual_residual':
-                adapted = self.adapter(hidden_states, orig_time_features, orig_static_features)
-            elif self.model_config['adapter_type'] == 'feedforward':
-                adapter_input = torch.cat([hidden_states, orig_time_features], dim=-1)
-                adapted = self.adapter(adapter_input)
-            else:
-                adapted = self.adapter(hidden_states)
+            # Apply adapter based on type
+            adapted = self._apply_adapter(hidden_states, orig_time_features, orig_static_features)
             
             if self.model_config['use_residual_lstm']:
                 outputs = self._decode_with_residual_lstm(adapted, orig_time_features, orig_static_features)
@@ -248,6 +274,25 @@ class FineTuner(nn.Module):
                 outputs = outputs.permute(1, 0, 2)
                 
             return outputs
+    
+    def _apply_adapter(self, hidden_states, orig_time_features, orig_static_features):
+        adapter_type = self.model_config['adapter_type']
+        
+        if adapter_type == 'dual_residual':
+            # DualResidualAdapter expects (hidden_states, time_features, static_features)
+            return self.adapter(hidden_states, orig_time_features, orig_static_features)
+            
+        elif adapter_type in ['gated', 'feedforward', 'conv', 'attention', 'bottleneck', 'moe']:
+            # These adapters expect (hidden_states, time_features, static_features=None)
+            return self.adapter(hidden_states, orig_time_features, orig_static_features)
+            
+        elif adapter_type == 'none':
+            return self.adapter(hidden_states)
+            
+        else:
+            # Fallback for inline feedforward
+            adapter_input = torch.cat([hidden_states, orig_time_features], dim=-1)
+            return self.adapter(adapter_input)
     
     def _decode_with_residual_lstm(self, adapted, orig_time_features, orig_static_features):
         # Prepare LSTM input with residual connections
@@ -277,7 +322,7 @@ class FineTuner(nn.Module):
         
         # Process through post-LSTM layer with residual connection
         post_output = self.post_lstm(post_lstm_combined)
-        final_output = post_output + lstm_output  # YOUR EXACT RESIDUAL CONNECTION
+        final_output = post_output + lstm_output  # Residual connection
         
         return final_output
     
