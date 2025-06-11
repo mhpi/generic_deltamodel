@@ -163,12 +163,8 @@ class FineTuner(nn.Module):
             return nn.Identity()
             
         else:
-            # Fallback to inline feedforward for backward compatibility
-            return nn.Sequential(
-                nn.Linear(d_model + n_time_features, d_model * 2),
-                nn.ReLU(),
-                nn.Linear(d_model * 2, d_model)
-            )
+            raise ValueError(f"Invalid adapter type: {adapter_type} available types:
+             ['none', 'gated', 'feedforward', 'conv', 'attention', 'bottleneck', 'moe','dual_residual']")
     
     def _load_pretrained_weights(self, model):
         pretrained_model_path = self.model_config['pretrained_model']
@@ -276,23 +272,16 @@ class FineTuner(nn.Module):
             return outputs
     
     def _apply_adapter(self, hidden_states, orig_time_features, orig_static_features):
-        adapter_type = self.model_config['adapter_type']
-        
-        if adapter_type == 'dual_residual':
-            # DualResidualAdapter expects (hidden_states, time_features, static_features)
-            return self.adapter(hidden_states, orig_time_features, orig_static_features)
-            
-        elif adapter_type in ['gated', 'feedforward', 'conv', 'attention', 'bottleneck', 'moe']:
-            # These adapters expect (hidden_states, time_features, static_features=None)
+        adapter_type = self.model_config['adapter_type']            
+        if adapter_type in ['gated', 'feedforward', 'conv', 'attention', 'bottleneck', 'moe','dual_residual']:
             return self.adapter(hidden_states, orig_time_features, orig_static_features)
             
         elif adapter_type == 'none':
             return self.adapter(hidden_states)
             
         else:
-            # Fallback for inline feedforward
-            adapter_input = torch.cat([hidden_states, orig_time_features], dim=-1)
-            return self.adapter(adapter_input)
+            raise ValueError(f"Invalid adapter type: {adapter_type} available types:
+             ['none', 'gated', 'feedforward', 'conv', 'attention', 'bottleneck', 'moe','dual_residual']")
     
     def _decode_with_residual_lstm(self, adapted, orig_time_features, orig_static_features):
         # Prepare LSTM input with residual connections

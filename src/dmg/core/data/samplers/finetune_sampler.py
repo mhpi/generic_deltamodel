@@ -19,13 +19,6 @@ class FinetuneDataSampler(BaseDataSampler):
         self.rho = config['dpl_model']['rho']
         self.batch_size = config['train']['batch_size']
 
-    def load_data(self):
-        """Custom implementation for loading data."""
-        print("Loading data...")
-
-    def preprocess_data(self):
-        """Custom implementation for preprocessing data."""
-        print("Preprocessing data...")
 
     def select_subset(
         self,
