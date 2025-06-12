@@ -5,16 +5,16 @@ import pickle
 import numpy as np
 import torch
 from typing import Dict, Any, Optional, Tuple, List
-from core.data.data_loaders.base import BaseDataLoader
-from core.data.data_loaders.load_nc import NetCDFDataset
-from core.data import intersect
+from dMG.core.data.loaders.base import BaseLoader
+from dMG.core.data.loaders.load_nc import NetCDFDataset
+from dMG.core.data.data import intersect
 import pandas as pd
 from sklearn.exceptions import DataDimensionalityWarning
 
 log = logging.getLogger(__name__)
 
 
-class FineTuneDataLoader(BaseDataLoader):
+class FinetuneLoader(BaseLoader):
     """Data loader for fine-tuning with both NetCDF and pickle data sources.
     
     Supports both temporal and spatial testing modes, combining NetCDF data
@@ -45,15 +45,15 @@ class FineTuneDataLoader(BaseDataLoader):
         self.overwrite = overwrite
         
         # Data configuration
-        self.nn_attributes = config['dpl_model']['nn_model'].get('attributes', [])
-        self.nn_forcings = config['dpl_model']['nn_model'].get('forcings', [])
-        self.phy_attributes = config['dpl_model']['phy_model'].get('attributes', [])
-        self.phy_forcings = config['dpl_model']['phy_model'].get('forcings', [])
+        self.nn_attributes = config['delta_model']['nn_model'].get('attributes', [])
+        self.nn_forcings = config['delta_model']['nn_model'].get('forcings', [])
+        self.phy_attributes = config['delta_model']['phy_model'].get('attributes', [])
+        self.phy_forcings = config['delta_model']['phy_model'].get('forcings', [])
         self.data_name = config['observations']['name']
-        self.all_forcings = config['observations']['forcings_all']
-        self.all_attributes = config['observations']['attributes_all']
+        self.all_forcings = config['observations']['all_forcings']
+        self.all_attributes = config['observations']['all_attributes']
         self.target = config['train']['target']
-        self.log_norm_vars = config['dpl_model']['phy_model'].get('use_log_norm', [])
+        self.log_norm_vars = config['delta_model']['phy_model'].get('use_log_norm', [])
         
         # Device and data type
         self.device = config['device']
@@ -75,17 +75,17 @@ class FineTuneDataLoader(BaseDataLoader):
         )
         
         # Spatial testing configuration
-        self.test_mode = config.get('test_mode', {})
-        self.is_spatial_test = (self.test_mode and 
-                               self.test_mode.get('type') == 'spatial')
+        self.test = config.get('test', {})
+        self.is_spatial_test = (self.test and 
+                               self.test.get('type') == 'spatial')
         
         # Set holdout index for spatial testing
         if holdout_index is not None:
             self.holdout_index = holdout_index
-        elif self.is_spatial_test and 'current_holdout_index' in self.test_mode:
-            self.holdout_index = self.test_mode['current_holdout_index']
-        elif self.is_spatial_test and self.test_mode.get('holdout_indexs'):
-            self.holdout_index = self.test_mode['holdout_indexs'][0]
+        elif self.is_spatial_test and 'current_holdout_index' in self.test:
+            self.holdout_index = self.test['current_holdout_index']
+        elif self.is_spatial_test and self.test.get('holdout_indexs'):
+            self.holdout_index = self.test['holdout_indexs'][0]
         else:
             self.holdout_index = None
             
@@ -181,10 +181,8 @@ class FineTuneDataLoader(BaseDataLoader):
         c_nn = nn_data['c_nn'].cpu().numpy() if torch.is_tensor(nn_data['c_nn']) else nn_data['c_nn']
         
         # Load physics model data from pickle
-        if scope == 'train':
-            data_path = self.config['observations']['train_path']
-        else:
-            data_path = self.config['observations']['test_path']
+        data_path = self.config['observations']['data_path']
+   
             
         with open(data_path, 'rb') as f:
             forcings, target, attributes = pickle.load(f)
@@ -244,20 +242,12 @@ class FineTuneDataLoader(BaseDataLoader):
     def _load_nn_data(self, scope: str, t_range: Dict[str, str]) -> Dict[str, np.ndarray]:
         """Load and process neural network data from NetCDF."""
         time_range = [t_range['start'].replace('/', '-'), t_range['end'].replace('/', '-')]
-        warmup_days = self.config['dpl_model']['phy_model']['warm_up']
+        warmup_days = self.config['delta_model']['phy_model']['warm_up']
         
-        # Handle station subsetting
-        station_ids = None
-        if self.data_name.split('_')[-1] != '671':
-            subset_path = self.config['observations']['subset_path']
-            with open(subset_path, 'r') as f:
-                selected_basins = json.load(f)
-            station_ids = [str(id) for id in selected_basins]
-        
-        # Load data from NetCDF
+        # Load ALL stations first to avoid station ID format mismatch
         time_series_data, static_data, date_range = self.nc_tool.nc2array(
             self.config['data_path'],
-            station_ids=station_ids,
+            station_ids=None,  # Load all stations
             time_range=time_range,
             time_series_variables=self.nn_forcings,
             static_variables=self.nn_attributes,
@@ -265,9 +255,26 @@ class FineTuneDataLoader(BaseDataLoader):
             warmup_days=warmup_days
         )
         
+        # Now filter stations if needed
+        if self.data_name.split('_')[-1] != '671':
+            subset_path = self.config['observations']['subset_path']
+            gage_id_path = self.config['observations']['gage_info']
+            
+            with open(subset_path, 'r') as f:
+                selected_basins = json.load(f)
+            gage_info = np.load(gage_id_path)
+            
+            subset_idx = intersect(selected_basins, gage_info)
+            
+            # Filter the NetCDF data to match the subset
+            time_series_data = time_series_data[subset_idx]
+            static_data = static_data[subset_idx]
+        
         # Handle coordinates (remove lat/lon from static data)
         if static_data.shape[1] >= 2:
             static_data = static_data[:, :-2]
+
+        time_series_data = np.transpose(time_series_data, (1, 0, 2))
         
         return {
             'x_nn': time_series_data.astype(np.float32),
@@ -280,27 +287,27 @@ class FineTuneDataLoader(BaseDataLoader):
             return dataset, dataset
         
         try:
-            extent = self.test_mode.get('extent')
+            extent = self.test.get('extent')
             holdout_gages = []
             
             if extent == 'PUR':
-                huc_regions = self.test_mode.get('huc_regions', [])
+                huc_regions = self.test.get('huc_regions', [])
                 if self.holdout_index >= len(huc_regions):
                     raise ValueError(f"Invalid holdout index: {self.holdout_index}")
                     
                 holdout_hucs = huc_regions[self.holdout_index]
-                gage_file = self.test_mode.get('gage_split_file')
+                gage_file = self.config['observations']['gage_split_file']
                 gageinfo = pd.read_csv(gage_file, dtype={"huc": int, "gage": str})
                 holdout_hucs_int = [int(huc) for huc in holdout_hucs]
                 holdout_gages = gageinfo[gageinfo['huc'].isin(holdout_hucs_int)]['gage'].tolist()
                 
             elif extent == 'PUB':
-                pub_ids = self.test_mode.get('PUB_ids', [])
+                pub_ids = self.test.get('PUB_ids', [])
                 if self.holdout_index >= len(pub_ids):
                     raise ValueError(f"Invalid holdout index: {self.holdout_index}")
                     
                 holdout_pub = pub_ids[self.holdout_index]
-                gage_file = self.test_mode.get('gage_split_file')
+                gage_file = self.test.get('gage_split_file')
                 gageinfo = pd.read_csv(gage_file, dtype={"PUB_ID": int, "gage": str})
                 holdout_gages = gageinfo[gageinfo['PUB_ID'] == holdout_pub]['gage'].tolist()
             

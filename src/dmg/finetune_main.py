@@ -68,7 +68,7 @@ def main(config: DictConfig) -> None:
             elif mode == 'simulation':
                 trainer.inference()
             else:
-                raise ValueError(f"Invalid mode: {mode}"
+                raise ValueError(f"Invalid mode: {mode}")
             
         elif test_mode == 'spatial':
             # Spatial testing with holdout validation

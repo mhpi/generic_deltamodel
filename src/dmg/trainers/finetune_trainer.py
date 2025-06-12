@@ -1,25 +1,25 @@
-#Old working verison of code 
 import logging
 import time
-from typing import Any, Dict, List, Optional
-from contextlib import nullcontext  # Use built-in contextlib.nullcontext
+from typing import Any, Dict, List, Optional, Tuple
+from contextlib import nullcontext
 
 import numpy as np
 import torch
 import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from core.data.data_samplers.finetune_sampler import FinetuneDataSampler
 
-from trainers.base import BaseTrainer
-from core.utils import save_outputs
-from core.calc.metrics_soilMoisture import Metrics
-from models.loss_functions import get_loss_func
-from core.data import create_training_grid
+# from dMG.core.data.samplers.finetune_sampler import Finetuneampler
+from dMG.trainers.base import BaseTrainer
+from dMG.core.utils.utils import save_outputs
+from dMG.core.calc.metrics import Metrics
+from dMG.core.utils.factory import import_data_sampler, load_criterion
+from dMG.core.data import create_training_grid
 import os
 
 log = logging.getLogger(__name__)
 
-class FineTuneTrainer(BaseTrainer):
+
+class FinetuneTrainer(BaseTrainer):
     def __init__(
         self,
         config: Dict[str, Any],
@@ -62,20 +62,22 @@ class FineTuneTrainer(BaseTrainer):
         self.is_in_train = False
         self.epoch_train_loss_list = []
         self.epoch_val_loss_list = []
-        self.sampler = FinetuneDataSampler(config)
+        self.sampler = import_data_sampler(config['data_sampler'])(config)
+        
+        # Determine model type based on config or model output
+        self.model_type = self._determine_model_type()
         
         if 'train' in config['mode']:
-            log.info(f"Initializing loss function and optimizer")
-            # self.loss_func = RMSELoss()
-            # self.model.loss_func = self.loss_func
-            self.loss_func = loss_func or get_loss_func(
-                self.train_dataset['target'].to('cpu'),
+            # log.info(f"Initializing loss function and optimizer for {self.model_type} model")
+            
+            self.loss_func = loss_func or load_criterion(
+                self.train_dataset['target'],
                 config['loss_function'],
-                config['device'],
+                device=config['device'],
             )
 
             self.model.loss_func = self.loss_func
-            self.optimizer = optimizer or self.create_optimizer()
+            self.optimizer = optimizer or self.init_optimizer()
             self.start_epoch = self.config['train'].get('start_epoch', 0) + 1
             
             # Add scheduler for learning rate adjustment
@@ -86,28 +88,20 @@ class FineTuneTrainer(BaseTrainer):
                 factor=self.config.get('lr_factor', 0.1)
             )
 
-            
-            # Create necessary directories for outputs
-            # if 'validation_path' not in self.config:
-            #     if 'test_mode' in self.config and self.config['test_mode']['type'] == 'spatial' and 'current_holdout_index' in self.config['test_mode']:
-            #         holdout_idx = self.config['test_mode']['current_holdout_index']
-            #         # Create a dedicated output directory for this specific holdout
-            #         holdout_dir = os.path.join(self.config['save_path'], f'spatial_holdout_{holdout_idx}')
-            #         self.config['validation_path'] = os.path.join(holdout_dir, 'validation')
-            #         self.config['testing_path'] = os.path.join(holdout_dir, 'testing')
-            #         self.config['out_path'] = holdout_dir
-            #     else:
-            #         # Default paths if not spatial holdout testing
-            #         self.config['validation_path'] = os.path.join(self.config['save_path'], 'validation')
-            #         self.config['testing_path'] = os.path.join(self.config['save_path'], 'testing')
-            #         self.config['out_path'] = self.config['save_path']
-                
-            # # Create output directories
-            # os.makedirs(self.config['validation_path'], exist_ok=True)
-            # os.makedirs(self.config['testing_path'], exist_ok=True)
-    def create_optimizer(self) -> torch.optim.Optimizer:
+    def _determine_model_type(self) -> str:
+        """Determine if this is an HBV model or direct output model."""
+        return 'hbv'
+        # Check config first
+        if 'delta_model' in self.config and 'phy_model' in self.config['delta_model']:
+            if 'Hbv' in self.config['delta_model']['phy_model'].get('model', ''):
+                return 'hbv'
+        
+        # Default to direct output
+        return 'direct'
+
+    def init_optimizer(self) -> torch.optim.Optimizer:
         optimizer_name = self.config['train']['optimizer']
-        learning_rate = self.config['dpl_model']['nn_model']['learning_rate']
+        learning_rate = self.config['delta_model']['nn_model']['learning_rate']
 
         optimizer_dict = {
             'Adadelta': torch.optim.Adadelta,
@@ -136,12 +130,10 @@ class FineTuneTrainer(BaseTrainer):
         except Exception as e:
             raise ValueError(f"Error initializing optimizer: {e}")
 
-  
-
     def train(self) -> None:
         """Training loop implementation."""
         log.info(f"Training model: Beginning {self.start_epoch} of {self.config['train']['epochs']} epochs")
-        # log.info(f"cliping grad {self.config.get('clip_grad')}")
+        
         results_dir = self.config.get('save_path', 'results')
         os.makedirs(results_dir, exist_ok=True)
         results_file = open(os.path.join(results_dir, "results.txt"), 'a')
@@ -158,38 +150,55 @@ class FineTuneTrainer(BaseTrainer):
 
                 # Training phase
                 self.model.train()
-                data_shape = self.train_dataset['xc_nn_norm'].shape
-               # Get grid dimensions for training
-                n_timesteps, n_minibatch, n_samples = create_training_grid(
+                
+                # Debug: Check actual data dimensions
+                log.info(f"Dataset shapes:")
+                for key, value in self.train_dataset.items():
+                    if hasattr(value, 'shape'):
+                        log.info(f"  {key}: {value.shape}")
+                
+                # Get grid dimensions for training - but fix the dimension issue
+                n_samples, n_minibatch, n_timesteps = create_training_grid(
                     self.train_dataset['xc_nn_norm'],
                     self.config
                 )
-                log.info(f"Training grid - samples: {n_samples}, batches: {n_minibatch}, timesteps: {n_timesteps}")
+                
+                # Recalculate minibatches based on correct basin count
+                batch_size = self.config['train']['batch_size']
+                n_minibatch = max(1, (n_samples * self.config.get('train_samples_per_epoch', 1)) // batch_size)
+                
+                log.info(f"Corrected training grid - basins: {n_samples}, timesteps: {n_timesteps}, batches: {n_minibatch}")
 
                 for i in range(1, n_minibatch + 1):
                     self.optimizer.zero_grad()
                     
-                    batch_data = self.sampler.get_training_sample(self.train_dataset,
-                                                                        n_samples,
-                                                                        n_timesteps
-                                                                    )
+                    batch_data = self.sampler.get_training_sample(
+                        self.train_dataset,
+                        n_samples,
+                        n_timesteps
+                    )
                     
                     # Use AMP context manager if available
                     cm = torch.cuda.amp.autocast() if use_amp and torch.cuda.is_available() else nullcontext()
                     with cm:
                         outputs = self.model(batch_data)
-
                         target = batch_data['target']
-                        # print(outputs)
-                        hbv_output = outputs['HBV_1_1p']
-                        # print(hbv_output[0])
-                        # print(target[0])    
-                        # if not isinstance(hbv_output, dict) or 'flow_sim' not in hbv_output:
-                        #     raise ValueError(f"Invalid HBV output structure. Got {type(hbv_output)}")
-                        # print(batch_data)
-                        # hbv_output = torch.cat((hbv_output,hbv_output))
-                        loss = self.loss_func(hbv_output, target, batch_data['batch_sample'])
+                        
+                        # Handle different model output types
+                        if self.model_type == 'hbv':
+                            # HBV model with nested output structure
+                            hbv_output = outputs['Hbv_1_1p']
+                            if isinstance(hbv_output, dict) and 'streamflow' in hbv_output:
+                                model_output = hbv_output['streamflow']
+                            else:
+                                model_output = hbv_output
+                        else:
+                            # Direct output model (e.g., soil moisture)
+                            model_output = outputs['Hbv_1_1p']
 
+                        # print(model_output["streamflow"])
+                        loss = self.loss_func(model_output,target)
+                        
                         if torch.isnan(loss):
                             continue
                             
@@ -197,50 +206,26 @@ class FineTuneTrainer(BaseTrainer):
 
                     if use_amp and torch.cuda.is_available():
                         scaler.scale(loss).backward()
-                        # if self.config.get('clip_grad'):
-                        #     scaler.unscale_(self.optimizer)
-                        #     torch.nn.utils.clip_grad_norm_(
-                        #         self.model.parameters(), 
-                        #         self.config['clip_grad']
-                        #     )
                         scaler.step(self.optimizer)
                         scaler.update()
                     else:
                         loss.backward()
-                        # if self.config.get('clip_grad'):
-                        #     torch.nn.utils.clip_grad_norm_(
-                        #         self.model.parameters(), 
-                        #         self.config['clip_grad']
-                        #     )
                         self.optimizer.step()
 
-                # Validation phase
-                # if self.config.get('do_eval', True):
-                #     val_loss = self._validate()
-                    
                 # Log statistics and save model
                 self._log_epoch_stats(epoch, train_loss, val_loss, epoch_time, results_file)
                 
                 if epoch % self.config['train']['save_epoch'] == 0:
                     self.model.save_model(epoch)
 
-                # Adjust learning rate
-                # if val_loss:
-                #     self.scheduler.step(np.mean(val_loss))
-
-                # clear_gpu_memory()
-
         except Exception as e:
             log.error(f"Training error: {str(e)}")
-            # clear_gpu_memory()
             raise
         finally:
             results_file.close()
             log.info("Training complete")
 
-
-
-    def test(self):
+    def evaluate(self) -> Tuple[np.ndarray, np.ndarray]:
         """Enhanced testing method that handles both variable basin counts and full time periods."""
         log.info("Starting model testing with full time period prediction...")
         
@@ -253,9 +238,8 @@ class FineTuneTrainer(BaseTrainer):
         log.info(f"Total basins: {total_basins}, Total timesteps: {total_timesteps}")
         
         # Calculate parameters
-        warm_up = self.config['dpl_model']['phy_model']['warm_up']
-        rho = self.config['dpl_model']['rho']
-        seq_len = warm_up + rho
+        warm_up = self.config['delta_model']['phy_model']['warm_up']
+        rho = self.config['delta_model']['rho']
         
         # Define prediction interval (can be adjusted for overlap)
         stride = rho  # Non-overlapping windows
@@ -287,8 +271,6 @@ class FineTuneTrainer(BaseTrainer):
                 time_end = min(time_start + rho, total_timesteps)
                 actual_window_size = time_end - time_start
                 
-                # log.info(f"Processing time window {window+1}/{n_windows} (timesteps {time_start} to {time_end})")
-                
                 # Inner loop through basin batches
                 window_predictions = []
                 
@@ -296,8 +278,6 @@ class FineTuneTrainer(BaseTrainer):
                     # Calculate basin indices for this batch
                     basin_start = i * batch_size
                     basin_end = min(basin_start + batch_size, total_basins)
-                    
-                    # log.info(f"  Processing basin batch {i+1}/{n_batches} (basins {basin_start} to {basin_end-1})")
                     
                     try:
                         # Create a custom function to get time-windowed validation sample
@@ -312,23 +292,14 @@ class FineTuneTrainer(BaseTrainer):
                         # Forward pass
                         prediction = self.model(dataset_sample, eval=True)
                         
-                        # Extract predictions (only take the part after warm-up)
-                        if isinstance(prediction, dict):
-                            # Get the prediction and remove the warm-up period
-                            batch_pred = prediction['HBV_1_1p'].cpu().numpy()
-                            if batch_pred.shape[0] > warm_up:
-                                batch_pred = batch_pred[warm_up:, :, :]
-                            
-                            # Store the batch prediction
+                        # Extract predictions based on model type
+                        batch_pred = self._extract_prediction(prediction, warm_up)
+                        
+                        if batch_pred is not None:
                             window_predictions.append(batch_pred)
-                        else:
-                            log.warning(f"Unexpected prediction type: {type(prediction)}")
-                            continue
                             
                     except Exception as e:
                         log.error(f"Error processing batch {i+1} in window {window+1}: {str(e)}")
-                        import traceback
-                        log.error(traceback.format_exc())
                         continue
                         
                 # Combine basin predictions for this time window
@@ -343,8 +314,6 @@ class FineTuneTrainer(BaseTrainer):
                         pred_length = min(window_pred_full.shape[0], end_offset - window_offset)
                         
                         all_predictions[window_offset:window_offset+pred_length, :, :] = window_pred_full[:pred_length, :, :]
-                        
-                        # log.info(f"  Added predictions for window {window+1} to positions {window_offset} through {window_offset+pred_length-1}")
                         
                     except Exception as e:
                         log.error(f"Error combining predictions for window {window+1}: {str(e)}")
@@ -373,25 +342,46 @@ class FineTuneTrainer(BaseTrainer):
             np.save(os.path.join(output_dir, 'observations.npy'), observations)
             log.info(f"Saved raw predictions and observations to {output_dir}")
             
-            # Calculate metrics using the Metrics class
+            # Calculate metrics using the appropriate Metrics class
             self.calc_metrics(all_predictions, observations)
             return all_predictions, observations
         else:
             log.warning("No predictions were generated during testing")
-            return none, none
+            return None, None
+
+    def _extract_prediction(self, prediction: dict, warm_up: int) -> Optional[np.ndarray]:
+        """Extract prediction tensor based on model type."""
+        if not isinstance(prediction, dict):
+            log.warning(f"Unexpected prediction type: {type(prediction)}")
+            return None
         
-       
+        if self.model_type == 'hbv':
+            # HBV model with nested structure
+            if 'Hbv_1_1p' in prediction and isinstance(prediction['Hbv_1_1p'], dict):
+                if 'flow_sim' in prediction['Hbv_1_1p']:
+                    batch_pred = prediction['Hbv_1_1p']['flow_sim'].cpu().numpy()
+                else:
+                    log.warning(f"Could not find flow_sim in HBV output. Keys: {prediction['Hbv_1_1p'].keys()}")
+                    return None
+            else:
+                log.warning(f"Could not find Hbv_1_1p in prediction. Keys: {prediction.keys()}")
+                return None
+        else:
+            # Direct output model (e.g., soil moisture)
+            if 'Hbv_1_1p' in prediction:
+                batch_pred = prediction['Hbv_1_1p'].cpu().numpy()
+            else:
+                log.warning(f"Could not find prediction output. Keys: {prediction.keys()}")
+                return None
+        
+        # Remove warm-up period if present
+        if batch_pred.shape[0] > warm_up:
+            batch_pred = batch_pred[warm_up:, :, :]
+        
+        return batch_pred
 
     def calc_metrics(self, predictions: np.ndarray, observations: np.ndarray) -> None:
-        """Calculate comprehensive metrics using the Metrics class.
-        
-        Parameters
-        ----------
-        predictions : np.ndarray
-            Model predictions with shape [time, basins, 1]
-        observations : np.ndarray
-            Target observations with shape [time, basins, 1]
-        """
+        """Calculate comprehensive metrics using the appropriate Metrics class."""
         try:
             # Ensure no NaN values in predictions
             predictions = np.nan_to_num(predictions, nan=0.0)
@@ -404,74 +394,36 @@ class FineTuneTrainer(BaseTrainer):
             log.info(f"Calculating comprehensive metrics")
             log.info(f"Formatted shapes - predictions: {pred_formatted.shape}, observations: {obs_formatted.shape}")
             
-            # Create Metrics object
-            metrics = Metrics(pred_formatted, obs_formatted)
+            # Use appropriate metrics class
+            try:
+                # Try soil moisture metrics first if it might be soil moisture data
+                if self.model_type == 'direct':
+                    from dMG.core.calc.metrics_soilMoisture import Metrics
+                    log.info("Using soil moisture specific metrics")
+                else:
+                    metrics = Metrics(pred_formatted, obs_formatted)
+            except ImportError:
+                # Fall back to standard metrics
+                log.info("Using standard metrics")
+                metrics = Metrics(pred_formatted, obs_formatted)
             
-            # Save metrics to the specified output directory
+            # Create Metrics object and save
+            metrics = Metrics(pred_formatted, obs_formatted)
             metrics.dump_metrics(self.config['validation_path'])
             
         except Exception as e:
             log.error(f"Error calculating metrics: {str(e)}")
             import traceback
             log.error(traceback.format_exc())
-            
-            # Fall back to basic metrics calculation if the comprehensive method fails
-            self._calculate_basic_metrics(predictions, observations)
+    
+    def inference(self) -> None:
+        """Run batch model inference - required by BaseTrainer."""
+        raise NotImplementedError
 
-    def _calculate_basic_metrics(self, predictions: np.ndarray, observations: np.ndarray) -> None:
-        """Calculate basic metrics as a fallback.
-        
-        Parameters
-        ----------
-        predictions : np.ndarray
-            Model predictions with shape [time, basins, 1]
-        observations : np.ndarray
-            Target observations with shape [time, basins, 1]
-        output_dir : str
-            Directory to save metrics files
-        """
-        log.info("Falling back to basic metrics calculation")
-        
-        # Flatten predictions and observations for metrics
-        pred_flat = predictions.flatten()
-        obs_flat = observations.flatten()
-        
-        # Handle NaN values
-        mask = ~np.isnan(obs_flat) & ~np.isnan(pred_flat)
-        pred_flat = pred_flat[mask]
-        obs_flat = obs_flat[mask]
-        
-        # Correlation
-        correlation = np.corrcoef(pred_flat, obs_flat)[0, 1]
-        log.info(f"Correlation Coefficient: {correlation:.4f}")
-        
-        # Mean Absolute Error (MAE)
-        mae = np.mean(np.abs(pred_flat - obs_flat))
-        log.info(f"Mean Absolute Error: {mae:.4f}")
-        
-        # Root Mean Squared Error (RMSE)
-        rmse = np.sqrt(np.mean((pred_flat - obs_flat)**2))
-        log.info(f"Root Mean Squared Error: {rmse:.4f}")
-        
-        # Nash-Sutcliffe Efficiency (NSE)
-        obs_mean = np.mean(obs_flat)
-        nse = 1 - (np.sum((obs_flat - pred_flat)**2) / np.sum((obs_flat - obs_mean)**2))
-        log.info(f"Nash-Sutcliffe Efficiency: {nse:.4f}")
-        
-        # Save metrics to file
-        metrics_file = os.path.join(self.config['validation_path'], 'test_metrics.txt')
-        with open(metrics_file, 'w') as f:
-            f.write(f"Correlation Coefficient: {correlation:.4f}\n")
-            f.write(f"Mean Absolute Error: {mae:.4f}\n")
-            f.write(f"Root Mean Squared Error: {rmse:.4f}\n")
-            f.write(f"Nash-Sutcliffe Efficiency: {nse:.4f}\n")
-        
-        log.info(f"Basic metrics saved to {metrics_file}")
+   
 
     def _get_time_window_sample(self, dataset, basin_start, basin_end, time_start, time_end):
         """Custom method to get a validation sample for a specific time window."""
-        # log.info(f"Creating time window sample for basins {basin_start} to {basin_end-1}, time {time_start} to {time_end}")
-        
         # Calculate dimensions
         batch_size = basin_end - basin_start
         seq_len = time_end - time_start
@@ -500,21 +452,6 @@ class FineTuneTrainer(BaseTrainer):
             batch_data['target'] = dataset['target'][time_start:time_start+seq_len, basin_start:basin_end].to(self.device)
         
         return batch_data
-  
-        
-    def _get_batch_data(self, n_samples: int, n_timesteps: int) -> Dict[str, torch.Tensor]:
-        """Get a batch of training data."""
-        batch_data = {
-            key: value.float().to(self.device)
-            for key, value in self.sampler.get_training_sample(
-                self.train_dataset,
-                n_samples,
-                n_timesteps
-            ).items()
-            if torch.is_tensor(value)
-        }
-        return batch_data
-
 
     def _log_epoch_stats(
         self,
@@ -552,8 +489,8 @@ class FineTuneTrainer(BaseTrainer):
         
         with open(loss_data, 'a') as f:
             f.write(f"{epoch},{train_loss},{val_loss if val_loss else ''}\n")
-            
- 
+
+
 def clear_gpu_memory():
     """Clear GPU memory cache."""
     if torch.cuda.is_available():

@@ -8,18 +8,18 @@ import torch
 import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from dMG.core.data.data_samplers.finetune_sampler import FinetuneDataSampler
+# from dMG.core.data.samplers.finetune_sampler import Finetuneampler
 from dMG.trainers.base import BaseTrainer
 from dMG.core.utils.utils import save_outputs
 from dMG.core.calc.metrics import Metrics
-from dMG.models.loss_functions import get_loss_func
+from dMG.core.utils.factory import import_data_sampler, load_criterion
 from dMG.core.data import create_training_grid
 import os
 
 log = logging.getLogger(__name__)
 
 
-class FineTuneTrainer(BaseTrainer):
+class FinetuneTrainer(BaseTrainer):
     def __init__(
         self,
         config: Dict[str, Any],
@@ -62,22 +62,22 @@ class FineTuneTrainer(BaseTrainer):
         self.is_in_train = False
         self.epoch_train_loss_list = []
         self.epoch_val_loss_list = []
-        self.sampler = FinetuneDataSampler(config)
+        self.sampler = import_data_sampler(config['data_sampler'])(config)
         
         # Determine model type based on config or model output
         self.model_type = self._determine_model_type()
         
         if 'train' in config['mode']:
-            log.info(f"Initializing loss function and optimizer for {self.model_type} model")
+            # log.info(f"Initializing loss function and optimizer for {self.model_type} model")
             
-            self.loss_func = loss_func or get_loss_func(
-                self.train_dataset['target'].to('cpu'),
+            self.loss_func = loss_func or load_criterion(
+                self.train_dataset['target'],
                 config['loss_function'],
-                config['device'],
+                device=config['device'],
             )
 
             self.model.loss_func = self.loss_func
-            self.optimizer = optimizer or self.create_optimizer()
+            self.optimizer = optimizer or self.init_optimizer()
             self.start_epoch = self.config['train'].get('start_epoch', 0) + 1
             
             # Add scheduler for learning rate adjustment
@@ -90,17 +90,18 @@ class FineTuneTrainer(BaseTrainer):
 
     def _determine_model_type(self) -> str:
         """Determine if this is an HBV model or direct output model."""
+        return 'hbv'
         # Check config first
-        if 'dpl_model' in self.config and 'phy_model' in self.config['dpl_model']:
-            if 'HBV' in self.config['dpl_model']['phy_model'].get('model', ''):
+        if 'delta_model' in self.config and 'phy_model' in self.config['delta_model']:
+            if 'Hbv' in self.config['delta_model']['phy_model'].get('model', ''):
                 return 'hbv'
         
         # Default to direct output
         return 'direct'
 
-    def create_optimizer(self) -> torch.optim.Optimizer:
+    def init_optimizer(self) -> torch.optim.Optimizer:
         optimizer_name = self.config['train']['optimizer']
-        learning_rate = self.config['dpl_model']['nn_model']['learning_rate']
+        learning_rate = self.config['delta_model']['nn_model']['learning_rate']
 
         optimizer_dict = {
             'Adadelta': torch.optim.Adadelta,
@@ -150,12 +151,23 @@ class FineTuneTrainer(BaseTrainer):
                 # Training phase
                 self.model.train()
                 
-                # Get grid dimensions for training
-                n_timesteps, n_minibatch, n_samples = create_training_grid(
+                # Debug: Check actual data dimensions
+                log.info(f"Dataset shapes:")
+                for key, value in self.train_dataset.items():
+                    if hasattr(value, 'shape'):
+                        log.info(f"  {key}: {value.shape}")
+                
+                # Get grid dimensions for training - but fix the dimension issue
+                n_samples, n_minibatch, n_timesteps = create_training_grid(
                     self.train_dataset['xc_nn_norm'],
                     self.config
                 )
-                log.info(f"Training grid - samples: {n_samples}, batches: {n_minibatch}, timesteps: {n_timesteps}")
+                
+                # Recalculate minibatches based on correct basin count
+                batch_size = self.config['train']['batch_size']
+                n_minibatch = max(1, (n_samples * self.config.get('train_samples_per_epoch', 1)) // batch_size)
+                
+                log.info(f"Corrected training grid - basins: {n_samples}, timesteps: {n_timesteps}, batches: {n_minibatch}")
 
                 for i in range(1, n_minibatch + 1):
                     self.optimizer.zero_grad()
@@ -175,16 +187,17 @@ class FineTuneTrainer(BaseTrainer):
                         # Handle different model output types
                         if self.model_type == 'hbv':
                             # HBV model with nested output structure
-                            hbv_output = outputs['HBV_1_1p']
-                            if isinstance(hbv_output, dict) and 'flow_sim' in hbv_output:
-                                model_output = hbv_output['flow_sim']
+                            hbv_output = outputs['Hbv_1_1p']
+                            if isinstance(hbv_output, dict) and 'streamflow' in hbv_output:
+                                model_output = hbv_output['streamflow']
                             else:
                                 model_output = hbv_output
                         else:
                             # Direct output model (e.g., soil moisture)
-                            model_output = outputs['HBV_1_1p']
-                        
-                        loss = self.loss_func(model_output, target, batch_data['batch_sample'])
+                            model_output = outputs['Hbv_1_1p']
+
+                        # print(model_output["streamflow"])
+                        loss = self.loss_func(model_output,target)
                         
                         if torch.isnan(loss):
                             continue
@@ -212,7 +225,7 @@ class FineTuneTrainer(BaseTrainer):
             results_file.close()
             log.info("Training complete")
 
-    def test(self) -> Tuple[np.ndarray, np.ndarray]:
+    def evaluate(self) -> Tuple[np.ndarray, np.ndarray]:
         """Enhanced testing method that handles both variable basin counts and full time periods."""
         log.info("Starting model testing with full time period prediction...")
         
@@ -225,8 +238,8 @@ class FineTuneTrainer(BaseTrainer):
         log.info(f"Total basins: {total_basins}, Total timesteps: {total_timesteps}")
         
         # Calculate parameters
-        warm_up = self.config['dpl_model']['phy_model']['warm_up']
-        rho = self.config['dpl_model']['rho']
+        warm_up = self.config['delta_model']['phy_model']['warm_up']
+        rho = self.config['delta_model']['rho']
         
         # Define prediction interval (can be adjusted for overlap)
         stride = rho  # Non-overlapping windows
@@ -344,19 +357,19 @@ class FineTuneTrainer(BaseTrainer):
         
         if self.model_type == 'hbv':
             # HBV model with nested structure
-            if 'HBV_1_1p' in prediction and isinstance(prediction['HBV_1_1p'], dict):
-                if 'flow_sim' in prediction['HBV_1_1p']:
-                    batch_pred = prediction['HBV_1_1p']['flow_sim'].cpu().numpy()
+            if 'Hbv_1_1p' in prediction and isinstance(prediction['Hbv_1_1p'], dict):
+                if 'flow_sim' in prediction['Hbv_1_1p']:
+                    batch_pred = prediction['Hbv_1_1p']['flow_sim'].cpu().numpy()
                 else:
-                    log.warning(f"Could not find flow_sim in HBV output. Keys: {prediction['HBV_1_1p'].keys()}")
+                    log.warning(f"Could not find flow_sim in HBV output. Keys: {prediction['Hbv_1_1p'].keys()}")
                     return None
             else:
-                log.warning(f"Could not find HBV_1_1p in prediction. Keys: {prediction.keys()}")
+                log.warning(f"Could not find Hbv_1_1p in prediction. Keys: {prediction.keys()}")
                 return None
         else:
             # Direct output model (e.g., soil moisture)
-            if 'HBV_1_1p' in prediction:
-                batch_pred = prediction['HBV_1_1p'].cpu().numpy()
+            if 'Hbv_1_1p' in prediction:
+                batch_pred = prediction['Hbv_1_1p'].cpu().numpy()
             else:
                 log.warning(f"Could not find prediction output. Keys: {prediction.keys()}")
                 return None
@@ -402,6 +415,10 @@ class FineTuneTrainer(BaseTrainer):
             log.error(f"Error calculating metrics: {str(e)}")
             import traceback
             log.error(traceback.format_exc())
+    
+    def inference(self) -> None:
+        """Run batch model inference - required by BaseTrainer."""
+        raise NotImplementedError
 
    
 

@@ -14,8 +14,8 @@ log = logging.getLogger(__name__)
 
 def run_spatial_testing(config: DictConfig, model) -> None:
     """Execute spatial testing across all holdout indices."""
-    holdout_indices = config['test_mode']['holdout_indexs']
-    extent = config['test_mode']['extent']
+    holdout_indices = config['test']['holdout_indexs']
+    extent = config['test']['extent']
     
     log.info(f"Running spatial testing with {len(holdout_indices)} holdouts")
     
@@ -30,7 +30,7 @@ def run_spatial_testing(config: DictConfig, model) -> None:
         
         # Create holdout-specific config
         current_config = config.copy() if isinstance(config, dict) else dict(config)
-        current_config['test_mode']['current_holdout_index'] = holdout_idx
+        current_config['test']['current_holdout_index'] = holdout_idx
         
         # Setup directories
         holdout_dir = os.path.join(config['validation_path'], f'spatial_holdout_{holdout_idx}_{extent}')
@@ -104,14 +104,14 @@ def _save_holdout_metadata(holdout_dir: str, holdout_idx: int, config: DictConfi
         f.write(f"Holdout Index: {holdout_idx}\n")
         
         if extent == 'PUR':
-            region_info = config['test_mode']['huc_regions'][holdout_idx]
+            region_info = config['test']['huc_regions'][holdout_idx]
             f.write(f"HUC Regions: {region_info}\n")
         elif extent == 'PUB':
-            pub_id = config['test_mode']['PUB_ids'][holdout_idx]
+            pub_id = config['test']['PUB_ids'][holdout_idx]
             f.write(f"PUB ID: {pub_id}\n")
         
-        if 'holdout_basins' in config['test_mode']:
-            f.write(f"Basins: {config['test_mode']['holdout_basins']}\n")
+        if 'holdout_basins' in config['test']:
+            f.write(f"Basins: {config['test']['holdout_basins']}\n")
 
 
 def _aggregate_spatial_results(predictions: List[np.ndarray], targets: List[np.ndarray], 

@@ -3,21 +3,29 @@ from typing import Dict, Optional
 import numpy as np
 import torch
 
-from core.data import random_index
-from core.data.data_samplers.base import BaseDataSampler
+from dMG.core.data.data import random_index
+from dMG.core.data.samplers.base import BaseSampler
 
 import logging
 
 log = logging.getLogger(__name__)
 
-class FinetuneDataSampler(BaseDataSampler):
+class FinetuneSampler(BaseSampler):
     def __init__(self, config: Dict):
         super().__init__()
         self.config = config
         self.device = config['device']
-        self.warm_up = config['dpl_model']['phy_model']['warm_up']
-        self.rho = config['dpl_model']['rho']
+        self.warm_up = config['delta_model']['phy_model']['warm_up']
+        self.rho = config['delta_model']['rho']
         self.batch_size = config['train']['batch_size']
+
+    def load_data(self):
+        """Custom implementation for loading data."""
+        print("Loading data...")
+
+    def preprocess_data(self):
+        """Custom implementation for preprocessing data."""
+        print("Preprocessing data...")
 
 
     def select_subset(
@@ -36,24 +44,20 @@ class FinetuneDataSampler(BaseDataSampler):
         batch_size, nx = len(i_grid), x.shape[-1]
         rho, warm_up = self.rho, self.warm_up
 
-        if is_nn_data:
-            # Handle neural network data [basins, timesteps, features]
-            if i_t is not None:
-                x_tensor = torch.zeros(
-                    [batch_size, rho + warm_up, nx],
-                    device=self.device,
-                    requires_grad=has_grad
-                )
-                for k in range(batch_size):
-                    # Calculate valid indices
-                    start_idx = i_t[k] - warm_up
-                    end_idx = min(i_t[k] + rho, x.shape[1])
-                    valid_length = end_idx - start_idx
-                    x_tensor[k, :valid_length, :] = x[i_grid[k], start_idx:end_idx, :]
+        # Check actual data dimensions to determine the correct indexing
+        # Both physics and NN data appear to be [timesteps, basins, features] in your case
+        if len(x.shape) == 3:
+            if x.shape[0] > x.shape[1]:  # More timesteps than basins
+                # Data is [timesteps, basins, features]
+                data_format = "time_basin_feature"
             else:
-                x_tensor = x[i_grid].float().to(self.device)
+                # Data is [basins, timesteps, features]
+                data_format = "basin_time_feature"
         else:
-            # Handle physics data [time, basins, features]
+            data_format = "unknown"
+
+        if data_format == "time_basin_feature":
+            # Handle data format [time, basins, features] - same for both physics and NN
             if i_t is not None:
                 x_tensor = torch.zeros(
                     [rho + warm_up, batch_size, nx],
@@ -62,23 +66,47 @@ class FinetuneDataSampler(BaseDataSampler):
                 )
                 for k in range(batch_size):
                     # Calculate valid indices
-                    start_idx = i_t[k] - warm_up
+                    start_idx = max(0, i_t[k] - warm_up)
                     end_idx = min(i_t[k] + rho, x.shape[0])
                     valid_length = end_idx - start_idx
                     
-                    # Only copy the valid portion
-                    slice_data = x[start_idx:end_idx, i_grid[k]:i_grid[k] + 1, :]
-                    x_tensor[:valid_length, k:k + 1, :] = slice_data
+                    if valid_length > 0:
+                        slice_data = x[start_idx:end_idx, i_grid[k]:i_grid[k] + 1, :]
+                        x_tensor[:valid_length, k:k + 1, :] = slice_data
             else:
-                x_tensor = x[:, i_grid, :].float().to(self.device) if x.ndim == 3 else x[i_grid, :].float().to(self.device)
+                x_tensor = x[:, i_grid, :].float().to(self.device)
+                
+        elif data_format == "basin_time_feature":
+            # Handle data format [basins, time, features] - original NN data handling
+            if i_t is not None:
+                x_tensor = torch.zeros(
+                    [batch_size, rho + warm_up, nx],
+                    device=self.device,
+                    requires_grad=has_grad
+                )
+                for k in range(batch_size):
+                    # Calculate valid indices
+                    start_idx = max(0, i_t[k] - warm_up)
+                    end_idx = min(i_t[k] + rho, x.shape[1])
+                    valid_length = end_idx - start_idx
+                    
+                    if valid_length > 0:
+                        x_tensor[k, :valid_length, :] = x[i_grid[k], start_idx:end_idx, :]
+            else:
+                x_tensor = x[i_grid].float().to(self.device)
+        else:
+            raise ValueError(f"Unknown data format for tensor shape: {x.shape}")
 
         if c is not None:
             c_tensor = torch.from_numpy(c).float().to(self.device)
-            c_tensor = c_tensor[i_grid].unsqueeze(1).repeat(1, rho + warm_up, 1)
-            return (x_tensor, c_tensor) if tuple_out else torch.cat((x_tensor, c_tensor), dim=2)
+            if data_format == "time_basin_feature":
+                c_tensor = c_tensor[i_grid].unsqueeze(0).repeat(rho + warm_up, 1, 1)
+            else:
+                c_tensor = c_tensor[i_grid].unsqueeze(1).repeat(1, rho + warm_up, 1)
+            return (x_tensor, c_tensor) if tuple_out else torch.cat((x_tensor, c_tensor), dim=-1)
 
         return x_tensor
-   
+
     def get_training_sample(
         self,
         dataset: Dict[str, np.ndarray],
@@ -86,35 +114,46 @@ class FinetuneDataSampler(BaseDataSampler):
         nt: int
     ) -> Dict[str, torch.Tensor]:
         """Generate a training batch."""
-        # Ensure we don't exceed dataset bounds
-        max_t = min(nt, dataset['x_phy'].shape[0] - self.rho)
-        i_sample, i_t = random_index(ngrid_train, max_t, (self.batch_size, self.rho), warm_up=self.warm_up)
+        # Calculate the maximum valid time index
+        min_required = self.warm_up + self.rho
+        
+        if nt < min_required:
+            log.warning(f"Not enough timesteps ({nt}) for warm_up ({self.warm_up}) + rho ({self.rho}). "
+                       f"Required: {min_required}. Adjusting rho to fit available data.")
+            effective_rho = max(1, nt - self.warm_up - 1)
+        else:
+            effective_rho = self.rho
+        
+        # Calculate valid time range for sampling
+        max_t = nt - effective_rho
+        
+        if max_t <= self.warm_up:
+            log.error(f"Invalid time range: max_t ({max_t}) <= warm_up ({self.warm_up})")
+            max_t = self.warm_up + 1
+            effective_rho = 1
+        
+        # Generate random indices
+        i_sample, i_t = random_index(ngrid_train, max_t, (self.batch_size, effective_rho), warm_up=self.warm_up)
 
         samples = {
             'x_phy': self.select_subset(dataset['x_phy'], i_sample, i_t),
-            'c_phy': dataset['c_phy'][i_sample],
-            'c_nn': dataset['c_nn'][i_sample],
             'target': self.select_subset(dataset['target'], i_sample, i_t)[self.warm_up:, :],
             'batch_sample': i_sample,
         }
 
+        # Handle static features (check if they have actual data)
+        if 'c_phy' in dataset and dataset['c_phy'].shape[1] > 0:
+            samples['c_phy'] = dataset['c_phy'][i_sample]
+        if 'c_nn' in dataset and dataset['c_nn'].shape[1] > 0:
+            samples['c_nn'] = dataset['c_nn'][i_sample]
+
         # Handle NN-specific data
         if 'x_nn' in dataset:
-            samples['x_nn'] = self.select_subset(dataset['x_nn'], i_sample, i_t, has_grad=False, is_nn_data=True)
+            samples['x_nn'] = self.select_subset(dataset['x_nn'], i_sample, i_t)
         if 'xc_nn_norm' in dataset:
-            samples['xc_nn_norm'] = self.select_subset(dataset['xc_nn_norm'], i_sample, i_t, has_grad=False, is_nn_data=True)
+            samples['xc_nn_norm'] = self.select_subset(dataset['xc_nn_norm'], i_sample, i_t)
 
         return samples
-    # def get_validation_sample(self, dataset: Dict[str, torch.Tensor], i_s: int, i_e: int) -> Dict[str, torch.Tensor]:
-    #     """Generate a validation batch."""
-    #     return {
-    #         key: torch.tensor(
-    #             value[self.warm_up:, i_s:i_e, :] if value.ndim == 3 else value[i_s:i_e, :],
-    #             dtype=torch.float32,
-    #             device=self.device
-    #         )
-    #         for key, value in dataset.items()
-    #     }
     def get_validation_sample(
             self,
             dataset: Dict[str, torch.Tensor],
@@ -266,10 +305,10 @@ class FinetuneDataSampler(BaseDataSampler):
 
         # Handle target data based on model configuration
         if not (
-            'HBV1_1p' in self.config['dpl_model']['phy_model']['model'] and
-            self.config['dpl_model']['phy_model']['warm_up_states'] and
+            'HBV1_1p' in self.config['delta_model']['phy_model']['model'] and
+            self.config['delta_model']['phy_model']['warm_up_states'] and
             self.config['multimodel_type'] == 'none'
         ):
-            sample['target'] = sample['target'][self.config['dpl_model']['phy_model']['warm_up']:days, :basins]
+            sample['target'] = sample['target'][self.config['delta_model']['phy_model']['warm_up']:days, :basins]
 
         return sample

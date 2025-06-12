@@ -5,17 +5,17 @@ import pickle
 import numpy as np
 import torch
 from typing import Dict, Any, Optional, Tuple, List
-from core.data.data_loaders.base import BaseDataLoader
-from core.data.data_loaders.load_nc import NetCDFDataset
-from core.utils.transform import cal_statistics
-from core.data import intersect
+from dMG.core.data.loaders.base import BaseLoader
+from dMG.core.data.loaders.load_nc import NetCDFDataset
+from dMG.core.utils.transform import cal_statistics
+from dMG.core.data.data import intersect
 import pandas as pd
 from sklearn.exceptions import DataDimensionalityWarning
 from numpy.typing import NDArray
 
 log = logging.getLogger(__name__)
 
-class NNDirectDataLoader(BaseDataLoader):
+class NNDirectLoader(BaseLoader):
     """Data loader for running direct NN comparisons 
     Within the finetuning setup so removing you physics model.
     """
@@ -34,21 +34,21 @@ class NNDirectDataLoader(BaseDataLoader):
         self.overwrite = overwrite
         
         # Configuration attributes following paste-2 structure
-        self.nn_attributes = config['dpl_model']['nn_model'].get('attributes', [])
-        self.nn_forcings = config['dpl_model']['nn_model'].get('forcings', [])
+        self.nn_attributes = config['delta_model']['nn_model'].get('attributes', [])
+        self.nn_forcings = config['delta_model']['nn_model'].get('forcings', [])
         
-        # Physics model attributes (empty for direct NN comparison)
+        # Physics model attributes (empty for direct NN comparison)s
         self.phy_attributes = []
         self.phy_forcings = []
         
         # Data configuration
         self.data_name = config['observations'].get('name', '')
-        self.forcing_names = config['observations'].get('forcings_all', [])  # renamed from all_forcings
-        self.attribute_names = config['observations'].get('attributes_all', [])  # renamed from all_attributes
+        self.forcing_names = config['observations'].get('all_forcings', [])  # renamed from all_forcings
+        self.attribute_names = config['observations'].get('all_attributes', [])  # renamed from all_attributes
         self.target = config['train']['target']
         
         # Normalization configuration
-        self.log_norm_vars = config['dpl_model']['phy_model'].get('use_log_norm', [])
+        self.log_norm_vars = config['delta_model']['phy_model'].get('use_log_norm', [])
 
         # Device and data type configuration
         self.device = config['device']
@@ -747,7 +747,7 @@ class NNDirectDataLoader(BaseDataLoader):
     def _load_nn_data(self, scope: str, t_range: Dict[str, str]) -> Dict[str, torch.Tensor]:
         """Load and process neural network data from NetCDF, including target variables."""
         time_range = [t_range['start'].replace('/', '-'), t_range['end'].replace('/', '-')]
-        warmup_days = self.config['dpl_model']['phy_model']['warm_up']
+        warmup_days = self.config['delta_model']['phy_model']['warm_up']
 
         try:
             # Get subset path if exists
