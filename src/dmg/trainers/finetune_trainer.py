@@ -8,7 +8,6 @@ import torch
 import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-# from dMG.core.data.samplers.finetune_sampler import Finetuneampler
 from dMG.trainers.base import BaseTrainer
 from dMG.core.utils.utils import save_outputs
 from dMG.core.calc.metrics import Metrics
@@ -152,22 +151,19 @@ class FinetuneTrainer(BaseTrainer):
                 self.model.train()
                 
                 # Debug: Check actual data dimensions
-                log.info(f"Dataset shapes:")
-                for key, value in self.train_dataset.items():
-                    if hasattr(value, 'shape'):
-                        log.info(f"  {key}: {value.shape}")
+                # log.info(f"Dataset shapes:")
+                # for key, value in self.train_dataset.items():
+                #     if hasattr(value, 'shape'):
+                #         log.info(f"  {key}: {value.shape}")
                 
                 # Get grid dimensions for training - but fix the dimension issue
                 n_samples, n_minibatch, n_timesteps = create_training_grid(
                     self.train_dataset['xc_nn_norm'],
                     self.config
                 )
+                                
                 
-                # Recalculate minibatches based on correct basin count
-                batch_size = self.config['train']['batch_size']
-                n_minibatch = max(1, (n_samples * self.config.get('train_samples_per_epoch', 1)) // batch_size)
-                
-                log.info(f"Corrected training grid - basins: {n_samples}, timesteps: {n_timesteps}, batches: {n_minibatch}")
+                log.info(f"Corrected training grid - basins: {n_samples}, timesteps: {n_timesteps}, mini_batches: {n_minibatch}")
 
                 for i in range(1, n_minibatch + 1):
                     self.optimizer.zero_grad()
@@ -225,129 +221,70 @@ class FinetuneTrainer(BaseTrainer):
             results_file.close()
             log.info("Training complete")
 
-    def evaluate(self) -> Tuple[np.ndarray, np.ndarray]:
-        """Enhanced testing method that handles both variable basin counts and full time periods."""
-        log.info("Starting model testing with full time period prediction...")
-        
-        # Ensure model is in evaluation mode
-        self.model.eval()
-        
-        # Get total number of basins and time steps
-        total_basins = self.test_dataset['xc_nn_norm'].shape[0]
-        total_timesteps = self.test_dataset['target'].shape[0]
-        log.info(f"Total basins: {total_basins}, Total timesteps: {total_timesteps}")
-        
-        # Calculate parameters
-        warm_up = self.config['delta_model']['phy_model']['warm_up']
-        rho = self.config['delta_model']['rho']
-        
-        # Define prediction interval (can be adjusted for overlap)
-        stride = rho  # Non-overlapping windows
-        
-        # Calculate number of time windows needed
-        effective_timesteps = total_timesteps - warm_up
-        n_windows = (effective_timesteps + stride - 1) // stride
-        log.info(f"Predicting {n_windows} time windows to cover {effective_timesteps} effective timesteps")
-        
-        # Use batch size from config or adjust if needed
-        batch_size = min(self.config['test'].get('batch_size', 25), total_basins)
-        n_batches = (total_basins + batch_size - 1) // batch_size
-        
-        # Create an array to store all predictions
-        all_predictions = np.zeros((effective_timesteps, total_basins, 1))
-        
-        # Disable gradient computation
-        with torch.no_grad():
-            # First loop through time windows
-            for window in range(n_windows):
-                # Calculate starting time index for this window
-                time_start = warm_up + window * stride
-                
-                # Ensure we don't exceed dataset bounds
-                if time_start >= total_timesteps:
-                    break
-                    
-                # Calculate ending time index for this window
-                time_end = min(time_start + rho, total_timesteps)
-                actual_window_size = time_end - time_start
-                
-                # Inner loop through basin batches
-                window_predictions = []
-                
-                for i in range(n_batches):
-                    # Calculate basin indices for this batch
-                    basin_start = i * batch_size
-                    basin_end = min(basin_start + batch_size, total_basins)
-                    
-                    try:
-                        # Create a custom function to get time-windowed validation sample
-                        dataset_sample = self._get_time_window_sample(
-                            self.test_dataset,
-                            basin_start,
-                            basin_end,
-                            time_start - warm_up,  # Include warm-up period before prediction window
-                            time_end
-                        )
-                        
-                        # Forward pass
-                        prediction = self.model(dataset_sample, eval=True)
-                        
-                        # Extract predictions based on model type
-                        batch_pred = self._extract_prediction(prediction, warm_up)
-                        
-                        if batch_pred is not None:
-                            window_predictions.append(batch_pred)
-                            
-                    except Exception as e:
-                        log.error(f"Error processing batch {i+1} in window {window+1}: {str(e)}")
-                        continue
-                        
-                # Combine basin predictions for this time window
-                if window_predictions:
-                    try:
-                        # Concatenate basin predictions
-                        window_pred_full = np.concatenate(window_predictions, axis=1)
-                        
-                        # Store in the appropriate slice of the full predictions array
-                        window_offset = window * stride
-                        end_offset = min(window_offset + actual_window_size, effective_timesteps)
-                        pred_length = min(window_pred_full.shape[0], end_offset - window_offset)
-                        
-                        all_predictions[window_offset:window_offset+pred_length, :, :] = window_pred_full[:pred_length, :, :]
-                        
-                    except Exception as e:
-                        log.error(f"Error combining predictions for window {window+1}: {str(e)}")
-                else:
-                    log.warning(f"No predictions generated for window {window+1}")
-        
-        # Get observations (removing warm-up period)
-        observations = self.test_dataset['target'][warm_up:].cpu().numpy()
-        
-        # Ensure shapes match
-        if all_predictions.shape[0] > observations.shape[0]:
-            all_predictions = all_predictions[:observations.shape[0], :, :]
-        elif observations.shape[0] > all_predictions.shape[0]:
-            observations = observations[:all_predictions.shape[0], :, :]
-        
-        # Calculate metrics and save outputs
-        log.info(f"Final prediction shape: {all_predictions.shape}, observation shape: {observations.shape}")
-        if all_predictions.size > 0:
-            output_dir = self.config['validation_path']
-         
-            log.info(f"Saving results to directory: {output_dir}")
-            os.makedirs(output_dir, exist_ok=True)
-            
-            # Save raw predictions and observations
-            np.save(os.path.join(output_dir, 'predictions.npy'), all_predictions)
-            np.save(os.path.join(output_dir, 'observations.npy'), observations)
-            log.info(f"Saved raw predictions and observations to {output_dir}")
-            
-            # Calculate metrics using the appropriate Metrics class
-            self.calc_metrics(all_predictions, observations)
-            return all_predictions, observations
-        else:
-            log.warning("No predictions were generated during testing")
-            return None, None
+    def evaluate(self) -> None:
+        """Run model evaluation and return both metrics and model outputs."""
+        self.is_in_train = False
+
+        # Track overall predictions and observations
+        batch_predictions = []
+        observations = self.test_dataset['target']
+
+        # Get start and end indices for each batch
+        n_samples = self.test_dataset['xc_nn_norm'].shape[1]
+        batch_start = np.arange(0, n_samples, self.config['test']['batch_size'])
+        batch_end = np.append(batch_start[1:], n_samples)
+
+        # Model forward
+        log.info(f"Validating Model: Forwarding {len(batch_start)} batches")
+        batch_predictions = self._forward_loop(self.test_dataset, batch_start, batch_end)
+
+        # Save predictions and calculate metrics
+        log.info("Saving model outputs + Calculating metrics")
+        save_outputs(self.config, batch_predictions, observations)
+        self.predictions = self._batch_data(batch_predictions)
+
+        # Calculate metrics
+        self.calc_metrics(batch_predictions, observations)
+    
+    def _forward_loop(
+        self,
+        data: dict[str, torch.Tensor],
+        batch_start: NDArray,
+        batch_end: NDArray
+    ) -> None:
+        """Forward loop used in model evaluation and inference.
+
+        Parameters
+        ----------
+        data
+            Dictionary containing model input data.
+        batch_start
+            Start indices for each batch.
+        batch_end
+            End indices for each batch.
+        """
+        # Track predictions accross batches
+        batch_predictions = []
+
+        for i in tqdm.tqdm(range(len(batch_start)), desc='Forwarding', leave=False, dynamic_ncols=True):
+            self.current_batch = i
+
+            # Select a batch of data
+            dataset_sample = self.sampler.get_validation_sample(
+                data,
+                batch_start[i],
+                batch_end[i],
+            )
+
+            prediction = self.model(dataset_sample, eval=True)
+
+            # Save the batch predictions
+            model_name = self.config['delta_model']['phy_model']['model'][0]
+            prediction = {
+                key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()
+            }
+            batch_predictions.append(prediction)
+        return batch_predictions
 
     def _extract_prediction(self, prediction: dict, warm_up: int) -> Optional[np.ndarray]:
         """Extract prediction tensor based on model type."""
@@ -409,7 +346,7 @@ class FinetuneTrainer(BaseTrainer):
             
             # Create Metrics object and save
             metrics = Metrics(pred_formatted, obs_formatted)
-            metrics.dump_metrics(self.config['validation_path'])
+            metrics.dump_metrics(self.config['out_path'])
             
         except Exception as e:
             log.error(f"Error calculating metrics: {str(e)}")
@@ -422,36 +359,36 @@ class FinetuneTrainer(BaseTrainer):
 
    
 
-    def _get_time_window_sample(self, dataset, basin_start, basin_end, time_start, time_end):
-        """Custom method to get a validation sample for a specific time window."""
-        # Calculate dimensions
-        batch_size = basin_end - basin_start
-        seq_len = time_end - time_start
+    # def _get_time_window_sample(self, dataset, basin_start, basin_end, time_start, time_end):
+    #     """Custom method to get a validation sample for a specific time window."""
+    #     # Calculate dimensions
+    #     batch_size = basin_end - basin_start
+    #     seq_len = time_end - time_start
         
-        batch_data = {}
+    #     batch_data = {}
         
-        # Process NN data (dimensions: [basins, time, features])
-        if 'xc_nn_norm' in dataset:
-            batch_data['xc_nn_norm'] = dataset['xc_nn_norm'][basin_start:basin_end, time_start:time_start+seq_len].to(self.device)
-            log.debug(f"Time window xc_nn_norm shape: {batch_data['xc_nn_norm'].shape}")
+    #     # Process NN data (dimensions: [basins, time, features])
+    #     if 'xc_nn_norm' in dataset:
+    #         batch_data['xc_nn_norm'] = dataset['xc_nn_norm'][basin_start:basin_end, time_start:time_end].to(self.device)
+    #         log.debug(f"Time window xc_nn_norm shape: {batch_data['xc_nn_norm'].shape}")
         
-        # Process physics data (dimensions: [time, basins, features])
-        if 'x_phy' in dataset:
-            batch_data['x_phy'] = dataset['x_phy'][time_start:time_start+seq_len, basin_start:basin_end].to(self.device)
-            log.debug(f"Time window x_phy shape: {batch_data['x_phy'].shape}")
+    #     # Process physics data (dimensions: [time, basins, features])
+    #     if 'x_phy' in dataset:
+    #         batch_data['x_phy'] = dataset['x_phy'][time_start:time_end, basin_start:basin_end].to(self.device)
+    #         log.debug(f"Time window x_phy shape: {batch_data['x_phy'].shape}")
         
-        # Process static attributes
-        if 'c_phy' in dataset:
-            batch_data['c_phy'] = dataset['c_phy'][basin_start:basin_end].to(self.device)
+    #     # Process static attributes
+    #     if 'c_phy' in dataset:
+    #         batch_data['c_phy'] = dataset['c_phy'][basin_start:basin_end].to(self.device)
         
-        if 'c_nn' in dataset:
-            batch_data['c_nn'] = dataset['c_nn'][basin_start:basin_end].to(self.device)
+    #     if 'c_nn' in dataset:
+    #         batch_data['c_nn'] = dataset['c_nn'][basin_start:basin_end].to(self.device)
         
-        # Process target data
-        if 'target' in dataset:
-            batch_data['target'] = dataset['target'][time_start:time_start+seq_len, basin_start:basin_end].to(self.device)
+    #     # Process target data
+    #     if 'target' in dataset:
+    #         batch_data['target'] = dataset['target'][time_start:time_end, basin_start:basin_end].to(self.device)
         
-        return batch_data
+    #     return batch_data
 
     def _log_epoch_stats(
         self,
@@ -489,6 +426,38 @@ class FinetuneTrainer(BaseTrainer):
         
         with open(loss_data, 'a') as f:
             f.write(f"{epoch},{train_loss},{val_loss if val_loss else ''}\n")
+
+            
+    def _batch_data(
+        self,
+        batch_list: list[dict[str, torch.Tensor]],
+        target_key: str = None,
+    ) -> None:
+        """Merge batch data into a single dictionary.
+        
+        Parameters
+        ----------
+        batch_list
+            List of dictionaries from each forward batch containing inputs and
+            model predictions.
+        target_key
+            Key to extract from each batch dictionary.
+        """
+        data = {}
+        try:
+            if target_key:
+                return torch.cat([x[target_key] for x in batch_list], dim=1).numpy()
+
+            for key in batch_list[0].keys():
+                if len(batch_list[0][key].shape) == 3:
+                    dim = 1
+                else:
+                    dim = 0
+                data[key] = torch.cat([d[key] for d in batch_list], dim=dim).cpu().numpy()
+            return data
+
+        except ValueError as e:
+            raise ValueError(f"Error concatenating batch data: {e}") from e
 
 
 def clear_gpu_memory():

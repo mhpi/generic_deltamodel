@@ -5,6 +5,7 @@ import pickle
 import numpy as np
 import torch
 from typing import Dict, Any, Optional, Tuple, List
+from numpy.typing import NDArray
 from dMG.core.data.loaders.base import BaseLoader
 from dMG.core.data.loaders.load_nc import NetCDFDataset
 from dMG.core.data.data import intersect
@@ -187,18 +188,33 @@ class FinetuneLoader(BaseLoader):
         with open(data_path, 'rb') as f:
             forcings, target, attributes = pickle.load(f)
             
-        # Convert dates to indices for time slicing
         start_date = pd.to_datetime(t_range['start'].replace('/', '-'))
         end_date = pd.to_datetime(t_range['end'].replace('/', '-'))
+        
+        # ADD WARMUP TO PHYSICS DATA TOO
+        warmup_days = self.config['delta_model']['phy_model']['warm_up']
+        start_date_with_warmup = start_date - pd.Timedelta(days=warmup_days)
+        
         all_dates = pd.date_range(
             self.config['observations']['start_time'].replace('/', '-'),
             self.config['observations']['end_time'].replace('/', '-'),
             freq='D'
         )
-        idx_start = all_dates.get_loc(start_date)
+        
+        # DEBUG: 
+        log.debug(f"DEBUG PHYSICS TIME RANGE:")
+        log.debug(f"  Requested range: {t_range['start']} to {t_range['end']}")
+        log.debug(f"  With warmup: {start_date_with_warmup} to {end_date}")
+        log.debug(f"  All dates range: {all_dates[0]} to {all_dates[-1]}")
+        log.debug(f"  Total physics data shape: {forcings.shape}")
+        
+        # Use the warmup-extended start date
+        idx_start = all_dates.get_loc(start_date_with_warmup)
         idx_end = all_dates.get_loc(end_date) + 1
         
-        # Process forcings and target with correct transposition
+        log.debug(f"  Calculated indices: {idx_start} to {idx_end} (length: {idx_end - idx_start})")
+        
+        # Process forcings and target with warmup included
         forcings = np.transpose(forcings[:, idx_start:idx_end], (1, 0, 2))
         target = np.transpose(target[:, idx_start:idx_end], (1, 0, 2))
         
@@ -245,14 +261,15 @@ class FinetuneLoader(BaseLoader):
         warmup_days = self.config['delta_model']['phy_model']['warm_up']
         
         # Load ALL stations first to avoid station ID format mismatch
+        # nc2array will automatically extend the time range backwards by warmup_days
         time_series_data, static_data, date_range = self.nc_tool.nc2array(
             self.config['data_path'],
             station_ids=None,  # Load all stations
-            time_range=time_range,
+            time_range=time_range,  # Original time range - nc2array handles warmup extension
             time_series_variables=self.nn_forcings,
             static_variables=self.nn_attributes,
             add_coords=True,
-            warmup_days=warmup_days
+            warmup_days=warmup_days  # Let nc2array handle the warmup period
         )
         
         # Now filter stations if needed
@@ -274,13 +291,14 @@ class FinetuneLoader(BaseLoader):
         if static_data.shape[1] >= 2:
             static_data = static_data[:, :-2]
 
+        # Transform to match HydroLoader format [time, basins, features]
         time_series_data = np.transpose(time_series_data, (1, 0, 2))
         
         return {
-            'x_nn': time_series_data.astype(np.float32),
-            'c_nn': static_data.astype(np.float32)
+            'x_nn': time_series_data.astype(np.float32),  # Now [time, basins, features] with warmup
+            'c_nn': static_data.astype(np.float32)        # [basins, features]
         }
-
+        
     def _split_by_basin(self, dataset):
         """Split dataset by basin for spatial testing."""
         if not dataset or not self.is_spatial_test:
@@ -307,7 +325,7 @@ class FinetuneLoader(BaseLoader):
                     raise ValueError(f"Invalid holdout index: {self.holdout_index}")
                     
                 holdout_pub = pub_ids[self.holdout_index]
-                gage_file = self.test.get('gage_split_file')
+                gage_file = self.config['observations']['gage_split_file']
                 gageinfo = pd.read_csv(gage_file, dtype={"PUB_ID": int, "gage": str})
                 holdout_gages = gageinfo[gageinfo['PUB_ID'] == holdout_pub]['gage'].tolist()
             
@@ -516,14 +534,18 @@ class FinetuneLoader(BaseLoader):
             log.warning(f"No area information found: {e}. Basin area norm will not be applied.")
             return None
 
-    def normalize(self, x_nn: np.ndarray, c_nn: np.ndarray) -> np.ndarray:
-        """Normalize data for neural network."""
+    def normalize(
+        self,
+        x_nn: NDArray[np.float32],
+        c_nn: NDArray[np.float32],
+    ) -> NDArray[np.float32]:
+        """Normalize data for neural network"""
         x_nn_norm = self._to_norm(
-            np.swapaxes(x_nn, 1, 0).copy(),
+            np.swapaxes(x_nn, 1, 0).copy(),  # [time, basins, features] -> [basins, time, features]
             self.nn_forcings,
         )
         c_nn_norm = self._to_norm(
-            c_nn,
+            c_nn,  # [basins, features]
             self.nn_attributes,
         )
 
@@ -538,10 +560,16 @@ class FinetuneLoader(BaseLoader):
         )
 
         xc_nn_norm = np.concatenate((x_nn_norm, c_nn_norm), axis=2)
+        del x_nn_norm, c_nn_norm
+
         return xc_nn_norm
 
-    def _to_norm(self, data: np.ndarray, vars: List[str]) -> np.ndarray:
-        """Standard data normalization."""
+    def _to_norm(
+        self,
+        data: NDArray[np.float32],
+        vars: list[str],
+    ) -> NDArray[np.float32]:
+        """Standard data normalization - IDENTICAL to HydroLoader."""
         if not self.norm_stats:
             log.warning("No normalization statistics available, using identity normalization")
             return data
@@ -555,61 +583,57 @@ class FinetuneLoader(BaseLoader):
                 
             stat = self.norm_stats[var]
 
-            try:
-                if len(data.shape) == 3:
-                    if var in self.log_norm_vars:
-                        data[:, :, k] = np.log10(np.sqrt(np.maximum(data[:, :, k], 0)) + 0.1)
-                    data_norm[:, :, k] = (data[:, :, k] - stat[2]) / stat[3]
-                elif len(data.shape) == 2:
-                    if var in self.log_norm_vars:
-                        data[:, k] = np.log10(np.sqrt(np.maximum(data[:, k], 0)) + 0.1)
-                    data_norm[:, k] = (data[:, k] - stat[2]) / stat[3]
-                else:
-                    raise DataDimensionalityWarning("Data dimension must be 2 or 3.")
-            except Exception as e:
-                log.warning(f"Error normalizing {var}: {e}")
-                if len(data.shape) == 3:
-                    data_norm[:, :, k] = data[:, :, k]
-                else:
-                    data_norm[:, k] = data[:, k]
-            
+            if len(data.shape) == 3:
+                if var in self.log_norm_vars:
+                    data[:, :, k] = np.log10(np.sqrt(np.maximum(data[:, :, k], 0)) + 0.1)
+                data_norm[:, :, k] = (data[:, :, k] - stat[2]) / stat[3]
+            elif len(data.shape) == 2:
+                if var in self.log_norm_vars:
+                    data[:, k] = np.log10(np.sqrt(np.maximum(data[:, k], 0)) + 0.1)
+                data_norm[:, k] = (data[:, k] - stat[2]) / stat[3]
+            else:
+                raise DataDimensionalityWarning("Data dimension must be 2 or 3.")
+
+        # NOTE: Should be external, except altering order of first two dims
+        # augments normalization...
         if len(data_norm.shape) < 3:
             return data_norm
         else:
-            return np.swapaxes(data_norm, 1, 0)
+            return np.swapaxes(data_norm, 1, 0)  # Back to [time, basins, features]
 
-    def _from_norm(self, data_norm: np.ndarray, vars: List[str]) -> np.ndarray:
-        """De-normalize data."""
-        if not self.norm_stats:
-            log.warning("No normalization statistics available, using identity denormalization")
-            return data_norm
-            
-        data = np.zeros(data_norm.shape)
-                
+    def _from_norm(
+            self,
+            data_scaled: NDArray[np.float32],
+            vars: list[str],
+        ) -> NDArray[np.float32]:
+        """De-normalize data.
+        
+        Parameters
+        ----------
+        data
+            Data to de-normalize.
+        vars
+            List of variable names in data to de-normalize.
+        
+        Returns
+        -------
+        NDArray[np.float32]
+            De-normalized data.
+        """
+        data = np.zeros(data_scaled.shape)
+
         for k, var in enumerate(vars):
-            if var not in self.norm_stats:
-                log.warning(f"No normalization stats for {var}, skipping")
-                continue
-                
             stat = self.norm_stats[var]
-            
-            try:
-                if len(data_norm.shape) == 3:
-                    data[:, :, k] = data_norm[:, :, k] * stat[3] + stat[2]
-                    if var in self.log_norm_vars:
-                        data[:, :, k] = (np.power(10, data[:, :, k]) - 0.1) ** 2
-                elif len(data_norm.shape) == 2:
-                    data[:, k] = data_norm[:, k] * stat[3] + stat[2]
-                    if var in self.log_norm_vars:
-                        data[:, k] = (np.power(10, data[:, k]) - 0.1) ** 2
-                else:
-                    raise DataDimensionalityWarning("Data dimension must be 2 or 3.")
-            except Exception as e:
-                log.warning(f"Error denormalizing {var}: {e}")
-                if len(data_norm.shape) == 3:
-                    data[:, :, k] = data_norm[:, :, k]
-                else:
-                    data[:, k] = data_norm[:, k]
+            if len(data_scaled.shape) == 3:
+                data[:, :, k] = data_scaled[:, :, k] * stat[3] + stat[2]
+                if var in self.log_norm_vars:
+                    data[:, :, k] = (np.power(10, data[:, :, k]) - 0.1) ** 2
+            elif len(data_scaled.shape) == 2:
+                data[:, k] = data_scaled[:, k] * stat[3] + stat[2]
+                if var in self.log_norm_vars:
+                    data[:, k] = (np.power(10, data[:, k]) - 0.1) ** 2
+            else:
+                raise DataDimensionalityWarning("Data dimension must be 2 or 3.")
 
         if len(data.shape) < 3:
             return data

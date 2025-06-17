@@ -19,8 +19,9 @@ def run_spatial_testing(config: DictConfig, model) -> None:
     
     log.info(f"Running spatial testing with {len(holdout_indices)} holdouts")
     
-    # Setup aggregated results directory
-    agg_results_dir = os.path.join(config['validation_path'], f'spatial_aggregated_{extent}')
+    # Setup aggregated results directory in the main testing folder
+    base_output_dir = config.get('out_path', '.')
+    agg_results_dir = os.path.join(base_output_dir, f'spatial_aggregated_{extent}')
     os.makedirs(agg_results_dir, exist_ok=True)
     
     all_predictions, all_targets = [], []
@@ -32,13 +33,18 @@ def run_spatial_testing(config: DictConfig, model) -> None:
         current_config = config.copy() if isinstance(config, dict) else dict(config)
         current_config['test']['current_holdout_index'] = holdout_idx
         
-        # Setup directories
-        holdout_dir = os.path.join(config['validation_path'], f'spatial_holdout_{holdout_idx}_{extent}')
-        current_config['validation_path'] = os.path.join(holdout_dir, 'validation')
-        current_config['testing_path'] = os.path.join(holdout_dir, 'testing')
-        current_config['out_path'] = holdout_dir
+        # Setup directories - just testing folder within each holdout
+        holdout_dir = os.path.join(base_output_dir, f'spatial_holdout_{holdout_idx}_{extent}')
+        testing_dir = os.path.join(holdout_dir, 'testing')
         
-        os.makedirs(current_config['validation_path'], exist_ok=True)
+        current_config['testing_path'] = testing_dir
+        current_config['out_path'] = testing_dir  # Output directly to testing folder
+        
+        # Ensure model_path is set for compatibility
+        if 'model_path' not in current_config:
+            current_config['model_path'] = config.get('model_path', holdout_dir)
+        
+        os.makedirs(testing_dir, exist_ok=True)
         
         # Reinitialize model for each holdout to prevent data leakage
         if 'train' in config['mode']:
@@ -73,10 +79,10 @@ def run_spatial_testing(config: DictConfig, model) -> None:
         if mode == 'train':
             trainer.train()
         elif mode == 'test':
-            pred, target = trainer.test()
+            pred, target = trainer.evaluate()
         elif mode == 'train_test':
             trainer.train()
-            pred, target = trainer.test()
+            pred, target = trainer.evaluate()
         else:
             raise ValueError(f"Invalid mode: {mode}")
         
@@ -154,4 +160,3 @@ def _aggregate_spatial_results(predictions: List[np.ndarray], targets: List[np.n
         log.error(f"Error in spatial result aggregation: {str(e)}")
         import traceback
         log.error(traceback.format_exc())
-

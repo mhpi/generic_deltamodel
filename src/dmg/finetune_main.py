@@ -35,7 +35,7 @@ def main(config: DictConfig) -> None:
         config = initialize_config(config, write_path=True)
         set_randomseed(config['random_seed'])
         
-        test_mode = config.get('test_mode', {}).get('type', 'temporal')
+        test_mode = config.get('test', {}).get('type', 'temporal')
         log.info(f"Running mode: {config['mode']}, Testing type: {test_mode}")
         print_config(config)
         
@@ -61,10 +61,10 @@ def main(config: DictConfig) -> None:
             if mode == 'train':
                 trainer.train()
             elif mode == 'test':
-                return trainer.test()
+                return trainer.evaluate()
             elif mode == 'train_test':
                 trainer.train()
-                return trainer.test()
+                return trainer.evaluate()
             elif mode == 'simulation':
                 trainer.inference()
             else:
