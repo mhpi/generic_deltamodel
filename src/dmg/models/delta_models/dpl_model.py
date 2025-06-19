@@ -117,6 +117,12 @@ class DplModel(torch.nn.Module):
             parameters = self.nn_model(data_dict['xc_nn_norm'], data_dict['c_nn_norm'])
         else:
             parameters = self.nn_model(data_dict['xc_nn_norm'])
+        
+        
+        if self.config.get('direct_prediction', False):
+            # Direct prediction mode - return NN output with the expected target key
+            return parameters
+
 
         # Physics model
         predictions = self.phy_model(

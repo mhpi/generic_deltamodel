@@ -213,6 +213,20 @@ def load_nn_model(
         hidden_size = config['hidden_size']
         dr = config['dropout']
         name = config['model']
+    elif config.get('direct_prediction',False):
+        # For direct prediction, output should match target size, not physics parameters
+        n_forcings = len(config['nn_model']['forcings'])
+        n_attributes = len(config['nn_model']['attributes'])
+        
+        # Get target variables count - typically 1 for soil_moisture
+        target_vars = config.get('target_variables', ['soil_moisture'])
+        ny = len(target_vars)  # This will be 1 instead of 226
+        
+        name = config['nn_model']['model']
+        
+        if name not in ['LstmMlpModel']:
+            hidden_size = config['nn_model']['hidden_size']
+            dr = config['nn_model']['dropout']
     else:
         n_forcings = len(config['nn_model']['forcings'])
         n_attributes = len(config['nn_model']['attributes'])
@@ -259,6 +273,12 @@ def load_nn_model(
             dr1=config['nn_model']['lstm_dropout'],
             dr2=config['nn_model']['mlp_dropout'],
             device=device,
+        )
+    elif name in ['Finetuneing']:
+        # Finetuneing model initialization - doesn't need nx, handles config internally
+        model = cls(
+            config=config,
+            ny=ny,
         )
     else:
         raise ValueError(f"Model {name} is not supported.")

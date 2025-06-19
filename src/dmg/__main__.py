@@ -40,7 +40,7 @@ def run_mode(mode, trainer) -> None:
 @hydra.main(
     version_base='1.3',
     config_path='./../../conf/',
-    config_name='temporalCamels',
+    config_name='prism',
 )
 def main(config: DictConfig) -> None:
     """Main function to run differentiable model experiments."""

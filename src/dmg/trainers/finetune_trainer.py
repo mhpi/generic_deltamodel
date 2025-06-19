@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from numpy.typing import NDArray
 
 from dMG.trainers.base import BaseTrainer
 from dMG.core.utils.utils import save_outputs
@@ -163,7 +164,7 @@ class FinetuneTrainer(BaseTrainer):
                 )
                                 
                 
-                log.info(f"Corrected training grid - basins: {n_samples}, timesteps: {n_timesteps}, mini_batches: {n_minibatch}")
+                log.info(f"training grid - basins: {n_samples}, timesteps: {n_timesteps}, mini_batches: {n_minibatch}")
 
                 for i in range(1, n_minibatch + 1):
                     self.optimizer.zero_grad()
@@ -192,7 +193,8 @@ class FinetuneTrainer(BaseTrainer):
                             # Direct output model (e.g., soil moisture)
                             model_output = outputs['Hbv_1_1p']
 
-                        # print(model_output["streamflow"])
+                        # print(model_output.shape)
+                        # print(target.shape)
                         loss = self.loss_func(model_output,target)
                         
                         if torch.isnan(loss):
@@ -221,7 +223,7 @@ class FinetuneTrainer(BaseTrainer):
             results_file.close()
             log.info("Training complete")
 
-    def evaluate(self) -> None:
+    def evaluate(self) -> Tuple[np.ndarray, np.ndarray]:
         """Run model evaluation and return both metrics and model outputs."""
         self.is_in_train = False
 
@@ -229,8 +231,8 @@ class FinetuneTrainer(BaseTrainer):
         batch_predictions = []
         observations = self.test_dataset['target']
 
-        # Get start and end indices for each batch
-        n_samples = self.test_dataset['xc_nn_norm'].shape[1]
+        # CORRECTED: Use shape[1] for TIME dimension like the working version
+        n_samples = self.test_dataset['xc_nn_norm'].shape[1]  # 731 timesteps, not basins
         batch_start = np.arange(0, n_samples, self.config['test']['batch_size'])
         batch_end = np.append(batch_start[1:], n_samples)
 
@@ -245,13 +247,69 @@ class FinetuneTrainer(BaseTrainer):
 
         # Calculate metrics
         self.calc_metrics(batch_predictions, observations)
+
+        return batch_predictions, observations
+
+
+    def _process_predictions(self, batch_predictions: list) -> np.ndarray:
+        """Convert list of batch predictions to a single numpy array."""
+        if not batch_predictions:
+            raise ValueError("No batch predictions to process")
+        
+        # Extract arrays from each batch
+        arrays = []
+        for i, batch in enumerate(batch_predictions):
+            if isinstance(batch, dict):
+                # Get the prediction tensor from the dictionary
+                if 'prediction' in batch:
+                    array = batch['prediction']
+                else:
+                    # Take the first value if 'prediction' key doesn't exist
+                    array = next(iter(batch.values()))
+                
+                # Convert to numpy if needed
+                if isinstance(array, torch.Tensor):
+                    array = array.cpu().detach().numpy()
+                
+                arrays.append(array)
+                log.debug(f"Batch {i} array shape: {array.shape}")
+            else:
+                log.warning(f"Unexpected batch type: {type(batch)}")
+                continue
+        
+        if not arrays:
+            raise ValueError("No valid arrays found in batch predictions")
+        
+        # Concatenate arrays
+        # Assuming arrays are shaped like [time, batch_basins, features]
+        # We want to concatenate along the basin dimension (axis=1)
+        try:
+            if len(arrays[0].shape) == 3:
+                # [time, batch_basins, features] -> concatenate along axis=1
+                combined = np.concatenate(arrays, axis=1)
+            elif len(arrays[0].shape) == 2:
+                # [time, batch_basins] -> concatenate along axis=1
+                combined = np.concatenate(arrays, axis=1)
+            else:
+                # Fallback: concatenate along axis=0
+                combined = np.concatenate(arrays, axis=0)
+            
+            log.info(f"Combined array shape: {combined.shape}")
+            return combined
+            
+        except Exception as e:
+            log.error(f"Error concatenating arrays: {e}")
+            # Debug: print shapes of first few arrays
+            for i, arr in enumerate(arrays[:3]):
+                log.error(f"Array {i} shape: {arr.shape}")
+            raise    
     
     def _forward_loop(
         self,
         data: dict[str, torch.Tensor],
         batch_start: NDArray,
         batch_end: NDArray
-    ) -> None:
+    ) -> list:
         """Forward loop used in model evaluation and inference.
 
         Parameters
@@ -263,7 +321,7 @@ class FinetuneTrainer(BaseTrainer):
         batch_end
             End indices for each batch.
         """
-        # Track predictions accross batches
+        # Track predictions across batches
         batch_predictions = []
 
         for i in tqdm.tqdm(range(len(batch_start)), desc='Forwarding', leave=False, dynamic_ncols=True):
@@ -278,13 +336,43 @@ class FinetuneTrainer(BaseTrainer):
 
             prediction = self.model(dataset_sample, eval=True)
 
-            # Save the batch predictions
+            # Save the batch predictions - CORRECTED to match working version
             model_name = self.config['delta_model']['phy_model']['model'][0]
-            prediction = {
-                key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()
-            }
-            batch_predictions.append(prediction)
+            
+            # Check the structure and handle appropriately
+            model_output = prediction[model_name]
+            
+            if isinstance(model_output, dict):
+                # Working version expects this to be a dict of tensors
+                prediction_dict = {
+                    key: tensor.cpu().detach() for key, tensor in model_output.items()
+                }
+            elif isinstance(model_output, torch.Tensor):
+                # If it's a tensor, check if it contains a dict (single element)
+                if model_output.numel() == 1:
+                    try:
+                        extracted = model_output.item()
+                        if isinstance(extracted, dict):
+                            prediction_dict = {
+                                key: tensor.cpu().detach() if isinstance(tensor, torch.Tensor) else tensor
+                                for key, tensor in extracted.items()
+                            }
+                        else:
+                            # Fallback: create dict with single prediction
+                            prediction_dict = {'prediction': model_output.cpu().detach()}
+                    except:
+                        prediction_dict = {'prediction': model_output.cpu().detach()}
+                else:
+                    # Multi-element tensor: treat as prediction
+                    prediction_dict = {'prediction': model_output.cpu().detach()}
+            else:
+                log.warning(f"Unexpected model output type: {type(model_output)}")
+                prediction_dict = {'prediction': model_output}
+                
+            batch_predictions.append(prediction_dict)
+            
         return batch_predictions
+
 
     def _extract_prediction(self, prediction: dict, warm_up: int) -> Optional[np.ndarray]:
         """Extract prediction tensor based on model type."""
@@ -317,78 +405,47 @@ class FinetuneTrainer(BaseTrainer):
         
         return batch_pred
 
-    def calc_metrics(self, predictions: np.ndarray, observations: np.ndarray) -> None:
-        """Calculate comprehensive metrics using the appropriate Metrics class."""
-        try:
-            # Ensure no NaN values in predictions
-            predictions = np.nan_to_num(predictions, nan=0.0)
+    # def calc_metrics(self, predictions: np.ndarray, observations: np.ndarray) -> None:
+    #     """Calculate comprehensive metrics using the appropriate Metrics class."""
+    #     try:
+    #         # Ensure no NaN values in predictions
+    #         predictions = np.nan_to_num(predictions, nan=0.0)
             
-            # Format predictions and observations for the Metrics class
-            # Metrics expects shape [basins, time]
-            pred_formatted = np.swapaxes(predictions.squeeze(), 0, 1)
-            obs_formatted = np.swapaxes(observations.squeeze(), 0, 1)
+    #         # Format predictions and observations for the Metrics class
+    #         # Metrics expects shape [basins, time]
+    #         pred_formatted = np.swapaxes(predictions.squeeze(), 0, 1)
+    #         obs_formatted = np.swapaxes(observations.squeeze(), 0, 1)
             
-            log.info(f"Calculating comprehensive metrics")
-            log.info(f"Formatted shapes - predictions: {pred_formatted.shape}, observations: {obs_formatted.shape}")
+    #         log.info(f"Calculating comprehensive metrics")
+    #         log.info(f"Formatted shapes - predictions: {pred_formatted.shape}, observations: {obs_formatted.shape}")
             
-            # Use appropriate metrics class
-            try:
-                # Try soil moisture metrics first if it might be soil moisture data
-                if self.model_type == 'direct':
-                    from dMG.core.calc.metrics_soilMoisture import Metrics
-                    log.info("Using soil moisture specific metrics")
-                else:
-                    metrics = Metrics(pred_formatted, obs_formatted)
-            except ImportError:
-                # Fall back to standard metrics
-                log.info("Using standard metrics")
-                metrics = Metrics(pred_formatted, obs_formatted)
+    #         # Use appropriate metrics class
+    #         try:
+    #             # Try soil moisture metrics first if it might be soil moisture data
+    #             if self.model_type == 'direct':
+    #                 from dMG.core.calc.metrics_soilMoisture import Metrics
+    #                 log.info("Using soil moisture specific metrics")
+    #             else:
+    #                 metrics = Metrics(pred_formatted, obs_formatted)
+    #         except ImportError:
+    #             # Fall back to standard metrics
+    #             log.info("Using standard metrics")
+    #             metrics = Metrics(pred_formatted, obs_formatted)
             
-            # Create Metrics object and save
-            metrics = Metrics(pred_formatted, obs_formatted)
-            metrics.dump_metrics(self.config['out_path'])
+    #         # Create Metrics object and save
+    #         metrics = Metrics(pred_formatted, obs_formatted)
+    #         metrics.dump_metrics(self.config['out_path'])
             
-        except Exception as e:
-            log.error(f"Error calculating metrics: {str(e)}")
-            import traceback
-            log.error(traceback.format_exc())
+    #     except Exception as e:
+    #         log.error(f"Error calculating metrics: {str(e)}")
+    #         import traceback
+    #         log.error(traceback.format_exc())
     
     def inference(self) -> None:
         """Run batch model inference - required by BaseTrainer."""
         raise NotImplementedError
 
-   
 
-    # def _get_time_window_sample(self, dataset, basin_start, basin_end, time_start, time_end):
-    #     """Custom method to get a validation sample for a specific time window."""
-    #     # Calculate dimensions
-    #     batch_size = basin_end - basin_start
-    #     seq_len = time_end - time_start
-        
-    #     batch_data = {}
-        
-    #     # Process NN data (dimensions: [basins, time, features])
-    #     if 'xc_nn_norm' in dataset:
-    #         batch_data['xc_nn_norm'] = dataset['xc_nn_norm'][basin_start:basin_end, time_start:time_end].to(self.device)
-    #         log.debug(f"Time window xc_nn_norm shape: {batch_data['xc_nn_norm'].shape}")
-        
-    #     # Process physics data (dimensions: [time, basins, features])
-    #     if 'x_phy' in dataset:
-    #         batch_data['x_phy'] = dataset['x_phy'][time_start:time_end, basin_start:basin_end].to(self.device)
-    #         log.debug(f"Time window x_phy shape: {batch_data['x_phy'].shape}")
-        
-    #     # Process static attributes
-    #     if 'c_phy' in dataset:
-    #         batch_data['c_phy'] = dataset['c_phy'][basin_start:basin_end].to(self.device)
-        
-    #     if 'c_nn' in dataset:
-    #         batch_data['c_nn'] = dataset['c_nn'][basin_start:basin_end].to(self.device)
-        
-    #     # Process target data
-    #     if 'target' in dataset:
-    #         batch_data['target'] = dataset['target'][time_start:time_end, basin_start:basin_end].to(self.device)
-        
-    #     return batch_data
 
     def _log_epoch_stats(
         self,
@@ -432,7 +489,7 @@ class FinetuneTrainer(BaseTrainer):
         self,
         batch_list: list[dict[str, torch.Tensor]],
         target_key: str = None,
-    ) -> None:
+    ) -> dict:
         """Merge batch data into a single dictionary.
         
         Parameters
@@ -450,15 +507,121 @@ class FinetuneTrainer(BaseTrainer):
 
             for key in batch_list[0].keys():
                 if len(batch_list[0][key].shape) == 3:
-                    dim = 1
+                    dim = 1  # Concatenate along time dimension for 3D tensors
                 else:
-                    dim = 0
+                    dim = 0  # Concatenate along first dimension for 2D tensors
                 data[key] = torch.cat([d[key] for d in batch_list], dim=dim).cpu().numpy()
             return data
 
         except ValueError as e:
             raise ValueError(f"Error concatenating batch data: {e}") from e
 
+    def calc_metrics(
+        self,
+        batch_predictions: list[dict[str, torch.Tensor]], 
+        observations: torch.Tensor,
+    ) -> None:
+        """Calculate and save model performance metrics - FIXED VERSION.
+
+        Parameters
+        ----------
+        batch_predictions
+            List of dictionaries containing model predictions.
+        observations
+            Target variable observation data.
+        """
+        try:
+            # Check what keys are available
+            available_keys = list(batch_predictions[0].keys()) if batch_predictions else []
+            log.info(f"Available prediction keys: {available_keys}")
+            
+            # Get target name from config, but fall back to first available key
+            target_name = self.config['train']['target'][0]
+            
+            if target_name in available_keys:
+                log.info(f"Using target key: '{target_name}'")
+                predictions = self._batch_data(batch_predictions, target_name)
+            else:
+                # Use first available key as fallback
+                fallback_key = available_keys[0] if available_keys else None
+                if fallback_key:
+                    log.warning(f"Target key '{target_name}' not found, using '{fallback_key}' instead")
+                    predictions = self._batch_data(batch_predictions, fallback_key)
+                else:
+                    log.error("No keys available in batch predictions")
+                    return
+            
+            # Process target like the working version
+            if isinstance(observations, torch.Tensor):
+                target = np.expand_dims(observations[:, :, 0].cpu().numpy(), 2)
+            else:
+                target = np.expand_dims(observations[:, :, 0], 2)
+
+            log.info(f"Before warmup alignment - predictions: {predictions.shape}, target: {target.shape}")
+
+            # FIXED: Handle warmup period mismatch properly
+            warm_up = self.config['delta_model']['phy_model'].get('warm_up', 0)
+            
+            # Check if there's a time dimension mismatch that suggests warmup handling issue
+            time_diff = target.shape[0] - predictions.shape[0]
+            
+            if time_diff == warm_up:
+                # Target includes warmup, predictions don't - remove warmup from target
+                log.info(f"Removing {warm_up} warmup steps from target only")
+                target = target[warm_up:, :]
+            elif time_diff == -warm_up:
+                # Predictions include warmup, target doesn't - remove warmup from predictions  
+                log.info(f"Removing {warm_up} warmup steps from predictions only")
+                predictions = predictions[warm_up:, :]
+            elif time_diff == 0:
+                # Same size - remove warmup from both if specified
+                if warm_up > 0:
+                    log.info(f"Removing {warm_up} warmup steps from both")
+                    target = target[warm_up:, :]
+                    predictions = predictions[warm_up:, :]
+            else:
+                # Other mismatch - try to align by taking the minimum
+                min_time = min(target.shape[0], predictions.shape[0])
+                log.warning(f"Time mismatch not matching warmup. Aligning to minimum: {min_time}")
+                target = target[:min_time, :]
+                predictions = predictions[:min_time, :]
+
+            log.info(f"Final shapes for metrics - predictions: {predictions.shape}, target: {target.shape}")
+            
+            # Additional shape validation
+            if predictions.shape[0] != target.shape[0]:
+                log.error(f"Time dimension still mismatched: predictions {predictions.shape[0]} vs target {target.shape[0]}")
+                return
+                
+            if predictions.shape[1] != target.shape[1]:
+                log.error(f"Basin dimension mismatch: predictions {predictions.shape[1]} vs target {target.shape[1]}")
+                return
+
+            # Squeeze and check dimensions before swapaxes
+            pred_squeezed = predictions.squeeze()
+            target_squeezed = target.squeeze()
+            
+            log.info(f"After squeeze - predictions: {pred_squeezed.shape}, target: {target_squeezed.shape}")
+            
+            # Only proceed if we have valid 2D arrays
+            if len(pred_squeezed.shape) < 2 or len(target_squeezed.shape) < 2:
+                log.error(f"Invalid dimensions after squeeze: pred {pred_squeezed.shape}, target {target_squeezed.shape}")
+                return
+
+            # Compute metrics using the exact same format as working version
+            metrics = Metrics(
+                np.swapaxes(pred_squeezed, 1, 0),  # [basins, time]
+                np.swapaxes(target_squeezed, 1, 0),       # [basins, time]
+            )
+
+            # Save all metrics and aggregated statistics
+            metrics.dump_metrics(self.config['out_path'])
+            log.info("Metrics calculation completed successfully")
+            
+        except Exception as e:
+            log.error(f"Error calculating metrics: {str(e)}")
+            import traceback
+            log.error(traceback.format_exc())
 
 def clear_gpu_memory():
     """Clear GPU memory cache."""

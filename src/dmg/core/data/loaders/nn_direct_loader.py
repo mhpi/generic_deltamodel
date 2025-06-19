@@ -7,15 +7,15 @@ import torch
 from typing import Dict, Any, Optional, Tuple, List
 from dMG.core.data.loaders.base import BaseLoader
 from dMG.core.data.loaders.load_nc import NetCDFDataset
-from dMG.core.utils.transform import cal_statistics
 from dMG.core.data.data import intersect
 import pandas as pd
+from datetime import datetime
 from sklearn.exceptions import DataDimensionalityWarning
 from numpy.typing import NDArray
 
 log = logging.getLogger(__name__)
 
-class NNDirectLoader(BaseLoader):
+class NnDirectLoader(BaseLoader):
     """Data loader for running direct NN comparisons 
     Within the finetuning setup so removing you physics model.
     """
@@ -60,6 +60,9 @@ class NNDirectLoader(BaseLoader):
         self.dataset = None
         self.norm_stats = None
         
+        # Temporal features storage
+        self.temporal_features = None
+        
         # Output path for normalization statistics
         self.out_path = os.path.join(
             config.get('out_path', 'results'),
@@ -80,6 +83,51 @@ class NNDirectLoader(BaseLoader):
             self.holdout_index = None
         
         self.load_dataset()
+
+    def _extract_temporal_features(self, date_range: List[str]) -> np.ndarray:
+        """Extract temporal features from date strings.
+        
+        Parameters
+        ----------
+        date_range : List[str]
+            List of date strings in format 'YYYY-MM-DD'
+            
+        Returns
+        -------
+        np.ndarray
+            Array of shape [time_steps, 7] containing temporal features:
+            [day_of_month, week_of_year, month, quarter, day_of_week, year, special_events]
+        """
+        temporal_features = np.zeros((len(date_range), 7), dtype=np.float32)
+        
+        for i, date_str in enumerate(date_range):
+            try:
+                # Parse the date string
+                if isinstance(date_str, str):
+                    # Handle different date formats
+                    if 'T' in date_str:
+                        date_obj = datetime.fromisoformat(date_str.replace('T', ' ').split('.')[0])
+                    else:
+                        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                else:
+                    # If it's already a datetime object
+                    date_obj = date_str
+                
+                # Extract temporal features
+                temporal_features[i, 0] = date_obj.day                        # day of month (1-31)
+                temporal_features[i, 1] = date_obj.isocalendar()[1]          # week of year (1-53)
+                temporal_features[i, 2] = date_obj.month                     # month (1-12)
+                temporal_features[i, 3] = (date_obj.month - 1) // 3 + 1     # quarter (1-4)
+                temporal_features[i, 4] = date_obj.weekday() + 1             # day of week (1-7, Monday=1)
+                temporal_features[i, 5] = date_obj.year                      # year
+                temporal_features[i, 6] = 0                                  # special events (can be customized)
+                
+            except Exception as e:
+                log.warning(f"Error parsing date {date_str}: {e}, using defaults")
+                # Use defaults for problematic dates
+                temporal_features[i, :] = [1, 1, 1, 1, 1, 2020, 0]
+        
+        return temporal_features
 
     def load_dataset(self) -> None:
         """Load data into dictionary of nn and physics model input tensors."""
@@ -120,7 +168,7 @@ class NNDirectLoader(BaseLoader):
                     'end': self.config['test']['end_time']
                 }
                 self.dataset = self._preprocess_data('all', full_range)
-
+                
     def _preprocess_data(
         self,
         scope: str,
@@ -152,12 +200,12 @@ class NNDirectLoader(BaseLoader):
 
             # Build data dict of Torch tensors
             dataset = {
-                'x_phy': self.to_tensor(x_phy),
-                'c_phy': self.to_tensor(c_phy),
-                'x_nn': self.to_tensor(x_nn),
-                'c_nn': self.to_tensor(c_nn),
-                'xc_nn_norm': self.to_tensor(xc_nn_norm),
-                'target': self.to_tensor(target),
+                'x_phy': self.to_tensor(x_phy),  # Already in [time, stations, 0] format
+                'c_phy': self.to_tensor(c_phy),  # [stations, 0] format
+                'x_nn': self.to_tensor(np.transpose(x_nn, (1, 0, 2))),  # [stations, time, features] -> [time, stations, features]
+                'c_nn': self.to_tensor(c_nn),    # [stations, features] format
+                'xc_nn_norm': self.to_tensor(xc_nn_norm),  # Already in [time, stations, features] format from normalize()
+                'target': self.to_tensor(np.transpose(target, (1, 0, 2))),  # [stations, time, features] -> [time, stations, features]
             }
             
             return dataset
@@ -190,15 +238,15 @@ class NNDirectLoader(BaseLoader):
             log.info(f"Neural network data shapes - x_nn: {nn_data['x_nn'].shape}, c_nn: {nn_data['c_nn'].shape}")
             
             # Extract target data
-            target_data = nn_data.get('target')
+            target = nn_data.get('target')
             
-            if target_data is None:
+            if target is None:
                 log.error("Target data not found in neural network data")
                 raise ValueError("Target data missing from neural network data")
             
             # Convert target to proper format - from [stations, time, features] to [time, stations, features]
-            target = np.transpose(target_data, (1, 0, 2))
-            log.info(f"Target shape after transpose: {target.shape}")
+            # target = np.transpose(target_data, (1, 0, 2))
+            # log.info(f"Target shape after transpose: {target.shape}")
             
             # Handle invalid values in target data
             invalid_mask = (target < -10)  # Detect extreme negative values
@@ -217,11 +265,8 @@ class NNDirectLoader(BaseLoader):
             x_nn = nn_data['x_nn'].cpu().numpy() if torch.is_tensor(nn_data['x_nn']) else nn_data['x_nn']
             c_nn = nn_data['c_nn'].cpu().numpy() if torch.is_tensor(nn_data['c_nn']) else nn_data['c_nn']
             
-            # Transpose x_nn to match expected format [time, stations, features]
-            x_nn = np.transpose(x_nn, (1, 0, 2))
-            
             # Create empty placeholder arrays for physics data (minimal memory footprint)
-            x_phy = np.zeros((target.shape[0], target.shape[1], 0), dtype=np.float32)
+            x_phy = np.zeros((target.shape[1], target.shape[0], 0), dtype=np.float32)  # [time, stations, 0]
             c_phy = np.zeros((c_nn.shape[0], 0), dtype=np.float32)
             
             return x_phy, c_phy, x_nn, c_nn, target
@@ -600,63 +645,55 @@ class NNDirectLoader(BaseLoader):
         x_nn: NDArray[np.float32],
         c_nn: NDArray[np.float32],
     ) -> NDArray[np.float32]:
-        """Normalize data for neural network.
-        
-        Parameters
-        ----------
-        x_nn
-            Neural network dynamic data.
-        c_nn
-            Neural network static data.
-        
-        Returns
-        -------
-        NDArray[np.float32]
-            Normalized x_nn and c_nn concatenated together.
-        """
+        """Normalize data for neural network"""
+        # x_nn comes in as [stations, time, features] = [1316, 1736, 18]
         x_nn_norm = self._to_norm(
-            np.swapaxes(x_nn, 1, 0).copy(),
+            np.swapaxes(x_nn, 1, 0).copy(),  # [stations, time, features] -> [time, stations, features]
             self.nn_forcings,
         )
+        # After _to_norm, x_nn_norm is back to [stations, time, features] due to internal transpose
+        
         c_nn_norm = self._to_norm(
-            c_nn,
+            c_nn,  # [stations, features]
             self.nn_attributes,
         )
+        # c_nn_norm remains [stations, features]
 
         # Remove nans
         x_nn_norm[x_nn_norm != x_nn_norm] = 0
         c_nn_norm[c_nn_norm != c_nn_norm] = 0
 
+        # Expand c_nn_norm to match x_nn_norm's time dimension
+        # x_nn_norm is [stations, time, features] = [1316, 1736, 18]
+        # c_nn_norm is [stations, features] = [1316, 17]
+        # We need c_nn_norm to be [stations, time, features] = [1316, 1736, 17]
+        
+        time_steps = x_nn_norm.shape[1]  # Get time dimension from x_nn_norm
         c_nn_norm = np.repeat(
-            np.expand_dims(c_nn_norm, 0),
-            x_nn_norm.shape[0],
-            axis=0
+            np.expand_dims(c_nn_norm, 1),  # [stations, 1, features]
+            time_steps,                    # Repeat for time dimension
+            axis=1
         )
 
         xc_nn_norm = np.concatenate((x_nn_norm, c_nn_norm), axis=2)
         del x_nn_norm, c_nn_norm
+
+        # CRITICAL: The trainer expects [time, stations, features] format
+        # So we need to transpose the final result
+        xc_nn_norm = np.transpose(xc_nn_norm, (1, 0, 2))  # [stations, time, features] -> [time, stations, features]
 
         return xc_nn_norm
 
     def _to_norm(
         self,
         data: NDArray[np.float32],
-        vars: List[str],
+        vars: list[str],
     ) -> NDArray[np.float32]:
-        """Standard data normalization.
-        
-        Parameters
-        ----------
-        data
-            Data to normalize.
-        vars
-            List of variable names in data to normalize.
-        
-        Returns
-        -------
-        NDArray[np.float32]
-            Normalized data.
-        """
+        """Standard data normalization - IDENTICAL to HydroLoader."""
+        if not self.norm_stats:
+            log.warning("No normalization statistics available, using identity normalization")
+            return data
+            
         data_norm = np.zeros(data.shape)
 
         for k, var in enumerate(vars):
@@ -666,42 +703,34 @@ class NNDirectLoader(BaseLoader):
                 
             stat = self.norm_stats[var]
 
-            try:
-                if len(data.shape) == 3:
-                    if var in self.log_norm_vars:
-                        data[:, :, k] = np.log10(np.sqrt(np.maximum(data[:, :, k], 0)) + 0.1)
-                    data_norm[:, :, k] = (data[:, :, k] - stat[2]) / stat[3]
-                elif len(data.shape) == 2:
-                    if var in self.log_norm_vars:
-                        data[:, k] = np.log10(np.sqrt(np.maximum(data[:, k], 0)) + 0.1)
-                    data_norm[:, k] = (data[:, k] - stat[2]) / stat[3]
-                else:
-                    raise DataDimensionalityWarning("Data dimension must be 2 or 3.")
-            except Exception as e:
-                log.warning(f"Error normalizing {var}: {e}")
-                # Copy original data if normalization fails
-                if len(data.shape) == 3:
-                    data_norm[:, :, k] = data[:, :, k]
-                else:
-                    data_norm[:, k] = data[:, k]
+            if len(data.shape) == 3:
+                if var in self.log_norm_vars:
+                    data[:, :, k] = np.log10(np.sqrt(np.maximum(data[:, :, k], 0)) + 0.1)
+                data_norm[:, :, k] = (data[:, :, k] - stat[2]) / stat[3]
+            elif len(data.shape) == 2:
+                if var in self.log_norm_vars:
+                    data[:, k] = np.log10(np.sqrt(np.maximum(data[:, k], 0)) + 0.1)
+                data_norm[:, k] = (data[:, k] - stat[2]) / stat[3]
+            else:
+                raise DataDimensionalityWarning("Data dimension must be 2 or 3.")
 
         # NOTE: Should be external, except altering order of first two dims
         # augments normalization...
         if len(data_norm.shape) < 3:
             return data_norm
         else:
-            return np.swapaxes(data_norm, 1, 0)
+            return np.swapaxes(data_norm, 1, 0)  # Back to [time, basins, features]
 
     def _from_norm(
-        self,
-        data_scaled: NDArray[np.float32],
-        vars: List[str],
-    ) -> NDArray[np.float32]:
+            self,
+            data_scaled: NDArray[np.float32],
+            vars: list[str],
+        ) -> NDArray[np.float32]:
         """De-normalize data.
         
         Parameters
         ----------
-        data_scaled
+        data
             Data to de-normalize.
         vars
             List of variable names in data to de-normalize.
@@ -714,35 +743,23 @@ class NNDirectLoader(BaseLoader):
         data = np.zeros(data_scaled.shape)
 
         for k, var in enumerate(vars):
-            if var not in self.norm_stats:
-                log.warning(f"No normalization stats for {var}, skipping")
-                continue
-                
             stat = self.norm_stats[var]
-            
-            try:
-                if len(data_scaled.shape) == 3:
-                    data[:, :, k] = data_scaled[:, :, k] * stat[3] + stat[2]
-                    if var in self.log_norm_vars:
-                        data[:, :, k] = (np.power(10, data[:, :, k]) - 0.1) ** 2
-                elif len(data_scaled.shape) == 2:
-                    data[:, k] = data_scaled[:, k] * stat[3] + stat[2]
-                    if var in self.log_norm_vars:
-                        data[:, k] = (np.power(10, data[:, k]) - 0.1) ** 2
-                else:
-                    raise DataDimensionalityWarning("Data dimension must be 2 or 3.")
-            except Exception as e:
-                log.warning(f"Error denormalizing {var}: {e}")
-                # Copy normalized data if denormalization fails
-                if len(data_scaled.shape) == 3:
-                    data[:, :, k] = data_scaled[:, :, k]
-                else:
-                    data[:, k] = data_scaled[:, k]
+            if len(data_scaled.shape) == 3:
+                data[:, :, k] = data_scaled[:, :, k] * stat[3] + stat[2]
+                if var in self.log_norm_vars:
+                    data[:, :, k] = (np.power(10, data[:, :, k]) - 0.1) ** 2
+            elif len(data_scaled.shape) == 2:
+                data[:, k] = data_scaled[:, k] * stat[3] + stat[2]
+                if var in self.log_norm_vars:
+                    data[:, k] = (np.power(10, data[:, k]) - 0.1) ** 2
+            else:
+                raise DataDimensionalityWarning("Data dimension must be 2 or 3.")
 
         if len(data.shape) < 3:
             return data
         else:
             return np.swapaxes(data, 1, 0)
+
 
     def _load_nn_data(self, scope: str, t_range: Dict[str, str]) -> Dict[str, torch.Tensor]:
         """Load and process neural network data from NetCDF, including target variables."""

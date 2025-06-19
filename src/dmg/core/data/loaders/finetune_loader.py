@@ -236,7 +236,7 @@ class FinetuneLoader(BaseLoader):
         c_phy = attributes[:, phy_attr_idx]
         
         # Apply subsetting if needed
-        if self.data_name.split('_')[-1] != '671':
+        if 'subset_path' in self.config['observations']:
             subset_path = self.config['observations']['subset_path']
             gage_id_path = self.config['observations']['gage_info']
             
@@ -273,7 +273,7 @@ class FinetuneLoader(BaseLoader):
         )
         
         # Now filter stations if needed
-        if self.data_name.split('_')[-1] != '671':
+        if 'subset_path' in self.config['observations']:
             subset_path = self.config['observations']['subset_path']
             gage_id_path = self.config['observations']['gage_info']
             
