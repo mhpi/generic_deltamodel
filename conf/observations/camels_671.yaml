@@ -1,10 +1,8 @@
 name: camels_671
-train_path: /global/homes/n/nrk5343/Data/training_file
-test_path: /global/homes/n/nrk5343/Data/training_file
-
-gage_info: /global/homes/n/nrk5343/Data/gageid.npy
+data_path: /storage/home/nrk5343/scratch/Data/training_file
+gage_info: /storage/home/nrk5343/scratch/Data/gageid.npy
 area_name: area_gages2
-station_ids: /global/homes/n/nrk5343/Data/671_basin_list.txt
+gage_split_file:  /storage/home/nrk5343/scratch/Data/gages_list_with_pub.csv
 
 start_time: 1980/10/01
 

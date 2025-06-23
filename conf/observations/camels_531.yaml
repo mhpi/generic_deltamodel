@@ -1,11 +1,10 @@
 name: camels_531
-data_path: /global/homes/n/nrk5343/Data/training_file
-test_path: /storage/home/nrk5343/scratch/Data/training_file
+data_path: /storage/home/nrk5343/scratch/Data/training_file
 
-gage_info: /global/homes/n/nrk5343/Data/gageid.npy
-subset_path: /global/homes/n/nrk5343/Data/Sub531ID.txt
+gage_info: /storage/home/nrk5343/scratch/Data/gageid.npy
+subset_path: /storage/home/nrk5343/scratch/Data/Sub531ID.txt
 area_name: area_gages2
-station_ids: /global/homes/n/nrk5343/Data/531_basin_list.txt
+gage_split_file: /storage/home/nrk5343/scratch/Data/gages_list_with_pub.csv
 
 start_time: 1980/10/01
 end_time: 2014/09/30

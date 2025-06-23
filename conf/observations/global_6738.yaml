@@ -1,6 +1,5 @@
 name: Global_6738
-train_path: /global/homes/n/nrk5343/Data/training_file_prism
-test_path: /global/homes/n/nrk5343/Data/training_file_prism
+data_path: /storage/home/nrk5343/scratch/Data/training_file_prism
 
 area_name: area_gages2
 station_ids: /storage/home/nrk5343/work/30.MFFormer/MFFormer/datasets/GLOBAL_streamflow/6738_global.txt
