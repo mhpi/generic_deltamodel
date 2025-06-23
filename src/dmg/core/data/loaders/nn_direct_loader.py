@@ -5,9 +5,9 @@ import pickle
 import numpy as np
 import torch
 from typing import Dict, Any, Optional, Tuple, List
-from dMG.core.data.loaders.base import BaseLoader
-from dMG.core.data.loaders.load_nc import NetCDFDataset
-from dMG.core.data.data import intersect
+from dmg.core.data.loaders.base import BaseLoader
+from dmg.core.data.loaders.load_nc import NetCDFDataset
+from dmg.core.data.data import intersect
 import pandas as pd
 from datetime import datetime
 from sklearn.exceptions import DataDimensionalityWarning

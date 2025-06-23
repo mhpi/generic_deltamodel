@@ -6,8 +6,8 @@ import os
 import numpy as np
 from typing import List, Tuple
 from omegaconf import DictConfig
-from dMG.core.utils.factory import import_data_loader, import_trainer
-from dMG.core.calc.metrics import Metrics
+from dmg.core.utils.factory import import_data_loader, import_trainer
+from dmg.core.calc.metrics import Metrics
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ def run_spatial_testing(config: DictConfig, model) -> None:
         
         # Reinitialize model for each holdout to prevent data leakage
         if 'train' in config['mode']:
-            from dMG.models.model_handler import ModelHandler as dModel
+            from dmg.models.model_handler import ModelHandler as dModel
             holdout_model = dModel(current_config, verbose=True)
         else:
             holdout_model = model

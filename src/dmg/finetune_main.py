@@ -1,9 +1,9 @@
 """
 Main entry point for differentiable model experiments with spatial testing support.
 
-There are two ways to run dMG in command line:
-1. python -m dMG (Uses default config.yaml)
-2. python src/dMG/__main__.py (Uses default config.yaml)
+There are two ways to run dmg in command line:
+1. python -m dmg (Uses default config.yaml)
+2. python src/dmg/__main__.py (Uses default config.yaml)
 Add opt `--config-name <config_name>` to (1) or (2) to use a different config.
 """
 import logging
@@ -11,10 +11,10 @@ import time
 import hydra
 import torch
 from omegaconf import DictConfig
-from dMG.core.utils.factory import import_data_loader, import_trainer
-from dMG.core.utils.utils import (initialize_config, print_config, set_randomseed)
-from dMG.models.model_handler import ModelHandler as dModel
-from dMG.core.utils.spatial_testing import run_spatial_testing
+from dmg.core.utils.factory import import_data_loader, import_trainer
+from dmg.core.utils.utils import (initialize_config, print_config, set_randomseed)
+from dmg.models.model_handler import ModelHandler as dModel
+from dmg.core.utils.spatial_testing import run_spatial_testing
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
