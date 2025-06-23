@@ -183,7 +183,7 @@ class Trainer(BaseTrainer):
         path = self.config['model_path']
         for file in os.listdir(path):
             # Check for state checkpoint: looks like `train_state_epoch_XX.pt`.
-            if 'train_state' and (str(self.start_epoch-1) in file):
+            if ('train_state' in file) and (str(self.start_epoch - 1) in file):
                 log.info("Loading trainer states --> Resuming Training from" /
                          f" epoch {self.start_epoch}")
 

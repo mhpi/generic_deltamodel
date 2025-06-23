@@ -219,7 +219,7 @@ class HydroLoader(BaseLoader):
         target = np.transpose(target[:, idx_start:idx_end], (1,0,2))
 
         # Subset basins if necessary
-        if self.data_name.split('_')[-1] != '671':
+        if 'subset_path' in self.config['observations']:
             subset_path = self.config['observations']['subset_path']
             gage_id_path = self.config['observations']['gage_info']
 
