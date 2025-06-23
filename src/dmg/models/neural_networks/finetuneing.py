@@ -5,11 +5,12 @@ import torch.nn as nn
 import logging
 import warnings
 from omegaconf import DictConfig, OmegaConf
-from typing import Dict, Any, Union
+from typing import Dict, Any, Union, Optional
 
 from models.neural_networks.cudnn_lstm import CudnnLstm
 from models.neural_networks.transformer.MFFormer import Model as MFFormer
-from models.neural_networks.transformer.MFFormerTFT import Model as MFFormerTFT  # Import the new TFT model
+from models.neural_networks.transformer.MFFormerTFT import Model as MFFormerTFT
+from models.neural_networks.adapters.localization_adapter import LocalizedStationAdapter, AdaptiveLocalizedAdapter
 
 warnings.filterwarnings("ignore", message=".*weights are not part of single contiguous chunk.*")
 log = logging.getLogger(__name__)
@@ -49,8 +50,16 @@ class Finetuneing(nn.Module):
             'adapter_params': nn_config.get('adapter_params', {}),
             # New TFT-specific configurations
             'use_temporal_features': nn_config.get('use_temporal_features', True),
-            'temporal_feature_dim': nn_config.get('temporal_feature_dim', 7),  # [day, week, month, quarter, weekday, year, special]
+            'temporal_feature_dim': nn_config.get('temporal_feature_dim', 7),
+            # Localized adapter configurations
+            'use_localized_adapter': nn_config.get('use_localized_adapter', False),
+            'localized_adapter_params': nn_config.get('localized_adapter_params', {}),
         }
+        
+        # Extract test mode information for spatial testing detection
+        self.test_mode = config_dict.get('test_mode', {})
+        self.is_spatial_test = (self.test_mode and 
+                               self.test_mode.get('type') == 'spatial')
         
         missing_configs = []
         if not self.model_config['time_series_variables']:
@@ -63,8 +72,11 @@ class Finetuneing(nn.Module):
         # Initialize pretrained model
         self.pretrained_model = self._initialize_pretrained_model()
         
-        # Initialize adapter
+        # Initialize standard adapter
         self.adapter = self._initialize_adapter()
+        
+        # Initialize localized station adapter
+        self.localized_adapter = self._initialize_localized_adapter(config_dict)
         
         # Initialize LSTM components
         self.decoder = CudnnLstm(
@@ -88,7 +100,88 @@ class Finetuneing(nn.Module):
         # Final projection
         self.projection = nn.Linear(self.model_config['d_model'], self.model_config['target_variables'])
         
-        log.info(f"Initialized FineTuner: {self.model_config['pretrained_type']} + {self.model_config['adapter_type']}")
+        log.info(f"Initialized FineTuner: {self.model_config['pretrained_type']} + {self.model_config['adapter_type']}" + 
+                (f" + localized_adapter" if self.model_config['use_localized_adapter'] else ""))
+
+    def _initialize_localized_adapter(self, config_dict: Dict) -> Optional[nn.Module]:
+        """Initialize the localized station adapter if enabled."""
+        if not self.model_config['use_localized_adapter']:
+            return None
+        
+        # Get station information from config
+        localized_params = self.model_config['localized_adapter_params']
+        
+        # Determine number of stations from dataset configuration
+        n_stations = self._get_number_of_stations(config_dict)
+        
+        if n_stations is None:
+            log.warning("Cannot determine number of stations, disabling localized adapter")
+            return None
+        
+        # Extract parameters with defaults
+        embedding_dim = localized_params.get('embedding_dim', 64)
+        dropout_rate = localized_params.get('dropout_rate', 0.2)
+        use_positional = localized_params.get('use_positional', True)
+        adapter_variant = localized_params.get('variant', 'standard')  # 'standard' or 'adaptive'
+        
+        # Initialize appropriate adapter variant
+        if adapter_variant == 'adaptive':
+            use_adaptive_weighting = localized_params.get('use_adaptive_weighting', True)
+            context_window = localized_params.get('context_window', 7)
+            
+            localized_adapter = AdaptiveLocalizedAdapter(
+                d_model=self.model_config['d_model'],
+                n_stations=n_stations,
+                embedding_dim=embedding_dim,
+                dropout_rate=dropout_rate,
+                use_positional=use_positional,
+                use_adaptive_weighting=use_adaptive_weighting,
+                context_window=context_window
+            )
+        else:
+            localized_adapter = LocalizedStationAdapter(
+                d_model=self.model_config['d_model'],
+                n_stations=n_stations,
+                embedding_dim=embedding_dim,
+                dropout_rate=dropout_rate,
+                use_positional=use_positional
+            )
+        
+        log.info(f"Initialized {adapter_variant} localized adapter for {n_stations} stations")
+        return localized_adapter
+    
+    def _get_number_of_stations(self, config_dict: Dict) -> Optional[int]:
+        """Determine the number of stations from configuration."""
+        try:
+            # Try to get from subset file if available
+            observations = config_dict.get('observations', {})
+            subset_path = observations.get('subset_path')
+            
+            if subset_path and os.path.exists(subset_path):
+                try:
+                    with open(subset_path, 'r') as f:
+                        content = f.read().strip()
+                        if content.startswith('[') and content.endswith(']'):
+                            content = content.strip('[]')
+                            stations = [item.strip().strip(',') for item in content.split() if item.strip().strip(',')]
+                        else:
+                            stations = [line.strip() for line in content.split() if line.strip()]
+                    return len(stations)
+                except Exception as e:
+                    log.warning(f"Error reading subset file: {e}")
+            
+            # Fallback: try to get from localized adapter params if explicitly specified
+            localized_params = self.model_config['localized_adapter_params']
+            if 'n_stations' in localized_params:
+                return localized_params['n_stations']
+            
+            # If all else fails, return None (will disable localized adapter)
+            log.warning("Could not determine number of stations from config")
+            return None
+            
+        except Exception as e:
+            log.warning(f"Error determining number of stations: {e}")
+            return None
 
     def _initialize_pretrained_model(self):
         pretrained_type = self.model_config['pretrained_type']
@@ -257,13 +350,25 @@ class Finetuneing(nn.Module):
             log.error(f"Error loading pretrained model: {str(e)}")
             raise
 
-    def forward(self, xc_nn_norm, temporal_features=None) -> torch.Tensor:
+    def forward(self, xc_nn_norm, temporal_features=None, station_ids=None) -> torch.Tensor:
+        """
+        Forward pass with optional localized station adaptation.
+        
+        Parameters
+        ----------
+        xc_nn_norm : torch.Tensor
+            Normalized input features
+        temporal_features : torch.Tensor, optional
+            Temporal features for TFT models
+        station_ids : torch.Tensor, optional
+            Station IDs for localized adaptation [batch_size]
+        """
         if self.model_config['pretrained_type'] in ['mfformer', 'mfformer_tft']:
-            return self._forward_with_mfformer(xc_nn_norm, temporal_features)
+            return self._forward_with_mfformer(xc_nn_norm, temporal_features, station_ids)
         elif self.model_config['pretrained_type'] == 'none':
-            return self._forward_direct(xc_nn_norm)
+            return self._forward_direct(xc_nn_norm, station_ids)
     
-    def _forward_with_mfformer(self, xc_nn_norm, temporal_features=None):
+    def _forward_with_mfformer(self, xc_nn_norm, temporal_features=None, station_ids=None):
         n_time_series = len(self.model_config['time_series_variables'])
         batch_x = xc_nn_norm[..., :n_time_series]
         batch_c = xc_nn_norm[..., n_time_series:][..., 0, :]
@@ -335,8 +440,17 @@ class Finetuneing(nn.Module):
             orig_time_features = batch_x
             orig_static_features = batch_c
             
-            # Apply adapter based on type
+            # Apply standard adapter first
             adapted = self._apply_adapter(hidden_states, orig_time_features, orig_static_features)
+            
+            # Apply localized station adapter if enabled
+            if self.localized_adapter is not None:
+                adapted = self.localized_adapter(
+                    adapted, 
+                    station_ids=station_ids,
+                    is_spatial_test=self.is_spatial_test,
+                    is_training=self.training
+                )
             
             if self.model_config['use_residual_lstm']:
                 outputs = self._decode_with_residual_lstm(adapted, orig_time_features, orig_static_features)
@@ -387,10 +501,10 @@ class Finetuneing(nn.Module):
     
     def _decode_simple(self, adapted):
         lstm_input = adapted
-        lstm_output, _ = self.decoder(lstm_input, doDropMC=False, dropoutFalse=(not self.training))
+        lstm_output, _ = self.decoder(lstm_input, do_drop_mc=False, dr_false=(not self.training))
         return lstm_output
     
-    def _forward_direct(self, xc_nn_norm):
+    def _forward_direct(self, xc_nn_norm, station_ids=None):
         # LSTM-only case
         n_time_series = len(self.model_config['time_series_variables'])
         batch_x = xc_nn_norm[..., :n_time_series]
@@ -408,6 +522,70 @@ class Finetuneing(nn.Module):
         combined_input = torch.cat([batch_x, static_expanded], dim=-1)
         
         lstm_input = nn.Linear(combined_input.size(-1), self.model_config['d_model']).to(combined_input.device)(combined_input)
+        
+        # Apply localized station adapter if enabled (even for direct LSTM)
+        if self.localized_adapter is not None:
+            lstm_input = self.localized_adapter(
+                lstm_input,
+                station_ids=station_ids,
+                is_spatial_test=self.is_spatial_test,
+                is_training=self.training
+            )
+        
         dec_output = self._decode_simple(lstm_input)
         outputs = self.projection(dec_output)
         return outputs
+    
+    def get_station_similarities(self, station_ids: torch.Tensor = None) -> Optional[torch.Tensor]:
+        """
+        Get station similarity matrix from localized adapter.
+        Useful for analyzing station groupings.
+        """
+        if self.localized_adapter is None:
+            log.warning("No localized adapter available for similarity analysis")
+            return None
+        
+        return self.localized_adapter.get_station_similarities(station_ids)
+    
+    def set_localized_dropout(self, rate: float) -> None:
+        """Update the dropout rate for localized adapter."""
+        if self.localized_adapter is not None:
+            self.localized_adapter.set_dropout_rate(rate)
+        else:
+            log.warning("No localized adapter available to set dropout rate")
+    
+    def get_parameters(self):
+        """Get trainable parameters, respecting frozen pretrained weights."""
+        trainable_params = []
+        
+        # Add adapter parameters (always trainable)
+        if hasattr(self, 'adapter') and self.adapter is not None:
+            trainable_params.extend(list(self.adapter.parameters()))
+        
+        # Add localized adapter parameters (always trainable)
+        if hasattr(self, 'localized_adapter') and self.localized_adapter is not None:
+            trainable_params.extend(list(self.localized_adapter.parameters()))
+        
+        # Add LSTM decoder parameters (always trainable)
+        if hasattr(self, 'decoder'):
+            trainable_params.extend(list(self.decoder.parameters()))
+        
+        # Add residual LSTM parameters if present
+        if hasattr(self, 'pre_lstm'):
+            trainable_params.extend(list(self.pre_lstm.parameters()))
+        if hasattr(self, 'post_lstm'):
+            trainable_params.extend(list(self.post_lstm.parameters()))
+        
+        # Add final projection parameters
+        if hasattr(self, 'projection'):
+            trainable_params.extend(list(self.projection.parameters()))
+        
+        # Add pretrained model parameters only if not frozen
+        if (hasattr(self, 'pretrained_model') and 
+            self.pretrained_model is not None and 
+            not self.model_config['freeze_pretrained']):
+            trainable_params.extend(list(self.pretrained_model.parameters()))
+        
+        log.info(f"Total trainable parameters: {sum(p.numel() for p in trainable_params if p.requires_grad)}")
+        
+        return trainable_params

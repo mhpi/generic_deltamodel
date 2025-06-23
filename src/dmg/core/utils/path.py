@@ -34,6 +34,9 @@ class PathBuilder(BaseModel):
     dynamic_state: str = ''
     loss_function: str = ''
     hyperparameter_detail: str = ''
+    test_config: str = ''  
+    adapter_config: str = ''  
+    prediction_mode: str = '' 
 
     def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config=config)
@@ -61,6 +64,10 @@ class PathBuilder(BaseModel):
         self.loss_function = self._loss_function(self.config)
         self.hyperparameter_detail = self._hyperparameter_details(self.config)
 
+        self.test_config = self._test_config(self.config)
+        self.adapter_config = self._adapter_config(self.config)
+        self.prediction_mode = self._prediction_mode(self.config)
+
         return super().model_post_init(__context)
 
     @field_validator('config')
@@ -82,6 +89,8 @@ class PathBuilder(BaseModel):
             self.hyperparameter_detail,
             self.model_names,
             self.loss_function,
+            self.prediction_mode,  
+            self.adapter_config,   
             self.dynamic_state,
             self.dynamic_parameters,
         )
@@ -106,6 +115,7 @@ class PathBuilder(BaseModel):
             return os.path.join(
                 model_path,
                 self.test_period,
+                self.test_config,
             )
         elif self.config['mode'] == 'simulation':
             return os.path.join(
@@ -399,3 +409,72 @@ class PathBuilder(BaseModel):
             f"{warmup}_"
             f"{config['random_seed']}"
         )
+    @staticmethod
+    def _test_config(config: dict[str, Any]) -> str:
+        """Test configuration details (type and extent).
+        
+        Parameters
+        ----------
+        config
+            Configuration dictionary.
+        
+        Returns
+        -------
+        str
+            Test configuration string (e.g., 'spatial_PUB', 'temporal').
+        """
+        if 'test' not in config:
+            return 'no_test'
+        
+        test_type = config['test'].get('type', 'temporal')
+        test_extent = config['test'].get('extent', 'PUR')
+
+        if test_type == 'spatial':
+            return f"{test_type}_{test_extent}"
+
+        return f"{test_type}"
+
+    @staticmethod
+    def _adapter_config(config: dict[str, Any]) -> str:
+        """Adapter configuration for neural network model.
+        
+        Parameters
+        ----------
+        config
+            Configuration dictionary.
+        
+        Returns
+        -------
+        str
+            Adapter configuration string.
+        """
+        nn_config = config.get('delta_model', {}).get('nn_model', {})
+        adapter_type = nn_config.get('adapter_type', 'none')
+        
+        # Abbreviate common adapter types to keep paths shorter
+        adapter_abbrev = {
+            'dual_residual': 'dual_res',
+            'feedforward': 'ff',
+            'attention': 'attn',
+            'bottleneck': 'bneck',
+            'none': 'no_adapt'
+        }
+        
+        return adapter_abbrev.get(adapter_type, adapter_type)
+
+    @staticmethod
+    def _prediction_mode(config: dict[str, Any]) -> str:
+        """Direct prediction mode flag.
+        
+        Parameters
+        ----------
+        config
+            Configuration dictionary.
+        
+        Returns
+        -------
+        str
+            Prediction mode string ('direct' or 'indirect').
+        """
+        direct_pred = config.get('delta_model', {}).get('direct_prediction', False)
+        return 'direct' if direct_pred else 'indirect'

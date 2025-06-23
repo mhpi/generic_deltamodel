@@ -183,10 +183,9 @@ class Trainer(BaseTrainer):
         path = self.config['model_path']
         for file in os.listdir(path):
             # Check for state checkpoint: looks like `train_state_epoch_XX.pt`.
-            if 'train_state' and (str(self.start_epoch-1) in file):
-                log.info("Loading trainer states --> Resuming Training from" /
-                         f" epoch {self.start_epoch}")
-
+            if 'train_state' in file and (str(self.start_epoch-1) in file):
+                log.info(f"Loading trainer states --> Resuming Training from epoch {self.start_epoch}")
+        
                 checkpoint = torch.load(os.path.join(path, file))
 
                 # Restore optimizer states
@@ -200,8 +199,7 @@ class Trainer(BaseTrainer):
                     torch.cuda.set_rng_state_all(checkpoint['cuda_random_state'])
                 return
             elif 'train_state' in file:
-                raise FileNotFoundError(f"Available checkpoint file {file} does" /
-                                        f" not match start epoch {self.start_epoch-1}.")
+                raise FileNotFoundError(f"Available checkpoint file {file} does not match start epoch {self.start_epoch-1}.")
 
         # If no checkpoint file is found for named epoch...
         raise FileNotFoundError(f"No checkpoint for epoch {self.start_epoch-1}.")
