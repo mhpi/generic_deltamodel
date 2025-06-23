@@ -10,7 +10,7 @@ import torch
 from numpy.typing import NDArray
 from sklearn.exceptions import DataDimensionalityWarning
 
-from dmg.core.data.data import intersect
+from dmg.core.data.data import intersect, split_dataset_by_basin
 from dmg.core.data.loaders.base import BaseLoader
 
 log = logging.getLogger(__name__)
@@ -45,6 +45,8 @@ class HydroLoader(BaseLoader):
         Whether to split data into training and testing sets.
     overwrite
         Whether to overwrite existing normalization statistics.
+    holdout_index
+        Index for spatial holdout testing.
 
     NOTE: to support new datasets of similar form to CAMELS, add the dataset
     key name to `self.supported_data`.
@@ -54,11 +56,13 @@ class HydroLoader(BaseLoader):
         config: dict[str, Any],
         test_split: Optional[bool] = False,
         overwrite: Optional[bool] = False,
+        holdout_index: Optional[int] = None,
     ) -> None:
         super().__init__()
         self.config = config
         self.test_split = test_split
         self.overwrite = overwrite
+        self.holdout_index = holdout_index
         self.supported_data = ['camels_671', 'camels_531', 'prism_671', 'prism_531']
         self.data_name = config['observations']['name']
         self.nn_attributes = config['delta_model']['nn_model'].get('attributes', [])
@@ -86,8 +90,21 @@ class HydroLoader(BaseLoader):
     def load_dataset(self) -> None:
         """Load data into dictionary of nn and physics model input tensors."""
         mode = self.config['mode']
+        is_spatial_test = (self.config.get('test', {}).get('type') == 'spatial')
+        
         if mode == 'simulation':
             self.dataset = self._preprocess_data(scope='simulation')
+        elif is_spatial_test:
+            # For spatial testing, load data and split by basin using utility function
+            train_dataset = self._preprocess_data(scope='train')
+            test_dataset = self._preprocess_data(scope='test')
+            
+            self.train_dataset, _ = split_dataset_by_basin(
+                train_dataset, self.config, self.holdout_index
+            )
+            _, self.eval_dataset = split_dataset_by_basin(
+                test_dataset, self.config, self.holdout_index
+            )
         elif self.test_split:
             self.train_dataset = self._preprocess_data(scope='train')
             self.eval_dataset = self._preprocess_data(scope='test')
@@ -219,7 +236,7 @@ class HydroLoader(BaseLoader):
         target = np.transpose(target[:, idx_start:idx_end], (1,0,2))
 
         # Subset basins if necessary
-        if self.data_name.split('_')[-1] != '671':
+        if 'subset_path' in self.config['observations']:
             subset_path = self.config['observations']['subset_path']
             gage_id_path = self.config['observations']['gage_info']
 
