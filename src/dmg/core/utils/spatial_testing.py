@@ -1,13 +1,14 @@
 """Spatial testing utilities for running holdout validation experiments."""
 import logging
 import os
-import numpy as np
-from omegaconf import DictConfig
-from dmg.core.utils.factory import import_data_loader, import_trainer
-from dmg.core.calc.metrics import Metrics
-import torch
 import traceback
 
+import numpy as np
+import torch
+from omegaconf import DictConfig
+
+from dmg.core.calc.metrics import Metrics
+from dmg.core.utils.factory import import_data_loader, import_trainer
 
 log = logging.getLogger(__name__)
 

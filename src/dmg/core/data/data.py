@@ -1,12 +1,12 @@
 import datetime as dt
 import json
 import logging
+import traceback
 from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
 import torch
-import traceback
 from numpy.typing import NDArray
 
 log = logging.getLogger(__name__)
