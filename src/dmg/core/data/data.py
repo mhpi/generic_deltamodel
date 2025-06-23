@@ -1,11 +1,12 @@
 import datetime as dt
 import json
 import logging
-from typing import Any, Optional, Union, Dict, Tuple
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
 import torch
+import traceback
 from numpy.typing import NDArray
 
 log = logging.getLogger(__name__)
@@ -346,12 +347,14 @@ def timestep_resample(
     return data_resample
 
 def split_dataset_by_basin(
-    dataset: Dict[str, torch.Tensor],
-    config: Dict[str, Any],
+    dataset: dict[str, torch.Tensor],
+    config: dict[str, Any],
     holdout_index: int,
-) -> Tuple[Optional[Dict[str, torch.Tensor]], Optional[Dict[str, torch.Tensor]]]:
+) -> tuple[Optional[dict[str, torch.Tensor]], Optional[dict[str, torch.Tensor]]]:
     """Split dataset by basin for spatial testing.
-    Currently this is based on the gage_split file we may want to change to this in the future 
+    
+    NOTE: Currently this is based on the gage_split file we may want to change
+    to this in the future.
     
     Parameters
     ----------
@@ -413,7 +416,7 @@ def split_dataset_by_basin(
         subset_path = config['observations']['subset_path']
         log.info(f"Loading basin subset from {subset_path}")
         
-        with open(subset_path, 'r') as f:
+        with open(subset_path) as f:
             content = f.read().strip()
             if content.startswith('[') and content.endswith(']'):
                 # Handle list format
@@ -424,7 +427,7 @@ def split_dataset_by_basin(
                 all_basins = [line.strip() for line in content.split() if line.strip()]
         
         # Create basin indices for train/test split
-        holdout_gages_set = set(int(str(basin).strip()) for basin in holdout_gages)
+        holdout_gages_set = [int(str(basin).strip()) for basin in holdout_gages]
         test_indices = []
         train_indices = []
         
@@ -460,16 +463,16 @@ def split_dataset_by_basin(
             
             if len(cpu_tensor.shape) == 3:
                 # Handle 3D tensors - could be [basins, time, features] or [time, basins, features]
-                if cpu_tensor.shape[0] == len(all_basins):  
+                if cpu_tensor.shape[0] == len(all_basins):
                     # [basins, time, features] format
                     train_data[key] = cpu_tensor[train_indices_tensor]
                     test_data[key] = cpu_tensor[test_indices_tensor]
-                else:  
+                else:
                     # [time, basins, features] format (typical for HydroLoader)
                     train_data[key] = cpu_tensor[:, train_indices_tensor]
                     test_data[key] = cpu_tensor[:, test_indices_tensor]
                     
-            elif len(cpu_tensor.shape) == 2:  
+            elif len(cpu_tensor.shape) == 2:
                 # Handle 2D tensors - typically [basins, features]
                 train_data[key] = cpu_tensor[train_indices_tensor]
                 test_data[key] = cpu_tensor[test_indices_tensor]
@@ -487,7 +490,5 @@ def split_dataset_by_basin(
         return train_data, test_data
         
     except Exception as e:
-        log.error(f"Error splitting dataset by basin: {e}")
-        import traceback
         log.error(traceback.format_exc())
-        return None, None
+        raise RuntimeError(f"Error splitting dataset by basin: {e}") from e

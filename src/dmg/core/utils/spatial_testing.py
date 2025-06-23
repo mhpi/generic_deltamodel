@@ -1,14 +1,13 @@
-"""
-Spatial testing utilities for running holdout validation experiments.
-"""
+"""Spatial testing utilities for running holdout validation experiments."""
 import logging
 import os
 import numpy as np
-from typing import List, Tuple
 from omegaconf import DictConfig
 from dmg.core.utils.factory import import_data_loader, import_trainer
 from dmg.core.calc.metrics import Metrics
 import torch
+import traceback
+
 
 log = logging.getLogger(__name__)
 
@@ -57,10 +56,10 @@ def run_spatial_testing(config: DictConfig, model) -> None:
         # Initialize data loader
         data_loader_cls = import_data_loader(config['data_loader'])
         data_loader = data_loader_cls(
-            current_config, 
-            test_split=True, 
+            current_config,
+            test_split=True,
             overwrite=False,
-            holdout_index=holdout_idx
+            holdout_index=holdout_idx,
         )
         
         # Initialize trainer
@@ -70,7 +69,7 @@ def run_spatial_testing(config: DictConfig, model) -> None:
             model=holdout_model,
             train_dataset=data_loader.train_dataset,
             eval_dataset=data_loader.eval_dataset,
-            verbose=True
+            verbose=True,
         )
         
         # Execute mode and collect results
@@ -123,8 +122,12 @@ def _save_holdout_metadata(holdout_dir: str, holdout_idx: int, config: DictConfi
             f.write(f"Basins: {config['test']['holdout_basins']}\n")
 
 
-def _aggregate_spatial_results(predictions: List[np.ndarray], targets: List[np.ndarray], 
-                              output_dir: str, config: DictConfig) -> None:
+def _aggregate_spatial_results(
+    predictions: list[np.ndarray],
+    targets: list[np.ndarray],
+    output_dir: str,
+    config: DictConfig,
+) -> None:
     """Aggregate results from multiple spatial holdouts."""
     log.info(f"Aggregating results from {len(predictions)} holdouts")
     
@@ -160,13 +163,14 @@ def _aggregate_spatial_results(predictions: List[np.ndarray], targets: List[np.n
         metrics.dump_metrics(output_dir)
         
     except Exception as e:
-        log.error(f"Error in spatial result aggregation: {str(e)}")
-        import traceback
         log.error(traceback.format_exc())
+        raise RuntimeError(f"Error in spatial result aggregation: {str(e)}") from e
 
 
-
-def _extract_predictions_and_targets(trainer, config: DictConfig) -> Tuple[np.ndarray, np.ndarray]:
+def _extract_predictions_and_targets(
+    trainer: torch.nn.Module,
+    config: DictConfig,
+) -> tuple[np.ndarray, np.ndarray]:
     """Extract predictions and targets from trainer after evaluation.
     
     Parameters
@@ -218,7 +222,5 @@ def _extract_predictions_and_targets(trainer, config: DictConfig) -> Tuple[np.nd
         return pred, target
         
     except Exception as e:
-        log.error(f"Error extracting predictions and targets: {e}")
-        import traceback
         log.error(traceback.format_exc())
-        return None, None
+        raise RuntimeError(f"Error extracting predictions and targets: {e}") from e
