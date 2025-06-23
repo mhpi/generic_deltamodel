@@ -1,6 +1,7 @@
 import datetime as dt
 import json
 import logging
+import traceback
 from typing import Any, Optional, Union
 
 import numpy as np
@@ -344,3 +345,150 @@ def timestep_resample(
     data_resample['time'] = data_resample.index
 
     return data_resample
+
+def split_dataset_by_basin(
+    dataset: dict[str, torch.Tensor],
+    config: dict[str, Any],
+    holdout_index: int,
+) -> tuple[Optional[dict[str, torch.Tensor]], Optional[dict[str, torch.Tensor]]]:
+    """Split dataset by basin for spatial testing.
+    
+    NOTE: Currently this is based on the gage_split file we may want to change
+    to this in the future.
+    
+    Parameters
+    ----------
+    dataset
+        Dictionary of torch tensors containing the full dataset
+    config
+        Configuration dictionary containing test settings
+    holdout_index
+        Index for the current holdout experiment
+        
+    Returns
+    -------
+    Tuple[Optional[Dict[str, torch.Tensor]], Optional[Dict[str, torch.Tensor]]]
+        Tuple of (train_dataset, test_dataset) split by basins
+    """
+    if not dataset:
+        log.warning("Empty dataset provided for spatial splitting")
+        return dataset, dataset
+    
+    test_config = config.get('test', {})
+    if test_config.get('type') != 'spatial':
+        log.info("Not a spatial test, returning original dataset")
+        return dataset, dataset
+    
+    try:
+        extent = test_config.get('extent')
+        holdout_gages = []
+        
+        # Determine holdout basins based on test extent type
+        if extent == 'PUR':
+            huc_regions = test_config.get('huc_regions', [])
+            if holdout_index >= len(huc_regions):
+                raise ValueError(f"Invalid holdout index {holdout_index} for {len(huc_regions)} HUC regions")
+                
+            holdout_hucs = huc_regions[holdout_index]
+            gage_file = config['observations']['gage_split_file']
+            
+            log.info(f"Loading PUR split data from {gage_file}")
+            gageinfo = pd.read_csv(gage_file, dtype={"huc": int, "gage": str})
+            holdout_hucs_int = [int(huc) for huc in holdout_hucs]
+            holdout_gages = gageinfo[gageinfo['huc'].isin(holdout_hucs_int)]['gage'].tolist()
+            
+        elif extent == 'PUB':
+            pub_ids = test_config.get('PUB_ids', [])
+            if holdout_index >= len(pub_ids):
+                raise ValueError(f"Invalid holdout index {holdout_index} for {len(pub_ids)} PUB IDs")
+                
+            holdout_pub = pub_ids[holdout_index]
+            gage_file = config['observations']['gage_split_file']
+            
+            log.info(f"Loading PUB split data from {gage_file}")
+            gageinfo = pd.read_csv(gage_file, dtype={"PUB_ID": int, "gage": str})
+            holdout_gages = gageinfo[gageinfo['PUB_ID'] == holdout_pub]['gage'].tolist()
+            
+        else:
+            raise ValueError(f"Unsupported spatial test extent: {extent}")
+        
+        # Load the complete basin list
+        subset_path = config['observations']['subset_path']
+        log.info(f"Loading basin subset from {subset_path}")
+        
+        with open(subset_path) as f:
+            content = f.read().strip()
+            if content.startswith('[') and content.endswith(']'):
+                # Handle list format
+                content = content.strip('[]')
+                all_basins = [item.strip().strip(',') for item in content.split() if item.strip().strip(',')]
+            else:
+                # Handle plain text format
+                all_basins = [line.strip() for line in content.split() if line.strip()]
+        
+        # Create basin indices for train/test split
+        holdout_gages_set = [int(str(basin).strip()) for basin in holdout_gages]
+        test_indices = []
+        train_indices = []
+        
+        for i, basin in enumerate(all_basins):
+            basin_int = int(str(basin).strip())
+            if basin_int in holdout_gages_set:
+                test_indices.append(i)
+            else:
+                train_indices.append(i)
+        
+        if not test_indices:
+            raise ValueError("No test basins found for current holdout!")
+        if not train_indices:
+            raise ValueError("No training basins found for current holdout!")
+            
+        log.info(f"Spatial split: {len(train_indices)} training basins, {len(test_indices)} test basins")
+        
+        # Perform the actual dataset splitting
+        train_data = {}
+        test_data = {}
+        train_indices_tensor = torch.tensor(train_indices, device='cpu')
+        test_indices_tensor = torch.tensor(test_indices, device='cpu')
+        
+        for key, tensor in dataset.items():
+            if tensor is None:
+                train_data[key] = None
+                test_data[key] = None
+                continue
+                
+            # Move to CPU for indexing
+            cpu_tensor = tensor.to('cpu')
+            original_device = tensor.device
+            
+            if len(cpu_tensor.shape) == 3:
+                # Handle 3D tensors - could be [basins, time, features] or [time, basins, features]
+                if cpu_tensor.shape[0] == len(all_basins):
+                    # [basins, time, features] format
+                    train_data[key] = cpu_tensor[train_indices_tensor]
+                    test_data[key] = cpu_tensor[test_indices_tensor]
+                else:
+                    # [time, basins, features] format (typical for HydroLoader)
+                    train_data[key] = cpu_tensor[:, train_indices_tensor]
+                    test_data[key] = cpu_tensor[:, test_indices_tensor]
+                    
+            elif len(cpu_tensor.shape) == 2:
+                # Handle 2D tensors - typically [basins, features]
+                train_data[key] = cpu_tensor[train_indices_tensor]
+                test_data[key] = cpu_tensor[test_indices_tensor]
+            else:
+                # For 1D or other tensors, keep unchanged
+                train_data[key] = tensor
+                test_data[key] = tensor
+                continue
+            
+            # Move back to original device
+            train_data[key] = train_data[key].to(original_device)
+            test_data[key] = test_data[key].to(original_device)
+        
+        log.info("Successfully split dataset by basins for spatial testing")
+        return train_data, test_data
+        
+    except Exception as e:
+        log.error(traceback.format_exc())
+        raise RuntimeError(f"Error splitting dataset by basin: {e}") from e
