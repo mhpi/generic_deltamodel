@@ -70,15 +70,15 @@ class NnDirectLoader(BaseLoader):
         )
         
         # Spatial testing configuration
-        self.test_mode = config.get('test_mode', {})
-        self.is_spatial_test = (self.test_mode and 
-                            self.test_mode.get('type') == 'spatial')
+        self.test = config.get('test', {})
+        self.is_spatial_test = (self.test and 
+                            self.test.get('type') == 'spatial')
         if holdout_index is not None:
             self.holdout_index = holdout_index
-        elif self.is_spatial_test and 'current_holdout_index' in self.test_mode:
-            self.holdout_index = self.test_mode['current_holdout_index']
-        elif self.is_spatial_test and self.test_mode.get('holdout_indexs'):
-            self.holdout_index = self.test_mode['holdout_indexs'][0]
+        elif self.is_spatial_test and 'current_holdout_index' in self.test:
+            self.holdout_index = self.test['current_holdout_index']
+        elif self.is_spatial_test and self.test.get('holdout_indexs'):
+            self.holdout_index = self.test['holdout_indexs'][0]
         else:
             self.holdout_index = None
         
@@ -143,11 +143,14 @@ class NnDirectLoader(BaseLoader):
         
         if self.is_spatial_test:
             # For spatial testing, load and preprocess one dataset
-            # Use test data time range for testing in all basins
-            full_data = self._preprocess_data('test', test_range)
+            # Use test data time range for testing in all basins            
+            train_data = self._preprocess_data('train', train_range)
+            test_data = self._preprocess_data('test', test_range)
+
+            # Split each dataset by basin
+            self.train_dataset, _ = self._split_by_basin(train_data)
+            _, self.eval_dataset = self._split_by_basin(test_data)
             
-            # Split into train and test by station ID
-            self.train_dataset, self.eval_dataset = self._split_by_basin(full_data)
             
             # Log the split dataset sizes for verification
             if self.train_dataset and self.eval_dataset:
@@ -276,128 +279,63 @@ class NnDirectLoader(BaseLoader):
             raise
 
     def _split_by_basin(self, dataset):
-        """Split dataset by HUC regions or PUB IDs with robust error handling."""
-        if not dataset:
-            return None, None
+        """Split dataset by basin for spatial testing."""
+        if not dataset or not self.is_spatial_test:
+            return dataset, dataset
         
         try:
-            extent = self.test_mode.get('extent')
+            extent = self.test.get('extent')
             holdout_gages = []
             
             if extent == 'PUR':
-                # Get the HUC regions to hold out
-                huc_regions = self.test_mode.get('huc_regions', [])
-                if not huc_regions or self.holdout_index >= len(huc_regions):
-                    log.warning(f"Invalid holdout index: {self.holdout_index}")
-                    return None, None
+                huc_regions = self.test.get('huc_regions', [])
+                if self.holdout_index >= len(huc_regions):
+                    raise ValueError(f"Invalid holdout index: {self.holdout_index}")
                     
-                # Get the specific HUC regions for this holdout index
                 holdout_hucs = huc_regions[self.holdout_index]
-                log.info(f"Holding out basins from HUC regions: {holdout_hucs}")
-                
-                # Load the gage info file with HUC mappings
-                gage_file = self.test_mode.get('gage_split_file')
-                if not os.path.exists(gage_file):
-                    log.error(f"Gage file not found: {gage_file}")
-                    return None, None
-
-                # Read the gage info CSV
+                gage_file = self.config['observations']['gage_split_file']
                 gageinfo = pd.read_csv(gage_file, dtype={"huc": int, "gage": str})
-                
-                # Get the basin IDs for the holdout HUCs
                 holdout_hucs_int = [int(huc) for huc in holdout_hucs]
                 holdout_gages = gageinfo[gageinfo['huc'].isin(holdout_hucs_int)]['gage'].tolist()
                 
-                log.info(f"Found {len(holdout_gages)} holdout basins from HUC regions {holdout_hucs}")
-                
             elif extent == 'PUB':
-                # Get the PUB IDs to hold out
-                pub_ids = self.test_mode.get('PUB_ids', [])
-                if not pub_ids or self.holdout_index >= len(pub_ids):
-                    log.warning(f"Invalid holdout index: {self.holdout_index}")
-                    return None, None
+                pub_ids = self.test.get('PUB_ids', [])
+                if self.holdout_index >= len(pub_ids):
+                    raise ValueError(f"Invalid holdout index: {self.holdout_index}")
                     
-                # Get the specific PUB ID for this holdout index
                 holdout_pub = pub_ids[self.holdout_index]
-                log.info(f"Holding out basins from PUB ID: {holdout_pub}")
-                
-                # Load the gage info file with PUB mappings
-                gage_file = self.test_mode.get('gage_split_file')
-                if not os.path.exists(gage_file):
-                    log.error(f"Gage file not found: {gage_file}")
-                    return None, None
-                    
-                # Read the gage info CSV
+                gage_file = self.config['observations']['gage_split_file']
                 gageinfo = pd.read_csv(gage_file, dtype={"PUB_ID": int, "gage": str})
-                
-                # Get the basin IDs for the holdout PUB ID
                 holdout_gages = gageinfo[gageinfo['PUB_ID'] == holdout_pub]['gage'].tolist()
-                
-                log.info(f"Found {len(holdout_gages)} holdout basins from PUB ID {holdout_pub}")
-                
-            else:
-                log.error(f"Unknown extent: {extent}")
-                return None, None
             
-            # Check if subset path exists, if not we'll use all basins
-            subset_path = self.config['observations'].get('subset_path')
-            all_basins = []
+            # Get basin list
+            subset_path = self.config['observations']['subset_path']
+            with open(subset_path, 'r') as f:
+                content = f.read().strip()
+                if content.startswith('[') and content.endswith(']'):
+                    content = content.strip('[]')
+                    all_basins = [item.strip().strip(',') for item in content.split() if item.strip().strip(',')]
+                else:
+                    all_basins = [line.strip() for line in content.split() if line.strip()]
             
-            if subset_path and os.path.exists(subset_path):
-                log.info(f"Using subset file: {subset_path}")
-                with open(subset_path, 'r') as f:
-                    content = f.read().strip()
-                    # Handle Python list format
-                    if content.startswith('[') and content.endswith(']'):
-                        content = content.strip('[]')
-                        all_basins = [item.strip().strip(',') for item in content.split() if item.strip().strip(',')]
-                    else:
-                        all_basins = [line.strip() for line in content.split() if line.strip()]
-                
-                log.info(f"Parsed {len(all_basins)} basins from subset file")
-            else:
-                # If no subset file, determine basins from the dataset dimensions
-                # Use the first 3D tensor's first dimension to determine basin count
-                for key, tensor in dataset.items():
-                    if torch.is_tensor(tensor) and len(tensor.shape) == 3:
-                        if tensor.shape[0] > 0:  # Check if it's shaped as [basins, time, features]
-                            all_basins = [str(i) for i in range(tensor.shape[0])]
-                            log.info(f"Using all {len(all_basins)} basins from dataset")
-                            break
-                
-                if not all_basins:
-                    log.error("Could not determine basin count from dataset")
-                    return None, None
-            
-            # Convert holdout gages to integers for matching
-            holdout_gages_int = set()
-            for basin in holdout_gages:
-                basin_str = str(basin).strip()
-                holdout_gages_int.add(int(basin_str))
-
-            # Determine train and test indices
+            # Create indices for train/test split
+            holdout_gages_set = set(int(str(basin).strip()) for basin in holdout_gages)
             test_indices = []
             train_indices = []
-            for i, basin in enumerate(all_basins):
-                try:
-                    basin_int = int(str(basin).strip())
-                    if basin_int in holdout_gages_int:
-                        test_indices.append(i)
-                    else:
-                        train_indices.append(i)
-                except ValueError:
-                    log.warning(f"Could not convert basin ID to integer: {basin}")
-                    train_indices.append(i)  # Default to training set
             
-            # Verify we have test basins
+            for i, basin in enumerate(all_basins):
+                basin_int = int(str(basin).strip())
+                if basin_int in holdout_gages_set:
+                    test_indices.append(i)
+                else:
+                    train_indices.append(i)
+            
             if not test_indices:
-                raise ValueError("No test basins found! Check your region settings and basin IDs.")
-                
-            # Now split the dataset using these indices
+                raise ValueError("No test basins found!")
+            
+            # Split the dataset
             train_data = {}
             test_data = {}
-            
-            # Create index tensors
             train_indices_tensor = torch.tensor(train_indices, device='cpu')
             test_indices_tensor = torch.tensor(test_indices, device='cpu')
             
@@ -405,22 +343,19 @@ class NnDirectLoader(BaseLoader):
                 if tensor is None:
                     continue
                     
-                # Move tensor to CPU for safe indexing
                 cpu_tensor = tensor.to('cpu')
                 
-                # Handle different tensor shapes
                 if len(cpu_tensor.shape) == 3:
                     if cpu_tensor.shape[0] == len(all_basins):  # [basins, time, features]
                         train_data[key] = cpu_tensor[train_indices_tensor]
                         test_data[key] = cpu_tensor[test_indices_tensor]
-                    else:  # [time, basins, features] for target
+                    else:  # [time, basins, features]
                         train_data[key] = cpu_tensor[:, train_indices_tensor]
                         test_data[key] = cpu_tensor[:, test_indices_tensor]
                 elif len(cpu_tensor.shape) == 2:  # [basins, features]
                     train_data[key] = cpu_tensor[train_indices_tensor]
                     test_data[key] = cpu_tensor[test_indices_tensor]
                 else:
-                    # Just copy for unusual shapes
                     train_data[key] = tensor
                     test_data[key] = tensor
                 
@@ -429,13 +364,10 @@ class NnDirectLoader(BaseLoader):
                 test_data[key] = test_data[key].to(tensor.device)
             
             return train_data, test_data
-        
+            
         except Exception as e:
             log.error(f"Error splitting dataset by basin: {e}")
-            import traceback
-            log.error(traceback.format_exc())
             return None, None
-
     def load_norm_stats(
         self,
         x_nn: NDArray[np.float32],
@@ -803,13 +735,27 @@ class NnDirectLoader(BaseLoader):
             # Let the NetCDF loader handle subsetting if station_ids is provided
             time_series_data, static_data, date_range = self.nc_tool.nc2array(
                 self.config['data_path'],
-                station_ids=station_ids,  # Will be None if no subsetting
+                station_ids=None,  # Will be None if no subsetting
                 time_range=time_range,
                 time_series_variables=all_variables,
                 static_variables=self.nn_attributes,
                 add_coords=True,
                 warmup_days=warmup_days
             )
+            if 'subset_path' in self.config['observations']:
+                subset_path = self.config['observations']['subset_path']
+                gage_id_path = self.config['observations']['gage_info']
+                
+                with open(subset_path, 'r') as f:
+                    selected_basins = json.load(f)
+                gage_info = np.load(gage_id_path)
+                
+                subset_idx = intersect(selected_basins, gage_info)
+                
+                # Filter the NetCDF data to match the subset
+                time_series_data = time_series_data[subset_idx]
+                static_data = static_data[subset_idx]
+        
             
             log.info(f"Loaded data shapes - time_series: {time_series_data.shape}, static: {static_data.shape}")
             

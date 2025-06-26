@@ -10,12 +10,17 @@ from typing import Dict, Any, Union, Optional
 from models.neural_networks.cudnn_lstm import CudnnLstm
 from models.neural_networks.transformer.MFFormer import Model as MFFormer
 from models.neural_networks.transformer.MFFormerTFT import Model as MFFormerTFT
-from models.neural_networks.adapters.localization_adapter import LocalizedStationAdapter, AdaptiveLocalizedAdapter
+from dmg.core.utils.variable_mapping import create_variable_mapping, prepare_masked_input
 
 warnings.filterwarnings("ignore", message=".*weights are not part of single contiguous chunk.*")
 log = logging.getLogger(__name__)
 
-class Finetuneing(nn.Module):
+class MaskFinetuneing(nn.Module):
+    """
+    Fine-tuning module that uses masked variables instead of skipping embedding layers.
+    This approach preserves the pretrained model's learned representations.
+    """
+    
     def __init__(self, config: Union[Dict, DictConfig], ny) -> None:
         super().__init__()
         
@@ -31,15 +36,36 @@ class Finetuneing(nn.Module):
             dpl_config = config_dict.get('delta_model', {})
             nn_config = dpl_config.get('nn_model', {})
         
+        # Get pretrained variables from config
+        self.pretrained_ts_vars = nn_config.get('pretrained_time_series_vars', [])
+        self.pretrained_static_vars = nn_config.get('pretrained_static_vars', [])
+        
+        if not self.pretrained_ts_vars or not self.pretrained_static_vars:
+            raise ValueError("Must specify 'pretrained_time_series_vars' and 'pretrained_static_vars' in config")
+        
+        # Get fine-tuning variables from config
+        self.finetuning_ts_vars = nn_config.get('forcings', [])
+        self.finetuning_static_vars = nn_config.get('attributes', [])
+        
+        if not self.finetuning_ts_vars or not self.finetuning_static_vars:
+            raise ValueError("Missing forcings or attributes in configuration")
+        
+        # Create variable mappings
+        self.ts_mapping, self.ts_missing_mask = create_variable_mapping(
+            self.pretrained_ts_vars, self.finetuning_ts_vars
+        )
+        self.static_mapping, self.static_missing_mask = create_variable_mapping(
+            self.pretrained_static_vars, self.finetuning_static_vars
+        )
+        
+        # Model configuration - use pretrained variable counts for model architecture
         self.model_config = {
             'd_model': nn_config.get('hidden_size', 256),
-            'num_heads': 4,
+            'num_heads': nn_config.get('num_heads', 4),
             'dropout': nn_config.get('dropout', 0.1),
             'num_enc_layers': nn_config.get('num_enc_layers', 4),
             'num_dec_layers': nn_config.get('num_dec_layers', 2),
             'd_ffd': nn_config.get('d_ffd', 512),
-            'time_series_variables': nn_config.get('forcings', []),
-            'static_variables': nn_config.get('attributes', []),
             'pred_len': dpl_config.get('rho', 365),
             'pretrained_model': nn_config.get('pretrained_model'),
             'target_variables': ny,
@@ -48,37 +74,22 @@ class Finetuneing(nn.Module):
             'adapter_type': nn_config.get('adapter_type', 'none'),
             'use_residual_lstm': nn_config.get('use_residual_lstm', False),
             'adapter_params': nn_config.get('adapter_params', {}),
-            # New TFT-specific configurations
             'use_temporal_features': nn_config.get('use_temporal_features', True),
             'temporal_feature_dim': nn_config.get('temporal_feature_dim', 7),
-            # Localized adapter configurations
-            'use_localized_adapter': nn_config.get('use_localized_adapter', False),
-            'localized_adapter_params': nn_config.get('localized_adapter_params', {}),
         }
         
-        # Extract test mode information for spatial testing detection
-        self.test_mode = config_dict.get('test_mode', {})
+        # Extract test mode information
+        self.test_mode = config_dict.get('test', {})
         self.is_spatial_test = (self.test_mode and 
                                self.test_mode.get('type') == 'spatial')
         
-        missing_configs = []
-        if not self.model_config['time_series_variables']:
-            missing_configs.append("time_series_variables (forcings)")
-        if not self.model_config['target_variables']:
-            missing_configs.append("target_variables")
-        if missing_configs:
-            raise ValueError(f"Missing configuration: {', '.join(missing_configs)}")
-
-        # Initialize pretrained model
+        # Initialize pretrained model with original variable configuration
         self.pretrained_model = self._initialize_pretrained_model()
         
-        # Initialize standard adapter
+        # Initialize adapter
         self.adapter = self._initialize_adapter()
         
-        # Initialize localized station adapter
-        self.localized_adapter = self._initialize_localized_adapter(config_dict)
-        
-        # Initialize LSTM components
+        # Initialize LSTM decoder
         self.decoder = CudnnLstm(
             nx=self.model_config['d_model'],  
             hidden_size=self.model_config['d_model'],  
@@ -87,8 +98,8 @@ class Finetuneing(nn.Module):
         
         # Initialize residual LSTM components if needed
         if self.model_config['use_residual_lstm']:
-            n_time_features = len(self.model_config['time_series_variables'])
-            n_static_features = len(self.model_config['static_variables'])
+            n_time_features = len(self.finetuning_ts_vars)     
+            n_static_features = len(self.finetuning_static_vars)
             
             self.lstm_input_dim = self.model_config['d_model'] + n_time_features + n_static_features
             self.pre_lstm = nn.Linear(self.lstm_input_dim, self.model_config['d_model'])
@@ -97,108 +108,31 @@ class Finetuneing(nn.Module):
                 self.model_config['d_model']
             )
         
-        n_time_series = len(self.model_config['time_series_variables'])
-        n_static_features = len(self.model_config['static_variables'])
+        # Direct input projection for non-pretrained case
+        n_time_series = len(self.finetuning_ts_vars)  # Use fine-tuning counts for direct case
+        n_static_features = len(self.finetuning_static_vars)
         self.direct_input_projection = nn.Linear(
             n_time_series + n_static_features, 
             self.model_config['d_model']
         )
+        
         # Final projection
         self.projection = nn.Linear(self.model_config['d_model'], self.model_config['target_variables'])
 
+        # Normalization and scaling for embeddings
         if self.model_config['pretrained_type'] in ['mfformer', 'mfformer_tft']:
             self.embedding_norm = nn.LayerNorm(self.model_config['d_model'])
-            # Optional: Add a learnable scaling factor
             self.embedding_scale = nn.Parameter(torch.ones(1) * 0.1)
         
-        log.info(f"Initialized FineTuner: {self.model_config['pretrained_type']} + {self.model_config['adapter_type']} + used residual setup={self.model_config['use_residual_lstm']}" + 
-                (f" + localized_adapter" if self.model_config['use_localized_adapter'] else ""))
-
-    def _initialize_localized_adapter(self, config_dict: Dict) -> Optional[nn.Module]:
-        """Initialize the localized station adapter if enabled."""
-        if not self.model_config['use_localized_adapter']:
-            return None
-        
-        # Get station information from config
-        localized_params = self.model_config['localized_adapter_params']
-        
-        # Determine number of stations from dataset configuration
-        n_stations = self._get_number_of_stations(config_dict)
-        
-        if n_stations is None:
-            log.warning("Cannot determine number of stations, disabling localized adapter")
-            return None
-        
-        # Extract parameters with defaults
-        embedding_dim = localized_params.get('embedding_dim', 64)
-        dropout_rate = localized_params.get('dropout_rate', 0.2)
-        use_positional = localized_params.get('use_positional', True)
-        adapter_variant = localized_params.get('variant', 'standard')  # 'standard' or 'adaptive'
-        
-        # Initialize appropriate adapter variant
-        if adapter_variant == 'adaptive':
-            use_adaptive_weighting = localized_params.get('use_adaptive_weighting', True)
-            context_window = localized_params.get('context_window', 7)
-            
-            localized_adapter = AdaptiveLocalizedAdapter(
-                d_model=self.model_config['d_model'],
-                n_stations=n_stations,
-                embedding_dim=embedding_dim,
-                dropout_rate=dropout_rate,
-                use_positional=use_positional,
-                use_adaptive_weighting=use_adaptive_weighting,
-                context_window=context_window
-            )
-        else:
-            localized_adapter = LocalizedStationAdapter(
-                d_model=self.model_config['d_model'],
-                n_stations=n_stations,
-                embedding_dim=embedding_dim,
-                dropout_rate=dropout_rate,
-                use_positional=use_positional
-            )
-        
-        log.info(f"Initialized {adapter_variant} localized adapter for {n_stations} stations")
-        return localized_adapter
-    
-    def _get_number_of_stations(self, config_dict: Dict) -> Optional[int]:
-        """Determine the number of stations from configuration."""
-        try:
-            # Try to get from subset file if available
-            observations = config_dict.get('observations', {})
-            subset_path = observations.get('subset_path')
-            
-            if subset_path and os.path.exists(subset_path):
-                try:
-                    with open(subset_path, 'r') as f:
-                        content = f.read().strip()
-                        if content.startswith('[') and content.endswith(']'):
-                            content = content.strip('[]')
-                            stations = [item.strip().strip(',') for item in content.split() if item.strip().strip(',')]
-                        else:
-                            stations = [line.strip() for line in content.split() if line.strip()]
-                    return len(stations)
-                except Exception as e:
-                    log.warning(f"Error reading subset file: {e}")
-            
-            # Fallback: try to get from localized adapter params if explicitly specified
-            localized_params = self.model_config['localized_adapter_params']
-            if 'n_stations' in localized_params:
-                return localized_params['n_stations']
-            
-            # If all else fails, return None (will disable localized adapter)
-            log.warning("Could not determine number of stations from config")
-            return None
-            
-        except Exception as e:
-            log.warning(f"Error determining number of stations: {e}")
-            return None
+        log.info(f"Initialized MaskedFineTuning: {self.model_config['pretrained_type']} + {self.model_config['adapter_type']}")
+        log.info(f"Time series variables: {len(self.ts_mapping)}/{len(self.pretrained_ts_vars)} available")
+        log.info(f"Static variables: {len(self.static_mapping)}/{len(self.pretrained_static_vars)} available")
 
     def _initialize_pretrained_model(self):
+        """Initialize pretrained model with original variable configuration."""
         pretrained_type = self.model_config['pretrained_type']
         
         if pretrained_type == 'mfformer':
-            # Original MFFormer configuration
             mfformer_config = type('Config', (), {
                 'd_model': self.model_config['d_model'],
                 'num_heads': self.model_config['num_heads'],
@@ -206,8 +140,8 @@ class Finetuneing(nn.Module):
                 'num_enc_layers': self.model_config['num_enc_layers'],
                 'num_dec_layers': self.model_config['num_dec_layers'],
                 'd_ffd': self.model_config['d_ffd'],
-                'time_series_variables': self.model_config['time_series_variables'],
-                'static_variables': self.model_config['static_variables'],
+                'time_series_variables': self.pretrained_ts_vars,  # Use pretrained variables!
+                'static_variables': self.pretrained_static_vars,   # Use pretrained variables!
                 'static_variables_category': [],
                 'static_variables_category_dict': {},
                 'mask_ratio_time_series': 0.5,
@@ -224,7 +158,6 @@ class Finetuneing(nn.Module):
             return self._load_pretrained_weights(built_model)
             
         elif pretrained_type == 'mfformer_tft':
-            # New MFFormer with TFT-style temporal encoding
             mfformer_tft_config = type('Config', (), {
                 'd_model': self.model_config['d_model'],
                 'num_heads': self.model_config['num_heads'],
@@ -232,8 +165,8 @@ class Finetuneing(nn.Module):
                 'num_enc_layers': self.model_config['num_enc_layers'],
                 'num_dec_layers': self.model_config['num_dec_layers'],
                 'd_ffd': self.model_config['d_ffd'],
-                'time_series_variables': self.model_config['time_series_variables'],
-                'static_variables': self.model_config['static_variables'],
+                'time_series_variables': self.pretrained_ts_vars,  # Use pretrained variables!
+                'static_variables': self.pretrained_static_vars,   # Use pretrained variables!
                 'static_variables_category': [],
                 'static_variables_category_dict': {},
                 'mask_ratio_time_series': 0.5,
@@ -252,13 +185,14 @@ class Finetuneing(nn.Module):
         elif pretrained_type == 'none':
             return None
         else:
-            raise ValueError(f"Unsupported pretrained_type: {pretrained_type}. Available types: ['mfformer', 'mfformer_tft', 'none']")
+            raise ValueError(f"Unsupported pretrained_type: {pretrained_type}")
     
     def _initialize_adapter(self):
+        """Initialize adapter layer."""
         adapter_type = self.model_config['adapter_type']
         d_model = self.model_config['d_model']
-        n_time_features = len(self.model_config['time_series_variables'])
-        n_static_features = len(self.model_config['static_variables'])
+        n_time_features = len(self.finetuning_ts_vars)    
+        n_static_features = len(self.finetuning_static_vars)
         adapter_params = self.model_config['adapter_params']
         
         if adapter_type == 'dual_residual':
@@ -299,9 +233,10 @@ class Finetuneing(nn.Module):
             return nn.Identity()
             
         else:
-            raise ValueError(f"Invalid adapter type: {adapter_type} available types: ['none', 'gated', 'feedforward', 'conv', 'attention', 'bottleneck', 'moe','dual_residual']")
+            raise ValueError(f"Invalid adapter type: {adapter_type}")
     
     def _load_pretrained_weights(self, model):
+        """Load pretrained weights - now we can load ALL weights since we keep all layers."""
         pretrained_model_path = self.model_config['pretrained_model']
         if not pretrained_model_path:
             log.warning("No pretrained model path provided")
@@ -329,28 +264,32 @@ class Finetuneing(nn.Module):
 
             pretrained_state_dict = checkpoint_dict['model_state_dict']
             
+            # Clean state dict
             cleaned_state_dict = {}
             for name, param in pretrained_state_dict.items():
-                # Strip 'module.' prefix if it exists
                 clean_name = name[7:] if name.startswith('module.') else name
                 cleaned_state_dict[clean_name] = param
             
-            # Now use the cleaned state dict
+            # Load weights - now most should match!
             current_state_dict = model.state_dict()
-            
             loaded_keys = []
+            skipped_keys = []
+            
             for name, param in cleaned_state_dict.items():
                 if name in current_state_dict and current_state_dict[name].size() == param.size():
                     current_state_dict[name].copy_(param)
                     loaded_keys.append(name)
                 else:
-                    log.warning(f"Skipping parameter {name}: size mismatch or not found in current model")
+                    skipped_keys.append(name)
+                    log.debug(f"Skipping parameter {name}: size mismatch or not found")
 
-            # Load the updated state dict
             model.load_state_dict(current_state_dict)
 
             log.info(f"Loaded {len(loaded_keys)} parameters from pretrained model")
+            if skipped_keys:
+                log.info(f"Skipped {len(skipped_keys)} parameters")
 
+            # Freeze pretrained weights if specified
             if self.model_config['freeze_pretrained']:
                 for param in model.parameters():
                     param.requires_grad = False
@@ -363,12 +302,12 @@ class Finetuneing(nn.Module):
 
     def forward(self, xc_nn_norm, temporal_features=None, station_ids=None) -> torch.Tensor:
         """
-        Forward pass with optional localized station adaptation.
+        Forward pass with masked variable handling.
         
         Parameters
         ----------
         xc_nn_norm : torch.Tensor
-            Normalized input features
+            Normalized input features [time, stations, features]
         temporal_features : torch.Tensor, optional
             Temporal features for TFT models
         station_ids : torch.Tensor, optional
@@ -380,94 +319,98 @@ class Finetuneing(nn.Module):
             return self._forward_direct(xc_nn_norm, station_ids)
     
     def _forward_with_mfformer(self, xc_nn_norm, temporal_features=None, station_ids=None):
-        n_time_series = len(self.model_config['time_series_variables'])
-        batch_x = xc_nn_norm[..., :n_time_series]
-        batch_c = xc_nn_norm[..., n_time_series:][..., 0, :]
+        # Split fine-tuning input into time series and static components
+        n_ts_vars = len(self.finetuning_ts_vars)
+        n_static_vars = len(self.finetuning_static_vars)
         
-        # Handle missing values
-        x_mask = torch.isnan(batch_x)
-        c_mask = torch.isnan(batch_c)
-        x_median = torch.nanmedian(batch_x) if not torch.isnan(batch_x).all() else torch.tensor(0.0)
-        c_median = torch.nanmedian(batch_c) if not torch.isnan(batch_c).all() else torch.tensor(0.0)
-        batch_x = batch_x.masked_fill(x_mask, x_median)
-        batch_c = batch_c.masked_fill(c_mask, c_median)
+        # Extract ALL fine-tuning variables (this is what we want to use for adaptation)
+        batch_x_ft = xc_nn_norm[..., :n_ts_vars]  # ALL 5 time series variables
+        batch_c_ft = xc_nn_norm[..., n_ts_vars:n_ts_vars+n_static_vars][..., 0, :]  # ALL 26 static variables
         
+        # Convert to pretrained model format with masking (only for pretrained model)
+        batch_x_pretrained = prepare_masked_input(
+            batch_x_ft, self.ts_mapping, self.ts_missing_mask, len(self.pretrained_ts_vars)
+        )
+        batch_c_pretrained = prepare_masked_input(
+            batch_c_ft, self.static_mapping, self.static_missing_mask, len(self.pretrained_static_vars)
+        )
+        
+        # Create masks for the pretrained model (True = missing/masked)
+        time_series_mask = torch.tensor(
+            self.ts_missing_mask, 
+            device=batch_x_pretrained.device
+        ).unsqueeze(0).unsqueeze(0).expand_as(batch_x_pretrained)
+        
+        static_mask = torch.tensor(
+            self.static_missing_mask,
+            device=batch_c_pretrained.device  
+        ).unsqueeze(0).expand_as(batch_c_pretrained)
+        
+        # Run through pretrained model with masks
         with torch.amp.autocast('cuda', enabled=False):
-            # Prepare batch data dictionary for both model types
             batch_data_dict = {
-                'batch_x': batch_x,
-                'batch_c': batch_c,
-                'batch_time_series_mask_index': torch.zeros_like(batch_x, dtype=torch.bool),
-                'batch_static_mask_index': torch.zeros_like(batch_c, dtype=torch.bool),
+                'batch_x': batch_x_pretrained,
+                'batch_c': batch_c_pretrained,
+                'batch_time_series_mask_index': time_series_mask,
+                'batch_static_mask_index': static_mask,
                 'mode': 'test'
             }
             
-            # Add temporal features for TFT model if available
-            if self.model_config['pretrained_type'] == 'mfformer_tft' and temporal_features is not None:
+            if temporal_features is not None:
                 batch_data_dict['temporal_features'] = temporal_features
             
-            # Get embeddings from pretrained model
+            # Get embeddings from pretrained model (using masked data)
             if self.model_config['pretrained_type'] == 'mfformer_tft':
-                # Use the new TFT model's forward method
-                model_output = self.pretrained_model(batch_data_dict, is_mask=False)
-                
-                # Extract encoded representations from the model
-                # We need to manually extract the embeddings since the TFT model has a different structure
                 enc_x = self.pretrained_model.time_series_embedding(
-                    batch_x, feature_order=self.model_config['time_series_variables']
+                    batch_x_pretrained, 
+                    feature_order=self.pretrained_ts_vars,
+                    masked_index=time_series_mask
                 )
                 enc_c = self.pretrained_model.static_embedding(
-                    batch_c, feature_order=self.model_config['static_variables']
+                    batch_c_pretrained, 
+                    feature_order=self.pretrained_static_vars,
+                    masked_index=static_mask
                 )
                 
-                # Process through TFT positional encoding
+                # Process through model
                 enc_combined = torch.cat([enc_x, enc_c[:, None, :]], dim=1)
-                temporal_features_for_encoding = batch_data_dict.get('temporal_features', None)
-                enc_combined = self.pretrained_model.positional_encoding(enc_combined, temporal_features=temporal_features_for_encoding)
-                
-                # Process through transformer encoder
+                enc_combined = self.pretrained_model.positional_encoding(
+                    enc_combined, temporal_features=temporal_features
+                )
                 hidden_states = self.pretrained_model.encoder(enc_combined)
                 hidden_states = self.pretrained_model.encoder_norm(hidden_states)
                 hidden_states = self.pretrained_model.enc_2_dec_embedding(hidden_states)
-                hidden_states = hidden_states[:, :batch_x.size(1), :]
+                hidden_states = hidden_states[:, :batch_x_pretrained.size(1), :]
                 
-            else:
-                # Original MFFormer processing
+            else:  # mfformer
                 enc_x = self.pretrained_model.time_series_embedding(
-                    batch_x, feature_order=self.model_config['time_series_variables']
+                    batch_x_pretrained, 
+                    feature_order=self.pretrained_ts_vars,
+                    masked_index=time_series_mask
                 )
                 enc_c = self.pretrained_model.static_embedding(
-                    batch_c, feature_order=self.model_config['static_variables']
+                    batch_c_pretrained, 
+                    feature_order=self.pretrained_static_vars,
+                    masked_index=static_mask
                 )
                 
-                # Process through transformer encoder
                 enc_combined = torch.cat([enc_x, enc_c[:, None, :]], dim=1)
                 enc_combined = self.pretrained_model.positional_encoding(enc_combined)
                 hidden_states = self.pretrained_model.encoder(enc_combined)
                 hidden_states = self.pretrained_model.encoder_norm(hidden_states)
                 hidden_states = self.pretrained_model.enc_2_dec_embedding(hidden_states)
-                hidden_states = hidden_states[:, :batch_x.size(1), :]
+                hidden_states = hidden_states[:, :batch_x_pretrained.size(1), :]
             
+            
+            # Normalize and scale embeddings
             hidden_states = self.embedding_norm(hidden_states)
             hidden_states = hidden_states * self.embedding_scale
             
-            orig_time_features = batch_x
-            orig_static_features = batch_c
-            
-            # Apply standard adapter first
-            adapted = self._apply_adapter(hidden_states, orig_time_features, orig_static_features)
-            
-            # Apply localized station adapter if enabled
-            if self.localized_adapter is not None:
-                adapted = self.localized_adapter(
-                    adapted, 
-                    station_ids=station_ids,
-                    is_spatial_test=self.is_spatial_test,
-                    is_training=self.training
-                )
+            # Apply adapter using FULL fine-tuning data (not masked data!)
+            adapted = self._apply_adapter(hidden_states, batch_x_ft, batch_c_ft)
             
             if self.model_config['use_residual_lstm']:
-                outputs = self._decode_with_residual_lstm(adapted, orig_time_features, orig_static_features)
+                outputs = self._decode_with_residual_lstm(adapted, batch_x_ft, batch_c_ft)
             else:
                 outputs = self._decode_simple(adapted)
             
@@ -478,14 +421,12 @@ class Finetuneing(nn.Module):
     
     def _apply_adapter(self, hidden_states, orig_time_features, orig_static_features):
         adapter_type = self.model_config['adapter_type']            
-        if adapter_type in ['gated', 'feedforward', 'conv', 'attention', 'bottleneck', 'moe','dual_residual']:
+        if adapter_type in ['gated', 'feedforward', 'conv', 'attention', 'bottleneck', 'moe', 'dual_residual']:
             return self.adapter(hidden_states, orig_time_features, orig_static_features)
-            
         elif adapter_type == 'none':
             return self.adapter(hidden_states)
-            
         else:
-            raise ValueError(f"Invalid adapter type: {adapter_type} available types:['none', 'gated', 'feedforward', 'conv', 'attention', 'bottleneck', 'moe','dual_residual']")
+            raise ValueError(f"Invalid adapter type: {adapter_type}")
     
     def _decode_with_residual_lstm(self, adapted, orig_time_features, orig_static_features):
         # Prepare LSTM input with residual connections
@@ -519,87 +460,15 @@ class Finetuneing(nn.Module):
         return lstm_output
     
     def _forward_direct(self, xc_nn_norm, station_ids=None):
-        # LSTM-only case
-        n_time_series = len(self.model_config['time_series_variables'])
+        # LSTM-only case using fine-tuning variables directly
+        n_time_series = len(self.finetuning_ts_vars)
         batch_x = xc_nn_norm[..., :n_time_series]
-        batch_c = xc_nn_norm[..., n_time_series:][..., 0, :]
-        
-        # Handle NaN
-        x_mask = torch.isnan(batch_x)
-        c_mask = torch.isnan(batch_c)
-        x_median = torch.nanmedian(batch_x) if not torch.isnan(batch_x).all() else torch.tensor(0.0)
-        c_median = torch.nanmedian(batch_c) if not torch.isnan(batch_c).all() else torch.tensor(0.0)
-        batch_x = batch_x.masked_fill(x_mask, x_median)
-        batch_c = batch_c.masked_fill(c_mask, c_median)
+        batch_c = xc_nn_norm[..., n_time_series:n_time_series+len(self.finetuning_static_vars)][..., 0, :]
         
         static_expanded = batch_c.unsqueeze(1).expand(-1, batch_x.size(1), -1)
         combined_input = torch.cat([batch_x, static_expanded], dim=-1)
         
         lstm_input = self.direct_input_projection(combined_input)
-        
-        # Apply localized station adapter if enabled (even for direct LSTM)
-        if self.localized_adapter is not None:
-            lstm_input = self.localized_adapter(
-                lstm_input,
-                station_ids=station_ids,
-                is_spatial_test=self.is_spatial_test,
-                is_training=self.training
-            )
-        
         dec_output = self._decode_simple(lstm_input)
         outputs = self.projection(dec_output)
         return outputs
-    
-    def get_station_similarities(self, station_ids: torch.Tensor = None) -> Optional[torch.Tensor]:
-        """
-        Get station similarity matrix from localized adapter.
-        Useful for analyzing station groupings.
-        """
-        if self.localized_adapter is None:
-            log.warning("No localized adapter available for similarity analysis")
-            return None
-        
-        return self.localized_adapter.get_station_similarities(station_ids)
-    
-    def set_localized_dropout(self, rate: float) -> None:
-        """Update the dropout rate for localized adapter."""
-        if self.localized_adapter is not None:
-            self.localized_adapter.set_dropout_rate(rate)
-        else:
-            log.warning("No localized adapter available to set dropout rate")
-    
-    def get_parameters(self):
-        """Get trainable parameters, respecting frozen pretrained weights."""
-        trainable_params = []
-        
-        # Add adapter parameters (always trainable)
-        if hasattr(self, 'adapter') and self.adapter is not None:
-            trainable_params.extend(list(self.adapter.parameters()))
-        
-        # Add localized adapter parameters (always trainable)
-        if hasattr(self, 'localized_adapter') and self.localized_adapter is not None:
-            trainable_params.extend(list(self.localized_adapter.parameters()))
-        
-        # Add LSTM decoder parameters (always trainable)
-        if hasattr(self, 'decoder'):
-            trainable_params.extend(list(self.decoder.parameters()))
-        
-        # Add residual LSTM parameters if present
-        if hasattr(self, 'pre_lstm'):
-            trainable_params.extend(list(self.pre_lstm.parameters()))
-        if hasattr(self, 'post_lstm'):
-            trainable_params.extend(list(self.post_lstm.parameters()))
-        
-        # Add final projection parameters
-        if hasattr(self, 'projection'):
-            trainable_params.extend(list(self.projection.parameters()))
-        
-        # Add pretrained model parameters only if not frozen
-        if (hasattr(self, 'pretrained_model') and 
-            self.pretrained_model is not None and 
-            not self.model_config['freeze_pretrained']):
-            trainable_params.extend(list(self.pretrained_model.parameters()))
-        
-        log.info(f"Total trainable parameters: {sum(p.numel() for p in trainable_params if p.requires_grad)}")
-        
-        return trainable_params

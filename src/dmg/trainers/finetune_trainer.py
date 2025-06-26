@@ -9,11 +9,11 @@ import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from numpy.typing import NDArray
 
-from dMG.trainers.base import BaseTrainer
-from dMG.core.utils.utils import save_outputs
-from dMG.core.calc.metrics import Metrics
-from dMG.core.utils.factory import import_data_sampler, load_criterion
-from dMG.core.data import create_training_grid
+from dmg.trainers.base import BaseTrainer
+from dmg.core.utils.utils import save_outputs
+from dmg.core.calc.metrics import Metrics
+from dmg.core.utils.factory import import_data_sampler, load_criterion
+from dmg.core.data import create_training_grid
 import os
 
 log = logging.getLogger(__name__)
@@ -423,7 +423,7 @@ class FinetuneTrainer(BaseTrainer):
     #         try:
     #             # Try soil moisture metrics first if it might be soil moisture data
     #             if self.model_type == 'direct':
-    #                 from dMG.core.calc.metrics_soilMoisture import Metrics
+    #                 from dmg.core.calc.metrics_soilMoisture import Metrics
     #                 log.info("Using soil moisture specific metrics")
     #             else:
     #                 metrics = Metrics(pred_formatted, obs_formatted)

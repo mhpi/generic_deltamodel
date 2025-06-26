@@ -274,7 +274,7 @@ def load_nn_model(
             dr2=config['nn_model']['mlp_dropout'],
             device=device,
         )
-    elif name in ['Finetuneing']:
+    elif name in ['Finetuneing', 'MaskFinetuneing']:
         # Finetuneing model initialization - doesn't need nx, handles config internally
         model = cls(
             config=config,
