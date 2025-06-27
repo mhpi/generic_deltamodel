@@ -174,6 +174,7 @@ class FinetuneTrainer(BaseTrainer):
                         n_samples,
                         n_timesteps
                     )
+                
                     
                     # Use AMP context manager if available
                     cm = torch.cuda.amp.autocast() if use_amp and torch.cuda.is_available() else nullcontext()
@@ -231,10 +232,10 @@ class FinetuneTrainer(BaseTrainer):
         batch_predictions = []
         observations = self.test_dataset['target']
 
-        # CORRECTED: Use shape[1] for TIME dimension like the working version
-        n_samples = self.test_dataset['xc_nn_norm'].shape[1]  # 731 timesteps, not basins
-        batch_start = np.arange(0, n_samples, self.config['test']['batch_size'])
+        n_samples = self.test_dataset['xc_nn_norm'].shape[0]  
+        batch_start = np.arange(0,n_samples, self.config['test']['batch_size'])
         batch_end = np.append(batch_start[1:], n_samples)
+
 
         # Model forward
         log.info(f"Validating Model: Forwarding {len(batch_start)} batches")
@@ -333,6 +334,7 @@ class FinetuneTrainer(BaseTrainer):
                 batch_start[i],
                 batch_end[i],
             )
+           
 
             prediction = self.model(dataset_sample, eval=True)
 
@@ -503,11 +505,11 @@ class FinetuneTrainer(BaseTrainer):
         data = {}
         try:
             if target_key:
-                return torch.cat([x[target_key] for x in batch_list], dim=1).numpy()
+                return torch.cat([x[target_key] for x in batch_list], dim=0).numpy()
 
             for key in batch_list[0].keys():
                 if len(batch_list[0][key].shape) == 3:
-                    dim = 1  # Concatenate along time dimension for 3D tensors
+                    dim = 0  # Concatenate along time dimension for 3D tensors
                 else:
                     dim = 0  # Concatenate along first dimension for 2D tensors
                 data[key] = torch.cat([d[key] for d in batch_list], dim=dim).cpu().numpy()

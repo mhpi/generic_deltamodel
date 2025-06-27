@@ -8,6 +8,7 @@ from typing import List, Tuple
 from omegaconf import DictConfig
 from dmg.core.utils.factory import import_data_loader, import_trainer
 from dmg.core.calc.metrics import Metrics
+import torch
 
 log = logging.getLogger(__name__)
 
@@ -120,26 +121,109 @@ def _save_holdout_metadata(holdout_dir: str, holdout_idx: int, config: DictConfi
             f.write(f"Basins: {config['test']['holdout_basins']}\n")
 
 
-def _aggregate_spatial_results(predictions: List[np.ndarray], targets: List[np.ndarray], 
+def _aggregate_spatial_results(predictions: List, targets: List, 
                               output_dir: str, config: DictConfig) -> None:
     """Aggregate results from multiple spatial holdouts."""
     log.info(f"Aggregating results from {len(predictions)} holdouts")
     
     try:
+        # Handle different types of predictions
+        processed_predictions = []
+        processed_targets = []
+        
+        for i, (pred, target) in enumerate(zip(predictions, targets)):
+            log.info(f"Processing holdout {i}")
+            
+            # Handle predictions - could be list of dicts or numpy array
+            if isinstance(pred, list):
+                # It's a list of batch predictions (dictionaries)
+                log.info(f"Holdout {i}: Converting list of {len(pred)} batch predictions to numpy array")
+                
+                # Extract prediction key - assume first available key
+                if pred and isinstance(pred[0], dict):
+                    available_keys = list(pred[0].keys())
+                    target_key = available_keys[0] if available_keys else 'prediction'
+                    log.info(f"Using prediction key: '{target_key}'")
+                    
+                    # Concatenate batch predictions
+                    try:
+                        # Try concatenating along timestep dimension (dim=0)
+                        batch_tensors = [torch.tensor(batch[target_key]) if not isinstance(batch[target_key], torch.Tensor) 
+                                       else batch[target_key] for batch in pred]
+                        pred_array = torch.cat(batch_tensors, dim=0).numpy()
+                    except Exception as e:
+                        log.warning(f"Failed to concatenate predictions for holdout {i}: {e}")
+                        # Fallback: try different concatenation strategy
+                        try:
+                            pred_array = np.concatenate([batch[target_key].numpy() if isinstance(batch[target_key], torch.Tensor) 
+                                                       else batch[target_key] for batch in pred], axis=0)
+                        except Exception as e2:
+                            log.error(f"Could not process predictions for holdout {i}: {e2}")
+                            continue
+                else:
+                    log.warning(f"Unexpected prediction format for holdout {i}: {type(pred)}")
+                    continue
+                    
+            elif isinstance(pred, np.ndarray):
+                # Already a numpy array
+                pred_array = pred
+            elif isinstance(pred, torch.Tensor):
+                # Convert tensor to numpy
+                pred_array = pred.numpy()
+            else:
+                log.warning(f"Unknown prediction type for holdout {i}: {type(pred)}")
+                continue
+            
+            # Handle targets
+            if isinstance(target, torch.Tensor):
+                target_array = target.cpu().numpy()
+            elif isinstance(target, np.ndarray):
+                target_array = target
+            else:
+                log.warning(f"Unknown target type for holdout {i}: {type(target)}")
+                continue
+            
+            # Ensure targets have the right shape
+            if len(target_array.shape) == 3 and target_array.shape[2] == 1:
+                target_array = target_array[:, :, 0]  # Remove last dimension if it's 1
+            
+            log.info(f"Holdout {i} - Prediction shape: {pred_array.shape}, Target shape: {target_array.shape}")
+            
+            processed_predictions.append(pred_array)
+            processed_targets.append(target_array)
+        
+        if not processed_predictions:
+            log.error("No valid predictions to aggregate")
+            return
+        
         # Log shapes for debugging
-        pred_shapes = [p.shape for p in predictions]
-        target_shapes = [t.shape for t in targets]
-        log.info(f"Prediction shapes: {pred_shapes}")
-        log.info(f"Target shapes: {target_shapes}")
+        pred_shapes = [p.shape for p in processed_predictions]
+        target_shapes = [t.shape for t in processed_targets]
+        log.info(f"Processed prediction shapes: {pred_shapes}")
+        log.info(f"Processed target shapes: {target_shapes}")
         
-        # Ensure consistent time dimensions
-        min_time_steps = min(p.shape[0] for p in predictions)
-        trimmed_predictions = [p[:min_time_steps] for p in predictions]
-        trimmed_targets = [t[:min_time_steps] for t in targets]
+        # Ensure consistent shapes across holdouts
+        # Find minimum dimensions
+        min_time_steps = min(p.shape[0] for p in processed_predictions)
         
-        # Concatenate along basin dimension (axis 1)
-        all_predictions = np.concatenate(trimmed_predictions, axis=1)
-        all_targets = np.concatenate(trimmed_targets, axis=1)
+        # Check if all have same number of time steps
+        if not all(p.shape[0] == processed_predictions[0].shape[0] for p in processed_predictions):
+            log.warning(f"Inconsistent time steps across holdouts. Trimming to minimum: {min_time_steps}")
+            processed_predictions = [p[:min_time_steps] for p in processed_predictions]
+            processed_targets = [t[:min_time_steps] for t in processed_targets]
+        
+        # Concatenate along basin dimension (axis 1 for 2D arrays)
+        if len(processed_predictions[0].shape) == 2:
+            # 2D arrays: [time, basins]
+            all_predictions = np.concatenate(processed_predictions, axis=1)
+            all_targets = np.concatenate(processed_targets, axis=1)
+        elif len(processed_predictions[0].shape) == 3:
+            # 3D arrays: [time, basins, features]
+            all_predictions = np.concatenate(processed_predictions, axis=1)
+            all_targets = np.concatenate(processed_targets, axis=1)
+        else:
+            log.error(f"Unexpected prediction array shape: {processed_predictions[0].shape}")
+            return
         
         log.info(f"Aggregated predictions shape: {all_predictions.shape}")
         log.info(f"Aggregated targets shape: {all_targets.shape}")
@@ -149,12 +233,16 @@ def _aggregate_spatial_results(predictions: List[np.ndarray], targets: List[np.n
         np.save(os.path.join(output_dir, 'aggregated_targets.npy'), all_targets)
         
         # Calculate and save metrics
-        pred_formatted = np.swapaxes(all_predictions.squeeze(), 0, 1)
-        target_formatted = np.swapaxes(all_targets.squeeze(), 0, 1)
+        pred_formatted = np.swapaxes(all_predictions.squeeze(), 0, 1)  # [basins, time]
+        target_formatted = np.swapaxes(all_targets.squeeze(), 0, 1)    # [basins, time]
+        
+        log.info(f"Formatted for metrics - predictions: {pred_formatted.shape}, targets: {target_formatted.shape}")
         
         log.info("Calculating metrics for aggregated results")
         metrics = Metrics(pred_formatted, target_formatted)
         metrics.dump_metrics(output_dir)
+        
+        log.info("Spatial aggregation completed successfully")
         
     except Exception as e:
         log.error(f"Error in spatial result aggregation: {str(e)}")

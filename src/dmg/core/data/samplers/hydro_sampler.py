@@ -93,7 +93,7 @@ class HydroSampler(BaseSampler):
         """Generate batch for model forwarding only."""
         return {
             key: (
-                value[:, i_s:i_e, :] if value.ndim == 3 else value[i_s:i_e, :]
+                value[i_s:i_e, :,  :] if value.ndim == 3 else value[i_s:i_e, :]
             ).to(dtype=torch.float32, device=self.device)
             for key, value in dataset.items()
         }

@@ -335,6 +335,7 @@ class MaskFinetuneing(nn.Module):
             batch_c_ft, self.static_mapping, self.static_missing_mask, len(self.pretrained_static_vars)
         )
         
+        
         # Create masks for the pretrained model (True = missing/masked)
         time_series_mask = torch.tensor(
             self.ts_missing_mask, 

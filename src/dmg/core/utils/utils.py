@@ -252,7 +252,7 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
         # Handle a single model
         for key in predictions[0].keys():
             if len(predictions[0][key].shape) == 3:
-                dim = 1
+                dim = 0
             else:
                 dim = 0
 
@@ -268,7 +268,7 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
             out_dict = {}
 
             if len(predictions[models[0]][0][key].shape) == 3:
-                dim = 1
+                dim = 0
             else:
                 dim = 0
 
