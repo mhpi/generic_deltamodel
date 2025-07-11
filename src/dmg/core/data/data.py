@@ -1,8 +1,7 @@
 import datetime as dt
 import json
 import logging
-from typing import Any, Optional, Union
-
+from typing import Any, Optional, Union, List
 import numpy as np
 import pandas as pd
 import torch
@@ -344,3 +343,49 @@ def timestep_resample(
     data_resample['time'] = data_resample.index
 
     return data_resample
+
+
+def extract_temporal_features(date_range: List[str]) -> np.ndarray:
+        """Extract temporal features from date strings.
+        
+        Parameters
+        ----------
+        date_range : List[str]
+            List of date strings in format 'YYYY-MM-DD'
+            
+        Returns
+        -------
+        np.ndarray
+            Array of shape [time_steps, 7] containing temporal features:
+            [day_of_month, week_of_year, month, quarter, day_of_week, year, special_events]
+        """
+        temporal_features = np.zeros((len(date_range), 7), dtype=np.float32)
+        
+        for i, date_str in enumerate(date_range):
+            try:
+                # Parse the date string
+                if isinstance(date_str, str):
+                    # Handle different date formats
+                    if 'T' in date_str:
+                        date_obj = dt.datetime.fromisoformat(date_str.replace('T', ' ').split('.')[0])
+                    else:
+                        date_obj = dt.datetime.strptime(date_str, '%Y-%m-%d')
+                else:
+                    # If it's already a datetime object
+                    date_obj = date_str
+                
+                # Extract temporal features
+                temporal_features[i, 0] = date_obj.day                        # day of month (1-31)
+                temporal_features[i, 1] = date_obj.isocalendar()[1]          # week of year (1-53)
+                temporal_features[i, 2] = date_obj.month                     # month (1-12)
+                temporal_features[i, 3] = (date_obj.month - 1) // 3 + 1     # quarter (1-4)
+                temporal_features[i, 4] = date_obj.weekday() + 1             # day of week (1-7, Monday=1)
+                temporal_features[i, 5] = date_obj.year                      # year
+                temporal_features[i, 6] = 0                                  # special events (can be customized)
+                
+            except Exception as e:
+                log.warning(f"Error parsing date {date_str}: {e}, using defaults")
+                # Use defaults for problematic dates
+                temporal_features[i, :] = [1, 1, 1, 1, 1, 2020, 0]
+        
+        return temporal_features

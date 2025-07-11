@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional, Tuple, List
 from numpy.typing import NDArray
 from dmg.core.data.loaders.base import BaseLoader
 from dmg.core.data.loaders.load_nc import NetCDFDataset
-from dmg.core.data.data import intersect
+from dmg.core.data.data import intersect, extract_temporal_features
 import pandas as pd
 from sklearn.exceptions import DataDimensionalityWarning
 
@@ -153,6 +153,14 @@ class FinetuneLoader(BaseLoader):
         # Load both NetCDF and pickle data
         x_phy, c_phy, x_nn, c_nn, target = self.read_data(t_range)
 
+        #for tft
+        start_date = pd.to_datetime(t_range['start'].replace('/', '-'))
+        end_date = pd.to_datetime(t_range['end'].replace('/', '-'))
+        warmup_days = self.config['delta_model']['phy_model']['warm_up']
+        start_date_with_warmup = start_date - pd.Timedelta(days=warmup_days)
+        date_range = pd.date_range(start_date_with_warmup, end_date, freq='D')
+        temporal_features = extract_temporal_features(date_range)
+
         # Normalize nn input data using shared utilities
         self.norm_stats = load_norm_stats(
             self.out_path, self.overwrite, x_nn, c_nn, target,
@@ -171,6 +179,7 @@ class FinetuneLoader(BaseLoader):
             'x_nn': to_tensor(x_nn, self.device, self.dtype),
             'c_nn': to_tensor(c_nn, self.device, self.dtype),
             'xc_nn_norm': to_tensor(xc_nn_norm, self.device, self.dtype),
+            'temporal_features': to_tensor(temporal_features, self.device, self.dtype),
             'target': to_tensor(target, self.device, self.dtype),
         }
         return dataset
@@ -193,7 +202,7 @@ class FinetuneLoader(BaseLoader):
         # Load neural network data from NetCDF using shared utilities
         nn_data = load_nn_data(
             self.config, scope, t_range, self.nn_forcings,
-            self.nn_attributes, [], self.device, self.nc_tool  # <- USE EMPTY LIST []
+            self.nn_attributes, [], self.device, self.nc_tool  
         )
         x_nn = nn_data['x_nn']
         c_nn = nn_data['c_nn']
@@ -247,12 +256,10 @@ class FinetuneLoader(BaseLoader):
                 raise ValueError(f"Attribute {attr} not in available attributes")
             phy_attr_idx.append(self.all_attributes.index(attr))
         
-        # Extract physics model data
         x_phy = forcings[:, :, phy_forc_idx]
         c_phy = attributes[:, phy_attr_idx]
         
-        
-        # Apply subsetting if needed
+
         if 'subset_path' in self.config['observations']:
             subset_path = self.config['observations']['subset_path']
             gage_id_path = self.config['observations']['gage_info']
@@ -267,7 +274,7 @@ class FinetuneLoader(BaseLoader):
             c_phy = c_phy[subset_idx, :]
             target = target[:, subset_idx, :]
         
-        # Convert flow to mm/day if necessary using shared utilities
+        # Convert flow to mm/day 
         target = flow_conversion(c_nn, target, self.target, self.nn_attributes, self.config)
         
         return x_phy, c_phy, x_nn, c_nn, target
