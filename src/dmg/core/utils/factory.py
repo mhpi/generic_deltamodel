@@ -249,7 +249,7 @@ def load_nn_model(
     )
 
     # Initialize the model with the appropriate parameters
-    if name in ['CudnnLstmModel', 'LstmModel']:
+    if name in ['CudnnLstmModel', 'LstmModel','FireLstm']:
         model = cls(
             nx=nx,
             ny=ny,

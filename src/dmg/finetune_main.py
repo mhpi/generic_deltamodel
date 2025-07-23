@@ -20,6 +20,25 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
+def _is_fire_data(config: DictConfig) -> bool:
+    """Check if this is fire occurrence data."""
+    # Check observations name
+    obs_name = config.get('observations', {}).get('name', '').lower()
+    if 'fire' in obs_name:
+        return True
+    
+    # Check target variables
+    targets = config.get('train', {}).get('target', [])
+    if any('fire' in str(target).lower() for target in targets):
+        return True
+    
+    # Check data loader type
+    data_loader = config.get('data_loader', '')
+    if 'grid' in data_loader.lower():
+        return True
+    
+    return False
+
 
 @hydra.main(
     version_base='1.3',
@@ -71,8 +90,19 @@ def main(config: DictConfig) -> None:
                 raise ValueError(f"Invalid mode: {mode}")
             
         elif test_mode == 'spatial':
-            # Spatial testing with holdout validation
-            run_spatial_testing(config, model)
+            # Check if this is fire data and use appropriate spatial testing
+            if _is_fire_data(config):
+                log.info("Detected fire data - using fire-specific spatial testing")
+                try:
+                    from dmg.core.utils.fire_spatial_testing import run_fire_spatial_testing
+                    run_fire_spatial_testing(config, model)
+                except ImportError:
+                    log.warning("Fire spatial testing not available, falling back to standard spatial testing")
+                    run_spatial_testing(config, model)
+            else:
+                # Standard spatial testing for streamflow/other data
+                log.info("Using standard spatial testing")
+                run_spatial_testing(config, model)
             
         else:
             raise ValueError(f"Invalid test_mode type: {test_mode}")

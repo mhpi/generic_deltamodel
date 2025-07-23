@@ -12,6 +12,7 @@ from numpy.typing import NDArray
 from dmg.trainers.base import BaseTrainer
 from dmg.core.utils.utils import save_outputs
 from dmg.core.calc.metrics import Metrics
+from dmg.core.calc.fire_metrics import FireMetrics
 from dmg.core.utils.factory import import_data_sampler, load_criterion
 from dmg.core.data import create_training_grid
 import os
@@ -142,6 +143,16 @@ class FinetuneTrainer(BaseTrainer):
         use_amp = self.config.get('use_amp', False)
         if use_amp and torch.cuda.is_available():
             scaler = torch.cuda.amp.GradScaler()
+
+        # Get grid dimensions for training - but fix the dimension issue
+        n_samples, n_minibatch, n_timesteps = create_training_grid(
+            self.train_dataset['xc_nn_norm'],
+            self.config
+        )
+                        
+        
+        log.info(f"training grid - basins: {n_samples}, timesteps: {n_timesteps}, mini_batches: {n_minibatch}")
+
         
         try:
             for epoch in range(self.start_epoch, self.config['train']['epochs'] + 1):
@@ -156,15 +167,7 @@ class FinetuneTrainer(BaseTrainer):
                 # for key, value in self.train_dataset.items():
                 #     if hasattr(value, 'shape'):
                 #         log.info(f"  {key}: {value.shape}")
-                
-                # Get grid dimensions for training - but fix the dimension issue
-                n_samples, n_minibatch, n_timesteps = create_training_grid(
-                    self.train_dataset['xc_nn_norm'],
-                    self.config
-                )
-                                
-                
-                log.info(f"training grid - basins: {n_samples}, timesteps: {n_timesteps}, mini_batches: {n_minibatch}")
+              
 
                 for i in range(1, n_minibatch + 1):
                     self.optimizer.zero_grad()
@@ -523,7 +526,7 @@ class FinetuneTrainer(BaseTrainer):
         batch_predictions: list[dict[str, torch.Tensor]], 
         observations: torch.Tensor,
     ) -> None:
-        """Calculate and save model performance metrics - FIXED VERSION.
+        """Calculate and save model performance metrics.
 
         Parameters
         ----------
@@ -553,7 +556,7 @@ class FinetuneTrainer(BaseTrainer):
                     log.error("No keys available in batch predictions")
                     return
             
-            # Process target like the working version
+            # Process target
             if isinstance(observations, torch.Tensor):
                 target = np.expand_dims(observations[:, :, 0].cpu().numpy(), 2)
             else:
@@ -561,28 +564,22 @@ class FinetuneTrainer(BaseTrainer):
 
             log.info(f"Before warmup alignment - predictions: {predictions.shape}, target: {target.shape}")
 
-            # FIXED: Handle warmup period mismatch properly
+            # Handle warmup period mismatch
             warm_up = self.config['delta_model']['phy_model'].get('warm_up', 0)
-            
-            # Check if there's a time dimension mismatch that suggests warmup handling issue
             time_diff = target.shape[0] - predictions.shape[0]
             
             if time_diff == warm_up:
-                # Target includes warmup, predictions don't - remove warmup from target
                 log.info(f"Removing {warm_up} warmup steps from target only")
                 target = target[warm_up:, :]
             elif time_diff == -warm_up:
-                # Predictions include warmup, target doesn't - remove warmup from predictions  
                 log.info(f"Removing {warm_up} warmup steps from predictions only")
                 predictions = predictions[warm_up:, :]
             elif time_diff == 0:
-                # Same size - remove warmup from both if specified
                 if warm_up > 0:
                     log.info(f"Removing {warm_up} warmup steps from both")
                     target = target[warm_up:, :]
                     predictions = predictions[warm_up:, :]
             else:
-                # Other mismatch - try to align by taking the minimum
                 min_time = min(target.shape[0], predictions.shape[0])
                 log.warning(f"Time mismatch not matching warmup. Aligning to minimum: {min_time}")
                 target = target[:min_time, :]
@@ -590,35 +587,49 @@ class FinetuneTrainer(BaseTrainer):
 
             log.info(f"Final shapes for metrics - predictions: {predictions.shape}, target: {target.shape}")
             
-            # Additional shape validation
+            # Validation
             if predictions.shape[0] != target.shape[0]:
                 log.error(f"Time dimension still mismatched: predictions {predictions.shape[0]} vs target {target.shape[0]}")
                 return
-                
             if predictions.shape[1] != target.shape[1]:
-                log.error(f"Basin dimension mismatch: predictions {predictions.shape[1]} vs target {target.shape[1]}")
+                log.error(f"Grid cell dimension mismatch: predictions {predictions.shape[1]} vs target {target.shape[1]}")
                 return
 
-            # Squeeze and check dimensions before swapaxes
+            # Squeeze and prepare data
             pred_squeezed = predictions.squeeze()
             target_squeezed = target.squeeze()
             
             log.info(f"After squeeze - predictions: {pred_squeezed.shape}, target: {target_squeezed.shape}")
             
-            # Only proceed if we have valid 2D arrays
             if len(pred_squeezed.shape) < 2 or len(target_squeezed.shape) < 2:
                 log.error(f"Invalid dimensions after squeeze: pred {pred_squeezed.shape}, target {target_squeezed.shape}")
                 return
 
-            # Compute metrics using the exact same format as working version
-            metrics = Metrics(
-                np.swapaxes(pred_squeezed, 1, 0),  # [basins, time]
-                np.swapaxes(target_squeezed, 1, 0),       # [basins, time]
-            )
+            # Check metrics type from config
+            metrics_type = self.config.get('metrics_type', 'standard')
+            
+            # Prepare data: [grid_cells, time] format
+            pred_formatted = np.swapaxes(pred_squeezed, 1, 0)
+            target_formatted = np.swapaxes(target_squeezed, 1, 0)
+            
+            if metrics_type == 'fire':
+                # Use fire metrics
+                log.info("Using fire occurrence metrics")
+                
+                # Apply sigmoid to convert logits to probabilities
+                pred_probs = 1 / (1 + np.exp(-pred_formatted))
+        
+                metrics = FireMetrics(pred_probs, target_formatted)
+                
+            else:
+                # Use standard metrics
+                log.info("Using standard regression metrics")
+                from dmg.core.calc.metrics import Metrics
+                metrics = Metrics(pred_formatted, target_formatted)
 
-            # Save all metrics and aggregated statistics
+            # Save metrics
             metrics.dump_metrics(self.config['out_path'])
-            log.info("Metrics calculation completed successfully")
+            log.info(f"Metrics calculation completed successfully using {metrics_type} metrics")
             
         except Exception as e:
             log.error(f"Error calculating metrics: {str(e)}")
