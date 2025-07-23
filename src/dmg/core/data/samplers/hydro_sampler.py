@@ -6,6 +6,7 @@ from numpy.typing import NDArray
 
 from dmg.core.data.data import random_index
 from dmg.core.data.samplers.base import BaseSampler
+from dmg.core.utils.curriculum_manager import CurriculumManager
 
 
 class HydroSampler(BaseSampler):
@@ -25,6 +26,7 @@ class HydroSampler(BaseSampler):
         self.device = config['device']
         self.warm_up = config['delta_model']['phy_model']['warm_up']
         self.rho = config['delta_model']['rho']
+        self.curriculum_manager = CurriculumManager(config)
 
     def load_data(self):
         """Custom implementation for loading data."""
@@ -97,3 +99,8 @@ class HydroSampler(BaseSampler):
             ).to(dtype=torch.float32, device=self.device)
             for key, value in dataset.items()
         }
+            
+    def get_current_forecast_horizon(self):
+        return self.curriculum_manager.get_current_horizon()
+    def is_curriculum_enabled(self):
+        return self.curriculum_manager.enabled

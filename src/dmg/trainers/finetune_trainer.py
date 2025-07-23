@@ -15,6 +15,7 @@ from dmg.core.calc.metrics import Metrics
 from dmg.core.calc.fire_metrics import FireMetrics
 from dmg.core.utils.factory import import_data_sampler, load_criterion
 from dmg.core.data import create_training_grid
+from dmg.core.utils.curriculum_manager import CurriculumManager, MultiStepLossManager
 import os
 
 log = logging.getLogger(__name__)
@@ -64,6 +65,8 @@ class FinetuneTrainer(BaseTrainer):
         self.epoch_train_loss_list = []
         self.epoch_val_loss_list = []
         self.sampler = import_data_sampler(config['data_sampler'])(config)
+        self.curriculum_manager = CurriculumManager(config)
+        self.multi_step_loss_manager = MultiStepLossManager(config)
         
         # Determine model type based on config or model output
         self.model_type = self._determine_model_type()
@@ -156,6 +159,9 @@ class FinetuneTrainer(BaseTrainer):
         
         try:
             for epoch in range(self.start_epoch, self.config['train']['epochs'] + 1):
+                curriculum_changed = self.curriculum_manager.update_curriculum(epoch, self.config['train']['epochs'])
+                if curriculum_changed:
+                    log.info(f"Curriculum updated to {self.curriculum_manager.get_current_horizon()} days")
                 train_loss, val_loss = [], []
                 epoch_time = time.time()
 
@@ -199,7 +205,10 @@ class FinetuneTrainer(BaseTrainer):
 
                         # print(model_output.shape)
                         # print(target.shape)
-                        loss = self.loss_func(model_output,target)
+                        current_horizon = self.curriculum_manager.get_current_horizon()
+                        loss = self.multi_step_loss_manager.compute_multi_step_loss(
+                            model_output, target, self.loss_func, current_horizon
+                        )
                         
                         if torch.isnan(loss):
                             continue
@@ -613,14 +622,46 @@ class FinetuneTrainer(BaseTrainer):
             target_formatted = np.swapaxes(target_squeezed, 1, 0)
             
             if metrics_type == 'fire':
-                # Use fire metrics
-                log.info("Using fire occurrence metrics")
+                # Use enhanced fire metrics with multi-day support
+                log.info("Using enhanced fire occurrence metrics")
                 
                 # Apply sigmoid to convert logits to probabilities
                 pred_probs = 1 / (1 + np.exp(-pred_formatted))
-        
-                metrics = FireMetrics(pred_probs, target_formatted)
                 
+                # Determine forecast days from curriculum manager if available
+                forecast_days = 1
+                if hasattr(self, 'curriculum_manager'):
+                    forecast_days = self.curriculum_manager.get_current_horizon()
+                
+                # Check if we have multi-day predictions
+                if forecast_days > 1 and pred_probs.shape[0] % forecast_days == 0:
+                    # Reshape for multi-day analysis: [grid_cells, time] -> [forecast_days, grid_cells, time_per_day]
+                    time_per_day = pred_probs.shape[1] // forecast_days
+                    pred_reshaped = pred_probs[:, :time_per_day * forecast_days].reshape(
+                        pred_probs.shape[0], forecast_days, time_per_day
+                    ).transpose(1, 0, 2)  # [forecast_days, grid_cells, time_per_day]
+                    
+                    target_reshaped = target_formatted[:, :time_per_day * forecast_days].reshape(
+                        target_formatted.shape[0], forecast_days, time_per_day
+                    ).transpose(1, 0, 2)  # [forecast_days, grid_cells, time_per_day]
+                    
+                    log.info(f"Multi-day analysis: {forecast_days} days, reshaped to {pred_reshaped.shape}")
+                    
+                    metrics = FireMetrics(
+                        pred_reshaped, 
+                        target_reshaped, 
+                        forecast_days=forecast_days,
+                        grid_resolution_km=40.0  # Adjust based on your grid
+                    )
+                else:
+                    # Single day analysis
+                    log.info("Single-day fire metrics analysis")
+                    metrics = FireMetrics(
+                        pred_probs, 
+                        target_formatted, 
+                        forecast_days=1,
+                        grid_resolution_km=40.0  # Adjust based on your grid
+                    )                
             else:
                 # Use standard metrics
                 log.info("Using standard regression metrics")
