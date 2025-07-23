@@ -62,6 +62,9 @@ class FireSpatialTesting:
         List[Dict[str, Any]]
             List of fold configurations with train/test indices
         """
+        if dataset is None:
+            raise ValueError("Dataset cannot be None")
+            
         # Extract coordinates from dataset
         lat, lon = self._extract_coordinates(dataset, lat_key, lon_key)
         n_cells = len(lat)
@@ -96,6 +99,9 @@ class FireSpatialTesting:
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Extract latitude and longitude coordinates from dataset."""
         
+        if dataset is None:
+            raise ValueError("Dataset is None")
+            
         # Try different ways to get coordinates
         lat, lon = None, None
         
@@ -127,17 +133,24 @@ class FireSpatialTesting:
                     break
         
         # Method 3: Extract from static attributes if available
-        if lat is None or lon is None:
-            if 'c_nn' in dataset:
-                static_data = dataset['c_nn'].cpu().numpy()
-                # Assuming lat/lon are first two columns based on your config
-                if static_data.shape[1] >= 2:
-                    if lat is None:
-                        lat = static_data[:, 0]  # Assuming first column is lat
-                    if lon is None:
-                        lon = static_data[:, 1]  # Assuming second column is lon
+        # For GridDataLoader, lat/lon are in c_nn tensor
+        if (lat is None or lon is None) and 'c_nn' in dataset:
+            static_data = dataset['c_nn'].cpu().numpy()
+            log.info(f"Found c_nn with shape: {static_data.shape}")
+            
+            # The GridDataLoader stores lat/lon as the first two columns in c_nn
+            if static_data.shape[1] >= 2:
+                if lat is None:
+                    lat = static_data[:, 0]  # First column is lat
+                    log.info(f"Extracted lat from c_nn, range: [{lat.min():.2f}, {lat.max():.2f}]")
+                if lon is None:
+                    lon = static_data[:, 1]  # Second column is lon
+                    log.info(f"Extracted lon from c_nn, range: [{lon.min():.2f}, {lon.max():.2f}]")
         
         if lat is None or lon is None:
+            log.error(f"Available keys in dataset: {list(dataset.keys())}")
+            if 'c_nn' in dataset:
+                log.error(f"c_nn shape: {dataset['c_nn'].shape}")
             raise ValueError("Could not extract latitude/longitude coordinates from dataset")
         
         if len(lat) != len(lon):
@@ -258,26 +271,54 @@ class FireSpatialTesting:
         train_dataset = {}
         test_dataset = {}
         
+        # Convert indices to torch tensors
+        train_idx_tensor = torch.tensor(train_indices, dtype=torch.long)
+        test_idx_tensor = torch.tensor(test_indices, dtype=torch.long)
+        
         for key, tensor in dataset.items():
-            if tensor.dim() >= 2 and tensor.shape[1] == len(train_indices) + len(test_indices):
-                # This tensor has a spatial dimension that matches total cells
-                if tensor.dim() == 2:  # [time, cells] or [cells, features]
-                    if tensor.shape[0] > tensor.shape[1]:  # Likely [time, cells]
-                        train_dataset[key] = tensor[:, train_indices]
-                        test_dataset[key] = tensor[:, test_indices]
-                    else:  # Likely [cells, features]
-                        train_dataset[key] = tensor[train_indices, :]
-                        test_dataset[key] = tensor[test_indices, :]
-                elif tensor.dim() == 3:  # [time, cells, features]
+            log.info(f"Processing tensor {key} with shape {tensor.shape}")
+            
+            # Handle different tensor types based on their dimensions and content
+            if key in ['temporal_features']:
+                # Temporal features don't have spatial dimension, keep same for both
+                train_dataset[key] = tensor
+                test_dataset[key] = tensor
+                
+            elif key in ['c_nn', 'c_phy']:
+                # Static attributes: [cells, features]
+                train_dataset[key] = tensor[train_indices, :]
+                test_dataset[key] = tensor[test_indices, :]
+                
+            elif key in ['x_nn', 'x_phy', 'xc_nn_norm', 'target']:
+                # Time-varying data: [time, cells, features]
+                if tensor.dim() == 3:
                     train_dataset[key] = tensor[:, train_indices, :]
                     test_dataset[key] = tensor[:, test_indices, :]
+                elif tensor.dim() == 2:
+                    # Could be [time, cells] or [cells, features]
+                    if tensor.shape[1] == len(train_indices) + len(test_indices):
+                        # Second dimension is spatial
+                        train_dataset[key] = tensor[:, train_indices]
+                        test_dataset[key] = tensor[:, test_indices]
+                    elif tensor.shape[0] == len(train_indices) + len(test_indices):
+                        # First dimension is spatial
+                        train_dataset[key] = tensor[train_indices, :]
+                        test_dataset[key] = tensor[test_indices, :]
+                    else:
+                        # Doesn't match spatial dimension, keep same
+                        train_dataset[key] = tensor
+                        test_dataset[key] = tensor
                 else:
-                    # For higher dimensions, assume second dimension is spatial
-                    train_dataset[key] = tensor.index_select(1, torch.tensor(train_indices, device=tensor.device))
-                    test_dataset[key] = tensor.index_select(1, torch.tensor(test_indices, device=tensor.device))
+                    # For other dimensions, try to split on the spatial dimension
+                    # Assume second dimension is spatial for most cases
+                    if tensor.shape[1] == len(train_indices) + len(test_indices):
+                        train_dataset[key] = tensor.index_select(1, train_idx_tensor.to(tensor.device))
+                        test_dataset[key] = tensor.index_select(1, test_idx_tensor.to(tensor.device))
+                    else:
+                        train_dataset[key] = tensor
+                        test_dataset[key] = tensor
             else:
-                # This tensor doesn't have spatial dimension or doesn't match expected size
-                # Keep the same for both train and test (e.g., temporal features)
+                # Unknown tensor type, keep same for both
                 train_dataset[key] = tensor
                 test_dataset[key] = tensor
         
@@ -309,10 +350,28 @@ def run_fire_spatial_testing(config: Dict[str, Any], model) -> Dict[str, Any]:
     # Initialize spatial testing
     spatial_tester = FireSpatialTesting(config)
     
-    # Load full dataset (no splitting yet)
+    # Create a modified config to load the full dataset
+    # We need to temporarily disable spatial testing so it loads dataset properly
+    full_config = config.copy()
+    full_config['train']['end_time'] = config['test']['end_time']
+    
+    # Temporarily disable spatial testing for data loading
+    full_config['test'] = full_config['test'].copy()
+    full_config['test']['type'] = 'temporal'  # This will make is_spatial_test = False
+    
+    log.info("Loading full dataset for spatial cross-validation")
     data_loader_cls = import_data_loader(config['data_loader'])
-    data_loader = data_loader_cls(config, test_split=False, overwrite=False)
-    full_dataset = data_loader.dataset
+    data_loader = data_loader_cls(full_config, test_split=False, overwrite=False)
+    
+    # Get the full dataset 
+    if hasattr(data_loader, 'dataset') and data_loader.dataset is not None:
+        full_dataset = data_loader.dataset
+    else:
+        raise ValueError("Could not load full dataset for spatial testing")
+    
+    log.info(f"Loaded full dataset with keys: {list(full_dataset.keys())}")
+    for key, tensor in full_dataset.items():
+        log.info(f"  {key}: {tensor.shape}")
     
     # Create spatial folds
     folds = spatial_tester.create_spatial_folds(full_dataset)
@@ -368,6 +427,8 @@ def run_fire_spatial_testing(config: Dict[str, Any], model) -> Dict[str, Any]:
             
         except Exception as e:
             log.error(f"Error in spatial fold {fold_idx}: {str(e)}")
+            import traceback
+            log.error(traceback.format_exc())
             continue
     
     log.info(f"Fire spatial cross-validation completed: {len(all_results['fold_results'])} successful folds")

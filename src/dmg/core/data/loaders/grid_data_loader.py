@@ -76,7 +76,7 @@ class GridDataLoader(BaseLoader):
             'normalization_statistics.json',
         )
         
-        # Spatial testing configuration (same as original)
+        # Spatial testing configuration
         self.test = config.get('test', {})
         self.is_spatial_test = (self.test and 
                             self.test.get('type') == 'spatial')
@@ -93,7 +93,7 @@ class GridDataLoader(BaseLoader):
 
     def load_dataset(self) -> None:
         """Load data into dictionary of nn and physics model input tensors."""
-        # Determine time ranges based on configuration (same as original)
+        # Determine time ranges based on configuration
         train_range = {
             'start': self.config['train']['start_time'],
             'end': self.config['train']['end_time']
@@ -104,24 +104,23 @@ class GridDataLoader(BaseLoader):
         }
         
         if self.is_spatial_test:
-            # For spatial testing, load and preprocess one dataset
+            # For spatial testing with grid data, don't use split_by_basin
+            # That function is for basin/streamflow data with explicit basin IDs
+            # Grid data spatial testing is handled by the fire spatial testing framework
             train_data = self._preprocess_data('train', train_range)
             test_data = self._preprocess_data('test', test_range)
-
-            # Split each dataset by grid cells using shared utilities
-            self.train_dataset, _ = split_by_basin(
-                train_data, self.config, self.test, self.holdout_index
-            )
-            _, self.eval_dataset = split_by_basin(
-                test_data, self.config, self.test, self.holdout_index
-            )
+            
+            # Store the full datasets - spatial splitting will be handled externally
+            self.train_dataset = train_data
+            self.eval_dataset = test_data
             
         else:
-            # Standard temporal split (same as original)
+            # Standard temporal split
             if self.test_split:
                 self.train_dataset = self._preprocess_data('train', train_range)
                 self.eval_dataset = self._preprocess_data('test', test_range)
             else:
+                # Load full dataset for the entire time range
                 full_range = {
                     'start': self.config['train']['start_time'],
                     'end': self.config['test']['end_time']
@@ -145,7 +144,7 @@ class GridDataLoader(BaseLoader):
             # Read data using the NetCDF read method
             x_phy, c_phy, x_nn, c_nn, target = self.read_netcdf_data(scope, t_range)
 
-            # Extract temporal features (same as original)
+            # Extract temporal features
             start_date = pd.to_datetime(t_range['start'].replace('/', '-'))
             end_date = pd.to_datetime(t_range['end'].replace('/', '-'))
             warmup_days = self.config['delta_model']['phy_model']['warm_up']
@@ -153,7 +152,7 @@ class GridDataLoader(BaseLoader):
             date_range = pd.date_range(start_date_with_warmup, end_date, freq='D')
             temporal_features = extract_temporal_features(date_range)
 
-            # Normalize nn input data using shared utilities (same as original)
+            # Normalize nn input data using shared utilities
             self.norm_stats = load_norm_stats(
                 self.out_path, self.overwrite, x_nn, c_nn, target,
                 self.nn_forcings, self.nn_attributes, self.target,
