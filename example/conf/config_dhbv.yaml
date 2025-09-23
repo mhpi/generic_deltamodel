@@ -1,0 +1,149 @@
+# This configuration file is specifically for the differentiable hydrologic model dHBV 1.0 from Feng et al. (2022). If you find this code is useful to your work, please cite this paper below:
+# Dapeng Feng, Jiangtao Liu, Kathryn Lawson, et al. "Differentiable, Learnable, Regionalized Process‐Based Models With Multiphysical Outputs can Approach State‐Of‐The‐Art Hydrologic Prediction Accuracy." Water Resources Research (2022). https://doi.org/10.1029/2022WR032404.
+
+# This config replicates the CAMELS 531-basin, 10-year benchmark. 
+# To setup for CAMELS 671-basin, 15-year benchmark, set the following...
+#   1. observations: camels_671
+#   2. train: start_time: 1980/10/01
+#   3. train: end_time: 1995/09/30
+#   4. test/simulation: start_time: 1995/10/01
+#   5. test/simulation: end_time: 2010/09/30
+
+defaults:
+    - _self_
+    - hydra: settings
+    - observations: camels_531 # camels_531, camels_671 
+
+
+## General -------------------------------#
+mode: train  # train, test, train_test, simulation
+random_seed: 111111
+device: cuda
+gpu_id: 0
+
+data_loader: HydroLoader
+data_sampler: HydroSampler
+trainer: Trainer
+
+save_path: ./output
+    # NOTE: The output path is relative to the current working directory. 
+    #       If you want to save the output in a different directory, please specify the absolute path.
+    #       * If a valid trained_model path is specified, save_path will be set to trained_model.
+trained_model: ./path/to/your/model/  # Prerained dHBV 1.0 can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_1_0_trained.zip
+
+
+## Training ------------------------------#
+train:
+    start_time: 1999/10/01
+    end_time: 2008/09/30
+    target: [streamflow]
+    optimizer: Adadelta
+    batch_size: 100
+    epochs: 100
+    start_epoch: 0
+    save_epoch: 5
+
+
+## Evaluation -------------------------------#
+test:
+    start_time: 1989/10/01
+    end_time: 1999/09/30
+    batch_size: 25
+    test_epoch: 100
+
+
+## Inference -------------------------------#
+simulation:
+    start_time: 2012/10/01
+    end_time: 2014/09/30
+    batch_size: 25
+
+
+## Loss Function -------------------------#
+loss_function:
+    model: RmseCombLoss
+
+
+## Differentiable Model -----------------------------#
+delta_model:
+    rho: 365
+    
+    phy_model:
+        ## Citations ##
+        # HBV 1.0: Dapeng Feng, Jiangtao Liu, Kathryn Lawson, et al.
+        # "Differentiable, Learnable, Regionalized Process‐Based Models With
+        # Multiphysical Outputs can Approach State‐Of‐The‐Art Hydrologic
+        # Prediction Accuracy." Water Resources Research (2022).
+        # https://doi.org/10.1029/2022WR032404.
+
+        model: [Hbv]
+        nmul: 16
+        warm_up: 365
+        warm_up_states: True
+        dy_drop: 0.0
+        dynamic_params:
+            Hbv: [parBETA, parBETAET]
+
+        routing: True
+        use_log_norm: [prcp]
+        nearzero: 1e-5
+
+        forcings: [
+            prcp,
+            tmean,
+            pet,
+        ]
+        attributes: []
+
+    nn_model:
+        model: CudnnLstmModel
+        dropout: 0.5
+        hidden_size: 256
+        learning_rate: 1.0
+        lr_scheduler: None
+        lr_scheduler_params:
+            step_size: 10
+            gamma: 0.5
+        
+        forcings: [
+            prcp,
+            tmean,
+            pet,
+        ]
+        attributes: [
+            p_mean,
+            pet_mean,
+            p_seasonality,
+            frac_snow,
+            aridity,
+            high_prec_freq,
+            high_prec_dur,
+            low_prec_freq,
+            low_prec_dur,
+            elev_mean,
+            slope_mean,
+            area_gages2,
+            frac_forest,
+            lai_max,
+            lai_diff,
+            gvf_max,
+            gvf_diff,
+            dom_land_cover_frac,
+            dom_land_cover,
+            root_depth_50,
+            soil_depth_pelletier,
+            soil_depth_statsgo,
+            soil_porosity,
+            soil_conductivity,
+            max_water_content,
+            sand_frac,
+            silt_frac,
+            clay_frac,
+            geol_1st_class,
+            glim_1st_class_frac,
+            geol_2nd_class,
+            glim_2nd_class_frac,
+            carbonate_rocks_frac,
+            geol_porosity,
+            geol_permeability,
+        ]

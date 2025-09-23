@@ -1,0 +1,18 @@
+# Default Observation Configuration
+#
+# Note this is a template and will not run unless modified.
+# See ./docs/configuration_glossary.md for definitions and options.
+name: none
+data_path: ./your/path/to/data
+
+start_time: 2000/01/01
+end_time: 2024/12/31
+
+all_forcings: [
+    x1_var,
+    x2_var,
+]
+all_attributes: [
+    attr1,
+    attr2,
+]

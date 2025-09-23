@@ -1,0 +1,145 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling", "hatch-vcs"]
+# requires = ["setuptools>=42", "wheel"]
+# build-backend = "setuptools.build_meta"
+
+[project]
+name = "dmg"
+description = "Differentiable modeling framework on PyTorch"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Leo Lonzarich", email = "lglonzaric@gmail.com" },
+    { name = "Tadd Bindas", email = "taddbindas@gmail.com" },
+    { name = "Farshid Rahmani", email = "farshid368@gmail.com" },
+    { name = "Yalan Song", email = "songyalan1@gmail.com" },
+]
+maintainers = [
+    { name = "Leo Lonzarich", email = "lglonzaric@gmail.com" },
+    { name = "Tadd Bindas", email = "taddbindas@gmail.com" },
+    { name = "Yalan Song", email = "songyalan1@gmail.com" },
+    { name = "Chaopeng Shen", email = "shen.chaopeng@gmail.com" }, 
+    { name = "Doaa Aboelyazeed", email = "doaa.barawy@gmail.com" },
+    { name = "Kathryn Lawson", email = "kel33@psu.edu" },
+]
+requires-python = ">=3.12.0"
+dynamic = ["version"]
+dependencies = [
+    "cartopy>=0.24.1",
+    "geopandas>=1.1.0",
+    "hydra-core>=1.3.2",
+    "ipykernel>=6.29.5",
+    "matplotlib>=3.10.3",
+    "numpy>=2.3.0",
+    "omegaconf>=2.3.0",
+    "pandas>=2.3.0",
+    "pre-commit>=4.2.0",
+    "pydantic>=2.11.5",
+    "ray[tune]>=2.46.0",  # TODO: Not available for Py3.12. Need a conditional here
+    "scikit-learn>=1.7.0",
+    "scipy>=1.15.3",
+    "torch>=2.7.1",
+    "torchaudio>=2.7.1",
+    "torchvision>=0.22.1",
+    "tqdm>=4.67.1",
+    "uv>=0.7.12",
+    "zarr>=3.0.8",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://mhpi.github.io/codes/frameworks/"
+Repository = "https://github.com/mhpi/generic_deltamodel"
+
+[project.optional-dependencies]
+dev = [
+    "ipywidgets>=8.1.7",
+    "pytest>=8.4.0",
+    "ruff>=0.11.13",
+]
+hydrodl2 = [
+    "hydrodl2 @ git+https://github.com/mhpi/hydrodl2.git@master"
+]
+
+[tool.hatch]
+version.source = "vcs"
+build.hooks.vcs.version-file = "src/dmg/_version.py"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+xfail_strict = true
+addopts = [
+    "--import-mode=importlib",  # allow using test files with same name
+]
+
+[tool.ruff]
+src = ["src"]
+line-length = 88
+lint.select = [
+    "F",  # Errors detected by Pyflakes
+    "E",  # Error detected by Pycodestyle
+    "W",  # Warning detected by Pycodestyle
+    "I",  # isort
+    "D",  # pydocstyle
+    "B",  # flake8-bugbear
+    "TID",  # flake8-tidy-imports
+    "C4",  # flake8-comprehensions
+    "BLE",  # flake8-blind-except
+    "UP",  # pyupgrade
+    "RUF100",  # Report unused noqa directives
+    "COM812",  # Missing trailing comma
+]
+exclude = [
+    ".git",
+    ".vscode",
+    "archive",
+    "dev",
+]
+lint.ignore = [
+    # Do not perform function call in argument defaults
+    "B008",
+    # Line too long
+    "E501",
+    # Do not assign a lambda expression, use a def
+    "E731",
+    # Missing docstring in public module
+    "D100",
+    # Missing docstring in public package
+    "D104",
+    # Missing docstring in magic method
+    "D105",
+    # Missing docstring in __init__
+    "D107",
+    # Blank lines before class docstring
+    "D203",
+    # 1 blank line required after class docstring
+    "D204",
+    # 1 blank line required between summary line and description
+    "D205",
+    # First line of docstring should be in imperative mood
+    "D401",
+    # Import block is un-sorted or un-formatted; Conflicts with isort
+    "I001",
+    # Blank line contains whitespace
+    "W293",
+    # Disable checks on | operator notation in type hints
+    "UP007",
+    # Use `X | None` for type annotations
+    "UP045"
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"docs/*" = ["I"]
+"tests/*" = ["D"]
+"*/__init__.py" = ["F401"]

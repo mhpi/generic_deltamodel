@@ -1,0 +1,95 @@
+# Default Master Configuration
+#
+# Note this is a template and will not run unless modified.
+# See ./docs/configuration_glossary.md for definitions and options.
+defaults:
+    - _self_
+    - hydra: settings
+    - observations: none
+
+
+## General -------------------------------#
+mode: train
+multimodel_type: none
+random_seed: 111111
+device: cuda
+gpu_id: 0
+
+data_loader: NoneLoader
+data_sampler: NoneSampler
+trainer: NoneTrainer
+
+save_path: ./output
+trained_model: ''
+
+
+## Training ------------------------------#
+train:
+    start_time: 2000/01/01
+    end_time: 2000/12/31
+    target: [y_var]
+    optimizer: Adadelta
+    batch_size: 100
+    epochs: 50
+    start_epoch: 0
+    save_epoch: 5
+
+
+## Evaluation -------------------------------#
+test:
+    start_time: 2001/01/01
+    end_time: 2001/12/31
+    batch_size: 100
+    test_epoch: 50
+
+
+## Inference -------------------------------#
+simulation:
+    start_time: 2001/01/01
+    end_time: 2001/12/31
+    batch_size: 400
+
+
+## Loss Function -------------------------#
+loss_function:
+    model: RmseLossComb
+
+
+## Differentiable Model -----------------------------#
+delta_model:
+    rho: 365
+    
+    phy_model:
+        model: [NonePhyModel]
+        nmul: 16
+        warm_up: 365
+        dynamic_params:
+            NonePhyModel: [z1, z2]
+
+        forcings: [
+            x1_var,
+            x2_var,
+        ]
+        attributes: [
+            attr1,
+            attr2,
+        ]
+
+    nn_model:
+        model: LSTM
+        dropout: 0.5
+        hidden_size: 256
+        learning_rate: 1.0
+        lr_scheduler: None
+        lr_scheduler_params:
+            step_size: 10
+            gamma: 0.5
+        
+        forcings: [
+            x1_var,
+            x2_var,
+        ]
+        attributes: [
+            attr1,
+            attr2,
+        ]
