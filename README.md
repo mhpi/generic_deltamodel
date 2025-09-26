@@ -5,7 +5,6 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 [![Build](https://github.com/mhpi/generic_deltamodel/actions/workflows/pytest.yaml/badge.svg?branch=master)](https://github.com/mhpi/generic_deltamodel/actions/workflows/pytest.yaml)
-[![License](https://img.shields.io/github/license/saltstack/salt)](https://github.com/mhpi/generic_deltamodel/blob/master/LICENSE)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14868671.svg)](https://doi.org/10.5281/zenodo.14868671)
 
 ---
