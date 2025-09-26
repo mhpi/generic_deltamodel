@@ -183,7 +183,7 @@ class Trainer(BaseTrainer):
         path = self.config['model_path']
         for file in os.listdir(path):
             # Check for state checkpoint: looks like `train_state_epoch_XX.pt`.
-            if 'train_state' and (str(self.start_epoch-1) in file):
+            if ('train_state' in file) and (str(self.start_epoch - 1) in file):
                 log.info("Loading trainer states --> Resuming Training from" /
                          f" epoch {self.start_epoch}")
 
@@ -246,6 +246,10 @@ class Trainer(BaseTrainer):
 
         self.current_epoch = epoch
         self.total_loss = 0.0
+
+        if hasattr(self.model, 'loss_dict'):
+            for key in self.model.loss_dict:
+                self.model.loss_dict[key] = 0.0
 
         # Iterate through epoch in minibatches.
         for mb in tqdm.tqdm(range(1, n_minibatch + 1), desc=prog_str,
@@ -471,7 +475,7 @@ class Trainer(BaseTrainer):
         start_time
             Start time of the epoch.
         """
-        avg_loss_dict = {key: value / n_minibatch + 1 for key, value in loss_dict.items()}
+        avg_loss_dict = {key: value / n_minibatch for key, value in loss_dict.items()}
         loss = ", ".join(f"{key}: {value:.6f}" for key, value in avg_loss_dict.items())
         elapsed = time.perf_counter() - start_time
         mem_aloc = int(torch.cuda.memory_reserved(device=self.config['device']) * 0.000001)
@@ -480,3 +484,6 @@ class Trainer(BaseTrainer):
             f"Loss after epoch {epoch}: {loss} \n"
             f"~ Runtime {elapsed:.2f} s, {mem_aloc} Mb reserved GPU memory",
         )
+        
+        with open(os.path.join(self.config['out_path'], 'train_log.txt'), 'a') as f:
+            f.write(f"Epoch {epoch}: " + loss + f", Time: {elapsed:.2f} s\n")
