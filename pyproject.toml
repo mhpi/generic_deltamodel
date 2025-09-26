@@ -40,6 +40,11 @@ dependencies = [
     "uv>=0.8.22",
     "zarr>=3.1.3",
 ]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -49,12 +54,6 @@ dev = [
 ]
 hydrodl2 = [
     "hydrodl2 @ git+https://github.com/mhpi/hydrodl2.git@master"
-]
-
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: Apache Software License",
-    "Operating System :: OS Independent",
 ]
 
 [project.urls]
