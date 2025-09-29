@@ -25,7 +25,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --extra dev hydrodl2
+        run: uv sync --extra dev --extra hydrodl2
 
       - name: Run Ruff check
         run: uv run ruff check . --config pyproject.toml --output-format=github
