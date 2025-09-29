@@ -12,7 +12,7 @@ class EnsembleGenerator(torch.nn.Module):
     Default modality:
         NN trained in series or parallel with multiple differentiable models
         to learn weights for spatiotemporal ensembling.
-    
+
     Parameters
     ----------
     model_list
@@ -25,6 +25,7 @@ class EnsembleGenerator(torch.nn.Module):
     device
         The device to run the model on. Default is None.
     """
+
     def __init__(
         self,
         model_list: list[str],
@@ -36,14 +37,18 @@ class EnsembleGenerator(torch.nn.Module):
         self.name = "Multimodel Ensemble Weights Generator"
         self.config = config
         self.model_list = model_list
-        self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = device or torch.device(
+            'cuda' if torch.cuda.is_available() else 'cpu'
+        )
 
         if nn_model:
             self.nn_model = nn_model
         elif config:
             self.nn_model = self._init_nn_model()
         else:
-            raise ValueError("A (1) neural network or (2) configuration dictionary is required.")
+            raise ValueError(
+                "A (1) neural network or (2) configuration dictionary is required."
+            )
 
         self.weights = {}
         self.ensemble_predictions = {}
@@ -51,7 +56,7 @@ class EnsembleGenerator(torch.nn.Module):
 
     def _init_nn_model(self) -> torch.nn.Module:
         """Initialize a neural network model.
-        
+
         Returns
         -------
         nn_model
@@ -70,7 +75,7 @@ class EnsembleGenerator(torch.nn.Module):
         predictions: dict[str, torch.Tensor],
     ) -> tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
         """Forward pass for the model.
-        
+
         Generate ensemble weights and ensemble model predictions.
 
         Parameters
@@ -79,7 +84,7 @@ class EnsembleGenerator(torch.nn.Module):
             Dictionary containing input data.
         predictions
             Dictionary containing predictions from individual models.
-        
+
         Returns
         -------
         ensemble_predictions
@@ -94,7 +99,10 @@ class EnsembleGenerator(torch.nn.Module):
             self._scale_weights()
 
             # Map weights to individual models
-            diff = dataset_dict['xc_nn_norm'].shape[0] - predictions[self.model_list[0]]['streamflow'].shape[0]
+            diff = (
+                dataset_dict['xc_nn_norm'].shape[0]
+                - predictions[self.model_list[0]]['streamflow'].shape[0]
+            )
             self.weights = {
                 model: self.weights_scaled[diff:, :, i]
                 for i, model in enumerate(self.model_list)
@@ -123,15 +131,21 @@ class EnsembleGenerator(torch.nn.Module):
             }
 
             # Convert weights to a tensor for easier manipulation
-            weights_tensor = torch.stack(list(self.weights.values()), dim=0)  # Shape: [num_models, num_timesteps, num_basins]
+            weights_tensor = torch.stack(
+                list(self.weights.values()), dim=0
+            )  # Shape: [num_models, num_timesteps, num_basins]
 
             # Step 1: Find the index of the model with the highest weight
-            best_model_idx = weights_tensor.argmax(dim=0)  # Shape: [num_timesteps, num_basins]
+            best_model_idx = weights_tensor.argmax(
+                dim=0
+            )  # Shape: [num_timesteps, num_basins]
 
             # Step 2: Create a mask to select the model with the highest weight
             # Create a one-hot mask
             mask = torch.zeros_like(weights_tensor, dtype=torch.bool)
-            mask.scatter_(0, best_model_idx.unsqueeze(0), True)  # Shape: [num_models, num_timesteps, num_basins]
+            mask.scatter_(
+                0, best_model_idx.unsqueeze(0), True
+            )  # Shape: [num_models, num_timesteps, num_basins]
 
             # Step 3: Use the mask to select predictions
             # Linearly combine individual model predictions.
@@ -139,7 +153,10 @@ class EnsembleGenerator(torch.nn.Module):
             shared_keys = find_shared_keys(*predictions_list)
 
             for key in shared_keys:
-                predictions_tensor = torch.stack([predictions[model][key].squeeze() for model in self.model_list], dim=0)
+                predictions_tensor = torch.stack(
+                    [predictions[model][key].squeeze() for model in self.model_list],
+                    dim=0,
+                )
                 # Shape: [num_models, num_timesteps, num_basins]
 
                 if predictions_tensor.ndim == 2:
@@ -150,10 +167,11 @@ class EnsembleGenerator(torch.nn.Module):
                     # Skip BFI key with shape 1.
                     continue
 
-                final_predictions = torch.gather(predictions_tensor, 0, best_model_idx.unsqueeze(0)).squeeze(0)
+                final_predictions = torch.gather(
+                    predictions_tensor, 0, best_model_idx.unsqueeze(0)
+                ).squeeze(0)
 
                 self.ensemble_predictions[key] = final_predictions
-
 
                 # # Mask out all but the best model's predictions
                 # selected_predictions = predictions_tensor * mask  # Shape: [num_models, num_timesteps, num_basins]

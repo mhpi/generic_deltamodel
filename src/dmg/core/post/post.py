@@ -35,10 +35,16 @@ def print_metrics(
             if mode == "median" and "median" in metrics[name]:
                 value = metrics[name]["median"]
                 print(f"{name.capitalize()}: {value:.{precision}f}")
-            elif mode == "mean_std" and "mean" in metrics[name] and "std" in metrics[name]:
+            elif (
+                mode == "mean_std"
+                and "mean" in metrics[name]
+                and "std" in metrics[name]
+            ):
                 mean = metrics[name]["mean"]
                 std = metrics[name]["std"]
-                print(f"{name.capitalize()}: {mean:.{precision}f} ± {std:.{precision}f}")
+                print(
+                    f"{name.capitalize()}: {mean:.{precision}f} ± {std:.{precision}f}"
+                )
             else:
                 print(f"{name.capitalize()}: Metric data incomplete")
         else:

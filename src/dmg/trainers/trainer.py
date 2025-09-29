@@ -29,10 +29,10 @@ class Trainer(BaseTrainer):
     """Generic, unified trainer for neural networks and differentiable models.
 
     Inspired by the Hugging Face Trainer class.
-    
+
     Retrieves and formats data, initializes optimizers/schedulers/loss functions,
     and runs training and testing/inference loops.
-    
+
     Parameters
     ----------
     config
@@ -58,6 +58,7 @@ class Trainer(BaseTrainer):
     TODO: Incorporate support for validation loss and early stopping in
     training loop. This will also enable using ReduceLROnPlateau scheduler.
     """
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -108,10 +109,10 @@ class Trainer(BaseTrainer):
             self.start_epoch = self.config['train']['start_epoch'] + 1
             if self.start_epoch > 1:
                 self.load_states()
-    
+
     def init_optimizer(self) -> torch.optim.Optimizer:
         """Initialize a state optimizer.
-        
+
         Adding additional optimizers is possible by extending the optimizer_dict.
 
         Returns
@@ -132,8 +133,10 @@ class Trainer(BaseTrainer):
         # Fetch optimizer class
         cls = optimizer_dict[name]
         if cls is None:
-            raise ValueError(f"Optimizer '{name}' not recognized. "
-                                f"Available options are: {list(optimizer_dict.keys())}")
+            raise ValueError(
+                f"Optimizer '{name}' not recognized. "
+                f"Available options are: {list(optimizer_dict.keys())}"
+            )
 
         # Initialize
         try:
@@ -147,7 +150,7 @@ class Trainer(BaseTrainer):
 
     def init_scheduler(self) -> torch.optim.lr_scheduler.LRScheduler:
         """Initialize a learning rate scheduler for the optimizer.
-        
+
         torch.optim.lr_scheduler.LRScheduler
             Initialized learning rate scheduler object.
         """
@@ -162,8 +165,10 @@ class Trainer(BaseTrainer):
         # Fetch scheduler class
         cls = scheduler_dict[name]
         if cls is None:
-            raise ValueError(f"Scheduler '{name}' not recognized. "
-                                f"Available options are: {list(scheduler_dict.keys())}")
+            raise ValueError(
+                f"Scheduler '{name}' not recognized. "
+                f"Available options are: {list(scheduler_dict.keys())}"
+            )
 
         # Initialize
         try:
@@ -184,8 +189,10 @@ class Trainer(BaseTrainer):
         for file in os.listdir(path):
             # Check for state checkpoint: looks like `train_state_epoch_XX.pt`.
             if ('train_state' in file) and (str(self.start_epoch - 1) in file):
-                log.info("Loading trainer states --> Resuming Training from" /
-                         f" epoch {self.start_epoch}")
+                log.info(
+                    "Loading trainer states --> Resuming Training from"
+                    / f" epoch {self.start_epoch}"
+                )
 
                 checkpoint = torch.load(os.path.join(path, file))
 
@@ -200,11 +207,13 @@ class Trainer(BaseTrainer):
                     torch.cuda.set_rng_state_all(checkpoint['cuda_random_state'])
                 return
             elif 'train_state' in file:
-                raise FileNotFoundError(f"Available checkpoint file {file} does" /
-                                        f" not match start epoch {self.start_epoch-1}.")
+                raise FileNotFoundError(
+                    f"Available checkpoint file {file} does"
+                    / f" not match start epoch {self.start_epoch - 1}."
+                )
 
         # If no checkpoint file is found for named epoch...
-        raise FileNotFoundError(f"No checkpoint for epoch {self.start_epoch-1}.")
+        raise FileNotFoundError(f"No checkpoint for epoch {self.start_epoch - 1}.")
 
     def train(self) -> None:
         """Train the model."""
@@ -216,8 +225,10 @@ class Trainer(BaseTrainer):
             self.config,
         )
 
-        log.info(f"Training model: Beginning {self.start_epoch} of {self.epochs} epochs")
-        
+        log.info(
+            f"Training model: Beginning {self.start_epoch} of {self.epochs} epochs"
+        )
+
         # Training loop
         for epoch in range(self.start_epoch, self.epochs + 1):
             self.train_one_epoch(
@@ -229,7 +240,7 @@ class Trainer(BaseTrainer):
 
     def train_one_epoch(self, epoch, n_samples, n_minibatch, n_timesteps) -> None:
         """Train model for one epoch.
-        
+
         Parameters
         ----------
         epoch
@@ -252,8 +263,9 @@ class Trainer(BaseTrainer):
                 self.model.loss_dict[key] = 0.0
 
         # Iterate through epoch in minibatches.
-        for mb in tqdm.tqdm(range(1, n_minibatch + 1), desc=prog_str,
-                            leave=False, dynamic_ncols=True):
+        for mb in tqdm.tqdm(
+            range(1, n_minibatch + 1), desc=prog_str, leave=False, dynamic_ncols=True
+        ):
             self.current_batch = mb
 
             dataset_sample = self.sampler.get_training_sample(
@@ -292,7 +304,7 @@ class Trainer(BaseTrainer):
                 scheduler=self.scheduler,
                 clear_prior=True,
             )
-        
+
             # if self.config['do_tune']:
             #     # Create temporary checkpoint if needed
             #     chkpt = None
@@ -320,7 +332,9 @@ class Trainer(BaseTrainer):
 
         # Model forward
         log.info(f"Validating Model: Forwarding {len(batch_start)} batches")
-        batch_predictions = self._forward_loop(self.eval_dataset, batch_start, batch_end)
+        batch_predictions = self._forward_loop(
+            self.eval_dataset, batch_start, batch_end
+        )
 
         # Save predictions and calculate metrics
         log.info("Saving model outputs + Calculating metrics")
@@ -359,7 +373,7 @@ class Trainer(BaseTrainer):
         target_key: str = None,
     ) -> None:
         """Merge batch data into a single dictionary.
-        
+
         Parameters
         ----------
         batch_list
@@ -378,7 +392,9 @@ class Trainer(BaseTrainer):
                     dim = 1
                 else:
                     dim = 0
-                data[key] = torch.cat([d[key] for d in batch_list], dim=dim).cpu().numpy()
+                data[key] = (
+                    torch.cat([d[key] for d in batch_list], dim=dim).cpu().numpy()
+                )
             return data
 
         except ValueError as e:
@@ -404,7 +420,9 @@ class Trainer(BaseTrainer):
         # Track predictions accross batches
         batch_predictions = []
 
-        for i in tqdm.tqdm(range(len(batch_start)), desc='Forwarding', leave=False, dynamic_ncols=True):
+        for i in tqdm.tqdm(
+            range(len(batch_start)), desc='Forwarding', leave=False, dynamic_ncols=True
+        ):
             self.current_batch = i
 
             # Select a batch of data
@@ -419,7 +437,8 @@ class Trainer(BaseTrainer):
             # Save the batch predictions
             model_name = self.config['delta_model']['phy_model']['model'][0]
             prediction = {
-                key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()
+                key: tensor.cpu().detach()
+                for key, tensor in prediction[model_name].items()
             }
             batch_predictions.append(prediction)
         return batch_predictions
@@ -444,7 +463,7 @@ class Trainer(BaseTrainer):
 
         # Remove warm-up data
         # if self.config['delta_model']['phy_model']['warm_up_states']:  # NOTE: remove if bug does not reoccur
-        target = target[self.config['delta_model']['phy_model']['warm_up']:, :]
+        target = target[self.config['delta_model']['phy_model']['warm_up'] :, :]
 
         # Compute metrics
         metrics = Metrics(
@@ -478,12 +497,14 @@ class Trainer(BaseTrainer):
         avg_loss_dict = {key: value / n_minibatch for key, value in loss_dict.items()}
         loss = ", ".join(f"{key}: {value:.6f}" for key, value in avg_loss_dict.items())
         elapsed = time.perf_counter() - start_time
-        mem_aloc = int(torch.cuda.memory_reserved(device=self.config['device']) * 0.000001)
+        mem_aloc = int(
+            torch.cuda.memory_reserved(device=self.config['device']) * 0.000001
+        )
 
         log.info(
             f"Loss after epoch {epoch}: {loss} \n"
             f"~ Runtime {elapsed:.2f} s, {mem_aloc} Mb reserved GPU memory",
         )
-        
+
         with open(os.path.join(self.config['out_path'], 'train_log.txt'), 'a') as f:
             f.write(f"Epoch {epoch}: " + loss + f", Time: {elapsed:.2f} s\n")

@@ -44,7 +44,9 @@ def set_system_spec(config: dict) -> tuple[str, str]:
             device = torch.device(f'cuda:{config['gpu_id']}')
             torch.cuda.set_device(device)
         else:
-            raise ValueError(f"Selected CUDA device {config['gpu_id']} is not available.")
+            raise ValueError(
+                f"Selected CUDA device {config['gpu_id']} is not available."
+            )
     else:
         raise ValueError(f"Invalid device: {config['device']}")
 
@@ -69,6 +71,7 @@ def set_randomseed(seed=0) -> None:
     os.environ["PYTHONHASHSEED"] = str(seed)
     try:
         import torch
+
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         torch.manual_seed(seed)
@@ -84,12 +87,12 @@ def initialize_config(
     write_path: bool = True,
 ) -> dict[str, Any]:
     """Parse and initialize configuration settings.
-    
+
     Parameters
     ----------
     config
         Configuration settings from Hydra.
-        
+
     Returns
     -------
     dict
@@ -131,10 +134,14 @@ def initialize_config(
 
     # TODO: add this handling directly to the trainer; this is not generalizable in current form.
     # change multimodel_type type to None if none.
-    if config.get('multimodel_type', '')  in ['none', 'None', '']:
+    if config.get('multimodel_type', '') in ['none', 'None', '']:
         config['multimodel_type'] = None
 
-    if config['delta_model']['nn_model'].get('lr_scheduler', '') in ['none', 'None', '']:
+    if config['delta_model']['nn_model'].get('lr_scheduler', '') in [
+        'none',
+        'None',
+        '',
+    ]:
         config['delta_model']['nn_model']['lr_scheduler'] = None
 
     if config.get('trained_model', '') in ['none', 'None', '']:
@@ -144,7 +151,7 @@ def initialize_config(
     out_path = PathBuilder(config)
     if write_path:
         config = out_path.write_path(config)
-    
+
     # Convert string back to data type.
     config['dtype'] = eval(config['dtype'])
 
@@ -159,7 +166,7 @@ def save_model(
     create_dirs: Optional[bool] = False,
 ) -> None:
     """Save model state dict.
-    
+
     Parameters
     ----------
     config
@@ -186,13 +193,13 @@ def save_model(
 def save_train_state(
     config: dict[str, Any],
     epoch: int,
-    optimizer:torch.nn.Module,
+    optimizer: torch.nn.Module,
     scheduler: Optional[torch.nn.Module] = None,
     create_dirs: Optional[bool] = False,
     clear_prior: Optional[bool] = False,
 ) -> None:
     """Save dict of all experiment states for training.
-    
+
     Parameters
     ----------
     config
@@ -230,13 +237,16 @@ def save_train_state(
     if torch.cuda.is_available():
         cuda_state = torch.cuda.get_rng_state()
 
-    torch.save({
-        'epoch': epoch,
-        'optimizer_state_dict': optimizer.state_dict(),
-        'scheduler_state_dict': scheduler_state,
-        'random_state': torch.get_rng_state(),
-        'cuda_state': cuda_state,
-    }, full_path)
+    torch.save(
+        {
+            'epoch': epoch,
+            'optimizer_state_dict': optimizer.state_dict(),
+            'scheduler_state_dict': scheduler_state,
+            'random_state': torch.get_rng_state(),
+            'cuda_state': cuda_state,
+        },
+        full_path,
+    )
 
 
 def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
@@ -285,7 +295,7 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
         raise ValueError("Invalid output format.")
 
     # Reading flow observation
-    if  y_obs is not None:
+    if y_obs is not None:
         for var in config['train']['target']:
             item_obs = y_obs[:, :, config['train']['target'].index(var)]
             file_name = var + '_obs.npy'
@@ -294,7 +304,7 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
 
 def load_model(config, model_name, epoch):
     """Load trained PyTorch models.
-    
+
     Parameters
     ----------
     config
@@ -303,7 +313,7 @@ def load_model(config, model_name, epoch):
         Name of the model to load.
     epoch
         Epoch number to load the specific state of the model.
-    
+
     Returns
     -------
     torch.nn.Module
@@ -328,38 +338,64 @@ def print_config(config: dict[str, Any]) -> None:
     if config['multimodel_type'] is not None:
         print(f"  {'Ensemble Mode:':<20}{config['multimodel_type']:<20}")
     for i, mod in enumerate(config['delta_model']['phy_model']['model']):
-        print(f"  {f'Model {i+1}:':<20}{mod:<20}")
+        print(f"  {f'Model {i + 1}:':<20}{mod:<20}")
     print()
 
     print("\033[1m" + "Data Loader" + "\033[0m")
     print(f"  {'Data Source:':<20}{config['observations']['name']:<20}")
     if 'train' in config['mode']:
-        print(f"  {'Train Range :':<20}{config['train']['start_time']:<20}{config['train']['end_time']:<20}")
+        print(
+            f"  {'Train Range :':<20}{config['train']['start_time']:<20}{config['train']['end_time']:<20}"
+        )
     if 'test' in config['mode']:
-        print(f"  {'Test Range :':<20}{config['test']['start_time']:<20}{config['test']['end_time']:<20}")
+        print(
+            f"  {'Test Range :':<20}{config['test']['start_time']:<20}{config['test']['end_time']:<20}"
+        )
     if 'simulation' in config['mode']:
-        print(f"  {'Simulation Range :':<20}{config['simulation']['start_time']:<20}{config['simulation']['end_time']:<20}")
+        print(
+            f"  {'Simulation Range :':<20}{config['simulation']['start_time']:<20}{config['simulation']['end_time']:<20}"
+        )
     if config['train']['start_epoch'] > 0 and 'train' in config['mode']:
-        print(f"  {'Resume training from epoch:':<20}{config['train']['start_epoch']:<20}")
+        print(
+            f"  {'Resume training from epoch:':<20}{config['train']['start_epoch']:<20}"
+        )
     print()
 
     print("\033[1m" + "Model Parameters" + "\033[0m")
-    print(f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}")
+    print(
+        f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}"
+    )
     if config['delta_model']['nn_model']['model'] != 'LstmMlpModel':
-        print(f"  {'Dropout:':<20}{config['delta_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['delta_model']['nn_model']['hidden_size']:<20}")
+        print(
+            f"  {'Dropout:':<20}{config['delta_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['delta_model']['nn_model']['hidden_size']:<20}"
+        )
     else:
-        print(f"  {'LSTM Dropout:':<20}{config['delta_model']['nn_model']['lstm_dropout']:<20}{'LSTM Hidden Size:':<20}{config['delta_model']['nn_model']['lstm_hidden_size']:<20}")
-        print(f"  {'MLP Dropout:':<20}{config['delta_model']['nn_model']['mlp_dropout']:<20}{'MLP Hidden Size:':<20}{config['delta_model']['nn_model']['mlp_hidden_size']:<20}")
-    print(f"  {'Warmup:':<20}{config['delta_model']['phy_model'].get('warm_up', '0'):<20}{'Concurrent Models:':<20}{config['delta_model']['phy_model']['nmul']:<20}")
+        print(
+            f"  {'LSTM Dropout:':<20}{config['delta_model']['nn_model']['lstm_dropout']:<20}{'LSTM Hidden Size:':<20}{config['delta_model']['nn_model']['lstm_hidden_size']:<20}"
+        )
+        print(
+            f"  {'MLP Dropout:':<20}{config['delta_model']['nn_model']['mlp_dropout']:<20}{'MLP Hidden Size:':<20}{config['delta_model']['nn_model']['mlp_hidden_size']:<20}"
+        )
+    print(
+        f"  {'Warmup:':<20}{config['delta_model']['phy_model'].get('warm_up', '0'):<20}{'Concurrent Models:':<20}{config['delta_model']['phy_model']['nmul']:<20}"
+    )
     print(f"  {'Loss Fn:':<20}{config['loss_function']['model']:<20}")
     print()
 
     if config['multimodel_type'] is not None:
         print("\033[1m" + "Multimodel Parameters" + "\033[0m")
-        print(f"  {'Mosaic:':<20}{config['multimodel']['mosaic']:<20}{'Dropout:':<20}{config['multimodel']['dropout']:<20}")
-        print(f"  {'Learning Rate:':<20}{config['multimodel']['learning_rate']:<20}{'Hidden Size:':<20}{config['multimodel']['hidden_size']:<20}")
-        print(f"  {'Scaling Fn:':<20}{config['multimodel']['scaling_function']:<20}{'Loss Fn:':<20}{config['multimodel']['loss_function']:<20}")
-        print(f"  {'Range-bound Loss:':<20}{config['multimodel']['use_rb_loss']:<20}{'Loss Factor:':<20}{config['multimodel']['loss_factor']:<20}")
+        print(
+            f"  {'Mosaic:':<20}{config['multimodel']['mosaic']:<20}{'Dropout:':<20}{config['multimodel']['dropout']:<20}"
+        )
+        print(
+            f"  {'Learning Rate:':<20}{config['multimodel']['learning_rate']:<20}{'Hidden Size:':<20}{config['multimodel']['hidden_size']:<20}"
+        )
+        print(
+            f"  {'Scaling Fn:':<20}{config['multimodel']['scaling_function']:<20}{'Loss Fn:':<20}{config['multimodel']['loss_function']:<20}"
+        )
+        print(
+            f"  {'Range-bound Loss:':<20}{config['multimodel']['use_rb_loss']:<20}{'Loss Factor:':<20}{config['multimodel']['loss_factor']:<20}"
+        )
         print()
 
     print("\033[1m" + 'Machine' + "\033[0m")
@@ -412,7 +448,7 @@ def camel_to_snake(camel_str):
 
 def format_resample_interval(resample: str) -> str:
     """Formats the resampling interval into a human-readable string.
-    
+
     Parameters
     ----------
     resample

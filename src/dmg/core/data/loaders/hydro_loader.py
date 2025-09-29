@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 class HydroLoader(BaseLoader):
     """Data loader for hydrological data from CAMELS dataset.
-    
+
     All data is loaded as PyTorch tensors. According to config settings,
     generates...
     - `dataset` for model inference,
@@ -28,7 +28,7 @@ class HydroLoader(BaseLoader):
     The CAMELS dataset is a large-sample watershed-scale hydrometeorological
     dataset for the contiguous USA and includes both meteorological forcings
     and basin attributes.
-    
+
     CAMELS:
     - https://ral.ucar.edu/solutions/products/camels
 
@@ -51,6 +51,7 @@ class HydroLoader(BaseLoader):
     NOTE: to support new datasets of similar form to CAMELS, add the dataset
     key name to `self.supported_data`.
     """
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -90,20 +91,24 @@ class HydroLoader(BaseLoader):
     def load_dataset(self) -> None:
         """Load data into dictionary of nn and physics model input tensors."""
         mode = self.config['mode']
-        is_spatial_test = (self.config.get('test', {}).get('type') == 'spatial')
-        
+        is_spatial_test = self.config.get('test', {}).get('type') == 'spatial'
+
         if mode == 'simulation':
             self.dataset = self._preprocess_data(scope='simulation')
         elif is_spatial_test:
             # For spatial testing, load data and split by basin using utility function
             train_dataset = self._preprocess_data(scope='train')
             test_dataset = self._preprocess_data(scope='test')
-            
+
             self.train_dataset, _ = split_dataset_by_basin(
-                train_dataset, self.config, self.holdout_index,
+                train_dataset,
+                self.config,
+                self.holdout_index,
             )
             _, self.eval_dataset = split_dataset_by_basin(
-                test_dataset, self.config, self.holdout_index,
+                test_dataset,
+                self.config,
+                self.holdout_index,
             )
         elif self.test_split:
             self.train_dataset = self._preprocess_data(scope='train')
@@ -118,12 +123,12 @@ class HydroLoader(BaseLoader):
         scope: Optional[str],
     ) -> dict[str, torch.Tensor]:
         """Read data, preprocess, and return as tensors for models.
-        
+
         Parameters
         ----------
         scope
             Scope of data to read, affects what timespan of data is loaded.
-            
+
         Returns
         -------
         dict[str, torch.Tensor]
@@ -148,7 +153,7 @@ class HydroLoader(BaseLoader):
 
     def read_data(self, scope: Optional[str]) -> tuple[NDArray[np.float32]]:
         """Read data from the data file.
-        
+
         Parameters
         ----------
         scope
@@ -162,7 +167,7 @@ class HydroLoader(BaseLoader):
         try:
             if self.config['observations']['data_path']:
                 data_path = self.config['observations']['data_path']
-            
+
             if scope == 'train':
                 if not data_path:
                     # NOTE: still including 'train_path' etc. for backwards
@@ -182,7 +187,9 @@ class HydroLoader(BaseLoader):
                     data_path = self.config['observations']['test_path']
                 time = self.config['all_time']
             else:
-                raise ValueError("Scope must be 'train', 'test', 'simulation', or 'all'.")
+                raise ValueError(
+                    "Scope must be 'train', 'test', 'simulation', or 'all'."
+                )
         except KeyError as e:
             raise ValueError(f"Key {e} for data path not in dataset config.") from e
 
@@ -199,7 +206,7 @@ class HydroLoader(BaseLoader):
         with open(data_path, 'rb') as f:
             forcings, target, attributes = pickle.load(f)
 
-        forcings = np.transpose(forcings[:, idx_start:idx_end], (1,0,2))
+        forcings = np.transpose(forcings[:, idx_start:idx_end], (1, 0, 2))
 
         # Forcing subset for phy model
         phy_forc_idx = []
@@ -207,7 +214,7 @@ class HydroLoader(BaseLoader):
             if forc not in self.forcing_names:
                 raise ValueError(f"Forcing {forc} not listed in available forcings.")
             phy_forc_idx.append(self.forcing_names.index(forc))
-        
+
         # Attribute subset for phy model
         phy_attr_idx = []
         for attr in self.phy_attributes:
@@ -229,11 +236,11 @@ class HydroLoader(BaseLoader):
                 raise ValueError(f"Attribute {attr} not in the list of all attributes.")
             nn_attr_idx.append(self.attribute_names.index(attr))
 
-        x_phy = forcings[:,:, phy_forc_idx]
+        x_phy = forcings[:, :, phy_forc_idx]
         c_phy = attributes[:, phy_attr_idx]
-        x_nn = forcings[:,:, nn_forc_idx]
+        x_nn = forcings[:, :, nn_forc_idx]
         c_nn = attributes[:, nn_attr_idx]
-        target = np.transpose(target[:, idx_start:idx_end], (1,0,2))
+        target = np.transpose(target[:, idx_start:idx_end], (1, 0, 2))
 
         # Subset basins if necessary
         if 'subset_path' in self.config['observations']:
@@ -263,7 +270,7 @@ class HydroLoader(BaseLoader):
         target: NDArray[np.float32],
     ) -> NDArray[np.float32]:
         """Convert hydraulic flow from ft3/s to mm/day.
-        
+
         Parameters
         ----------
         c_nn
@@ -277,9 +284,11 @@ class HydroLoader(BaseLoader):
                 area_name = self.config['observations']['area_name']
                 basin_area = c_nn[:, self.nn_attributes.index(area_name)]
 
-                area = np.expand_dims(basin_area, axis=0).repeat(target_temp.shape[0], 0)
+                area = np.expand_dims(basin_area, axis=0).repeat(
+                    target_temp.shape[0], 0
+                )
                 target[:, :, self.target.index(name)] = (
-                    (10 ** 3) * target_temp * 0.0283168 * 3600 * 24 / (area * (10 ** 6))
+                    (10**3) * target_temp * 0.0283168 * 3600 * 24 / (area * (10**6))
                 )
         return target
 
@@ -303,7 +312,6 @@ class HydroLoader(BaseLoader):
             # Init normalization stats if file doesn't exist or overwrite is True.
             self.norm_stats = self._init_norm_stats(x_nn, c_nn, target)
 
-
     def _init_norm_stats(
         self,
         x_nn: NDArray[np.float32],
@@ -311,7 +319,7 @@ class HydroLoader(BaseLoader):
         target: NDArray[np.float32],
     ) -> dict[str, list[float]]:
         """Compile and save calculations of data normalization statistics.
-        
+
         Parameters
         ----------
         x_nn
@@ -320,7 +328,7 @@ class HydroLoader(BaseLoader):
             Neural network static data.
         target
             Target variable data.
-        
+
         Returns
         -------
         dict[str, list[float]]
@@ -346,12 +354,12 @@ class HydroLoader(BaseLoader):
         for i, name in enumerate(self.target):
             if name in ['flow_sim', 'streamflow', 'sf']:
                 stat_dict[name] = self._calc_norm_stats(
-                    np.swapaxes(target[:, :, i:i+1], 1, 0).copy(),
+                    np.swapaxes(target[:, :, i : i + 1], 1, 0).copy(),
                     basin_area,
                 )
             else:
                 stat_dict[name] = self._calc_norm_stats(
-                    np.swapaxes(target[:, :, i:i+1], 1, 0),
+                    np.swapaxes(target[:, :, i : i + 1], 1, 0),
                 )
 
         with open(self.out_path, 'w') as f:
@@ -374,7 +382,7 @@ class HydroLoader(BaseLoader):
             Input data array.
         basin_area
             Basin area array for normalization.
-        
+
         Returns
         -------
         list[float]
@@ -391,7 +399,7 @@ class HydroLoader(BaseLoader):
             if (nd == 3) and (x.shape[2] == 1):
                 x = x[:, :, 0]  # Unsqueeze the original 3D matrix
             temparea = np.tile(basin_area, (1, x.shape[1]))
-            flow = (x * 0.0283168 * 3600 * 24) / (temparea * (10 ** 6)) * 10 ** 3
+            flow = (x * 0.0283168 * 3600 * 24) / (temparea * (10**6)) * 10**3
             x = flow  # Replace x with flow for further calculations
 
         # Flatten and exclude NaNs and invalid values
@@ -418,12 +426,12 @@ class HydroLoader(BaseLoader):
 
     def _calc_gamma_stats(self, x: NDArray[np.float32]) -> list[float]:
         """Calculate gamma statistics for streamflow and precipitation data.
-        
+
         Parameters
         ----------
         x
             Input data array.
-        
+
         Returns
         -------
         list[float]
@@ -433,7 +441,7 @@ class HydroLoader(BaseLoader):
         b = a[(~np.isnan(a))]
         b = np.log10(np.sqrt(b) + 0.1)
 
-        p10, p90 = np.percentile(b, [10,90]).astype(float)
+        p10, p90 = np.percentile(b, [10, 90]).astype(float)
         mean = np.mean(b).astype(float)
         std = np.std(b).astype(float)
 
@@ -441,12 +449,12 @@ class HydroLoader(BaseLoader):
 
     def _get_basin_area(self, c_nn: NDArray[np.float32]) -> NDArray[np.float32]:
         """Get basin area from attributes.
-        
+
         Parameters
         ----------
         c_nn
             Neural network static data.
-        
+
         Returns
         -------
         NDArray[np.float32]
@@ -456,8 +464,10 @@ class HydroLoader(BaseLoader):
             area_name = self.config['observations']['area_name']
             basin_area = c_nn[:, self.nn_attributes.index(area_name)][:, np.newaxis]
         except KeyError:
-            log.warning("No 'area_name' in observation config. Basin" \
-                        "area norm will not be applied.")
+            log.warning(
+                "No 'area_name' in observation config. Basin"
+                "area norm will not be applied."
+            )
             basin_area = None
         return basin_area
 
@@ -467,14 +477,14 @@ class HydroLoader(BaseLoader):
         c_nn: NDArray[np.float32],
     ) -> NDArray[np.float32]:
         """Normalize data for neural network.
-        
+
         Parameters
         ----------
         x_nn
             Neural network dynamic data.
         c_nn
             Neural network static data.
-        
+
         Returns
         -------
         NDArray[np.float32]
@@ -510,14 +520,14 @@ class HydroLoader(BaseLoader):
         vars: list[str],
     ) -> NDArray[np.float32]:
         """Standard data normalization.
-        
+
         Parameters
         ----------
         data
             Data to normalize.
         vars
             List of variable names in data to normalize.
-        
+
         Returns
         -------
         NDArray[np.float32]
@@ -552,14 +562,14 @@ class HydroLoader(BaseLoader):
         vars: list[str],
     ) -> NDArray[np.float32]:
         """De-normalize data.
-        
+
         Parameters
         ----------
         data
             Data to de-normalize.
         vars
             List of variable names in data to de-normalize.
-        
+
         Returns
         -------
         NDArray[np.float32]

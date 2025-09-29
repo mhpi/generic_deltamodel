@@ -12,6 +12,7 @@ log = logging.getLogger(__name__)
 
 class RayTrainable(tune.Trainable):
     """Trainer class for Ray Tune."""
+
     def setup(self, config):
         """Setup the trainer."""
         self.config = config

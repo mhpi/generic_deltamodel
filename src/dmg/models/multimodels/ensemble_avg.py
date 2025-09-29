@@ -21,7 +21,7 @@ def model_average(
 
     config
         Dictionary of model configuration.
-        
+
     Returns
     -------
     dict[str, Any]
@@ -36,7 +36,7 @@ def model_average(
     mod_dicts = [model_preds_dict[mod] for mod in config['hydro_models']]
     shared_keys = find_shared_keys(*mod_dicts)
 
-     # TODO: identify why 'flow_sim_no_rout' calculation returns shape [365,1]
+    # TODO: identify why 'flow_sim_no_rout' calculation returns shape [365,1]
     # vs [365, 100] which breaks the ensemble loop at point of matrix mul below. (weights_dict[mod]
     # takes shape [365, 100].) Look at `QSIM` comprout vs no comprout in HBVmul.py. For now, remove it.
     # NOTE: may have fixed this ^^^ need to confirm.
@@ -50,9 +50,9 @@ def model_average(
                 # Cut out warmup data present when testing model from loaded mod file.
                 print(key, model_preds_dict[mod][key].size())
 
-
                 ensemble_pred[key] += model_preds_dict[mod][key][
-                config['warm_up']:,:].squeeze()
+                    config['warm_up'] :, :
+                ].squeeze()
             else:
                 print(key)
                 ensemble_pred[key] += model_preds_dict[mod][key]
@@ -60,4 +60,3 @@ def model_average(
         ensemble_pred[key] = ensemble_pred[key] / len(config['hydro_models'])
 
     return ensemble_pred
-

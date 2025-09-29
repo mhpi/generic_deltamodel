@@ -2,6 +2,7 @@
 
 Run this script to validate an example config object (see bottom of file).
 """
+
 import logging
 import os
 from datetime import datetime
@@ -9,8 +10,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Union
 
-from pydantic import (BaseModel, Field, ValidationError, field_validator,
-                      model_validator)
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ def check_path(v: str) -> Path:
 
 class ModeEnum(str, Enum):
     """Enumeration for different modes of operation."""
+
     train = 'train'
     test = 'test'
     train_test = 'train_test'
@@ -35,12 +36,14 @@ class ModeEnum(str, Enum):
 
 class LossFunctionConfig(BaseModel):
     """Configuration class for loss functions."""
+
     model: str = Field(..., description="The name of the loss function.")
     weight: float = Field(default=1.0, description="Weight of the loss function.")
 
 
 class TrainingConfig(BaseModel):
     """Configuration class for training."""
+
     start_time: str
     end_time: str
     target: list[str]
@@ -71,6 +74,7 @@ class TrainingConfig(BaseModel):
 
 class TestingConfig(BaseModel):
     """Configuration class for testing."""
+
     start_time: str
     end_time: str
     batch_size: int
@@ -88,26 +92,39 @@ class TestingConfig(BaseModel):
 
 class PhyModelConfig(BaseModel):
     """Configuration class for the physics-based model."""
+
     model: list[str]
     nmul: int
     warm_up: int
     dynamic_params: dict[str, list[str]]
-    forcings: list[str] = Field(default_factory=list, description="List of dynamic input variables.")
-    attributes: list[str] = Field(default_factory=list, description="List of static input variables.")
+    forcings: list[str] = Field(
+        default_factory=list, description="List of dynamic input variables."
+    )
+    attributes: list[str] = Field(
+        default_factory=list, description="List of static input variables."
+    )
 
 
 class NeuralNetworkModelConfig(BaseModel):
     """Configuration class for the neural network model."""
-    model: str = Field(..., description="The type of neural network model (e.g., LSTM).")
+
+    model: str = Field(
+        ..., description="The type of neural network model (e.g., LSTM)."
+    )
     dropout: float = Field(..., ge=0.0, le=1.0, description="Dropout rate.")
     hidden_size: int = Field(..., gt=0, description="Number of hidden units.")
     learning_rate: float = Field(..., gt=0, description="Learning rate.")
-    forcings: list[str] = Field(default_factory=list, description="List of dynamic input variables.")
-    attributes: list[str] = Field(default_factory=list, description="List of static input variables.")
+    forcings: list[str] = Field(
+        default_factory=list, description="List of dynamic input variables."
+    )
+    attributes: list[str] = Field(
+        default_factory=list, description="List of static input variables."
+    )
 
 
 class DeltaModelConfig(BaseModel):
     """Configuration class for the DPL model."""
+
     rho: int
     phy_model: PhyModelConfig
     nn_model: NeuralNetworkModelConfig
@@ -115,13 +132,18 @@ class DeltaModelConfig(BaseModel):
 
 class ObservationConfig(BaseModel):
     """Configuration class for observations."""
+
     name: str = 'not_defined'
     train_path: str = 'not_defined'
     test_path: str = 'not_defined'
     start_time: str = 'not_defined'
     end_time_all: str = 'not_defined'
-    all_forcings: list[str] = Field(default_factory=list, description="List of dynamic input variables.")
-    all_attributes: list[str] = Field(default_factory=list, description="List of static input variables.")
+    all_forcings: list[str] = Field(
+        default_factory=list, description="List of dynamic input variables."
+    )
+    all_attributes: list[str] = Field(
+        default_factory=list, description="List of static input variables."
+    )
 
     @field_validator('train_path', 'test_path')
     @classmethod
@@ -134,10 +156,18 @@ class ObservationConfig(BaseModel):
     @model_validator(mode='after')
     def validate_dataset_times(cls, values):
         """Validates the dataset start and end times."""
-        if values.start_time_all == 'not_defined' and values.end_time_all == 'not_defined':
+        if (
+            values.start_time_all == 'not_defined'
+            and values.end_time_all == 'not_defined'
+        ):
             return values
-        elif values.start_time_all == 'not_defined' or values.end_time_all == 'not_defined':
-            raise ValueError("Both train_path and test_path must be defined if either is specified.")
+        elif (
+            values.start_time_all == 'not_defined'
+            or values.end_time_all == 'not_defined'
+        ):
+            raise ValueError(
+                "Both train_path and test_path must be defined if either is specified."
+            )
         else:
             start_time = datetime.strptime(values.start_time_all, '%Y/%m/%d')
             end_time = datetime.strptime(values.end_time_all, '%Y/%m/%d')
@@ -145,8 +175,10 @@ class ObservationConfig(BaseModel):
                 raise ValueError("Dataset start time must be earlier than end time.")
             return values
 
+
 class Config(BaseModel):
     """Configuration class for the model."""
+
     mode: ModeEnum = Field(default=ModeEnum.train_test)
     do_tune: bool = False
     multimodel_type: str = 'none'
@@ -235,7 +267,7 @@ if __name__ == '__main__':
                     },
                     'forcings': ['x1_var', 'x2_var'],
                     'attributes': ['attr1', 'attr2'],
-                    },
+                },
                 'nn_model': {
                     'model': 'LSTM',
                     'dropout': 0.5,

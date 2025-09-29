@@ -21,6 +21,7 @@ class BaseLoader(Dataset, ABC):
     overwrite : bool, optional
         Whether to overwrite existing data. Default is False.
     """
+
     def __init__(
         self,
         test_split: Optional[bool] = False,
@@ -38,7 +39,9 @@ class BaseLoader(Dataset, ABC):
                 train_range = self.config['train_t_range']
                 test_range = self.config['test_t_range']
             except KeyError as e:
-                raise KeyError("Missing train or test time range in configuration.") from e
+                raise KeyError(
+                    "Missing train or test time range in configuration."
+                ) from e
 
             self.train_dataset = self._preprocess_data(train_range)
             self.test_dataset = self._preprocess_data(test_range)

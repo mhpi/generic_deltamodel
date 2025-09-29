@@ -14,8 +14,8 @@ def plot_hydrograph(
     timesteps: pd.DatetimeIndex,
     predictions: Union[NDArray[np.float32], torch.Tensor],
     obs: Union[NDArray[np.float32], torch.Tensor] = None,
-    resample: Literal['D','W', 'M', 'Y'] = 'D',
-    title = None,
+    resample: Literal['D', 'W', 'M', 'Y'] = 'D',
+    title=None,
     ylabel: str = 'Streamflow (mm/day)',
     minor_ticks: bool = False,
     figsize: tuple = (12, 6),
@@ -55,11 +55,13 @@ def plot_hydrograph(
         obs = np.zeros_like(predictions)
 
     # Resample the data to the specified temporal resolution.
-    data = pd.DataFrame({
-        'time': timesteps,
-        'pred': predictions,
-        'obs': obs,
-    })
+    data = pd.DataFrame(
+        {
+            'time': timesteps,
+            'pred': predictions,
+            'obs': obs,
+        }
+    )
     data = timestep_resample(data, resolution=resample, method='mean')
 
     plt.rcParams.update({'font.size': fontsize})

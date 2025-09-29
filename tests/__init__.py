@@ -11,7 +11,7 @@ def get_available_classes(
     base_class: type,
 ) -> list[type]:
     """Dynamically import all modules from the specified directory.
-        
+
     Parameters
     ----------
     path

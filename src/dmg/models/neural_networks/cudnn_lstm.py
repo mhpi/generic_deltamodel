@@ -8,10 +8,12 @@ from torch.nn import Parameter
 
 from dmg.core.calc.dropout import DropMask, createMask
 
-#------------------------------------------#
+# ------------------------------------------#
 # NOTE: Suppress this warning until we can implement a proper pytorch nn.LSTM.
-warnings.filterwarnings("ignore", message=".*weights are not part of single contiguous chunk.*")
-#------------------------------------------#
+warnings.filterwarnings(
+    "ignore", message=".*weights are not part of single contiguous chunk.*"
+)
+# ------------------------------------------#
 
 
 class CudnnLstm(torch.nn.Module):
@@ -26,6 +28,7 @@ class CudnnLstm(torch.nn.Module):
     dr
         Dropout rate. Default is 0.5.
     """
+
     def __init__(
         self,
         *,
@@ -78,7 +81,7 @@ class CudnnLstm(torch.nn.Module):
         dr_false: bool = False,
     ) -> tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         """Forward pass.
-        
+
         Parameters
         ----------
         input
@@ -182,6 +185,7 @@ class CudnnLstmModel(torch.nn.Module):
     dr
         Dropout rate.
     """
+
     def __init__(
         self,
         *,
@@ -211,7 +215,7 @@ class CudnnLstmModel(torch.nn.Module):
         dr_false: Optional[bool] = False,
     ) -> torch.Tensor:
         """Forward pass.
-        
+
         Parameters
         ----------
         x

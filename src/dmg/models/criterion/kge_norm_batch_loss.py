@@ -28,6 +28,7 @@ class KgeNormBatchLoss(BaseCriterion):
 
         - eps: Stability term to prevent division by zero. Default is 0.1.
     """
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -57,7 +58,7 @@ class KgeNormBatchLoss(BaseCriterion):
             Tensor of target observation data.
         **kwargs
             Additional arguments for interface compatibility, not used.
-        
+
         Returns
         -------
         torch.Tensor
@@ -78,7 +79,9 @@ class KgeNormBatchLoss(BaseCriterion):
 
         # Compute correlation coefficient (r)
         numerator = torch.sum((p_sub - mean_p) * (t_sub - mean_t))
-        denominator = torch.sqrt(torch.sum((p_sub - mean_p)**2) * torch.sum((t_sub - mean_t)**2))
+        denominator = torch.sqrt(
+            torch.sum((p_sub - mean_p) ** 2) * torch.sum((t_sub - mean_t) ** 2)
+        )
         r = numerator / (denominator + self.eps)
 
         # Compute variability ratio (beta)
@@ -88,9 +91,9 @@ class KgeNormBatchLoss(BaseCriterion):
         gamma = std_p / (std_t + self.eps)
 
         # Compute KGE
-        kge = 1 - torch.sqrt((r - 1)**2 + (beta - 1)**2 + (gamma - 1)**2)
+        kge = 1 - torch.sqrt((r - 1) ** 2 + (beta - 1) ** 2 + (gamma - 1) ** 2)
 
         # Return KGE loss (1 - KGE)
-        loss = 1 - kge/(2 - kge)
+        loss = 1 - kge / (2 - kge)
 
         return loss

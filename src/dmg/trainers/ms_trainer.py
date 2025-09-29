@@ -18,10 +18,10 @@ class MsTrainer(BaseTrainer):
     """Generic, unified trainer for neural networks and differentiable models.
 
     Inspired by the Hugging Face Trainer class.
-    
+
     Retrieves and formats data, initializes optimizers/schedulers/loss functions,
     and runs training and testing/inference loops.
-    
+
     Parameters
     ----------
     config
@@ -46,6 +46,7 @@ class MsTrainer(BaseTrainer):
     training loop. This will also enable using ReduceLROnPlateau scheduler.
     NOTE: Training method and sampler implementation coming at a later date.
     """
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -70,23 +71,31 @@ class MsTrainer(BaseTrainer):
 
     def init_optimizer(self) -> torch.optim.Optimizer:
         """Initialize a model state optimizer."""
-        raise NotImplementedError("Method not implemented. Multiscale training"/
-                                  " will be enabled at a later date.")
+        raise NotImplementedError(
+            "Method not implemented. Multiscale training"
+            / " will be enabled at a later date."
+        )
 
     def init_scheduler(self) -> None:
         """Initialize a learning rate scheduler for the optimizer."""
-        raise NotImplementedError("Method not implemented. Multiscale training"/
-                                  " will be enabled at a later date.")
+        raise NotImplementedError(
+            "Method not implemented. Multiscale training"
+            / " will be enabled at a later date."
+        )
 
     def train(self) -> None:
         """Entry point for training loop."""
-        raise NotImplementedError("Method not implemented. Multiscale training"/
-                                  " will be enabled at a later date.")
+        raise NotImplementedError(
+            "Method not implemented. Multiscale training"
+            / " will be enabled at a later date."
+        )
 
     def evaluate(self) -> None:
         """Run model evaluation and return both metrics and model outputs."""
-        raise NotImplementedError("Method not implemented. Multiscale training"/
-                                  " will be enabled at a later date.")
+        raise NotImplementedError(
+            "Method not implemented. Multiscale training"
+            / " will be enabled at a later date."
+        )
 
     def inference(self) -> None:
         """Run batch model inference and save model outputs."""
@@ -117,7 +126,7 @@ class MsTrainer(BaseTrainer):
         target_key: str = None,
     ) -> None:
         """Merge batch data into a single dictionary.
-        
+
         Parameters
         ----------
         batch_list
@@ -135,7 +144,9 @@ class MsTrainer(BaseTrainer):
                     dim = 1
                 else:
                     dim = 0
-                data[key] = torch.cat([d[key] for d in batch_list], dim=dim).cpu().numpy()
+                data[key] = (
+                    torch.cat([d[key] for d in batch_list], dim=dim).cpu().numpy()
+                )
             return data
 
         except ValueError as e:
@@ -148,7 +159,7 @@ class MsTrainer(BaseTrainer):
         batch_end: NDArray,
     ) -> None:
         """Forward loop used in model evaluation and inference.
-        
+
         Parameters
         ----------
         data
@@ -161,7 +172,9 @@ class MsTrainer(BaseTrainer):
         # Track predictions accross batches
         batch_predictions = []
 
-        for i in tqdm.tqdm(range(len(batch_start)), desc='Forwarding', leave=False, dynamic_ncols=True):
+        for i in tqdm.tqdm(
+            range(len(batch_start)), desc='Forwarding', leave=False, dynamic_ncols=True
+        ):
             self.current_batch = i
 
             # Select a batch of data
@@ -176,17 +189,22 @@ class MsTrainer(BaseTrainer):
             # Save the batch predictions
             model_name = self.config['delta_model']['phy_model']['model'][0]
             prediction = {
-                key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()
+                key: tensor.cpu().detach()
+                for key, tensor in prediction[model_name].items()
             }
             batch_predictions.append(prediction)
         return batch_predictions
 
-
     def calc_metrics(self) -> None:
         """Calculate and save model performance metrics."""
-        raise NotImplementedError("Method not implemented. Multiscale training"/
-                                  " will be enabled at a later date.")
+        raise NotImplementedError(
+            "Method not implemented. Multiscale training"
+            / " will be enabled at a later date."
+        )
+
     def _log_epoch_stats(self) -> None:
         """Log statistics after each epoch."""
-        raise NotImplementedError("Method not implemented. Multiscale training"/
-                                  " will be enabled at a later date.")
+        raise NotImplementedError(
+            "Method not implemented. Multiscale training"
+            / " will be enabled at a later date."
+        )

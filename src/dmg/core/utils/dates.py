@@ -11,12 +11,12 @@ from pydantic import BaseModel, ConfigDict, model_validator
 log = logging.getLogger(__name__)
 
 
-
 class Dates(BaseModel):
     """Class to handle time-related operations and configurations.
 
     Adapted from Tadd Bindas.
     """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
     daily_format: str = "%Y/%m/%d"
     hourly_format: str = "%Y/%m/%d %H:%M:%S"
@@ -25,17 +25,21 @@ class Dates(BaseModel):
     end_time: str
     rho: Optional[int] = None
     batch_daily_time_range: Optional[pd.DatetimeIndex] = pd.DatetimeIndex(
-        [], dtype="datetime64[ns]",
+        [],
+        dtype="datetime64[ns]",
     )
     batch_hourly_time_range: Optional[pd.DatetimeIndex] = pd.DatetimeIndex(
-        [], dtype="datetime64[ns]",
+        [],
+        dtype="datetime64[ns]",
     )
     daily_time_range: Optional[pd.DatetimeIndex] = pd.DatetimeIndex(
-        [], dtype="datetime64[ns]",
+        [],
+        dtype="datetime64[ns]",
     )
     hourly_indices: Optional[torch.Tensor] = torch.empty(0)
     hourly_time_range: Optional[pd.DatetimeIndex] = pd.DatetimeIndex(
-        [], dtype="datetime64[ns]",
+        [],
+        dtype="datetime64[ns]",
     )
     numerical_time_range: Optional[NDArray[np.float32]] = np.empty(0)
 
@@ -43,14 +47,14 @@ class Dates(BaseModel):
         super().__init__(
             start_time=time_range['start_time'],
             end_time=time_range['end_time'],
-            rho = rho,
+            rho=rho,
         )
 
     @model_validator(mode="after")
     @classmethod
     def validate_dates(cls, dates: Any) -> Any:
         """Validate the dates configuration.
-        
+
         Parameters
         ----------
         dates : Any
@@ -99,7 +103,7 @@ class Dates(BaseModel):
 
     def set_batch_time(self, daily_time_range: pd.DatetimeIndex):
         """Set the batch time range.
-        
+
         Parameters
         ----------
         daily_time_range : pd.DatetimeIndex
@@ -123,7 +127,9 @@ class Dates(BaseModel):
 
         # The indices for the dates in your selected routing time range.
         self.numerical_time_range = np.arange(
-            origin_base_start_time, origin_base_end_time + 1, 1,
+            origin_base_start_time,
+            origin_base_end_time + 1,
+            1,
         )
 
         common_elements = self.hourly_time_range.intersection(
@@ -138,7 +144,9 @@ class Dates(BaseModel):
         if self.rho is not None:
             sample_size = len(self.daily_time_range)
             random_start = torch.randint(
-                low=0, high=sample_size - self.rho, size=(1, 1),
+                low=0,
+                high=sample_size - self.rho,
+                size=(1, 1),
             )[0][0].item()
             self.batch_daily_time_range = self.daily_time_range[
                 random_start : (random_start + self.rho)

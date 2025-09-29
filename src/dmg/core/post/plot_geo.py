@@ -15,7 +15,7 @@ def geoplot_single_metric(
     marker_size: int = 50,
 ):
     """Geographically map a single model performance metric using Basemap.
-    
+
     Parameters
     ----------
     gdf
@@ -41,14 +41,18 @@ def geoplot_single_metric(
         raise ValueError("The GeoDataFrame must include 'lat' and 'lon' columns.")
 
     if metric_name not in gdf.columns:
-        raise ValueError(f"The GeoDataFrame does not contain the column '{metric_name}'.")
+        raise ValueError(
+            f"The GeoDataFrame does not contain the column '{metric_name}'."
+        )
 
     # Extract latitude and longitude bounds for the map
     min_lat, max_lat = gdf['lat'].min() - 5, gdf['lat'].max() + 5
     min_lon, max_lon = gdf['lon'].min() - 5, gdf['lon'].max() + 5
 
     # Create the figure with Cartopy
-    fig, ax = plt.subplots(figsize=(12, 8), dpi=dpi, subplot_kw={'projection': ccrs.Mercator()})
+    fig, ax = plt.subplots(
+        figsize=(12, 8), dpi=dpi, subplot_kw={'projection': ccrs.Mercator()}
+    )
     ax.set_extent([min_lon, max_lon, min_lat, max_lat], crs=ccrs.PlateCarree())
 
     # Add map features
@@ -57,20 +61,23 @@ def geoplot_single_metric(
     ax.add_feature(cfeature.STATES.with_scale('50m'), linewidth=0.4)
 
     if map_color:
-        ax.add_feature(cfeature.LAND) #, facecolor='white')
-        ax.add_feature(cfeature.OCEAN) #, facecolor='white')
+        ax.add_feature(cfeature.LAND)  # , facecolor='white')
+        ax.add_feature(cfeature.OCEAN)  # , facecolor='white')
     else:
         ax.add_feature(cfeature.LAND, facecolor='white')
         ax.add_feature(cfeature.OCEAN, facecolor='white')
-        
+
     ax.add_feature(cfeature.COASTLINE)
 
     if draw_rivers:
-        ax.add_feature(cfeature.RIVERS.with_scale('50m'), linewidth=0.3, edgecolor='blue')
+        ax.add_feature(
+            cfeature.RIVERS.with_scale('50m'), linewidth=0.3, edgecolor='blue'
+        )
 
     # Plot the metric data
     scatter = ax.scatter(
-        gdf['lon'], gdf['lat'],
+        gdf['lon'],
+        gdf['lat'],
         c=gdf[metric_name],
         s=marker_size,
         cmap='coolwarm',
@@ -85,7 +92,7 @@ def geoplot_single_metric(
     cbar = plt.colorbar(scatter, orientation='horizontal', pad=0.05, ax=ax)
     cbar.set_label(f"{metric_name.upper()}", fontsize=14)
     cbar.ax.tick_params(labelsize=14)
-    
+
     # Add labels and title
     plt.title(title or f"Spatial Map of {metric_name.upper()}", fontsize=14)
     plt.tight_layout()

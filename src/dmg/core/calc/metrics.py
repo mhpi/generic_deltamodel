@@ -17,9 +17,10 @@ class Metrics(BaseModel):
 
     Using Pydantic BaseModel for validation.
     Metrics are calculated at each grid point and are listed below.
-    
+
     Adapted from Tadd Bindas, Yalan Song, Farshid Rahmani.
     """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
     pred: NDArray[np.float32]
     target: NDArray[np.float32]
@@ -171,10 +172,18 @@ class Metrics(BaseModel):
                     _pred_std = np.std(pred)
                     _target_std = np.std(target)
                     self.kge[i] = self._kge(
-                        _pred_mean, _target_mean, _pred_std, _target_std, self.corr[i],
+                        _pred_mean,
+                        _target_mean,
+                        _pred_std,
+                        _target_std,
+                        self.corr[i],
                     )
                     self.kge_12[i] = self._kge_12(
-                        _pred_mean, _target_mean, _pred_std, _target_std, self.corr[i],
+                        _pred_mean,
+                        _target_mean,
+                        _pred_std,
+                        _target_std,
+                        self.corr[i],
                     )
 
                     self.nse[i] = self.r2[i] = self._nse_r2(pred, target, _target_mean)
@@ -185,7 +194,7 @@ class Metrics(BaseModel):
     @classmethod
     def validate_pred(cls, metrics: Any) -> Any:
         """Checks that there are no NaN predictions.
-        
+
         Parameters
         ----------
         metrics : Any
@@ -195,7 +204,7 @@ class Metrics(BaseModel):
         ------
         ValueError
             If there are NaN predictions.
-        
+
         Returns
         -------
         Any
@@ -227,7 +236,7 @@ class Metrics(BaseModel):
 
     def model_dump_agg_stats(self, path: str) -> None:
         """Dump aggregate statistics (median, mean, std) to json or csv.
-        
+
         Parameters
         ----------
         path : str
@@ -243,7 +252,9 @@ class Metrics(BaseModel):
                 writer = csv.writer(f)
                 writer.writerow(['Metric', 'Median', 'Mean', 'Std'])
                 for metric, values in stats.items():
-                    writer.writerow([metric, values['median'], values['mean'], values['std']])
+                    writer.writerow(
+                        [metric, values['median'], values['mean'], values['std']]
+                    )
         else:
             raise ValueError("Provide either a .json or .csv file path.")
 
@@ -263,7 +274,7 @@ class Metrics(BaseModel):
 
     def dump_metrics(self, path: str) -> None:
         """Dump all metrics and aggregate statistics (median, mean, std) to json.
-        
+
         Parameters
         ----------
         path : str
@@ -287,7 +298,7 @@ class Metrics(BaseModel):
         ----------
         data : NDArray[np.float32]
             Data to calculate mean.
-        
+
         Returns
         -------
         NDArray[np.float32]
@@ -312,7 +323,7 @@ class Metrics(BaseModel):
         offset: float = 0.0,
     ) -> NDArray[np.float32]:
         """Calculate bias."""
-        return np.nanmean(abs(pred - target)/(target + offset), axis=1)
+        return np.nanmean(abs(pred - target) / (target + offset), axis=1)
 
     @staticmethod
     def _bias_rel(
@@ -320,7 +331,7 @@ class Metrics(BaseModel):
         target: NDArray[np.float32],
     ) -> NDArray[np.float32]:
         """Calculate relative bias.
-        
+
         Don't sum together because if NaNs are present at different idx,
         the sum will be off.
         """
@@ -419,7 +430,7 @@ class Metrics(BaseModel):
         ub: int = 10,
     ) -> np.float32:
         """Calculate maximum value of predictions.
-        
+
         Parameters
         ----------
         pred : NDArray[np.float32]
@@ -432,24 +443,26 @@ class Metrics(BaseModel):
             Upper bound. Default is 10.
         """
         idx_max = np.nanargmax(target)
-        if (idx_max < lb):
+        if idx_max < lb:
             lb = idx_max
-        elif (ub > len(pred) - idx_max):
+        elif ub > len(pred) - idx_max:
             ub = len(pred) - idx_max
         else:
             pass
-        return np.nanmax(pred[idx_max - lb:idx_max + ub])
+        return np.nanmax(pred[idx_max - lb : idx_max + ub])
 
     @staticmethod
     def _corr(
-        pred: NDArray[np.float32], target: NDArray[np.float32],
+        pred: NDArray[np.float32],
+        target: NDArray[np.float32],
     ) -> NDArray[np.float32]:
         """Calculate correlation."""
         return stats.pearsonr(pred, target)[0]
 
     @staticmethod
     def _corr_spearman(
-        pred: NDArray[np.float32], target: NDArray[np.float32],
+        pred: NDArray[np.float32],
+        target: NDArray[np.float32],
     ) -> np.float32:
         """Calculate Spearman correlation."""
         return stats.spearmanr(pred, target)[0]

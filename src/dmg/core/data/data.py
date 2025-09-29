@@ -20,16 +20,16 @@ def intersect(tLst1: list[np.float32], tLst2: list[np.float32]) -> list[int]:
 
 def time_to_date(t: int, hr: bool = False) -> Union[dt.date, dt.datetime]:
     """Convert time to date or datetime object.
-    
+
     Adapted from Farshid Rahmani.
-    
+
     Parameters
     ----------
     t
         Time object to convert.
     hr
         If True, return datetime object.
-    
+
     Returns
     -------
     Union[dt.date, dt.datetime]
@@ -62,14 +62,14 @@ def trange_to_array(
     step=np.timedelta64(1, "D"),
 ) -> NDArray[np.float32]:
     """Convert time range to array of dates.
-    
+
     Parameters
     ----------
     t_range
         Time range to convert.
     step
         Step size for the array.
-    
+
     Returns
     -------
     NDArray[np.float32]
@@ -87,7 +87,7 @@ def random_index(
     warm_up: int = 0,
 ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
     """Generate random indices for grid and time.
-    
+
     Parameters
     ----------
     ngrid
@@ -98,7 +98,7 @@ def random_index(
         Tuple of batch size and rho.
     warm_up
         Number of warm-up time steps.
-    
+
     Returns
     -------
     tuple[NDArray[np.float32], NDArray[np.float32]]
@@ -125,7 +125,7 @@ def create_training_grid(
         Configuration dictionary.
     n_samples
         The number of samples to use in the training grid.
-    
+
     Returns
     -------
     tuple[int, int, int]
@@ -145,12 +145,20 @@ def create_training_grid(
     n_iter_ep = int(
         np.ceil(
             np.log(0.01)
-            / np.log(1 - config['train']['batch_size'] * rho / n_samples
-                     / (n_t - config['delta_model']['phy_model'].get('warm_up', 0)),
+            / np.log(
+                1
+                - config['train']['batch_size']
+                * rho
+                / n_samples
+                / (n_t - config['delta_model']['phy_model'].get('warm_up', 0)),
             ),
         ),
     )
-    return n_samples, n_iter_ep, n_t,
+    return (
+        n_samples,
+        n_iter_ep,
+        n_t,
+    )
 
 
 def select_subset(
@@ -187,7 +195,7 @@ def select_subset(
         If True, create tensors with gradient tracking.
     warm_up
         Number of warm-up time steps.
-    
+
     Returns
     -------
     torch.Tensor
@@ -195,8 +203,8 @@ def select_subset(
     """
     nx = x.shape[-1]
     nt = x.shape[0]
-    if x.shape[0] == len(i_grid):   #hack
-        i_grid = np.arange(0,len(i_grid))  # hack
+    if x.shape[0] == len(i_grid):  # hack
+        i_grid = np.arange(0, len(i_grid))  # hack
     if nt <= rho:
         i_t.fill(0)
 
@@ -205,8 +213,10 @@ def select_subset(
     if i_t is not None:
         x_tensor = torch.zeros([rho + warm_up, batch_size, nx], requires_grad=has_grad)
         for k in range(batch_size):
-            temp = x[np.arange(i_t[k] - warm_up, i_t[k] + rho), i_grid[k]:i_grid[k] + 1, :]
-            x_tensor[:, k:k + 1, :] = torch.from_numpy(temp)
+            temp = x[
+                np.arange(i_t[k] - warm_up, i_t[k] + rho), i_grid[k] : i_grid[k] + 1, :
+            ]
+            x_tensor[:, k : k + 1, :] = torch.from_numpy(temp)
     else:
         if len(x.shape) == 2:
             # Used for local calibration kernel (x = Ngrid * Ntime).
@@ -218,7 +228,9 @@ def select_subset(
 
     if c is not None:
         nc = c.shape[-1]
-        temp = np.repeat(np.reshape(c[i_grid, :], [batch_size, 1, nc]), rho + warm_up, axis=1)
+        temp = np.repeat(
+            np.reshape(c[i_grid, :], [batch_size, 1, nc]), rho + warm_up, axis=1
+        )
         c_tensor = torch.from_numpy(temp).float()
 
         if tuple_out:
@@ -243,7 +255,7 @@ def numpy_to_torch_dict(
         The numpy data dictionary.
     device
         The device to move the data to.
-    
+
     Returns
     -------
     dict[str, torch.Tensor]
@@ -261,12 +273,12 @@ def numpy_to_torch_dict(
 
 def load_json(file_path: str) -> dict:
     """Load JSON data from a file and return it as a dictionary.
-    
+
     Parameters
     ----------
     file_path
         Path to the JSON file to load.
-    
+
     Returns
     -------
     dict
@@ -283,17 +295,19 @@ def load_json(file_path: str) -> dict:
     except FileNotFoundError as e:
         raise FileNotFoundError(f"Error: File '{file_path}' not found.") from e
     except json.JSONDecodeError as e:
-        raise json.JSONDecodeError(f"Error: Failed to decode JSON from file '{file_path}'.") from e
+        raise json.JSONDecodeError(
+            f"Error: Failed to decode JSON from file '{file_path}'."
+        ) from e
 
 
 def txt_to_array(txt_path: str) -> NDArray[np.float32]:
     """Load txt file of gage ids to numpy array.
-    
+
     Parameters
     ----------
     txt_path
         Path to the txt file to load.
-    
+
     Returns
     -------
     NDArray[np.float32]
@@ -346,16 +360,17 @@ def timestep_resample(
 
     return data_resample
 
+
 def split_dataset_by_basin(
     dataset: dict[str, torch.Tensor],
     config: dict[str, Any],
     holdout_index: int,
 ) -> tuple[Optional[dict[str, torch.Tensor]], Optional[dict[str, torch.Tensor]]]:
     """Split dataset by basin for spatial testing.
-    
+
     NOTE: Currently this is based on the gage_split file we may want to change
     to this in the future.
-    
+
     Parameters
     ----------
     dataset
@@ -364,7 +379,7 @@ def split_dataset_by_basin(
         Configuration dictionary containing test settings
     holdout_index
         Index for the current holdout experiment
-        
+
     Returns
     -------
     Tuple[Optional[Dict[str, torch.Tensor]], Optional[Dict[str, torch.Tensor]]]
@@ -373,94 +388,106 @@ def split_dataset_by_basin(
     if not dataset:
         log.warning("Empty dataset provided for spatial splitting")
         return dataset, dataset
-    
+
     test_config = config.get('test', {})
     if test_config.get('type') != 'spatial':
         log.info("Not a spatial test, returning original dataset")
         return dataset, dataset
-    
+
     try:
         extent = test_config.get('extent')
         holdout_gages = []
-        
+
         # Determine holdout basins based on test extent type
         if extent == 'PUR':
             huc_regions = test_config.get('huc_regions', [])
             if holdout_index >= len(huc_regions):
-                raise ValueError(f"Invalid holdout index {holdout_index} for {len(huc_regions)} HUC regions")
-                
+                raise ValueError(
+                    f"Invalid holdout index {holdout_index} for {len(huc_regions)} HUC regions"
+                )
+
             holdout_hucs = huc_regions[holdout_index]
             gage_file = config['observations']['gage_split_file']
-            
+
             log.info(f"Loading PUR split data from {gage_file}")
             gageinfo = pd.read_csv(gage_file, dtype={"huc": int, "gage": str})
             holdout_hucs_int = [int(huc) for huc in holdout_hucs]
-            holdout_gages = gageinfo[gageinfo['huc'].isin(holdout_hucs_int)]['gage'].tolist()
-            
+            holdout_gages = gageinfo[gageinfo['huc'].isin(holdout_hucs_int)][
+                'gage'
+            ].tolist()
+
         elif extent == 'PUB':
             pub_ids = test_config.get('PUB_ids', [])
             if holdout_index >= len(pub_ids):
-                raise ValueError(f"Invalid holdout index {holdout_index} for {len(pub_ids)} PUB IDs")
-                
+                raise ValueError(
+                    f"Invalid holdout index {holdout_index} for {len(pub_ids)} PUB IDs"
+                )
+
             holdout_pub = pub_ids[holdout_index]
             gage_file = config['observations']['gage_split_file']
-            
+
             log.info(f"Loading PUB split data from {gage_file}")
             gageinfo = pd.read_csv(gage_file, dtype={"PUB_ID": int, "gage": str})
             holdout_gages = gageinfo[gageinfo['PUB_ID'] == holdout_pub]['gage'].tolist()
-            
+
         else:
             raise ValueError(f"Unsupported spatial test extent: {extent}")
-        
+
         # Load the complete basin list
         subset_path = config['observations']['subset_path']
         log.info(f"Loading basin subset from {subset_path}")
-        
+
         with open(subset_path) as f:
             content = f.read().strip()
             if content.startswith('[') and content.endswith(']'):
                 # Handle list format
                 content = content.strip('[]')
-                all_basins = [item.strip().strip(',') for item in content.split() if item.strip().strip(',')]
+                all_basins = [
+                    item.strip().strip(',')
+                    for item in content.split()
+                    if item.strip().strip(',')
+                ]
             else:
                 # Handle plain text format
                 all_basins = [line.strip() for line in content.split() if line.strip()]
-        
+
         # Create basin indices for train/test split
         holdout_gages_set = [int(str(basin).strip()) for basin in holdout_gages]
         test_indices = []
         train_indices = []
-        
+
         for i, basin in enumerate(all_basins):
             basin_int = int(str(basin).strip())
             if basin_int in holdout_gages_set:
                 test_indices.append(i)
             else:
                 train_indices.append(i)
-        
+
         if not test_indices:
             raise ValueError("No test basins found for current holdout!")
         if not train_indices:
             raise ValueError("No training basins found for current holdout!")
-            
-        log.info(f"Spatial split: {len(train_indices)} training basins, {len(test_indices)} test basins")
-        
+
+        log.info(
+            f"Spatial split: {len(train_indices)} training basins, {len(test_indices)} test basins"
+        )
+
         # Perform the actual dataset splitting
         train_data = {}
         test_data = {}
         train_indices_tensor = torch.tensor(train_indices, device='cpu')
         test_indices_tensor = torch.tensor(test_indices, device='cpu')
-        
+
         for key, tensor in dataset.items():
             if tensor is None:
                 train_data[key] = None
                 test_data[key] = None
                 continue
-                
+
             # Move to CPU for indexing
             cpu_tensor = tensor.to('cpu')
             original_device = tensor.device
-            
+
             if len(cpu_tensor.shape) == 3:
                 # Handle 3D tensors - could be [basins, time, features] or [time, basins, features]
                 if cpu_tensor.shape[0] == len(all_basins):
@@ -471,7 +498,7 @@ def split_dataset_by_basin(
                     # [time, basins, features] format (typical for HydroLoader)
                     train_data[key] = cpu_tensor[:, train_indices_tensor]
                     test_data[key] = cpu_tensor[:, test_indices_tensor]
-                    
+
             elif len(cpu_tensor.shape) == 2:
                 # Handle 2D tensors - typically [basins, features]
                 train_data[key] = cpu_tensor[train_indices_tensor]
@@ -481,14 +508,14 @@ def split_dataset_by_basin(
                 train_data[key] = tensor
                 test_data[key] = tensor
                 continue
-            
+
             # Move back to original device
             train_data[key] = train_data[key].to(original_device)
             test_data[key] = test_data[key].to(original_device)
-        
+
         log.info("Successfully split dataset by basins for spatial testing")
         return train_data, test_data
-        
+
     except Exception as e:
         log.error(traceback.format_exc())
         raise RuntimeError(f"Error splitting dataset by basin: {e}") from e
