@@ -17,7 +17,6 @@ authors = [
 ]
 maintainers = [
     { name = "Leo Lonzarich", email = "lglonzaric@gmail.com" },
-    { name = "Kathryn Lawson", email = "kel33@psu.edu" },
 ]
 requires-python = ">=3.12.0"
 dynamic = ["version"]
@@ -42,7 +41,7 @@ dependencies = [
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: Apache Software License",
+    "License :: Free for non-commercial use",
     "Operating System :: OS Independent",
 ]
 
@@ -92,7 +91,7 @@ lint.select = [
     "BLE",  # flake8-blind-except
     "UP",  # pyupgrade
     "RUF100",  # Report unused noqa directives
-    "COM812",  # Missing trailing comma
+    # "COM812",  # Missing trailing comma
 ]
 exclude = [
     ".git",
@@ -143,4 +142,5 @@ convention = "numpy"
 "*.ipynb" = ["E402", "E501", "F401", "F811", "F841", "T201"]
 
 [tool.ruff.format]
+quote-style = "preserve"
 docstring-code-format = true
