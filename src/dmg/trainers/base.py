@@ -29,13 +29,15 @@ class BaseTrainer(ABC):
     @abstractmethod
     def init_optimizer(self) -> torch.optim.Optimizer:
         """Initialize the optimizer as named in the config.
-        
+
         Returns
         -------
         torch.optim.Optimizer
             The initialized optimizer.
         """
-        raise NotImplementedError("Derived classes must implement `init_optimizer` method.")
+        raise NotImplementedError(
+            "Derived classes must implement `init_optimizer` method."
+        )
 
     @abstractmethod
     def train(self) -> None:
@@ -67,11 +69,13 @@ class BaseTrainer(ABC):
         observations
             Target variable observation data.
         """
-        raise NotImplementedError("Derived classes must implement the `calc_metrics` method.")
+        raise NotImplementedError(
+            "Derived classes must implement the `calc_metrics` method."
+        )
 
     def save_model(self, epoch: int) -> None:
         """Save the model at a specified epoch.
-        
+
         Parameters
         ----------
         epoch
@@ -85,7 +89,7 @@ class BaseTrainer(ABC):
 
     def load_model(self, checkpoint_path: str) -> None:
         """Load model from a checkpoint.
-        
+
         Parameters
         ----------
         checkpoint_path

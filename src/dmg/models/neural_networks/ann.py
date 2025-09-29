@@ -7,7 +7,7 @@ from torch.nn import Dropout, Linear
 
 class AnnModel(torch.nn.Module):
     """Artificial neural network (ANN) model.
-    
+
     Parameters
     ----------
     nx
@@ -19,6 +19,7 @@ class AnnModel(torch.nn.Module):
     dr
         Dropout rate. Default is 0.5.
     """
+
     def __init__(
         self,
         *,
@@ -42,12 +43,12 @@ class AnnModel(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
-        
+
         Parameters
         ----------
         x
             Input tensor. Assuming x is already in appropriate batch form.
-        
+
         Returns
         -------
         torch.Tensor
@@ -92,6 +93,7 @@ class AnnCloseModel(torch.nn.Module):
     fill_obs
         Whether to fill observations. Default is True.
     """
+
     def __init__(
         self,
         *,
@@ -112,14 +114,14 @@ class AnnCloseModel(torch.nn.Module):
 
     def forward(self, x: torch.Tensor, y: torch.Tensor = None) -> torch.Tensor:
         """Forward pass.
-        
+
         Parameters
         ----------
         x
             Input tensor. Assuming x is already in appropriate batch form.
         y
             Tensor of observation data.
-        
+
         Returns
         -------
         torch.Tensor

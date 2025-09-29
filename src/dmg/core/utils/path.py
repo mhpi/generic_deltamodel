@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 class PathBuilder(BaseModel):
     """Build and initialize output directories for saving models and outputs.
-    
+
     Using Pydantic BaseModel to enforce type checking and validation.
     Scalable and flexible for diverse model configurations.
 
@@ -18,10 +18,13 @@ class PathBuilder(BaseModel):
     config
         Configuration dictionary with experiment and model settings.
     """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
     model_config['protected_namespaces'] = ()
 
-    config: dict[str, Any] = Field(..., description="Experiment configuration dictionary")
+    config: dict[str, Any] = Field(
+        ..., description="Experiment configuration dictionary"
+    )
     base_path: str = ''
     dataset_name: str = ''
     phy_model_inputs: str = ''
@@ -40,7 +43,7 @@ class PathBuilder(BaseModel):
 
     def model_post_init(self, __context: Any) -> Any:
         """Post-initialization method to create output directories.
-        
+
         This method is called after the model is initialized.
         """
         self.base_path = self.config['save_path']
@@ -88,12 +91,12 @@ class PathBuilder(BaseModel):
 
     def build_path_out(self, model_path: str = None) -> dict[str, Any]:
         """Build path to model outputs from individual root paths.
-        
+
         Parameters
         ----------
         model_path : str
             Path to the model object.
-        
+
         Returns
         -------
         str
@@ -101,7 +104,7 @@ class PathBuilder(BaseModel):
         """
         if not model_path:
             model_path = self.build_path_model()
-        
+
         if ('test' in self.config['mode']) or ('train' in self.config['mode']):
             return os.path.join(
                 model_path,
@@ -115,11 +118,11 @@ class PathBuilder(BaseModel):
         else:
             raise ValueError(f"Invalid mode: {self.config['mode']}")
 
-    def write_path (self, config: dict[str, Any]) -> dict:
+    def write_path(self, config: dict[str, Any]) -> dict:
         """Create directory where model and outputs will be saved.
 
         Creates all root directories to support the target directory.
-        
+
         Returns
         -------
         dict
@@ -175,7 +178,7 @@ class PathBuilder(BaseModel):
     @staticmethod
     def save_config(path: str, config: dict[str, Any]) -> None:
         """Save the configuration metadata to the output directory.
-        
+
         Overwrite if it already exists.
         """
         config_path = os.path.join(path, 'config.json')
@@ -185,7 +188,7 @@ class PathBuilder(BaseModel):
     @staticmethod
     def validate_base_path(base_path: Any) -> Any:
         """Check that the base path exists. If not, attempt to create it.
-        
+
         Parameters
         ----------
         base_path : Any
@@ -197,7 +200,9 @@ class PathBuilder(BaseModel):
             try:
                 os.makedirs(base_path)
             except ValueError as e:
-                raise ValueError(f"Error creating base save path from config: {e}") from e
+                raise ValueError(
+                    f"Error creating base save path from config: {e}"
+                ) from e
 
     @staticmethod
     def _dataset_name(config: dict[str, Any]) -> str:
@@ -207,7 +212,7 @@ class PathBuilder(BaseModel):
     @staticmethod
     def _phy_model_inputs(config: dict[str, Any]) -> str:
         """Number of physical model input variables.
-        
+
         TODO: needs more thought (e.g. what is same count, different inputs?)
         ...maybe use hash.
         """
@@ -278,7 +283,7 @@ class PathBuilder(BaseModel):
     @staticmethod
     def _model_names(config: dict[str, Any]) -> str:
         """Names of the models used in an experiment.
-        
+
         Parameters
         ----------
         config
@@ -290,7 +295,7 @@ class PathBuilder(BaseModel):
     @staticmethod
     def _dynamic_parameters(config: dict[str, Any], hash: bool = False) -> str:
         """Dynamic parameters used in the model(s).
-        
+
         Parameters
         ----------
         hash
@@ -319,12 +324,12 @@ class PathBuilder(BaseModel):
 
     def _dynamic_state(self) -> str:
         """Identify if any physical model parameters are dynamic.
-        
+
         Parameters
         ----------
         dynamic_parameters
             String of dynamic parameters used in the model(s).
-        
+
         Returns
         -------
         str
@@ -339,12 +344,12 @@ class PathBuilder(BaseModel):
     @staticmethod
     def _loss_function(config: dict[str, Any]) -> str:
         """Loss function(s) used in the model(s).
-    
+
         Parameters
         ----------
         config
             Configuration dictionary.
-        
+
         Returns
         -------
         str
@@ -352,20 +357,18 @@ class PathBuilder(BaseModel):
         """
         models = config['delta_model']['phy_model']['model']
         loss_fn = config['loss_function']['model']
-        loss_fn_str = '_'.join(
-            loss_fn for model in models
-        )
+        loss_fn_str = '_'.join(loss_fn for model in models)
         return loss_fn_str
 
     @staticmethod
     def _hyperparameter_details(config: dict[str, Any]) -> str:
         """Details of hyperparameters used in the model(s).
-        
+
         Parameters
         ----------
         config
             Configuration dictionary.
-        
+
         Returns
         -------
         str
@@ -383,8 +386,10 @@ class PathBuilder(BaseModel):
 
         # Set hiddensize for single or multi-NN setups.
         if config['delta_model']['nn_model']['model'] == 'LstmMlpModel':
-            hidden_size = f"{config['delta_model']['nn_model']['lstm_hidden_size']}" \
-                            f"_{config['delta_model']['nn_model']['mlp_hidden_size']}"
+            hidden_size = (
+                f"{config['delta_model']['nn_model']['lstm_hidden_size']}"
+                f"_{config['delta_model']['nn_model']['mlp_hidden_size']}"
+            )
         else:
             hidden_size = config['delta_model']['nn_model']['hidden_size']
 

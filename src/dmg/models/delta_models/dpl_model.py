@@ -9,7 +9,7 @@ class DplModel(torch.nn.Module):
     """Differentiable parameter learning (dPL) model.
 
     Learn parameters for a physics model using a neural network (NN).
-    
+
     Default modality:
         Parameterization neural network (NN) -> Physics Model (phy_model)
 
@@ -35,6 +35,7 @@ class DplModel(torch.nn.Module):
     device
         The device to run the model on.
     """
+
     def __init__(
         self,
         phy_model_name: Optional[str] = None,
@@ -46,7 +47,9 @@ class DplModel(torch.nn.Module):
         super().__init__()
         self.name = 'dPL Model'
         self.config = config
-        self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = device or torch.device(
+            'cuda' if torch.cuda.is_available() else 'cpu'
+        )
 
         if nn_model and phy_model:
             self.phy_model = phy_model.to(self.device)
@@ -56,19 +59,21 @@ class DplModel(torch.nn.Module):
             self.phy_model = self._init_phy_model(phy_model_name)
             self.nn_model = self._init_nn_model()
         else:
-            raise ValueError("A (1) neural network and physics model or (2)" /
-                             " configuration dictionary is required.")
+            raise ValueError(
+                "A (1) neural network and physics model or (2)"
+                / " configuration dictionary is required."
+            )
 
         self.initialized = True
 
     def _init_phy_model(self, phy_model_name) -> torch.nn.Module:
         """Initialize a physics model.
-        
+
         Parameters
         ----------
         phy_model_name
             The name of the physics model.
-        
+
         Returns
         -------
         torch.nn.Module
@@ -79,15 +84,17 @@ class DplModel(torch.nn.Module):
         elif self.config['phy_model']:
             model_name = self.config['phy_model']['model'][0]
         else:
-            raise ValueError("A (1) physics model name or (2) model spec in" /
-                             " a configuration dictionary is required.")
+            raise ValueError(
+                "A (1) physics model name or (2) model spec in"
+                / " a configuration dictionary is required."
+            )
 
         model = import_phy_model(model_name)
         return model(self.config['phy_model'], device=self.device)
 
     def _init_nn_model(self) -> torch.nn.Module:
         """Initialize a neural network model.
-        
+
         Returns
         -------
         torch.nn.Module
@@ -101,12 +108,12 @@ class DplModel(torch.nn.Module):
 
     def forward(self, data_dict: dict[str, torch.Tensor]) -> torch.Tensor:
         """Forward pass.
-        
+
         Parameters
         ----------
         data_dict
             The input data dictionary.
-        
+
         Returns
         -------
         torch.Tensor

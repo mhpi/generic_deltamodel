@@ -34,6 +34,7 @@ class ModelHandler(torch.nn.Module):
     verbose
         Whether to print verbose output.
     """
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -69,7 +70,7 @@ class ModelHandler(torch.nn.Module):
 
     def list_models(self) -> list[str]:
         """List of models specified in the configuration.
-        
+
         Returns
         -------
         list[str]
@@ -105,7 +106,7 @@ class ModelHandler(torch.nn.Module):
 
     def load_model(self, epoch: int = 0) -> None:
         """Load a specific model from a checkpoint.
-        
+
         Parameters
         ----------
         epoch
@@ -117,7 +118,7 @@ class ModelHandler(torch.nn.Module):
                 # Ensemble weighting NN
                 self.ensemble_generator = EnsembleGenerator(
                     config=self.config['multimodel'],
-                    model_list = self.models[:-1],
+                    model_list=self.models[:-1],
                     device=self.device,
                 )
             else:
@@ -149,7 +150,8 @@ class ModelHandler(torch.nn.Module):
                             path,
                             weights_only=False,
                             map_location=self.device,
-                        )                    )
+                        )
+                    )
                     self.ensemble_generator.to(self.device)
                 else:
                     self.model_dict[name].load_state_dict(
@@ -170,7 +172,7 @@ class ModelHandler(torch.nn.Module):
 
     def get_parameters(self) -> list[torch.Tensor]:
         """Return all model parameters.
-        
+
         Returns
         -------
         list[torch.Tensor]
@@ -203,7 +205,7 @@ class ModelHandler(torch.nn.Module):
         eval
             Whether to run the model in evaluation mode with gradients
             disabled.
-        
+
         Returns
         -------
         Dict[str, torch.Tensor]
@@ -267,7 +269,7 @@ class ModelHandler(torch.nn.Module):
         loss_func: Optional[torch.nn.Module] = None,
     ) -> torch.Tensor:
         """Calculate combined loss across all models.
-            
+
         Parameters
         ----------
         dataset_dict
@@ -291,7 +293,9 @@ class ModelHandler(torch.nn.Module):
         # Loss calculation for each model
         for name, output in self.output_dict.items():
             if self.target_name not in output.keys():
-                raise ValueError(f"Target variable '{self.target_name}' not in model outputs.")
+                raise ValueError(
+                    f"Target variable '{self.target_name}' not in model outputs."
+                )
             output = output[self.target_name]
 
             loss = loss_func(
@@ -326,7 +330,7 @@ class ModelHandler(torch.nn.Module):
             Dictionary containing input data.
         loss_func
             Loss function to use.
-        
+
         Returns
         -------
         torch.Tensor
@@ -364,8 +368,10 @@ class ModelHandler(torch.nn.Module):
 
         if self.verbose:
             if self.config['multimodel']['use_rb_loss']:
-                tqdm.tqdm.write(f"Ensemble loss: {ensemble_loss.item()}, " \
-                                f"Range bound loss: {rb_loss.item()}")
+                tqdm.tqdm.write(
+                    f"Ensemble loss: {ensemble_loss.item()}, "
+                    f"Range bound loss: {rb_loss.item()}"
+                )
             else:
                 tqdm.tqdm.write(f"-- Ensemble loss: {ensemble_loss.item()}")
 
@@ -376,7 +382,7 @@ class ModelHandler(torch.nn.Module):
 
     def save_model(self, epoch: int) -> None:
         """Save model state dicts.
-        
+
         Parameters
         ----------
         epoch

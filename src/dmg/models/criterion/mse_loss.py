@@ -7,7 +7,7 @@ from dmg.models.criterion.base import BaseCriterion
 
 class MSELoss(BaseCriterion):
     """Mean Squared Error (MSE) loss function.
-    
+
     The MSE is calculated as:
         p: predicted value,
         t: target value,
@@ -22,6 +22,7 @@ class MSELoss(BaseCriterion):
     **kwargs
         Additional arguments for interface compatibility, not used.
     """
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -40,7 +41,7 @@ class MSELoss(BaseCriterion):
         **kwargs: Any,
     ) -> torch.Tensor:
         """Compute loss.
-        
+
         Parameters
         ----------
         y_pred
@@ -57,13 +58,12 @@ class MSELoss(BaseCriterion):
         """
         prediction, target = self._format(y_pred, y_obs)
 
-
         if len(target) > 0:
             mask = ~torch.isnan(target)
             p_sub = prediction[mask]
             t_sub = target[mask]
 
-            loss = torch.mean((p_sub - t_sub)**2)
+            loss = torch.mean((p_sub - t_sub) ** 2)
         else:
             loss = torch.tensor(0.0, device=self.device)
         return loss

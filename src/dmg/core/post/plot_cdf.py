@@ -54,7 +54,7 @@ def plot_cdf(
 
     # Ensure model_labels matches the number of models
     if model_labels is None:
-        model_labels = [f"Model {i+1}" for i in range(len(metrics))]
+        model_labels = [f"Model {i + 1}" for i in range(len(metrics))]
     elif len(model_labels) != len(metrics):
         print("Error: Number of model labels must match the number of models.")
         return
@@ -73,9 +73,15 @@ def plot_cdf(
                 cdf = np.arange(1, len(sorted_values) + 1) / len(sorted_values)
 
                 # Plot the CDF
-                plt.plot(sorted_values, cdf, label=f"{model_labels[i]} - {metric_name.capitalize()}")
+                plt.plot(
+                    sorted_values,
+                    cdf,
+                    label=f"{model_labels[i]} - {metric_name.capitalize()}",
+                )
             else:
-                print(f"Warning: Metric '{metric_name}' not found or invalid in model {i+1}.")
+                print(
+                    f"Warning: Metric '{metric_name}' not found or invalid in model {i + 1}."
+                )
 
     # Add labels, legend, and grid
     plt.title(title, fontsize=fontsize)
@@ -102,20 +108,30 @@ def plot_cdf(
         xlim = plt.xlim()
         ylim = plt.ylim()
 
-        arrow_x_start = xlim[0] + 0.15 * (xlim[1] - xlim[0])  # Start slightly to the right of the y-axis
-        arrow_x_end = xlim[0] + 0.3 * (xlim[1] - xlim[0])    # End near the right edge
-        arrow_y = ylim[0] + 0.25 * (ylim[1] - ylim[0])                # Keep it centered vertically
+        arrow_x_start = xlim[0] + 0.15 * (
+            xlim[1] - xlim[0]
+        )  # Start slightly to the right of the y-axis
+        arrow_x_end = xlim[0] + 0.3 * (xlim[1] - xlim[0])  # End near the right edge
+        arrow_y = ylim[0] + 0.25 * (ylim[1] - ylim[0])  # Keep it centered vertically
 
         # Add the arrow without text
         plt.annotate(
             "",  # No text
             xy=(arrow_x_end, arrow_y),
             xytext=(arrow_x_start, arrow_y),  # Keep the y-coordinate constant
-            arrowprops={'facecolor':'red', 'arrowstyle':'->', 'lw':2},
+            arrowprops={'facecolor': 'red', 'arrowstyle': '->', 'lw': 2},
             fontsize=fontsize,
         )
 
-        plt.text(arrow_x_start - 0.1, arrow_y, "Better", fontsize=12, color='black', ha='left', va='center')
+        plt.text(
+            arrow_x_start - 0.1,
+            arrow_y,
+            "Better",
+            fontsize=12,
+            color='black',
+            ha='left',
+            va='center',
+        )
 
     # Show the plot
     plt.show()

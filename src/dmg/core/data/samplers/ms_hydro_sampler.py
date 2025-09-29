@@ -9,12 +9,13 @@ from dmg.core.data.samplers.base import BaseSampler
 
 class MsHydroSampler(BaseSampler):
     """Multiscale hydrological data sampler.
-    
+
     Parameters
     ----------
     config
         Configuration dictionary.
     """
+
     def __init__(
         self,
         config: dict,
@@ -44,7 +45,9 @@ class MsHydroSampler(BaseSampler):
     ) -> torch.Tensor:
         """Select a subset of input tensor."""
         if self.config['mode'] == 'train':
-            raise NotImplementedError("Method not implemented. Multiscale training with sampler will be enabled at a later date.")
+            raise NotImplementedError(
+                "Method not implemented. Multiscale training with sampler will be enabled at a later date."
+            )
 
     def get_training_sample(
         self,
@@ -53,7 +56,9 @@ class MsHydroSampler(BaseSampler):
         nt: int,
     ) -> dict[str, torch.Tensor]:
         """Generate a training batch."""
-        raise NotImplementedError("Method not implemented. Multiscale training with sampler will be enabled at a later date.")
+        raise NotImplementedError(
+            "Method not implemented. Multiscale training with sampler will be enabled at a later date."
+        )
 
     def get_validation_sample(
         self,
@@ -72,20 +77,22 @@ class MsHydroSampler(BaseSampler):
                 dataset_sample[key] = torch.tensor(
                     value[warm_up:, i_s:i_e, :],
                     dtype=torch.float32,
-                    device = self.config['device'],
+                    device=self.config['device'],
                 )
             elif value.ndim == 2:
                 dataset_sample[key] = torch.tensor(
                     value[i_s:i_e, :],
                     dtype=torch.float32,
-                    device = self.config['device'],
+                    device=self.config['device'],
                 )
             elif value.ndim == 1:
                 dataset_sample[key] = torch.tensor(
                     value[i_s:i_e],
                     dtype=torch.float32,
-                    device = self.config['device'],
+                    device=self.config['device'],
                 )
             else:
-                raise ValueError(f"Incorrect input dimensions. {key} array must have 1, 2 or 3 dimensions.")
+                raise ValueError(
+                    f"Incorrect input dimensions. {key} array must have 1, 2 or 3 dimensions."
+                )
         return dataset_sample

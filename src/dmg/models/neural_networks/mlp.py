@@ -6,7 +6,7 @@ import torch.nn as nn
 
 class MlpModel(nn.Module):
     """Multi-layer perceptron (MLP) model.
-    
+
     Parameters
     ----------
     config
@@ -16,19 +16,23 @@ class MlpModel(nn.Module):
     ny
         Number of output features.
     """
+
     def __init__(self, config: dict[str, Any], nx: int, ny: int) -> None:
         super().__init__()
         self.name = 'MlpMulModel'
         self.config = config
 
         self.L1 = nn.Linear(
-            nx,  self.config['hidden_size'],
+            nx,
+            self.config['hidden_size'],
         )
         self.L2 = nn.Linear(
-            self.config['hidden_size'], self.config['hidden_size'],
+            self.config['hidden_size'],
+            self.config['hidden_size'],
         )
         self.L3 = nn.Linear(
-            self.config['hidden_size'], self.config['hidden_size'],
+            self.config['hidden_size'],
+            self.config['hidden_size'],
         )
         self.L4 = nn.Linear(self.config['hidden_size'], ny)
 
@@ -37,12 +41,12 @@ class MlpModel(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
-        
+
         Parameters
         ----------
         x
             Input tensor.
-        
+
         Returns
         -------
         out

@@ -13,7 +13,7 @@ class NseSqrtBatchLoss(BaseCriterion):
     Adapted from Yalan Song.
 
     Uses the first variable of the target array as the target variable.
-    
+
     The sNSE is calculated as:
         p: predicted value,
         t: target value,
@@ -34,6 +34,7 @@ class NseSqrtBatchLoss(BaseCriterion):
 
         - beta: Stability term to prevent division by zero. Default is 1e-6.
     """
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -72,7 +73,7 @@ class NseSqrtBatchLoss(BaseCriterion):
             Additional arguments.
 
             - sample_ids: indices of samples included in batch. (Required)
-        
+
         Returns
         -------
         torch.Tensor
@@ -84,7 +85,6 @@ class NseSqrtBatchLoss(BaseCriterion):
             sample_ids = kwargs['sample_ids'].astype(int)
         except KeyError as e:
             raise KeyError("'sample_ids' is not provided in kwargs") from e
-
 
         if len(target) > 0:
             # Prepare grid-based standard deviations for normalization.
@@ -101,7 +101,7 @@ class NseSqrtBatchLoss(BaseCriterion):
             t_sub = target[mask]
             std_sub = std_batch[mask]
 
-            sq_res = torch.sqrt((p_sub - t_sub)**2 + self.beta)
+            sq_res = torch.sqrt((p_sub - t_sub) ** 2 + self.beta)
             norm_res = sq_res / (std_sub + self.eps)
             loss = torch.mean(norm_res)
         else:

@@ -8,10 +8,10 @@ from numpy.typing import NDArray
 
 class BaseCriterion(torch.nn.Module, ABC):
     """Base class for loss functions extended from PyTorch Module.
-    
+
     All loss functions should inherit from this class, which enforces minimum
     requirements for loss functions used within dMG.
-    
+
     Parameters
     ----------
     config
@@ -22,6 +22,7 @@ class BaseCriterion(torch.nn.Module, ABC):
         Additional arguments for loss computation, maintains loss function
         interchangeability. Not always used.
     """
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -38,7 +39,7 @@ class BaseCriterion(torch.nn.Module, ABC):
         y_obs: Union[NDArray, torch.Tensor],
     ) -> None:
         """Check input tensors for dimensionality and type.
-        
+
         Parameters
         ----------
         y_pred
@@ -89,7 +90,7 @@ class BaseCriterion(torch.nn.Module, ABC):
         **kwargs: torch.Tensor,
     ) -> torch.Tensor:
         """Compute loss.
-        
+
         Parameters
         ----------
         y_pred
@@ -99,7 +100,7 @@ class BaseCriterion(torch.nn.Module, ABC):
         **kwargs
             Additional arguments for loss computation, maintains loss function
             interchangeability. Not always used.
-            
+
         Returns
         -------
         torch.Tensor

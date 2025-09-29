@@ -1,4 +1,5 @@
 """Test trainers in dmg/trainers/."""
+
 import sys
 from pathlib import Path
 
@@ -16,6 +17,7 @@ PKG_PATH = 'dmg.trainers'
 
 
 loaders = get_available_classes(PATH, PKG_PATH, BaseTrainer)
+
 
 @pytest.fixture
 def config():
@@ -57,12 +59,13 @@ def config():
         'out_path': './tests/test_output/',
     }
 
+
 @pytest.fixture
 def mock_datasets():
     """Fixture for mock training, evaluation, and inference datasets."""
     train_dataset = {
         'xc_nn_norm': torch.rand(10, 5, 3),  # (time, samples, features)
-        'target': torch.rand(10, 5, 1),     # (time, samples, targets)
+        'target': torch.rand(10, 5, 1),  # (time, samples, targets)
     }
     eval_dataset = {
         'xc_nn_norm': torch.rand(10, 5, 3),

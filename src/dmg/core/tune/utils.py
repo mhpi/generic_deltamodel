@@ -9,7 +9,7 @@ from dmg.core.tune.tune import RayTrainable
 
 def run_tuning(config: dict[str, Any]):
     """Generic implementation of RayTune for model/hyperparameter.
-    
+
     See details here: https://docs.ray.io/en/latest/tune/index.html
 
     Parameters
@@ -25,10 +25,10 @@ def run_tuning(config: dict[str, Any]):
     tuner = tune.Tuner(
         RayTrainable,
         param_space=search_space,
-        tune_config= tune.TuneConfig(
+        tune_config=tune.TuneConfig(
             metric=config['tune']['metric'],
             mode=config['tune']['mode'],
-            scheduler= ASHAScheduler(),
+            scheduler=ASHAScheduler(),
             search_alg=OptunaSearch(),
             num_samples=config['tune']['num_samples'],
         ),

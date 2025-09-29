@@ -13,7 +13,7 @@ class NseBatchLoss(BaseCriterion):
     Adapted from Yalan Song.
 
     Uses the first variable of the target array as the target variable.
-    
+
     The NSE is calculated as:
         p: predicted value,
         t: target value,
@@ -32,6 +32,7 @@ class NseBatchLoss(BaseCriterion):
 
         - eps: Stability term to prevent division by zero. Default is 0.1.
     """
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -69,7 +70,7 @@ class NseBatchLoss(BaseCriterion):
             Additional arguments.
 
             - sample_ids: indices of samples included in batch. (Required)
-        
+
         Returns
         -------
         torch.Tensor
@@ -99,8 +100,8 @@ class NseBatchLoss(BaseCriterion):
             std_sub = std_batch[mask]
 
             # Compute the normalized residuals.
-            sq_res = (p_sub - t_sub)**2
-            norm_res = sq_res / (std_sub + self.eps)**2
+            sq_res = (p_sub - t_sub) ** 2
+            norm_res = sq_res / (std_sub + self.eps) ** 2
 
             #  Get mean loss
             loss = torch.mean(norm_res)

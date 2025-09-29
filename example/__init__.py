@@ -18,7 +18,7 @@ __all__ = [
 
 def load_config(path: str) -> dict[str, Any]:
     """Parse and initialize configuration settings from yaml with Hydra.
-    
+
     This loader is capable of handling config files in nonlinear directory
     structures.
 
@@ -26,7 +26,7 @@ def load_config(path: str) -> dict[str, Any]:
     ----------
     config_path
         Path to the configuration file.
-    
+
     Returns
     -------
     dict
@@ -56,7 +56,7 @@ def take_data_sample(
     basins: int = 100,
 ) -> dict[str, torch.Tensor]:
     """Take sample of data.
-    
+
     Parameters
     ----------
     config
@@ -67,7 +67,7 @@ def take_data_sample(
         Number of days to sample.
     basins
         Number of basins to sample.
-    
+
     Returns
     -------
     dict
@@ -84,21 +84,33 @@ def take_data_sample(
                 warm_up = config['delta_model']['phy_model']['warm_up']
 
             # Clone and detach the tensor to avoid the warning
-            dataset_sample[key] = value[warm_up:days, :basins, :].clone().detach().to(
-                dtype=torch.float32, device=config['device'])
+            dataset_sample[key] = (
+                value[warm_up:days, :basins, :]
+                .clone()
+                .detach()
+                .to(dtype=torch.float32, device=config['device'])
+            )
 
         elif value.ndim == 2:
             # Clone and detach the tensor to avoid the warning
-            dataset_sample[key] = value[:basins, :].clone().detach().to(
-                dtype=torch.float32, device=config['device'])
+            dataset_sample[key] = (
+                value[:basins, :]
+                .clone()
+                .detach()
+                .to(dtype=torch.float32, device=config['device'])
+            )
 
         else:
-            raise ValueError(f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.")
+            raise ValueError(
+                f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions."
+            )
 
     # Adjust the 'target' tensor based on the configuration
-    if ('HBV1_1p' in config['delta_model']['phy_model']['model'] and
-        config['delta_model']['phy_model']['use_warmup_mode'] and
-        config['multimodel_type'] == 'none'):
+    if (
+        'HBV1_1p' in config['delta_model']['phy_model']['model']
+        and config['delta_model']['phy_model']['use_warmup_mode']
+        and config['multimodel_type'] == 'none'
+    ):
         pass  # Keep 'warmup' days for dHBV1.1p
     else:
         warm_up = config['delta_model']['phy_model']['warm_up']

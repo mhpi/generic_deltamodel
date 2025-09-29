@@ -1,4 +1,5 @@
 """Test loss functions in dmg/models/criterion/."""
+
 import sys
 from pathlib import Path
 
@@ -47,6 +48,7 @@ def target_data():
     return torch.tensor(
         [[[3.0], [1.0], [4.0], [np.nan]], [[1.0], [5.0], [9.0], [2.0]]],
     )
+
 
 @pytest.fixture
 def sample_id_data():

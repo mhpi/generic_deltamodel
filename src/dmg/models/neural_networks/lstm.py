@@ -10,7 +10,7 @@ from dmg.core.calc.dropout import DropMask, createMask
 
 class Lstm(torch.nn.Module):
     """LSTM using torch LSTM (GPU + CPU support).
-    
+
     This replaces the HydroDL `CudnnLstm`, which uses CPU-incompatible
     torch cudnn_rnn backends.
 
@@ -25,6 +25,7 @@ class Lstm(torch.nn.Module):
 
     NOTE: Not validated for training.
     """
+
     def __init__(
         self,
         *,
@@ -96,7 +97,7 @@ class Lstm(torch.nn.Module):
         dr_false: bool = False,
     ) -> tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         """Forward pass.
-        
+
         Parameters
         ----------
         input
@@ -166,7 +167,7 @@ class Lstm(torch.nn.Module):
 
 class LstmModel(torch.nn.Module):
     """LSTM model using torch LSTM (GPU + CPU support).
-        
+
     This replaces `CudnnLstmModel`, which uses torch cudnn_rnn backends with no
     CPU support.
 
@@ -183,6 +184,7 @@ class LstmModel(torch.nn.Module):
 
     NOTE: Not validated for training.
     """
+
     def __init__(
         self,
         *,

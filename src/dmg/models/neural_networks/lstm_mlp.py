@@ -9,9 +9,9 @@ from dmg.models.neural_networks.lstm import LstmModel
 
 class LstmMlpModel(torch.nn.Module):
     """LSTM-MLP model for multi-scale learning.
-    
+
     Supports GPU and CPU forwarding.
-    
+
     Parameters
     ----------
     nx1
@@ -33,6 +33,7 @@ class LstmMlpModel(torch.nn.Module):
     device
         Device to run the model on. Default is 'cpu'.
     """
+
     def __init__(
         self,
         *,
@@ -52,16 +53,25 @@ class LstmMlpModel(torch.nn.Module):
         if device == 'cpu':
             # CPU-compatible LSTM model.
             self.lstminv = LstmModel(
-                nx=nx1, ny=ny1, hidden_size=hiddeninv1, dr=dr1,
+                nx=nx1,
+                ny=ny1,
+                hidden_size=hiddeninv1,
+                dr=dr1,
             )
         else:
             # GPU-only HydroDL LSTM.
             self.lstminv = CudnnLstmModel(
-                nx=nx1, ny=ny1, hidden_size=hiddeninv1, dr=dr1,
+                nx=nx1,
+                ny=ny1,
+                hidden_size=hiddeninv1,
+                dr=dr1,
             )
 
         self.ann = AnnModel(
-            nx=nx2, ny=ny2, hidden_size=hiddeninv2, dr=dr2,
+            nx=nx2,
+            ny=ny2,
+            hidden_size=hiddeninv2,
+            dr=dr2,
         )
 
     def forward(
@@ -77,7 +87,7 @@ class LstmMlpModel(torch.nn.Module):
             The LSTM input tensor.
         z2
             The MLP input tensor.
-        
+
         Returns
         -------
         tuple
