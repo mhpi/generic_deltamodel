@@ -1,19 +1,21 @@
 help:
-    app_name: dMG
-    header: == ${hydra.help.app_name} ==
-    template: |-
-        ${hydra.help.header}
+  app_name: dmg
+  header: == ${hydra.help.app_name} ==
+  template: |-
+    ${hydra.help.header}
 
-        Generic, Differentiable Model Framework in PyTorch, developed by MHPI.
+    PyTorch-based differentiable modeling framework developed by MHPI.
 
-        ${hydra.help.footer}
-    footer: |-
-        Powered by Hydra (https://hydra.cc)
-        Use --hydra-help to view Hydra specific help
+    ${hydra.help.footer}
+  footer: |-
+    Powered by Hydra (https://hydra.cc)
+    Use --hydra-help to view Hydra-specific help
 job:
-    chdir: False  # Changes working dir to run.dir below.
+  name: ${name}
+  chdir: True
 run:
-    dir: ./output/logs/${now:%Y-%m-%d_%H-%M-%S}
+  dir: ${hydra:runtime.cwd}/output/${hydra.job.name}/${now:%Y-%m-%d_%H-%M-%S}
+output_subdir: configs
 sweep:
-    dir: multirun
-    subdir: ${hydra.job.override_dirname}
+  dir: multirun
+  subdir: ${hydra.job.override_dirname}
