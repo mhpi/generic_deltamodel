@@ -11,10 +11,10 @@ help:
     Powered by Hydra (https://hydra.cc)
     Use --hydra-help to view Hydra-specific help
 job:
-  name: ${name}
+  name: dMG-v${oc.env:DMG_VERSION}
   chdir: True
 run:
-  dir: ${hydra:runtime.cwd}/output/${hydra.job.name}/${now:%Y-%m-%d_%H-%M-%S}
+  dir: ${hydra:runtime.cwd}/output/${name}/run-${now:%Y-%m-%d_%H-%M-%S}
 output_subdir: configs
 sweep:
   dir: multirun

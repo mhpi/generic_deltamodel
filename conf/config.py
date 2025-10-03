@@ -93,7 +93,7 @@ class TestingConfig(BaseModel):
 class PhyModelConfig(BaseModel):
     """Configuration class for the physics-based model."""
 
-    model: list[str]
+    name: list[str]
     nmul: int
     warm_up: int
     dynamic_params: dict[str, list[str]]
@@ -108,9 +108,7 @@ class PhyModelConfig(BaseModel):
 class NeuralNetworkModelConfig(BaseModel):
     """Configuration class for the neural network model."""
 
-    model: str = Field(
-        ..., description="The type of neural network model (e.g., LSTM)."
-    )
+    name: str = Field(..., description="The type of neural network model (e.g., LSTM).")
     dropout: float = Field(..., ge=0.0, le=1.0, description="Dropout rate.")
     hidden_size: int = Field(..., gt=0, description="Number of hidden units.")
     learning_rate: float = Field(..., gt=0, description="Learning rate.")
@@ -126,8 +124,8 @@ class DeltaModelConfig(BaseModel):
     """Configuration class for the DPL model."""
 
     rho: int
-    phy_model: PhyModelConfig
-    nn_model: NeuralNetworkModelConfig
+    phy: PhyModelConfig
+    nn: NeuralNetworkModelConfig
 
 
 class ObservationConfig(BaseModel):
@@ -188,28 +186,28 @@ class Config(BaseModel):
     data_loader: str = 'none'
     data_sampler: str = 'none'
     trainer: str = 'none'
-    save_path: str
+    output_dir: str
     train: TrainingConfig
     test: TestingConfig
     loss_function: LossFunctionConfig
-    delta_model: DeltaModelConfig
+    model: DeltaModelConfig
     observations: ObservationConfig
 
-    @field_validator('save_path')
+    @field_validator('output_dir')
     @classmethod
-    def validate_save_path(cls, v: str) -> Path:
-        """Validates the save_path directory."""
+    def validate_output_dir(cls, v: str) -> Path:
+        """Validates the output_dir directory."""
         path = Path(v)
         if not path.exists():
-            log_str = f"Save path '{v}' does not exist."
+            log_str = f"Output directory '{v}' does not exist."
             log.error(log_str)
             raise ValueError(log_str)
         if not path.is_dir():
-            log_str = f"Save path '{v}' is not a directory."
+            log_str = f"Output directory '{v}' is not a directory."
             log.error(log_str)
             raise ValueError(log_str)
         if not os.access(path, os.W_OK):
-            log_str = f"Save path '{v}' is not writable."
+            log_str = f"Output directory '{v}' is not writable."
             log.error(log_str)
             raise ValueError(log_str)
         return path
@@ -236,7 +234,7 @@ if __name__ == '__main__':
             data_loader='base_loader',
             data_sampler='base_sampler',
             trainer='trainer',
-            save_path='../results',
+            output_dir='../output',
             train={
                 'start_time': '2000/01/01',
                 'end_time': '2000/12/31',
@@ -256,10 +254,10 @@ if __name__ == '__main__':
             loss_function={
                 'model': 'RmseLossComb',
             },
-            delta_model={
+            model={
                 'rho': 365,
-                'phy_model': {
-                    'model': ['None_model'],
+                'phy': {
+                    'name': ['None_model'],
                     'nmul': 1,
                     'warm_up': 365,
                     'dynamic_params': {
@@ -268,8 +266,8 @@ if __name__ == '__main__':
                     'forcings': ['x1_var', 'x2_var'],
                     'attributes': ['attr1', 'attr2'],
                 },
-                'nn_model': {
-                    'model': 'LSTM',
+                'nn': {
+                    'name': 'LSTM',
                     'dropout': 0.5,
                     'hidden_size': 256,
                     'learning_rate': 1.0,
