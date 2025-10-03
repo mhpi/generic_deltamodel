@@ -84,6 +84,7 @@ def set_randomseed(seed=0) -> None:
 
 def initialize_config(
     config: Union[DictConfig, dict],
+    make_dirs: Optional[bool] = True,
 ) -> dict[str, Any]:
     """Parse and initialize configuration settings.
 
@@ -158,9 +159,10 @@ def initialize_config(
     config['plot_dir'] = os.path.join(output_dir, 'plot')
     config['sim_dir'] = os.path.join(output_dir, 'sim')
 
-    os.makedirs(config['model_dir'], exist_ok=True)
-    os.makedirs(config['plot_dir'], exist_ok=True)
-    os.makedirs(config['sim_dir'], exist_ok=True)
+    if make_dirs:
+        os.makedirs(config['model_dir'], exist_ok=True)
+        os.makedirs(config['plot_dir'], exist_ok=True)
+        os.makedirs(config['sim_dir'], exist_ok=True)
 
     # Convert string back to data type.
     config['dtype'] = eval(config['dtype'])
@@ -329,7 +331,10 @@ def save_run_summary(
     # Build critical info summary
     summary_lines = []
     summary_lines.append("=== Run Summary ===")
-    summary_lines.append(f"dMG Version : {os.environ['DMG_VERSION']}")
+    try:
+        summary_lines.append(f"dMG Version : {os.environ['DMG_VERSION']}")
+    except KeyError:
+        summary_lines.append("dMG Version : Unknown")
     summary_lines.append(f"Run directory : {run_dir}")
     summary_lines.append(f"Mode          : {config['mode']}")
     summary_lines.append(f"Seed          : {config['seed']}")
@@ -390,8 +395,8 @@ def save_run_summary(
     # Observations
     summary_lines.append("=== Dataset ===")
     summary_lines.append(f"Observations  : {config['observations']}")
-    summary_lines.append(f"Forcings      : {config['forcings']}")
-    summary_lines.append(f"Attributes    : {len(config['attributes'])} total")
+    summary_lines.append(f"Forcings      : {config.get('forcings', [])}")
+    summary_lines.append(f"Attributes    : {len(config.get('attributes', []))} total")
     summary_lines.append("")
 
     # Write file
