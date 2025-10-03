@@ -34,29 +34,29 @@ def config():
             'start_epoch': 0,
             'save_epoch': 1,
         },
-        'delta_model': {
-            'phy_model': {
-                'model': ['HBV'],
+        'model': {
+            'phy': {
+                'name': ['Hbv'],
                 'warm_up': 0,
                 'dynamic_params': {
-                    'HBV': ['parBETA', 'parBETAET'],
+                    'Hbv': ['parBETA', 'parBETAET'],
                 },
                 'forcings': ['precip', 'tmean', 'pet'],
             },
-            'nn_model': {
-                'model': 'LstmModel',
+            'nn': {
+                'name': 'LstmModel',
                 'dropout': 0.5,
                 'hidden_size': 32,
-                'learning_rate': 0.001,
+                'lr': 0.001,
                 'lr_scheduler': 'StepLR',
                 'lr_scheduler_params': {'step_size': 1, 'gamma': 0.1},
                 'forcings': ['precip', 'tmean', 'pet'],
                 'attributes': ['p_mean'],
             },
         },
-        'loss_function': 'MSELoss',
-        'model_path': './tests/test_output/',
-        'out_path': './tests/test_output/',
+        'loss_function': 'MseLoss',
+        'output_dir': './tests/test_output/',
+        'model_dir': './tests/test_output/',
     }
 
 

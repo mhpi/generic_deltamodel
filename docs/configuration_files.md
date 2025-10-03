@@ -22,9 +22,9 @@ Every model built in dMG is designed to run on a pair of configuration files to 
 
       ```yaml
         defaults:
-            - _self_
-            - hydra: settings
-            - observations: <observations_name>
+          - _self_
+          - hydra: settings
+          - observations: <observations_name>
         ```
 
     - There are **no** requirements for this except that the config have the *name* attribute. All settings here are intended to be minimally exposed within your data loader, so it's up to you what you want to include.
@@ -82,7 +82,7 @@ After your configuration files are initialized as a dictionary:
 
 - Any settings in the main config can be accessed like `config['mode']` or `config['train']['start_time']` for subsettings in the config.yaml (headers like *train* and *delta_model* create subdictionaries).
 
-- Settings in your observations data config or other type (see [here](#adding-configurations)) can be accessed as subdictionaries like `config['observations'][<setting_name>]` or `config['config_type'][<setting_name>]`.
+- Settings in your observations data config or other type (see [adding-configurations](#adding-configurations)) can be accessed as subdictionaries like `config['observations'][<setting_name>]` or `config['config_type'][<setting_name>]`.
 
 </br>
 

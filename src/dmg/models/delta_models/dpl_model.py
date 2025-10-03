@@ -45,7 +45,7 @@ class DplModel(torch.nn.Module):
         device: Optional[torch.device] = 'cpu',
     ) -> None:
         super().__init__()
-        self.name = 'dPL Model'
+        self.name = 'Differentiable Parameter Learning Model'
         self.config = config
         self.device = device or torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu'
@@ -81,8 +81,8 @@ class DplModel(torch.nn.Module):
         """
         if phy_model_name:
             model_name = phy_model_name
-        elif self.config['phy_model']:
-            model_name = self.config['phy_model']['model'][0]
+        elif self.config['phy']:
+            model_name = self.config['phy']['name'][0]
         else:
             raise ValueError(
                 "A (1) physics model name or (2) model spec in"
@@ -90,7 +90,7 @@ class DplModel(torch.nn.Module):
             )
 
         model = import_phy_model(model_name)
-        return model(self.config['phy_model'], device=self.device)
+        return model(self.config['phy'], device=self.device)
 
     def _init_nn_model(self) -> torch.nn.Module:
         """Initialize a neural network model.

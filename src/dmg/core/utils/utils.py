@@ -84,7 +84,6 @@ def set_randomseed(seed=0) -> None:
 
 def initialize_config(
     config: Union[DictConfig, dict],
-    write_path: bool = True,
 ) -> dict[str, Any]:
     """Parse and initialize configuration settings.
 
@@ -98,8 +97,13 @@ def initialize_config(
     dict
         Formatted configuration settings.
     """
+    # TODO: formalize this initializer
+
+    save_run_summary(config, os.getcwd())
+
     if type(config) is DictConfig:
         try:
+            # TODO: remove for dot-access configs
             config = OmegaConf.to_container(config, resolve=True)
         except ValidationError as e:
             log.exception("Configuration validation error", exc_info=e)
@@ -108,10 +112,10 @@ def initialize_config(
     config['device'], config['dtype'] = set_system_spec(config)
 
     # Convert date ranges to integer values.
-    train_time = Dates(config['train'], config['delta_model']['rho'])
-    test_time = Dates(config['test'], config['delta_model']['rho'])
-    sim_time = Dates(config['simulation'], config['delta_model']['rho'])
-    all_time = Dates(config['observations'], config['delta_model']['rho'])
+    train_time = Dates(config['train'], config['model']['rho'])
+    test_time = Dates(config['test'], config['model']['rho'])
+    sim_time = Dates(config['sim'], config['model']['rho'])
+    all_time = Dates(config['observations'], config['model']['rho'])
 
     exp_time_start = min(
         train_time.start_time,
@@ -137,97 +141,102 @@ def initialize_config(
     if config.get('multimodel_type', '') in ['none', 'None', '']:
         config['multimodel_type'] = None
 
-    if config['delta_model']['nn_model'].get('lr_scheduler', '') in [
+    if config['train'].get('lr_scheduler', '') in [
         'none',
         'None',
         '',
     ]:
-        config['delta_model']['nn_model']['lr_scheduler'] = None
+        config['train']['lr_scheduler'] = None
 
     if config.get('trained_model', '') in ['none', 'None', '']:
         config['trained_model'] = ''
 
     # Create output directories and add path to config.
-    out_path = PathBuilder(config)
-    if write_path:
-        config = out_path.write_path(config)
+    output_dir = os.getcwd()
+    config['output_dir'] = output_dir
+    config['model_dir'] = os.path.join(output_dir, 'model')
+    config['plot_dir'] = os.path.join(output_dir, 'plot')
+    config['sim_dir'] = os.path.join(output_dir, 'sim')
+
+    os.makedirs(config['model_dir'], exist_ok=True)
+    os.makedirs(config['plot_dir'], exist_ok=True)
+    os.makedirs(config['sim_dir'], exist_ok=True)
 
     # Convert string back to data type.
     config['dtype'] = eval(config['dtype'])
+
+    # Raytune
+    config['do_tune'] = config.get('do_tune', False)
+
+    # test type
+    config['test']['type'] = config.get('test', {}).get('type', 'temporal')
 
     return config
 
 
 def save_model(
-    config: dict[str, Any],
+    path: str,
     model: torch.nn.Module,
     model_name: str,
     epoch: int,
-    create_dirs: Optional[bool] = False,
+    make_dir: Optional[bool] = True,
 ) -> None:
     """Save model state dict.
 
     Parameters
     ----------
-    config
-        Configuration settings.
+    path
+        Path to save the model.
     model
         Model to save.
     model_name
         Name of the model.
     epoch
         Last completed epoch of training.
-    create_dirs
-        Create directories for saving files. Default is False.
+    make_dir
+        Create directories for saving files.
     """
-    if create_dirs:
-        out_path = PathBuilder(config)
-        out_path.write_path(config)
+    if (not os.path.exists(path)) and make_dir:
+        os.makedirs(path)
 
-    save_name = f"d{str(model_name)}_Ep{str(epoch)}.pt"
-
-    full_path = os.path.join(config['model_path'], save_name)
-    torch.save(model.state_dict(), full_path)
+    torch.save(
+        model.state_dict(),
+        os.path.join(path, f"{model_name.lower()}_ep{str(epoch)}.pt"),
+    )
 
 
 def save_train_state(
-    config: dict[str, Any],
+    path: str,
     epoch: int,
     optimizer: torch.nn.Module,
     scheduler: Optional[torch.nn.Module] = None,
-    create_dirs: Optional[bool] = False,
+    make_dir: Optional[bool] = True,
     clear_prior: Optional[bool] = False,
 ) -> None:
     """Save dict of all experiment states for training.
 
     Parameters
     ----------
-    config
-        Configuration settings.
+    path
+        Path to save the training state.
     epoch
         Last completed epoch of training.
     optimizer
         Optimizer state dict.
     scheduler
         Learning rate scheduler state dict.
-    create_dirs
-        Create directories for saving files. Default is False.
+    make_dir
+        Create directories for saving files.
     clear_prior
-        Clear previous saved states. Default is False.
+        Clear previous saved states.
     """
-    root = 'train_state'
-
-    if create_dirs:
-        out_path = PathBuilder(config)
-        out_path.write_path(config)
+    if (not os.path.exists(path)) and make_dir:
+        os.makedirs(path)
 
     if clear_prior:
-        for file in os.listdir(config['model_path']):
-            if root in file:
-                os.remove(os.path.join(config['model_path'], file))
-
-    file_name = f'{root}_Ep{str(epoch)}.pt'
-    full_path = os.path.join(config['model_path'], file_name)
+        for file in os.listdir(path):
+            if 'trainer_state' in file:
+                os.remove(os.path.join(path, file))
 
     scheduler_state = None
     cuda_state = None
@@ -245,7 +254,7 @@ def save_train_state(
             'random_state': torch.get_rng_state(),
             'cuda_state': cuda_state,
         },
-        full_path,
+        os.path.join(path, f'trainer_state_ep{str(epoch)}.pt'),
     )
 
 
@@ -302,6 +311,94 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
             np.save(os.path.join(config['out_path'], file_name), item_obs)
 
 
+def save_run_summary(
+    config: DictConfig, run_dir: str, filename: str = "run_summary.txt"
+):
+    """
+    Save a concise summary of critical configuration info to a text file.
+
+    Args:
+        config (DictConfig): Hydra/OmegaConf config object.
+        run_dir (str): Path to the run directory.
+        filename (str): Name of the text file to save.
+    """
+    # Ensure directory exists
+    os.makedirs(run_dir, exist_ok=True)
+    summary_path = os.path.join(run_dir, filename)
+
+    # Build critical info summary
+    summary_lines = []
+    summary_lines.append("=== Run Summary ===")
+    summary_lines.append(f"dMG Version : {os.environ['DMG_VERSION']}")
+    summary_lines.append(f"Run directory : {run_dir}")
+    summary_lines.append(f"Mode          : {config['mode']}")
+    summary_lines.append(f"Seed          : {config['seed']}")
+    summary_lines.append(f"Device        : {config['device']} (GPU {config['gpu_id']})")
+    summary_lines.append("")
+
+    # Training
+    summary_lines.append("=== Training ===")
+    summary_lines.append(
+        f"Train period  : {config['train']['start_time']} → {config['train']['end_time']}"
+    )
+    summary_lines.append(f"Epochs        : {config['train']['epochs']}")
+    summary_lines.append(f"Batch size    : {config['train']['batch_size']}")
+    summary_lines.append(f"Optimizer     : {config['train']['optimizer']}")
+    summary_lines.append(f"Learning rate : {config['train']['lr']}")
+    summary_lines.append(f"LR Scheduler  : {config['train']['lr_scheduler']}")
+    summary_lines.append(f"Loss          : {config['train']['loss_function']['name']}")
+    summary_lines.append("")
+
+    # Evaluation
+    summary_lines.append("=== Evaluation ===")
+    summary_lines.append(
+        f"Test period   : {config['test']['start_time']} → {config['test']['end_time']}"
+    )
+    summary_lines.append(f"Batch size    : {config['test']['batch_size']}")
+    summary_lines.append(f"Test epoch    : {config['test']['test_epoch']}")
+    summary_lines.append("")
+
+    # Model
+    summary_lines.append("=== Model ===")
+    summary_lines.append(f"NN model      : {config['model']['nn']['name']}")
+    summary_lines.append(
+        f"Hidden size   : {config['model'].get('nn', {}).get('hidden_size', '')}"
+    )
+    summary_lines.append(
+        f"Dropout       : {config['model'].get('nn', {}).get('dropout', '')}"
+    )
+    summary_lines.append("")
+    summary_lines.append(
+        f"Phy model     : {config['model'].get('phy', {}).get('name', '')}"
+    )
+    summary_lines.append(
+        f"Dynamic params: {config['model'].get('phy', {}).get('dynamic_params', '')}"
+    )
+    summary_lines.append("")
+
+    # Multimodel (if used)
+    if config['multimodel_type'] != "none":
+        summary_lines.append("=== Multimodel ===")
+        summary_lines.append(f"Type          : {config['multimodel_type']}")
+        summary_lines.append(f"Model         : {config['multimodel']['model']}")
+        summary_lines.append(
+            f"Scaling fn    : {config['multimodel']['scaling_function']}"
+        )
+        summary_lines.append(f"Loss function : {config['multimodel']['loss_function']}")
+        summary_lines.append("")
+
+    # Observations
+    summary_lines.append("=== Dataset ===")
+    summary_lines.append(f"Observations  : {config['observations']}")
+    summary_lines.append(f"Forcings      : {config['forcings']}")
+    summary_lines.append(f"Attributes    : {len(config['attributes'])} total")
+    summary_lines.append("")
+
+    # Write file
+    with open(summary_path, "w") as f:
+        f.write("\n".join(summary_lines))
+
+
 def load_model(config, model_name, epoch):
     """Load trained PyTorch models.
 
@@ -337,8 +434,12 @@ def print_config(config: dict[str, Any]) -> None:
     print(f"  {'Experiment Mode:':<20}{config['mode']:<20}")
     if config['multimodel_type'] is not None:
         print(f"  {'Ensemble Mode:':<20}{config['multimodel_type']:<20}")
-    for i, mod in enumerate(config['delta_model']['phy_model']['model']):
+    for i, mod in enumerate(config['model']['phy']['name']):
         print(f"  {f'Model {i + 1}:':<20}{mod:<20}")
+        print(
+            f"  {'Dynamic Params: ':<20}{str(config['model']['phy']['dynamic_params'][mod]):<20}"
+        )
+
     print()
 
     print("\033[1m" + "Data Loader" + "\033[0m")
@@ -353,7 +454,7 @@ def print_config(config: dict[str, Any]) -> None:
         )
     if 'simulation' in config['mode']:
         print(
-            f"  {'Simulation Range :':<20}{config['simulation']['start_time']:<20}{config['simulation']['end_time']:<20}"
+            f"  {'Simulation Range :':<20}{config['sim']['start_time']:<20}{config['sim']['end_time']:<20}"
         )
     if config['train']['start_epoch'] > 0 and 'train' in config['mode']:
         print(
@@ -365,21 +466,21 @@ def print_config(config: dict[str, Any]) -> None:
     print(
         f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}"
     )
-    if config['delta_model']['nn_model']['model'] != 'LstmMlpModel':
+    if config['model']['nn']['name'] != 'LstmMlpModel':
         print(
-            f"  {'Dropout:':<20}{config['delta_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['delta_model']['nn_model']['hidden_size']:<20}"
+            f"  {'Dropout:':<20}{config['model']['nn']['dropout']:<20}{'Hidden Size:':<20}{config['model']['nn']['hidden_size']:<20}"
         )
     else:
         print(
-            f"  {'LSTM Dropout:':<20}{config['delta_model']['nn_model']['lstm_dropout']:<20}{'LSTM Hidden Size:':<20}{config['delta_model']['nn_model']['lstm_hidden_size']:<20}"
+            f"  {'LSTM Dropout:':<20}{config['model']['nn']['lstm_dropout']:<20}{'LSTM Hidden Size:':<20}{config['model']['nn']['lstm_hidden_size']:<20}"
         )
         print(
-            f"  {'MLP Dropout:':<20}{config['delta_model']['nn_model']['mlp_dropout']:<20}{'MLP Hidden Size:':<20}{config['delta_model']['nn_model']['mlp_hidden_size']:<20}"
+            f"  {'MLP Dropout:':<20}{config['model']['nn']['mlp_dropout']:<20}{'MLP Hidden Size:':<20}{config['model']['nn']['mlp_hidden_size']:<20}"
         )
     print(
-        f"  {'Warmup:':<20}{config['delta_model']['phy_model'].get('warm_up', '0'):<20}{'Concurrent Models:':<20}{config['delta_model']['phy_model']['nmul']:<20}"
+        f"  {'Warmup:':<20}{config['model']['phy'].get('warm_up', '0'):<20}{'Concurrent Models:':<20}{config['model']['phy']['nmul']:<20}"
     )
-    print(f"  {'Loss Fn:':<20}{config['loss_function']['model']:<20}")
+    print(f"  {'Loss Fn:':<20}{config['train']['loss_function']['name']:<20}")
     print()
 
     if config['multimodel_type'] is not None:

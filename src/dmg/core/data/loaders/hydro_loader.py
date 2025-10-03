@@ -66,15 +66,15 @@ class HydroLoader(BaseLoader):
         self.holdout_index = holdout_index
         self.supported_data = ['camels_671', 'camels_531', 'prism_671', 'prism_531']
         self.data_name = config['observations']['name']
-        self.nn_attributes = config['delta_model']['nn_model'].get('attributes', [])
-        self.nn_forcings = config['delta_model']['nn_model'].get('forcings', [])
-        self.phy_attributes = config['delta_model']['phy_model'].get('attributes', [])
-        self.phy_forcings = config['delta_model']['phy_model'].get('forcings', [])
+        self.nn_attributes = config['model']['nn'].get('attributes', [])
+        self.nn_forcings = config['model']['nn'].get('forcings', [])
+        self.phy_attributes = config['model']['phy'].get('attributes', [])
+        self.phy_forcings = config['model']['phy'].get('forcings', [])
         self.forcing_names = self.config['observations']['all_forcings']
         self.attribute_names = self.config['observations']['all_attributes']
 
         self.target = config['train']['target']
-        self.log_norm_vars = config['delta_model']['phy_model']['use_log_norm']
+        self.log_norm_vars = config['model']['phy']['use_log_norm']
         self.device = config['device']
         self.dtype = config['dtype']
 
@@ -300,7 +300,7 @@ class HydroLoader(BaseLoader):
     ) -> None:
         """Load or calculate normalization statistics if necessary."""
         self.out_path = os.path.join(
-            self.config['model_path'],
+            self.config['model_dir'],
             'normalization_statistics.json',
         )
 

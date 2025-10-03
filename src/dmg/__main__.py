@@ -18,6 +18,8 @@ from dmg.core.tune.utils import run_tuning
 from dmg.core.utils.factory import import_data_loader, import_trainer
 from dmg.core.utils.utils import initialize_config, print_config, set_randomseed
 from dmg.models.model_handler import ModelHandler as dModel
+from dmg._version import __version__
+import os
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -74,16 +76,15 @@ def main(config: DictConfig) -> None:
         start_time = time.perf_counter()
 
         ### Initializations ###
-        config = initialize_config(config, write_path=True)
-        set_randomseed(config['random_seed'])
+        config = initialize_config(config)
+        set_randomseed(config['seed'])
 
         ### Do model tuning ###
-        if config.get('do_tune', False):
+        if config['do_tune']:
             run_tuning(config)
             exit()
 
-        test_type = config.get('test', {}).get('type', 'temporal')
-        log.info(f"Running mode: {config['mode']}, Test type: {test_type}")
+        log.info(f"Running mode: {config['mode']} | {config['test']['type']}")
         print_config(config)
 
         ### Create/Load differentiable model ###
@@ -91,8 +92,8 @@ def main(config: DictConfig) -> None:
 
         ### Process datasets and create trainer for temporal mode ###
         trainer = None
-        if test_type == 'temporal':
-            log.info("Processing datasets for temporal testing...")
+        if config['test']['type'] == 'temporal':
+            log.info("Processing data...")
             data_loader_cls = import_data_loader(config['data_loader'])
             data_loader = data_loader_cls(config, test_split=True, overwrite=False)
 
@@ -126,4 +127,5 @@ def main(config: DictConfig) -> None:
 
 
 if __name__ == '__main__':
+    os.environ['DMG_VERSION'] = __version__
     main()

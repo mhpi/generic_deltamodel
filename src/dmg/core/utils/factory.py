@@ -165,7 +165,7 @@ def load_criterion(
         The initialized loss function object.
     """
     if not name:
-        name = config['model']
+        name = config['name']
 
     # Load the loss function dynamically using the factory.
     cls = load_component(
@@ -220,16 +220,16 @@ def load_nn_model(
         dr = config['dropout']
         name = config['model']
     else:
-        n_forcings = len(config['nn_model']['forcings'])
-        n_attributes = len(config['nn_model']['attributes'])
+        n_forcings = len(config['nn']['forcings'])
+        n_attributes = len(config['nn']['attributes'])
         n_phy_params = phy_model.learnable_param_count
         ny = n_phy_params
 
-        name = config['nn_model']['model']
+        name = config['nn']['name']
 
         if name not in ['LstmMlpModel']:
-            hidden_size = config['nn_model']['hidden_size']
-            dr = config['nn_model']['dropout']
+            hidden_size = config['nn']['hidden_size']
+            dr = config['nn']['dropout']
 
     nx = n_forcings + n_attributes
 
@@ -258,12 +258,12 @@ def load_nn_model(
         model = cls(
             nx1=nx,
             ny1=phy_model.learnable_param_count1,
-            hiddeninv1=config['nn_model']['lstm_hidden_size'],
+            hiddeninv1=config['nn']['lstm_hidden_size'],
             nx2=n_attributes,
             ny2=phy_model.learnable_param_count2,
-            hiddeninv2=config['nn_model']['mlp_hidden_size'],
-            dr1=config['nn_model']['lstm_dropout'],
-            dr2=config['nn_model']['mlp_dropout'],
+            hiddeninv2=config['nn']['mlp_hidden_size'],
+            dr1=config['nn']['lstm_dropout'],
+            dr2=config['nn']['mlp_dropout'],
             device=device,
         )
     else:

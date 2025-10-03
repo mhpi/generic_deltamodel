@@ -92,14 +92,14 @@ class Trainer(BaseTrainer):
             # Loss function
             self.loss_func = loss_func or load_criterion(
                 self.train_dataset['target'],
-                config['loss_function'],
+                config['train']['loss_function'],
                 device=config['device'],
             )
             self.model.loss_func = self.loss_func
 
             # Optimizer and learning rate scheduler
             self.optimizer = optimizer or self.init_optimizer()
-            if config['delta_model']['nn_model']['lr_scheduler']:
+            if config['train']['lr_scheduler']:
                 self.use_scheduler = True
                 self.scheduler = scheduler or self.init_scheduler()
             else:
@@ -121,7 +121,7 @@ class Trainer(BaseTrainer):
             Initialized optimizer object.
         """
         name = self.config['train']['optimizer']
-        learning_rate = self.config['delta_model']['nn_model']['learning_rate']
+        learning_rate = self.config['train']['lr']
         optimizer_dict = {
             # 'SGD': torch.optim.SGD,
             # 'Adam': torch.optim.Adam,
@@ -154,7 +154,7 @@ class Trainer(BaseTrainer):
         torch.optim.lr_scheduler.LRScheduler
             Initialized learning rate scheduler object.
         """
-        name = self.config['delta_model']['nn_model']['lr_scheduler']
+        name = self.config['train']['lr_scheduler']
         scheduler_dict = {
             'StepLR': torch.optim.lr_scheduler.StepLR,
             'ExponentialLR': torch.optim.lr_scheduler.ExponentialLR,
@@ -174,7 +174,7 @@ class Trainer(BaseTrainer):
         try:
             self.scheduler = cls(
                 self.optimizer,
-                **self.config['delta_model']['nn_model']['lr_scheduler_params'],
+                **self.config['train']['lr_scheduler_params'],
             )
         except RuntimeError as e:
             raise RuntimeError(f"Error initializing scheduler: {e}") from e
@@ -185,7 +185,7 @@ class Trainer(BaseTrainer):
         Load model, optimizer, and scheduler states from a checkpoint to resume
         training if a checkpoint file exists.
         """
-        path = self.config['model_path']
+        path = self.config['model_dir']
         for file in os.listdir(path):
             # Check for state checkpoint: looks like `train_state_epoch_XX.pt`.
             if ('train_state' in file) and (str(self.start_epoch - 1) in file):
@@ -298,7 +298,7 @@ class Trainer(BaseTrainer):
         if epoch % self.config['train']['save_epoch'] == 0:
             self.model.save_model(epoch)
             save_train_state(
-                self.config,
+                self.config['model_dir'],
                 epoch=epoch,
                 optimizer=self.optimizer,
                 scheduler=self.scheduler,
@@ -353,7 +353,7 @@ class Trainer(BaseTrainer):
 
         # Get start and end indices for each batch
         n_samples = self.dataset['xc_nn_norm'].shape[1]
-        batch_start = np.arange(0, n_samples, self.config['simulation']['batch_size'])
+        batch_start = np.arange(0, n_samples, self.config['sim']['batch_size'])
         batch_end = np.append(batch_start[1:], n_samples)
 
         # Model forward
@@ -435,7 +435,7 @@ class Trainer(BaseTrainer):
             prediction = self.model(dataset_sample, eval=True)
 
             # Save the batch predictions
-            model_name = self.config['delta_model']['phy_model']['model'][0]
+            model_name = self.config['model']['phy']['name'][0]
             prediction = {
                 key: tensor.cpu().detach()
                 for key, tensor in prediction[model_name].items()
@@ -463,7 +463,7 @@ class Trainer(BaseTrainer):
 
         # Remove warm-up data
         # if self.config['delta_model']['phy_model']['warm_up_states']:  # NOTE: remove if bug does not reoccur
-        target = target[self.config['delta_model']['phy_model']['warm_up'] :, :]
+        target = target[self.config['model']['phy']['warm_up'] :, :]
 
         # Compute metrics
         metrics = Metrics(
@@ -472,7 +472,7 @@ class Trainer(BaseTrainer):
         )
 
         # Save all metrics and aggregated statistics.
-        metrics.dump_metrics(self.config['out_path'])
+        metrics.dump_metrics(self.config['output_dir'])
 
     def _log_epoch_stats(
         self,
@@ -506,5 +506,5 @@ class Trainer(BaseTrainer):
             f"~ Runtime {elapsed:.2f} s, {mem_aloc} Mb reserved GPU memory",
         )
 
-        with open(os.path.join(self.config['out_path'], 'train_log.txt'), 'a') as f:
+        with open(os.path.join(self.config['output_dir'], 'train_log.txt'), 'a') as f:
             f.write(f"Epoch {epoch}: " + loss + f", Time: {elapsed:.2f} s\n")
