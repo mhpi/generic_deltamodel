@@ -141,12 +141,12 @@ def initialize_config(
     if config.get('multimodel_type', '') in ['none', 'None', '']:
         config['multimodel_type'] = None
 
-    if config['model']['nn'].get('lr_scheduler', '') in [
+    if config['train'].get('lr_scheduler', '') in [
         'none',
         'None',
         '',
     ]:
-        config['model']['nn']['lr_scheduler'] = None
+        config['train']['lr_scheduler'] = None
 
     if config.get('trained_model', '') in ['none', 'None', '']:
         config['trained_model'] = ''
@@ -344,6 +344,8 @@ def save_run_summary(
     summary_lines.append(f"Epochs        : {config['train']['epochs']}")
     summary_lines.append(f"Batch size    : {config['train']['batch_size']}")
     summary_lines.append(f"Optimizer     : {config['train']['optimizer']}")
+    summary_lines.append(f"Learning rate : {config['train']['lr']}")
+    summary_lines.append(f"LR Scheduler  : {config['train']['lr_scheduler']}")
     summary_lines.append(f"Loss          : {config['train']['loss_function']['name']}")
     summary_lines.append("")
 
@@ -359,12 +361,19 @@ def save_run_summary(
     # Model
     summary_lines.append("=== Model ===")
     summary_lines.append(f"NN model      : {config['model']['nn']['name']}")
-    summary_lines.append(f"Hidden size   : {config['model']['nn']['hidden_size']}")
-    summary_lines.append(f"Dropout       : {config['model']['nn']['dropout']}")
-    summary_lines.append(f"Learning rate : {config['model']['nn']['lr']}")
+    summary_lines.append(
+        f"Hidden size   : {config['model'].get('nn', {}).get('hidden_size', '')}"
+    )
+    summary_lines.append(
+        f"Dropout       : {config['model'].get('nn', {}).get('dropout', '')}"
+    )
     summary_lines.append("")
-    summary_lines.append(f"Phy model     : {config['model']['phy']['name']}")
-    summary_lines.append(f"Dynamic params: {config['model']['phy']['dynamic_params']}")
+    summary_lines.append(
+        f"Phy model     : {config['model'].get('phy', {}).get('name', '')}"
+    )
+    summary_lines.append(
+        f"Dynamic params: {config['model'].get('phy', {}).get('dynamic_params', '')}"
+    )
     summary_lines.append("")
 
     # Multimodel (if used)

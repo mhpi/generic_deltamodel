@@ -30,6 +30,11 @@ train:
   end_time: 2000/12/31
   target: [y_var]
   optimizer: Adadelta
+  lr: 1.0
+  lr_scheduler: None
+  lr_scheduler_params:
+    step_size: 10
+    gamma: 0.5
   loss_function:
     model: RmseLossComb
 
@@ -78,11 +83,6 @@ model:
     name: Lstm
     dropout: 0.5
     hidden_size: 256
-    lr: 1.0
-    lr_scheduler: None
-    lr_scheduler_params:
-      step_size: 10
-      gamma: 0.5
 
     forcings: [
       x1_var,
