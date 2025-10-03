@@ -44,7 +44,7 @@ class ModelHandler(torch.nn.Module):
         super().__init__()
         self.config = config
         self.name = 'Differentiable Model Handler'
-        self.model_path = config['model_path']
+        self.model_path = config['model_dir']
         self.verbose = verbose
 
         if device is None:
@@ -76,7 +76,7 @@ class ModelHandler(torch.nn.Module):
         list[str]
             List of model names.
         """
-        models = self.config['delta_model']['phy_model']['model']
+        models = self.config['model']['phy']['name']
 
         if self.multimodel_type in ['nn_parallel']:
             # Add ensemble weighting NN to the list.
@@ -93,7 +93,7 @@ class ModelHandler(torch.nn.Module):
         # Epoch to load
         if self.config['mode'] == 'train':
             load_epoch = self.config['train']['start_epoch']
-        elif self.config['mode'] in ['test', 'simulation']:
+        elif self.config['mode'] in ['test', 'sim']:
             load_epoch = self.config['test']['test_epoch']
         else:
             load_epoch = self.config.get('load_epoch', 0)
@@ -126,7 +126,7 @@ class ModelHandler(torch.nn.Module):
                 # TODO: make dynamic import for other modalities.
                 self.model_dict[name] = DplModel(
                     phy_model_name=name,
-                    config=self.config['delta_model'],
+                    config=self.config['model'],
                     device=self.device,
                 )
 
@@ -389,9 +389,9 @@ class ModelHandler(torch.nn.Module):
             Epoch number to save model at.
         """
         for name, model in self.model_dict.items():
-            save_model(self.config, model, name, epoch)
+            save_model(self.config['model_dir'], model, name, epoch)
         if self.is_ensemble:
-            save_model(self.config, self.ensemble_generator, 'wNN', epoch)
+            save_model(self.config['model_dir'], self.ensemble_generator, 'wNN', epoch)
 
         if self.verbose:
-            log.info(f"All states successfully saved for Ep {epoch}")
+            log.info(f"All states saved for ep:{epoch}")

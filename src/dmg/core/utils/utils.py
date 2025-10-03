@@ -173,75 +173,68 @@ def initialize_config(
 
 
 def save_model(
-    config: dict[str, Any],
+    path: str,
     model: torch.nn.Module,
     model_name: str,
     epoch: int,
-    create_dirs: Optional[bool] = False,
+    make_dir: Optional[bool] = True,
 ) -> None:
     """Save model state dict.
 
     Parameters
     ----------
-    config
-        Configuration settings.
+    path
+        Path to save the model.
     model
         Model to save.
     model_name
         Name of the model.
     epoch
         Last completed epoch of training.
-    create_dirs
-        Create directories for saving files. Default is False.
+    make_dir
+        Create directories for saving files.
     """
-    if create_dirs:
-        out_path = PathBuilder(config)
-        out_path.write_path(config)
+    if (not os.path.exists(path)) and make_dir:
+        os.makedirs(path)
 
-    save_name = f"d{str(model_name)}_Ep{str(epoch)}.pt"
-
-    full_path = os.path.join(config['model_path'], save_name)
-    torch.save(model.state_dict(), full_path)
+    torch.save(
+        model.state_dict(),
+        os.path.join(path, f"{model_name.lower()}_ep{str(epoch)}.pt"),
+    )
 
 
 def save_train_state(
-    config: dict[str, Any],
+    path: str,
     epoch: int,
     optimizer: torch.nn.Module,
     scheduler: Optional[torch.nn.Module] = None,
-    create_dirs: Optional[bool] = False,
+    make_dir: Optional[bool] = True,
     clear_prior: Optional[bool] = False,
 ) -> None:
     """Save dict of all experiment states for training.
 
     Parameters
     ----------
-    config
-        Configuration settings.
+    path
+        Path to save the training state.
     epoch
         Last completed epoch of training.
     optimizer
         Optimizer state dict.
     scheduler
         Learning rate scheduler state dict.
-    create_dirs
-        Create directories for saving files. Default is False.
+    make_dir
+        Create directories for saving files.
     clear_prior
-        Clear previous saved states. Default is False.
+        Clear previous saved states.
     """
-    root = 'train_state'
-
-    if create_dirs:
-        out_path = PathBuilder(config)
-        out_path.write_path(config)
+    if (not os.path.exists(path)) and make_dir:
+        os.makedirs(path)
 
     if clear_prior:
-        for file in os.listdir(config['model_path']):
-            if root in file:
-                os.remove(os.path.join(config['model_path'], file))
-
-    file_name = f'{root}_Ep{str(epoch)}.pt'
-    full_path = os.path.join(config['model_path'], file_name)
+        for file in os.listdir(path):
+            if 'trainer_state' in file:
+                os.remove(os.path.join(path, file))
 
     scheduler_state = None
     cuda_state = None
@@ -259,7 +252,7 @@ def save_train_state(
             'random_state': torch.get_rng_state(),
             'cuda_state': cuda_state,
         },
-        full_path,
+        os.path.join(path, f'trainer_state_ep{str(epoch)}.pt'),
     )
 
 
@@ -393,7 +386,7 @@ def print_config(config: dict[str, Any]) -> None:
     print(
         f"  {'Warmup:':<20}{config['model']['phy'].get('warm_up', '0'):<20}{'Concurrent Models:':<20}{config['model']['phy']['nmul']:<20}"
     )
-    print(f"  {'Loss Fn:':<20}{config['loss_function']['model']:<20}")
+    print(f"  {'Loss Fn:':<20}{config['loss_function']['name']:<20}")
     print()
 
     if config['multimodel_type'] is not None:

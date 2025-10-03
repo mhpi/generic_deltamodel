@@ -93,7 +93,7 @@ def main(config: DictConfig) -> None:
         ### Process datasets and create trainer for temporal mode ###
         trainer = None
         if config['test']['type'] == 'temporal':
-            log.info("Processing datasets for temporal testing...")
+            log.info("Processing data...")
             data_loader_cls = import_data_loader(config['data_loader'])
             data_loader = data_loader_cls(config, test_split=True, overwrite=False)
 
