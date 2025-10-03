@@ -92,7 +92,7 @@ class Trainer(BaseTrainer):
             # Loss function
             self.loss_func = loss_func or load_criterion(
                 self.train_dataset['target'],
-                config['loss_function'],
+                config['train']['loss_function'],
                 device=config['device'],
             )
             self.model.loss_func = self.loss_func
@@ -121,7 +121,7 @@ class Trainer(BaseTrainer):
             Initialized optimizer object.
         """
         name = self.config['train']['optimizer']
-        learning_rate = self.config['model']['nn']['learning_rate']
+        learning_rate = self.config['model']['nn']['lr']
         optimizer_dict = {
             # 'SGD': torch.optim.SGD,
             # 'Adam': torch.optim.Adam,

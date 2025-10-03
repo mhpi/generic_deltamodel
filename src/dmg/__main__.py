@@ -77,7 +77,7 @@ def main(config: DictConfig) -> None:
 
         ### Initializations ###
         config = initialize_config(config)
-        set_randomseed(config['random_seed'])
+        set_randomseed(config['seed'])
 
         ### Do model tuning ###
         if config['do_tune']:
@@ -127,5 +127,5 @@ def main(config: DictConfig) -> None:
 
 
 if __name__ == '__main__':
-    os.environ["DMG_VERSION"] = __version__
+    os.environ['DMG_VERSION'] = __version__
     main()

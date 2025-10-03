@@ -99,6 +99,8 @@ def initialize_config(
     """
     # TODO: formalize this initializer
 
+    save_run_summary(config, os.getcwd())
+
     if type(config) is DictConfig:
         try:
             # TODO: remove for dot-access configs
@@ -309,6 +311,85 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
             np.save(os.path.join(config['out_path'], file_name), item_obs)
 
 
+def save_run_summary(
+    config: DictConfig, run_dir: str, filename: str = "run_summary.txt"
+):
+    """
+    Save a concise summary of critical configuration info to a text file.
+
+    Args:
+        config (DictConfig): Hydra/OmegaConf config object.
+        run_dir (str): Path to the run directory.
+        filename (str): Name of the text file to save.
+    """
+    # Ensure directory exists
+    os.makedirs(run_dir, exist_ok=True)
+    summary_path = os.path.join(run_dir, filename)
+
+    # Build critical info summary
+    summary_lines = []
+    summary_lines.append("=== Run Summary ===")
+    summary_lines.append(f"dMG Version : {os.environ['DMG_VERSION']}")
+    summary_lines.append(f"Run directory : {run_dir}")
+    summary_lines.append(f"Mode          : {config['mode']}")
+    summary_lines.append(f"Seed          : {config['seed']}")
+    summary_lines.append(f"Device        : {config['device']} (GPU {config['gpu_id']})")
+    summary_lines.append("")
+
+    # Training
+    summary_lines.append("=== Training ===")
+    summary_lines.append(
+        f"Train period  : {config['train']['start_time']} → {config['train']['end_time']}"
+    )
+    summary_lines.append(f"Epochs        : {config['train']['epochs']}")
+    summary_lines.append(f"Batch size    : {config['train']['batch_size']}")
+    summary_lines.append(f"Optimizer     : {config['train']['optimizer']}")
+    summary_lines.append(f"Loss          : {config['train']['loss_function']['name']}")
+    summary_lines.append("")
+
+    # Evaluation
+    summary_lines.append("=== Evaluation ===")
+    summary_lines.append(
+        f"Test period   : {config['test']['start_time']} → {config['test']['end_time']}"
+    )
+    summary_lines.append(f"Batch size    : {config['test']['batch_size']}")
+    summary_lines.append(f"Test epoch    : {config['test']['test_epoch']}")
+    summary_lines.append("")
+
+    # Model
+    summary_lines.append("=== Model ===")
+    summary_lines.append(f"NN model      : {config['model']['nn']['name']}")
+    summary_lines.append(f"Hidden size   : {config['model']['nn']['hidden_size']}")
+    summary_lines.append(f"Dropout       : {config['model']['nn']['dropout']}")
+    summary_lines.append(f"Learning rate : {config['model']['nn']['lr']}")
+    summary_lines.append("")
+    summary_lines.append(f"Phy model     : {config['model']['phy']['name']}")
+    summary_lines.append(f"Dynamic params: {config['model']['phy']['dynamic_params']}")
+    summary_lines.append("")
+
+    # Multimodel (if used)
+    if config['multimodel_type'] != "none":
+        summary_lines.append("=== Multimodel ===")
+        summary_lines.append(f"Type          : {config['multimodel_type']}")
+        summary_lines.append(f"Model         : {config['multimodel']['model']}")
+        summary_lines.append(
+            f"Scaling fn    : {config['multimodel']['scaling_function']}"
+        )
+        summary_lines.append(f"Loss function : {config['multimodel']['loss_function']}")
+        summary_lines.append("")
+
+    # Observations
+    summary_lines.append("=== Dataset ===")
+    summary_lines.append(f"Observations  : {config['observations']}")
+    summary_lines.append(f"Forcings      : {config['forcings']}")
+    summary_lines.append(f"Attributes    : {len(config['attributes'])} total")
+    summary_lines.append("")
+
+    # Write file
+    with open(summary_path, "w") as f:
+        f.write("\n".join(summary_lines))
+
+
 def load_model(config, model_name, epoch):
     """Load trained PyTorch models.
 
@@ -346,6 +427,10 @@ def print_config(config: dict[str, Any]) -> None:
         print(f"  {'Ensemble Mode:':<20}{config['multimodel_type']:<20}")
     for i, mod in enumerate(config['model']['phy']['name']):
         print(f"  {f'Model {i + 1}:':<20}{mod:<20}")
+        print(
+            f"  {'Dynamic Params: ':<20}{str(config['model']['phy']['dynamic_params'][mod]):<20}"
+        )
+
     print()
 
     print("\033[1m" + "Data Loader" + "\033[0m")
@@ -386,7 +471,7 @@ def print_config(config: dict[str, Any]) -> None:
     print(
         f"  {'Warmup:':<20}{config['model']['phy'].get('warm_up', '0'):<20}{'Concurrent Models:':<20}{config['model']['phy']['nmul']:<20}"
     )
-    print(f"  {'Loss Fn:':<20}{config['loss_function']['name']:<20}")
+    print(f"  {'Loss Fn:':<20}{config['train']['loss_function']['name']:<20}")
     print()
 
     if config['multimodel_type'] is not None:

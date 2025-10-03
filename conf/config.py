@@ -4,7 +4,6 @@ Run this script to validate an example config object (see bottom of file).
 """
 
 import logging
-import os
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -186,31 +185,31 @@ class Config(BaseModel):
     data_loader: str = 'none'
     data_sampler: str = 'none'
     trainer: str = 'none'
-    output_dir: str
+    # output_dir: str
     train: TrainingConfig
     test: TestingConfig
     loss_function: LossFunctionConfig
     model: DeltaModelConfig
     observations: ObservationConfig
 
-    @field_validator('output_dir')
-    @classmethod
-    def validate_output_dir(cls, v: str) -> Path:
-        """Validates the output_dir directory."""
-        path = Path(v)
-        if not path.exists():
-            log_str = f"Output directory '{v}' does not exist."
-            log.error(log_str)
-            raise ValueError(log_str)
-        if not path.is_dir():
-            log_str = f"Output directory '{v}' is not a directory."
-            log.error(log_str)
-            raise ValueError(log_str)
-        if not os.access(path, os.W_OK):
-            log_str = f"Output directory '{v}' is not writable."
-            log.error(log_str)
-            raise ValueError(log_str)
-        return path
+    # @field_validator('output_dir')
+    # @classmethod
+    # def validate_output_dir(cls, v: str) -> Path:
+    #     """Validates the output_dir directory."""
+    #     path = Path(v)
+    #     if not path.exists():
+    #         log_str = f"Output directory '{v}' does not exist."
+    #         log.error(log_str)
+    #         raise ValueError(log_str)
+    #     if not path.is_dir():
+    #         log_str = f"Output directory '{v}' is not a directory."
+    #         log.error(log_str)
+    #         raise ValueError(log_str)
+    #     if not os.access(path, os.W_OK):
+    #         log_str = f"Output directory '{v}' is not writable."
+    #         log.error(log_str)
+    #         raise ValueError(log_str)
+    #     return path
 
     @model_validator(mode='after')
     def check_device(cls, values):
@@ -234,7 +233,7 @@ if __name__ == '__main__':
             data_loader='base_loader',
             data_sampler='base_sampler',
             trainer='trainer',
-            output_dir='../output',
+            # output_dir='../output',
             train={
                 'start_time': '2000/01/01',
                 'end_time': '2000/12/31',
