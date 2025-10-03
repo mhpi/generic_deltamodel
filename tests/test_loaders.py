@@ -22,14 +22,11 @@ def test_hydro_loader_init(config, mock_dataset, tmp_path):
 
     config['observations']['data_path'] = str(data_path)
 
-    # The loader calls initialize_config internally, but we can do it here to be explicit
-    # and ensure all paths are set up correctly.
-    initialized_config = config  # initialize_config(config.copy(), make_dirs=False)
-    os.makedirs(initialized_config['output_dir'], exist_ok=True)
-    os.makedirs(initialized_config['model_dir'], exist_ok=True)
+    os.makedirs(config['output_dir'], exist_ok=True)
+    os.makedirs(config['model_dir'], exist_ok=True)
 
     # Test with test_split = True
-    loader_split = HydroLoader(initialized_config, test_split=True)
+    loader_split = HydroLoader(config, test_split=True)
     assert loader_split.train_dataset is not None
     assert loader_split.eval_dataset is not None
     assert loader_split.dataset is None
@@ -37,8 +34,8 @@ def test_hydro_loader_init(config, mock_dataset, tmp_path):
     assert 'xc_nn_norm' in loader_split.eval_dataset
 
     # Test with test_split = False
-    initialized_config['mode'] = 'simulation'  # Change mode to avoid splitting
-    loader_no_split = HydroLoader(initialized_config, test_split=False)
+    config['mode'] = 'simulation'  # Change mode to avoid splitting
+    loader_no_split = HydroLoader(config, test_split=False)
     assert loader_no_split.train_dataset is None
     assert loader_no_split.eval_dataset is None
     assert loader_no_split.dataset is not None

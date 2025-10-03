@@ -5,31 +5,38 @@ import numpy as np
 
 @pytest.fixture
 def config():
-    """A fixture for a mock configuration dictionary."""
+    """A fixture for a mock configuration dictionary.
+
+    Looks like config for dHBV1.0 with 2 dynamic parameters.
+    """
     return {
         'mode': 'train_test',
         'multimodel_type': 'none',
         'seed': 111111,
         'device': 'cpu',
         'gpu_id': 0,
-        'dtype': 'torch.float32',
+        'dtype': torch.float32,
         'data_loader': 'HydroLoader',
         'data_sampler': 'HydroSampler',
         'trainer': 'Trainer',
         'train': {
             'start_time': '2000/01/01',
-            'end_time': '2000/01/30',
+            'end_time': '2000/01/31',
             'target': ['streamflow'],
             'optimizer': 'Adadelta',
+            'lr': 1.0,
+            'lr_scheduler': None,
+            'lr_scheduler_params': {
+                'step_size': 10,
+                'gamma': 0.5,
+            },
+            'loss_function': {
+                'name': 'RmseLossComb',
+            },
             'batch_size': 5,
             'epochs': 2,
             'start_epoch': 0,
             'save_epoch': 1,
-            'loss_function': {
-                'name': 'RmseLossComb',
-            },
-            'lr': 1.0,
-            'lr_scheduler': None,
         },
         'test': {
             'start_time': '2000/02/01',
@@ -38,8 +45,8 @@ def config():
             'test_epoch': 2,
         },
         'sim': {
-            'start_time': '2000/01/01',
-            'end_time': '2000/01/10',
+            'start_time': '2000/02/01',
+            'end_time': '2000/02/10',
             'batch_size': 5,
         },
         'model': {
@@ -47,7 +54,7 @@ def config():
             'phy': {
                 'name': ['Hbv'],
                 'nmul': 1,
-                'warm_up': 0,
+                'warm_up': 2,
                 'warm_up_states': True,
                 'dy_drop': 0.0,
                 'dynamic_params': {
@@ -55,6 +62,7 @@ def config():
                 },
                 'routing': True,
                 'use_log_norm': ['prcp'],
+                'nearzero': 1e-5,
                 'forcings': ['prcp', 'tmean', 'pet'],
                 'attributes': [],
             },
@@ -63,21 +71,21 @@ def config():
                 'dropout': 0.5,
                 'hidden_size': 32,
                 'forcings': ['prcp', 'tmean', 'pet'],
-                'attributes': ['p_mean'],
+                'attributes': ['area_gages2'],
             },
         },
         'observations': {
             'name': 'camels_531',
-            'all_forcings': ['prcp', 'tmean', 'pet'],
-            'all_attributes': ['p_mean'],
-            'area_name': 'p_mean',  # Using p_mean for area for simplicity
+            'area_name': 'area_gages2',
             'start_time': '2000/01/01',
             'end_time': '2000/02/28',
+            'all_forcings': ['prcp', 'tmean', 'pet'],
+            'all_attributes': ['area_gages2'],
         },
         'output_dir': './tests/test_output/',
         'model_dir': './tests/test_output/model',
-        'train_time': ['2000/01/01', '2000/01/30'],
-        'eval_time': ['2000/02/01', '2000/02/10'],
+        'train_time': ['2000/01/01', '2000/01/31'],
+        'test_time': ['2000/02/01', '2000/02/10'],
         'sim_time': ['2000/02/01', '2000/02/10'],
         'all_time': ['2000/01/01', '2000/02/10'],
     }
