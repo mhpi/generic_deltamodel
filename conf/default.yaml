@@ -7,10 +7,13 @@ defaults:
   - hydra: settings
   - observations: none
 
+name: ${model.nn.name}-${model.phy.name}
+
+
 ## General -------------------------------#
 mode: train
 multimodel_type: none
-random_seed: 111111
+seed: 111111
 device: cuda
 gpu_id: 0
 
@@ -18,7 +21,6 @@ data_loader: NoneLoader
 data_sampler: NoneSampler
 trainer: NoneTrainer
 
-save_path: ./output
 trained_model: ''
 
 
@@ -28,6 +30,9 @@ train:
   end_time: 2000/12/31
   target: [y_var]
   optimizer: Adadelta
+  loss_function:
+    model: RmseLossComb
+
   batch_size: 100
   epochs: 50
   start_epoch: 0
@@ -43,42 +48,37 @@ test:
 
 
 ## Inference -------------------------------#
-simulation:
+sim:
   start_time: 2001/01/01
   end_time: 2001/12/31
   batch_size: 400
 
 
-## Loss Function -------------------------#
-loss_function:
-  model: RmseLossComb
-
-
 ## Differentiable Model -----------------------------#
-delta_model:
+model:
   rho: 365
 
-  phy_model:
-    model: [NonePhyModel]
+  phy:
+    name: [NonePhyModel]
     nmul: 16
     warm_up: 365
     dynamic_params:
-        NonePhyModel: [z1, z2]
+      NonePhyModel: [z1, z2]
 
     forcings: [
-        x1_var,
-        x2_var,
+      x1_var,
+      x2_var,
     ]
     attributes: [
-        attr1,
-        attr2,
+      attr1,
+      attr2,
     ]
 
-  nn_model:
-    model: LSTM
+  nn:
+    name: Lstm
     dropout: 0.5
     hidden_size: 256
-    learning_rate: 1.0
+    lr: 1.0
     lr_scheduler: None
     lr_scheduler_params:
       step_size: 10

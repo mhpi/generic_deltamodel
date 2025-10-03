@@ -41,7 +41,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 - `nn_parallel`: Dynamically weight model outputs using a neural network (NN) trained in parallel with models.
 - `nn_sequential`: Dynamically weight model outputs using a NN trained after pre-training models to be ensembled.
 
-**random_seed**: [111111] Seed to fix deterministic behavior in NumPy and PyTorch.
+**seed**: [111111] Seed to fix deterministic behavior in NumPy and PyTorch.
 
 **device**: [cpu, cuda] Device to run models on.
 
@@ -55,8 +55,6 @@ The settings are broken down as they appear in the YAML configuration files, wit
 **data_sampler**: Class name of the data sampler used in training/inference. E.g., *HydroSampler* located in `./generic_deltamodel/src/dmg/core/data/samplers/hydro_sampler.py`. Follows same convention as data_loader.
 
 **trainer**: Class name of the trainer used in training/inference. E.g., *Trainer* located in `./generic_deltamodel/src/dmg/trainers/trainer.py`. Follows same convention as data_loader.
-
-**save_path**: [./output] root path to which model weights, outputs, statistics, and metrics will be saved.
 
 *trained_model*: Path to a directory containing trained model weights, may also include subdirectory of model outputs. Note this path must end with a forward slash ('/').
 
@@ -75,6 +73,10 @@ The settings are broken down as they appear in the YAML configuration files, wit
 - **optimizer**: [Adadelta, Adam] Name of [PyTorch optimizer](https://docs.pytorch.org/docs/stable/optim.html) for training.
   - `Adadelta`: Adadelta algorithm.
   - `Adam`: Adam algorithm.
+
+- **loss_function**:
+
+  - **name**: [KgeBatchLoss, KgeNormBatchLoss, MseLoss, NseBatchLoss, NseSqrtBatchLoss, RmseCombLoss, RmseLoss] Loss function for training. See `./generic_deltamodel/src/dmg/models/criterion/` for all available loss functions. You can add custom criterion, but they must follow Class-File convention as illustrated for `data_loader`, etc.
 
 - **batch_size**: Training batch size. Must be less than total number of samples.
 
@@ -102,7 +104,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 ### 1.5 Inference
 
-**simulation**:
+**sim**:
 
 - **start_time**: Start date of simulation period, format as YYYY/MM/DD.
 
@@ -112,32 +114,24 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 </br>
 
-### 1.6 Loss Function
+### 1.6 Differentiable Model
 
-**loss_function**:
-
-- **model**: [KgeBatchLoss, KgeNormBatchLoss, MseLoss, NseBatchLoss, NseSqrtBatchLoss, RmseCombLoss, RmseLoss] Loss function for training. See `./generic_deltamodel/src/dmg/models/criterion/` for all available loss functions. You can add custom criterion, but they must follow Class-File convention as illustrated for `data_loader`, etc.
-
-</br>
-
-### 1.7 Differentiable Model
-
-**delta_model**: Settings for the differentiable model.
+**model**: Settings for the differentiable model.
 
 - **rho**: Prediction window.
 
-- **phy_model**: Physical model settings.
-  - **model**: [HBV, HBV_adj, HBV_1_1p, HBV_2_0, custom_model] name of physical model to use. Can be more than one if a list is passed.
-    - `HBV`: δHBV 1.0
-    - `HBV_adj`: δHBV with adjoint method.
-    - `HBV_1_1p`: δHBV 1.1p
-    - `HBV_2_0`: δHBV 2.0
+- **phy**: Physical model settings.
+  - **name**: [Hbv, Hbv_adj, Hbv_1_1p, Hbv_2_0, custom_model] name of physical model to use. Can be more than one if a list is passed.
+    - `Hbv`: δHBV 1.0
+    - `Hbv_adj`: δHBV with adjoint method.
+    - `Hbv_1_1p`: δHBV 1.1p
+    - `Hbv_2_0`: δHBV 2.0
     - `custom_model`: If you create and add a physical to [phy_model/](../src/dmg/models/phy_models/), this will be the class name. Note it must follow the Class-File convention as illustrated for `data_loader`, etc.
 
   - *nmul*: Number of parallel parameter sets to use. These will be averaged for single physical model output.
 
   - *warm_up*: Number of timesteps to use as warmup for model states.
-  
+
   - *warm_up_states*: [bool] If False, keep model gradients on during warmup. Increases computational time for training. Can slightly improve accuracy.
 
   - *dy_drop*: Factor to control the chance that some time-dynamic parameters are set to static.
@@ -157,8 +151,8 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
   - **attributes**: List of static input variables for the physical model. Used in data loader.
 
-- **nn_model**: Neural network settings.
-  - **model**: [CudnnLstmModel, LstmModel, AnnModel, AnnCloseModel, MlpModel, LstmMlpModel] Class name of the NN to use.
+- **nn**: Neural network settings.
+  - **name**: [CudnnLstmModel, LstmModel, AnnModel, AnnCloseModel, MlpModel, LstmMlpModel] Class name of the NN to use.
     - `CudnnLstmModel`: Custom LSTM built with PyTorch CUDA backend. LSTM of HydroDL. Only supports GPU.
     - `LstmModel`: LSTM equivalent to `CudnnLstmModel` with CPU and GPU support.
     - `AnnModel`: ANN.
@@ -167,10 +161,10 @@ The settings are broken down as they appear in the YAML configuration files, wit
     - `LstmMlpModel`: Combined LSTM-MLP model for multiscale applications.
 
   - **dropout**: [0.5] Dropout rate applied to model layers for regularization, discourages overfitting.
-  
+
   - **hidden_size**: [256] Number of hidden units in model layers, determines model complexity.
 
-  - **learning_rate**: [1.0] Initial learning rate used by the optimizer during training.
+  - **lr**: [1.0] Initial learning rate used by the optimizer during training.
 
   - **lr_scheduler**: [None, StepLR, ExponentialLR, CosineAnnealingLR] Name of [Pytorch scheduler](https://docs.pytorch.org/docs/stable/optim.html) to adjust learning rate for the optimizer during training.
     - `None`: No scheduler.
@@ -188,12 +182,12 @@ The settings are broken down as they appear in the YAML configuration files, wit
     - *eta_min*: [0] Minimum learning rate.
 
   - **forcings**: List of time-dynamic NN input variables. Used in data loader.
-  
+
   - **attributes**: List of static NN input variables. Used in data loader.
 
 </br>
 
-### 1.8 Multimodel (Optional)
+### 1.7 Multimodel (Optional)
 
 *multimodel*: Settings for NN in NN-weighted multimodel ensembles (see [Section 1.3](#12-general) multimodel type.). NN learns to weight a collection of models.
 
@@ -203,7 +197,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
   - `AnnModel`: ANN.
   - `AnnCloseModel`: ANN with close observations.
   - `MlpModel`: MLP.
-  
+
 - *mosaic*: [bool] For gridded domains. If True, only use best (highest weighted) model at each site/gridpoint. If False, do linear combination of all *models* using learned weights at each site/gridpoint.
 
 - *dropout*: [0.5] Dropout rate applied to model layers for regularization, discourages overfitting.
