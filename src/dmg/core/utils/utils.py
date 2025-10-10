@@ -163,11 +163,13 @@ def initialize_config(
         'plot_dir', os.path.join(config['output_dir'], 'plot')
     )
     config['sim_dir'] = config.get('sim_dir', os.path.join(config['output_dir'], 'sim'))
+    config['log_dir'] = config.get('log_dir', os.path.join(config['output_dir'], 'log'))
 
     if make_dirs:
         os.makedirs(config['model_dir'], exist_ok=True)
         os.makedirs(config['plot_dir'], exist_ok=True)
         os.makedirs(config['sim_dir'], exist_ok=True)
+        os.makedirs(config['log_dir'], exist_ok=True)
 
     # Convert string back to data type.
     config['dtype'] = eval(config['dtype'])
