@@ -154,11 +154,15 @@ def initialize_config(
         config['trained_model'] = ''
 
     # Create output directories and add path to config.
-    output_dir = os.getcwd()
-    config['output_dir'] = output_dir
-    config['model_dir'] = config.get('model_dir', os.path.join(output_dir, 'model'))
-    config['plot_dir'] = config.get('plot_dir', os.path.join(output_dir, 'plot'))
-    config['sim_dir'] = config.get('sim_dir', os.path.join(output_dir, 'sim'))
+    if 'output_dir' not in config or config['output_dir'] in ['none', 'None', '']:
+        config['output_dir'] = os.getcwd()
+    config['model_dir'] = config.get(
+        'model_dir', os.path.join(config['output_dir'], 'model')
+    )
+    config['plot_dir'] = config.get(
+        'plot_dir', os.path.join(config['output_dir'], 'plot')
+    )
+    config['sim_dir'] = config.get('sim_dir', os.path.join(config['output_dir'], 'sim'))
 
     if make_dirs:
         os.makedirs(config['model_dir'], exist_ok=True)
@@ -277,7 +281,7 @@ def save_outputs(config, predictions, y_obs=None) -> None:
             c_tensor = torch.cat([d[key] for d in predictions], dim=dim)
             file_name = key + ".npy"
 
-            np.save(os.path.join(config['output_dir'], file_name), c_tensor.numpy())
+            np.save(os.path.join(config['sim_dir'], file_name), c_tensor.numpy())
 
     elif type(predictions) is dict:
         # Handle multiple models
@@ -297,7 +301,7 @@ def save_outputs(config, predictions, y_obs=None) -> None:
                 ).numpy()
 
             file_name = key + '.npy'
-            np.save(os.path.join(config['output_dir'], file_name), out_dict)
+            np.save(os.path.join(config['sim_dir'], file_name), out_dict)
 
     else:
         raise ValueError("Invalid output format.")
@@ -307,7 +311,7 @@ def save_outputs(config, predictions, y_obs=None) -> None:
         for var in config['train']['target']:
             item_obs = y_obs[:, :, config['train']['target'].index(var)]
             file_name = var + '_obs.npy'
-            np.save(os.path.join(config['output_dir'], file_name), item_obs)
+            np.save(os.path.join(config['sim_dir'], file_name), item_obs)
 
 
 def save_run_summary(
