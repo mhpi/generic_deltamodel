@@ -31,7 +31,7 @@ def config():
                 'gamma': 0.5,
             },
             'loss_function': {
-                'name': 'RmseLossComb',
+                'name': 'RmseCombLoss',
             },
             'batch_size': 5,
             'epochs': 2,
@@ -82,8 +82,8 @@ def config():
             'all_forcings': ['prcp', 'tmean', 'pet'],
             'all_attributes': ['area_gages2'],
         },
-        'output_dir': './tests/test_output/',
-        'model_dir': './tests/test_output/model',
+        'output_dir': 'tests/test_output/',
+        'model_dir': 'tests/test_output/model/',
         'train_time': ['2000/01/01', '2000/01/31'],
         'test_time': ['2000/02/01', '2000/02/10'],
         'sim_time': ['2000/02/01', '2000/02/10'],
@@ -94,6 +94,10 @@ def config():
 @pytest.fixture
 def mock_dataset(config):
     """A fixture for a mock dataset dictionary, consistent with the config."""
+    # Set random seed
+    np.random.seed(config['seed'])
+    torch.manual_seed(config['seed'])
+
     n_basins = 10
     # Replace slashes with hyphens for numpy compatibility
     start_date = config['observations']['start_time'].replace('/', '-')

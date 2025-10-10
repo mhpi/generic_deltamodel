@@ -1,4 +1,7 @@
-"""Regression test for the training and evaluation process."""
+"""Regression test for the training and evaluation process.
+
+NOTE: We can only evaluate CPU-bound models due to constraint of GitHub.
+"""
 
 import sys
 from pathlib import Path
@@ -12,43 +15,42 @@ from dmg.trainers.trainer import Trainer
 from dmg.models.model_handler import ModelHandler
 from dmg.core.utils import set_randomseed, initialize_config
 
+# --- Expected Train Loss + Test NSE  ---
+# NOTE: If you change the model, data, or training process, these values must
+# need to be updated.
+EXP_FINAL_LOSS = 32.130700409412384
+EXP_NSE = -2.989192485809326
+# --------------------------------------------
+
 
 def test_training_regression(config, mock_dataset, tmp_path):
     """
     Tests the full training and evaluation pipeline for reproducibility.
     """
-    # Use a temporary directory for outputs
-    config['output_dir'] = str(tmp_path / 'output')
-    config['model_dir'] = str(tmp_path / 'model')
+    # Use temporary directory for outputs
+    config['output_dir'] = os.path.join(os.getcwd(), config['output_dir'])
+    config['model_dir'] = os.path.join(os.getcwd(), config['model_dir'])
     os.makedirs(config['model_dir'], exist_ok=True)
-
-    # Set a fixed random seed
     set_randomseed(config['seed'])
 
-    # Initialize model and trainer
-    config = initialize_config(config)
+    config = initialize_config(config, write_out=False)
     model = ModelHandler(config)
     trainer = Trainer(
         config,
         model,
         train_dataset=mock_dataset,
         eval_dataset=mock_dataset,
+        write_out=True,
     )
 
     # --- Training ---
     trainer.train()
 
-    # Expected loss after 2 epochs
-    # This value is obtained by running the test once and recording the output.
-    # If you change the model, data, or training process, this value will need
-    # to be updated.
-    expected_final_loss = 2.001859664916992
-    assert np.isclose(trainer.total_loss, expected_final_loss, atol=1e-5), (
-        f"Training loss regression failed. Expected: {expected_final_loss}, Got: {trainer.total_loss}"
+    assert np.isclose(trainer.total_loss, EXP_FINAL_LOSS, atol=1e-5), (
+        f"Training loss regression failed. Expected: {EXP_FINAL_LOSS}, Got: {trainer.total_loss}"
     )
 
     # --- Evaluation ---
-    # Load the trained model for evaluation
     config['mode'] = 'test'
     config['test']['test_epoch'] = 2
     model_eval = ModelHandler(config)
@@ -56,9 +58,6 @@ def test_training_regression(config, mock_dataset, tmp_path):
     trainer_eval = Trainer(config, model_eval, eval_dataset=mock_dataset)
     trainer_eval.evaluate()
 
-    # Expected evaluation metrics
-    # These are also obtained by running the test once and recording the output.
-    expected_nse = -0.923
     metrics_path = Path(config['output_dir']) / 'metrics_agg.json'
     import json
 
@@ -66,9 +65,8 @@ def test_training_regression(config, mock_dataset, tmp_path):
         metrics = json.load(f)
 
     actual_nse = metrics['nse']['median']
-    assert np.isclose(actual_nse, expected_nse, atol=1e-3), (
-        f"Evaluation NSE regression failed. Expected: {expected_nse}, Got: {actual_nse}"
+    assert np.isclose(actual_nse, EXP_NSE, atol=1e-3), (
+        f"Evaluation NSE regression failed. Expected: {EXP_NSE}, Got: {actual_nse}"
     )
 
-    # Clean up the temporary directory
     shutil.rmtree(tmp_path)

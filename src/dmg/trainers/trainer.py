@@ -52,6 +52,8 @@ class Trainer(BaseTrainer):
         optimizer is initialized.
     scheduler
         Learning rate scheduler. If not provided, a new scheduler is initialized.
+    write_out
+        Whether to save model outputs and metrics to disk.
     verbose
         Whether to print verbose output.
 
@@ -69,6 +71,7 @@ class Trainer(BaseTrainer):
         loss_func: Optional[torch.nn.Module] = None,
         optimizer: Optional[torch.optim.Optimizer] = None,
         scheduler: Optional[torch.nn.Module] = None,
+        write_out: Optional[bool] = True,
         verbose: Optional[bool] = False,
     ) -> None:
         self.config = config
@@ -78,6 +81,7 @@ class Trainer(BaseTrainer):
         self.dataset = dataset
         self.optimizer = optimizer
         self.scheduler = scheduler
+        self.write_out = write_out
         self.verbose = verbose
         self.sampler = import_data_sampler(config['data_sampler'])(config)
         self.is_in_train = False
@@ -295,7 +299,7 @@ class Trainer(BaseTrainer):
         self._log_epoch_stats(epoch, self.model.loss_dict, n_minibatch, start_time)
 
         # Save model and trainer states.
-        if epoch % self.config['train']['save_epoch'] == 0:
+        if (epoch % self.config['train']['save_epoch'] == 0) and self.write_out:
             self.model.save_model(epoch)
             save_train_state(
                 self.config['model_dir'],
@@ -497,14 +501,21 @@ class Trainer(BaseTrainer):
         avg_loss_dict = {key: value / n_minibatch for key, value in loss_dict.items()}
         loss = ", ".join(f"{key}: {value:.6f}" for key, value in avg_loss_dict.items())
         elapsed = time.perf_counter() - start_time
-        mem_aloc = int(
-            torch.cuda.memory_reserved(device=self.config['device']) * 0.000001
-        )
+        mem_aloc = 0
+        if self.config['device'] != 'cpu':
+            mem_aloc = int(
+                torch.cuda.memory_reserved(device=self.config['device']) * 0.000001
+            )
 
         log.info(
             f"Loss after epoch {epoch}: {loss} \n"
             f"~ Runtime {elapsed:.2f} s, {mem_aloc} Mb reserved GPU memory",
         )
 
-        with open(os.path.join(self.config['output_dir'], 'train_log.txt'), 'a') as f:
-            f.write(f"Epoch {epoch}: " + loss + f", Time: {elapsed:.2f} s\n")
+        if self.write_out:
+            with open(
+                os.path.join(self.config['output_dir'], 'train_log.txt'), 'a'
+            ) as f:
+                f.write(
+                    f"Epoch {epoch}: {loss}, Time: {elapsed:.2f} s, {mem_aloc} Mb reserved vram\n"
+                )

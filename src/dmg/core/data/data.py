@@ -234,9 +234,8 @@ def select_subset(
         c_tensor = torch.from_numpy(temp).float()
 
         if tuple_out:
-            if torch.cuda.is_available():
-                x_tensor = x_tensor.cuda()
-                c_tensor = c_tensor.cuda()
+            x_tensor = x_tensor.to(config['device'])
+            c_tensor = c_tensor.to(config['device'])
             return x_tensor, c_tensor
         return torch.cat((x_tensor, c_tensor), dim=2)
 
