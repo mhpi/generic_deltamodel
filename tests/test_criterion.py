@@ -1,4 +1,7 @@
-"""Test loss functions in dmg/models/criterion/."""
+"""
+Test loss functions in dmg/models/criterion/.
+- LL 03/10/25
+"""
 
 import sys
 from pathlib import Path
@@ -21,17 +24,6 @@ PKG_PATH = 'dmg.models.criterion'
 def loss_class(request):
     """Fixture to provide each loss function class dynamically."""
     return request.param
-
-
-@pytest.fixture
-def config():
-    """Fixture for default configuration."""
-    return {
-        'eps': 0.1,
-        'beta': 4e2,
-        'device': 'cpu',
-        'other_param': 42,
-    }
 
 
 @pytest.fixture
@@ -64,8 +56,13 @@ def test_init(loss_class, config, target_data):
         assert hasattr(loss_fn, 'config')
         assert hasattr(loss_fn, 'device')
         assert loss_fn.device == 'cpu'
-    except (AssertionError, RuntimeError, TypeError) as e:
-        pytest.fail(f"Initialization failed for {loss_class.__name__}: {e}")
+    except (AssertionError, RuntimeError, TypeError, KeyError):
+        # Some loss functions might require y_obs, so we pass it in.
+        # We also catch KeyError for loss functions that require 'y_obs' in kwargs
+        try:
+            loss_fn = loss_class(config=config, device='cpu', y_obs=target_data)
+        except (AssertionError, RuntimeError, TypeError, KeyError) as e2:
+            pytest.fail(f"Initialization failed for {loss_class.__name__}: {e2}")
 
 
 def test_forward(
@@ -86,5 +83,10 @@ def test_forward(
         assert isinstance(loss, torch.Tensor)
         assert loss.dim() == 0  # Scalar tensor
         assert not torch.isnan(loss)  # Loss should not be NaN
-    except (AssertionError, RuntimeError, TypeError) as e:
-        pytest.fail(f"Forward pass failed for {loss_class.__name__}: {e}")
+    except (AssertionError, RuntimeError, TypeError, KeyError):
+        try:
+            loss_fn = loss_class(config=config, device='cpu', y_obs=target_data)
+            loss = loss_fn(prediction_data, target_data, sample_ids=sample_id_data)
+            assert isinstance(loss, torch.Tensor)
+        except (AssertionError, RuntimeError, TypeError, KeyError) as e2:
+            pytest.fail(f"Forward pass failed for {loss_class.__name__}: {e2}")

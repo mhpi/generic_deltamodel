@@ -134,7 +134,7 @@ def _save_holdout_metadata(
 def _aggregate_spatial_results(
     predictions: list[np.ndarray],
     targets: list[np.ndarray],
-    output_dir: str,
+    path: str,
     config: DictConfig,
 ) -> None:
     """Aggregate results from multiple spatial holdouts."""
@@ -160,8 +160,8 @@ def _aggregate_spatial_results(
         log.info(f"Aggregated targets shape: {all_targets.shape}")
 
         # Save aggregated arrays
-        np.save(os.path.join(output_dir, 'aggregated_predictions.npy'), all_predictions)
-        np.save(os.path.join(output_dir, 'aggregated_targets.npy'), all_targets)
+        np.save(os.path.join(path, 'aggregated_predictions.npy'), all_predictions)
+        np.save(os.path.join(path, 'aggregated_targets.npy'), all_targets)
 
         # Calculate and save metrics
         pred_formatted = np.swapaxes(all_predictions.squeeze(), 0, 1)
@@ -169,7 +169,7 @@ def _aggregate_spatial_results(
 
         log.info("Calculating metrics for aggregated results")
         metrics = Metrics(pred_formatted, target_formatted)
-        metrics.dump_metrics(output_dir)
+        metrics.dump_metrics(path)
 
     except Exception as e:
         log.error(traceback.format_exc())

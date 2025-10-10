@@ -2,16 +2,41 @@
 
 import sys
 from pathlib import Path
+import pickle
 
 sys.path.append(str(Path(__file__).parent.parent))
+import os
+from dmg.core.data.loaders.hydro_loader import HydroLoader
 
 
-from dmg.core.data.loaders.base import BaseLoader
-from tests import get_available_classes
+def test_hydro_loader_init(config, mock_dataset, tmp_path):
+    """Test the initialization of the HydroLoader."""
+    data_path = tmp_path / "test_data.pkl"
+    with open(data_path, 'wb') as f:
+        # The loader expects a tuple of (forcings, target, attributes)
+        # with shapes (basins, time, features)
+        forcings = mock_dataset['x_phy'].permute(1, 0, 2).numpy()
+        target = mock_dataset['target'].permute(1, 0, 2).numpy()
+        attributes = mock_dataset['c_nn'].numpy()
+        pickle.dump((forcings, target, attributes), f)
 
-# Path to module directory
-PATH = Path(__file__).parent.parent / 'src' / 'dmg' / 'core' / 'data' / 'loaders'
-PKG_PATH = 'dmg.core.data.loaders'
+    config['observations']['data_path'] = str(data_path)
 
+    os.makedirs(config['output_dir'], exist_ok=True)
+    os.makedirs(config['model_dir'], exist_ok=True)
 
-loaders = get_available_classes(PATH, PKG_PATH, BaseLoader)
+    # Test with test_split = True
+    loader_split = HydroLoader(config, test_split=True)
+    assert loader_split.train_dataset is not None
+    assert loader_split.eval_dataset is not None
+    assert loader_split.dataset is None
+    assert 'xc_nn_norm' in loader_split.train_dataset
+    assert 'xc_nn_norm' in loader_split.eval_dataset
+
+    # Test with test_split = False
+    config['mode'] = 'simulation'  # Change mode to avoid splitting
+    loader_no_split = HydroLoader(config, test_split=False)
+    assert loader_no_split.train_dataset is None
+    assert loader_no_split.eval_dataset is None
+    assert loader_no_split.dataset is not None
+    assert 'xc_nn_norm' in loader_no_split.dataset

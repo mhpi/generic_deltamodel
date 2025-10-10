@@ -128,8 +128,8 @@ class AnnCloseModel(torch.nn.Module):
             Output tensor.
         """
         nt, ngrid, nx = x.shape
-        yt = torch.zeros(ngrid, 1).cuda()
-        out = torch.zeros(nt, ngrid, self.ny).cuda()
+        yt = torch.zeros(ngrid, 1).to(x.device)
+        out = torch.zeros(nt, ngrid, self.ny).to(x.device)
         for t in range(nt):
             if self.fill_obs is True:
                 yt_obs = y[t, :, :]

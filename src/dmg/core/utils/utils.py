@@ -13,7 +13,6 @@ from pydantic import ValidationError
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from dmg.core.utils.dates import Dates
-from dmg.core.utils.path import PathBuilder
 
 log = logging.getLogger(__name__)
 
@@ -84,6 +83,8 @@ def set_randomseed(seed=0) -> None:
 
 def initialize_config(
     config: Union[DictConfig, dict],
+    make_dirs: Optional[bool] = True,
+    write_out: Optional[bool] = True,
 ) -> dict[str, Any]:
     """Parse and initialize configuration settings.
 
@@ -99,7 +100,8 @@ def initialize_config(
     """
     # TODO: formalize this initializer
 
-    save_run_summary(config, os.getcwd())
+    if write_out:
+        save_run_summary(config, os.getcwd())
 
     if type(config) is DictConfig:
         try:
@@ -152,15 +154,20 @@ def initialize_config(
         config['trained_model'] = ''
 
     # Create output directories and add path to config.
-    output_dir = os.getcwd()
-    config['output_dir'] = output_dir
-    config['model_dir'] = os.path.join(output_dir, 'model')
-    config['plot_dir'] = os.path.join(output_dir, 'plot')
-    config['sim_dir'] = os.path.join(output_dir, 'sim')
+    if 'output_dir' not in config or config['output_dir'] in ['none', 'None', '']:
+        config['output_dir'] = os.getcwd()
+    config['model_dir'] = config.get(
+        'model_dir', os.path.join(config['output_dir'], 'model')
+    )
+    config['plot_dir'] = config.get(
+        'plot_dir', os.path.join(config['output_dir'], 'plot')
+    )
+    config['sim_dir'] = config.get('sim_dir', os.path.join(config['output_dir'], 'sim'))
 
-    os.makedirs(config['model_dir'], exist_ok=True)
-    os.makedirs(config['plot_dir'], exist_ok=True)
-    os.makedirs(config['sim_dir'], exist_ok=True)
+    if make_dirs:
+        os.makedirs(config['model_dir'], exist_ok=True)
+        os.makedirs(config['plot_dir'], exist_ok=True)
+        os.makedirs(config['sim_dir'], exist_ok=True)
 
     # Convert string back to data type.
     config['dtype'] = eval(config['dtype'])
@@ -258,14 +265,10 @@ def save_train_state(
     )
 
 
-def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
+def save_outputs(config, predictions, y_obs=None) -> None:
     """Save outputs from a model."""
     if torch.is_tensor(y_obs):
         y_obs = y_obs.cpu().numpy()
-
-    if create_dirs:
-        out_path = PathBuilder(config)
-        out_path.write_path(config)
 
     if type(predictions) is list:
         # Handle a single model
@@ -278,11 +281,11 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
             c_tensor = torch.cat([d[key] for d in predictions], dim=dim)
             file_name = key + ".npy"
 
-            np.save(os.path.join(config['out_path'], file_name), c_tensor.numpy())
+            np.save(os.path.join(config['sim_dir'], file_name), c_tensor.numpy())
 
     elif type(predictions) is dict:
         # Handle multiple models
-        models = config['delta_model']['phy_model']['model']
+        models = config['model']['phy']['model']
         for key in predictions[models[0]][0].keys():
             out_dict = {}
 
@@ -298,7 +301,7 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
                 ).numpy()
 
             file_name = key + '.npy'
-            np.save(os.path.join(config['out_path'], file_name), out_dict)
+            np.save(os.path.join(config['sim_dir'], file_name), out_dict)
 
     else:
         raise ValueError("Invalid output format.")
@@ -308,7 +311,7 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
         for var in config['train']['target']:
             item_obs = y_obs[:, :, config['train']['target'].index(var)]
             file_name = var + '_obs.npy'
-            np.save(os.path.join(config['out_path'], file_name), item_obs)
+            np.save(os.path.join(config['sim_dir'], file_name), item_obs)
 
 
 def save_run_summary(
@@ -329,7 +332,10 @@ def save_run_summary(
     # Build critical info summary
     summary_lines = []
     summary_lines.append("=== Run Summary ===")
-    summary_lines.append(f"dMG Version : {os.environ['DMG_VERSION']}")
+    try:
+        summary_lines.append(f"dMG Version : {os.environ['DMG_VERSION']}")
+    except KeyError:
+        summary_lines.append("dMG Version : Unknown")
     summary_lines.append(f"Run directory : {run_dir}")
     summary_lines.append(f"Mode          : {config['mode']}")
     summary_lines.append(f"Seed          : {config['seed']}")
@@ -390,8 +396,8 @@ def save_run_summary(
     # Observations
     summary_lines.append("=== Dataset ===")
     summary_lines.append(f"Observations  : {config['observations']}")
-    summary_lines.append(f"Forcings      : {config['forcings']}")
-    summary_lines.append(f"Attributes    : {len(config['attributes'])} total")
+    summary_lines.append(f"Forcings      : {config.get('forcings', [])}")
+    summary_lines.append(f"Attributes    : {len(config.get('attributes', []))} total")
     summary_lines.append("")
 
     # Write file
