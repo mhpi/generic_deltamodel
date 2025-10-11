@@ -3,7 +3,7 @@ from .tensorboard_logger import TensorBoardLogger
 from .wandb_logger import WandbLogger
 
 
-def get_logger(name: str = "none", **kwargs) -> BaseLogger:
+def get_exp_logger(name: str = "none", **kwargs) -> BaseLogger:
     """Factory function to get the appropriate logger based on the name."""
     name = (name or "none").lower()
 

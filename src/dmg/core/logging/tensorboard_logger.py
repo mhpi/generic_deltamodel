@@ -4,7 +4,7 @@ from .base import BaseLogger
 class TensorBoardLogger(BaseLogger):
     """Logger for TensorBoard."""
 
-    def __init__(self, log_dir="runs", config=None):
+    def __init__(self, log_dir='runs', config=None):
         super().__init__(config)
         try:
             from torch.utils.tensorboard import SummaryWriter
@@ -12,7 +12,11 @@ class TensorBoardLogger(BaseLogger):
             raise ImportError(
                 "TensorBoard not installed. Please run `uv pip install tensorboard`."
             ) from e
+
         self.writer = SummaryWriter(log_dir=log_dir)
+
+        config = config or {}
+        self.log_config(config)
 
     def log_metrics(self, metrics, step=None):
         """Log metrics to TensorBoard."""

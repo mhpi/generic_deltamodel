@@ -85,6 +85,7 @@ class Trainer(BaseTrainer):
         self.verbose = verbose
         self.sampler = import_data_sampler(config['data_sampler'])(config)
         self.is_in_train = False
+        self.exp_logger = None
 
         if 'train' in config['mode']:
             if not self.train_dataset:
@@ -113,6 +114,8 @@ class Trainer(BaseTrainer):
             self.start_epoch = self.config['train']['start_epoch'] + 1
             if self.start_epoch > 1:
                 self.load_states()
+
+            self._init_loggers()
 
     def init_optimizer(self) -> torch.optim.Optimizer:
         """Initialize a state optimizer.
@@ -241,6 +244,8 @@ class Trainer(BaseTrainer):
                 n_minibatch,
                 n_timesteps,
             )
+
+        self.exp_logger.finalize()
 
     def train_one_epoch(self, epoch, n_samples, n_minibatch, n_timesteps) -> None:
         """Train model for one epoch.
@@ -499,16 +504,19 @@ class Trainer(BaseTrainer):
             Start time of the epoch.
         """
         avg_loss_dict = {key: value / n_minibatch for key, value in loss_dict.items()}
-        loss = ", ".join(f"{key}: {value:.6f}" for key, value in avg_loss_dict.items())
+        loss_str = ", ".join(
+            f"{key}: {value:.6f}" for key, value in avg_loss_dict.items()
+        )
         elapsed = time.perf_counter() - start_time
         mem_aloc = 0
+
         if self.config['device'] != 'cpu':
             mem_aloc = int(
                 torch.cuda.memory_reserved(device=self.config['device']) * 0.000001
             )
 
         log.info(
-            f"Loss after epoch {epoch}: {loss} \n"
+            f"Loss after epoch {epoch}: {loss_str} \n"
             f"~ Runtime {elapsed:.2f} s, {mem_aloc} Mb reserved GPU memory",
         )
 
@@ -517,5 +525,18 @@ class Trainer(BaseTrainer):
                 os.path.join(self.config['output_dir'], 'train_log.txt'), 'a'
             ) as f:
                 f.write(
-                    f"Epoch {epoch}: {loss}, Time: {elapsed:.2f} s, {mem_aloc} Mb reserved vram\n"
+                    f"Epoch {epoch}: {loss_str}, Time: {elapsed:.2f} s, {mem_aloc} Mb reserved vram\n"
                 )
+
+        # For experiment loggers: create a single dictionary of metrics to log
+        metrics_to_log = {
+            'Loss/train_total': self.total_loss / n_minibatch,
+        }
+        for model_name, loss_val in avg_loss_dict.items():
+            metrics_to_log[f'Loss/{model_name}'] = loss_val
+
+        if self.use_scheduler:
+            metrics_to_log['learning_rate'] = self.scheduler.get_last_lr()[0]
+
+        # Loop through all active loggers and log the metrics
+        self.exp_logger.log_metrics(metrics_to_log, step=epoch)

@@ -43,6 +43,12 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 **seed**: [111111] Seed to fix deterministic behavior in NumPy and PyTorch.
 
+**logging**: [none, tensorboard, wandb] Experiment logger.
+
+- `none`: No experiment logging.
+- `tensorboard`: Use [Tensorboard](https://docs.pytorch.org/tutorials/recipes/recipes/tensorboard_with_pytorch.html) for logging.
+- `wandb`: Use [Weight & Biases](https://wandb.ai/site/) for logging.
+
 **device**: [cpu, cuda] Device to run models on.
 
 - `cpu`: Run on CPU.
