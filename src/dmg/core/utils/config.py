@@ -111,7 +111,7 @@ class TrainConfig(BaseModel):
     end_time: str
     target: list[str]
     optimizer: OptimizerConfig
-    lr: Optional[float] = Field(
+    lr: float = Field(
         ...,
         gt=0,
     )

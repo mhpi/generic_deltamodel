@@ -24,10 +24,12 @@ def config():
             'start_time': '2000/01/01',
             'end_time': '2000/01/31',
             'target': ['streamflow'],
-            'optimizer': 'Adadelta',
+            'optimizer': {
+                'name': 'Adadelta',
+            },
             'lr': 1.0,
-            'lr_scheduler': None,
-            'lr_scheduler_params': {
+            'lr_scheduler': {
+                'name': 'StepLR',
                 'step_size': 10,
                 'gamma': 0.5,
             },

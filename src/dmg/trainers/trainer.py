@@ -161,7 +161,8 @@ class Trainer(BaseTrainer):
         torch.optim.lr_scheduler.LRScheduler
             Initialized learning rate scheduler object.
         """
-        name = self.config['train']['lr_scheduler']['name']
+        params = self.config['train']['lr_scheduler'].copy()
+        name = params.pop('name')
         scheduler_dict = {
             'StepLR': torch.optim.lr_scheduler.StepLR,
             'ExponentialLR': torch.optim.lr_scheduler.ExponentialLR,
@@ -181,7 +182,7 @@ class Trainer(BaseTrainer):
         try:
             self.scheduler = cls(
                 self.optimizer,
-                **self.config['train']['lr_scheduler_params'],
+                **params,
             )
         except RuntimeError as e:
             raise RuntimeError(f"Error initializing scheduler: {e}") from e
