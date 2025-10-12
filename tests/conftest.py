@@ -13,6 +13,7 @@ def config():
         'mode': 'train_test',
         'multimodel_type': 'none',
         'seed': 111111,
+        'logging': 'tensorboard',
         'device': 'cpu',
         'gpu_id': 0,
         'dtype': torch.float32,
