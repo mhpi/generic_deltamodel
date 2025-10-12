@@ -84,6 +84,7 @@ def config():
         },
         'output_dir': 'tests/test_output/',
         'model_dir': 'tests/test_output/model/',
+        'plot_dir': 'tests/test_output/plots/',
         'sim_dir': 'tests/test_output/sim/',
         'log_dir': 'tests/test_output/log/',
         'train_time': ['2000/01/01', '2000/01/31'],
