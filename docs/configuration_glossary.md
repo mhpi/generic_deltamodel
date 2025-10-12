@@ -80,9 +80,11 @@ The settings are broken down as they appear in the YAML configuration files, wit
   - `Adadelta`: Adadelta algorithm.
   - `Adam`: Adam algorithm.
 
-- **loss_function**:
+- **lr_scheduler**:
+  - **name**: [StepLR, ExponentialLR, CosineAnnealingLR] Name of learning rate scheduler for the optimizer. See [PyTorch LR schedulers](https://docs.pytorch.org/docs/stable/optim.html) for more details.
 
-  - **name**: [KgeBatchLoss, KgeNormBatchLoss, MseLoss, NseBatchLoss, NseSqrtBatchLoss, RmseCombLoss, RmseLoss] Loss function for training. See `./generic_deltamodel/src/dmg/models/criterion/` for all available loss functions. You can add custom criterion, but they must follow Class-File convention as illustrated for `data_loader`, etc.
+- **loss_function**:
+  - **name**: [KgeBatchLoss, KgeNormBatchLoss, MseLoss, NseBatchLoss, NseSqrtBatchLoss, RmseCombLoss, RmseLoss] Name of loss function for training. See `./generic_deltamodel/src/dmg/models/criterion/` for all available loss functions. You can add custom criterion, but they must follow Class-File convention as illustrated for `data_loader`, etc.
 
 - **batch_size**: Training batch size. Must be less than total number of samples.
 

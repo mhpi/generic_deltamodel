@@ -15,7 +15,7 @@ from dmg.core.utils.utils import save_outputs, save_train_state
 from dmg.models.model_handler import ModelHandler
 from dmg.trainers.base import BaseTrainer
 
-log = logging.getLogger(__name__)
+log = logging.getLogger('trainer')
 
 
 # try:
@@ -161,7 +161,7 @@ class Trainer(BaseTrainer):
         torch.optim.lr_scheduler.LRScheduler
             Initialized learning rate scheduler object.
         """
-        name = self.config['train']['lr_scheduler']
+        name = self.config['train']['lr_scheduler']['name']
         scheduler_dict = {
             'StepLR': torch.optim.lr_scheduler.StepLR,
             'ExponentialLR': torch.optim.lr_scheduler.ExponentialLR,

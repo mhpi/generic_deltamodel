@@ -5,14 +5,33 @@ Run this script to validate an example config object (see bottom of file).
 -leoglonz, taddbindas 2024
 """
 
+import os
 import logging
 from datetime import datetime
 from enum import Enum
 from typing import Optional
+from pathlib import Path
 
-from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+    field_serializer,
+)
 
 log = logging.getLogger(__name__)
+
+
+def check_path(key: str, v: str) -> Path:
+    """Checks if a given path exists and is valid."""
+    path = Path(v)
+    if not path.exists():
+        log_str = f"Path does not exist for {key}: {v}"
+        log.error(log_str)
+        raise ValueError(log_str)
+    return path
 
 
 ## ------ Enums ------- ##
@@ -41,10 +60,18 @@ class MultimodelEnum(str, Enum):
     nn_sequential = 'nn_sequential'
 
 
+class TestNameEnum(str, Enum):
+    """Enumeration for different test types."""
+
+    temporal = 'temporal'
+    spatial = 'spatial'
+
+
 ## ------ Training Utilities ------- ##
-class LRSchedulerParams(BaseModel):
+class LRSchedulerConfig(BaseModel):
     """Configuration for learning rate scheduler parameters."""
 
+    name: Optional[str] = None
     step_size: Optional[int] = None
     gamma: Optional[float] = None
 
@@ -67,8 +94,7 @@ class TrainConfig(BaseModel):
         ...,
         gt=0,
     )
-    lr_scheduler: Optional[str] = None
-    lr_scheduler_params: LRSchedulerParams = Field(default_factory=LRSchedulerParams)
+    lr_scheduler: Optional[LRSchedulerConfig] = None
     loss_function: LossFunctionConfig
     batch_size: int
     epochs: int
@@ -82,6 +108,10 @@ class TrainConfig(BaseModel):
         end_time = datetime.strptime(self.end_time, '%Y/%m/%d')
         if start_time >= end_time:
             raise ValueError("Training `start_time` must be earlier than `end_time`.")
+
+        if self.lr_scheduler:
+            if self.lr_scheduler.name.lower() == 'none':
+                self.lr_scheduler = None
         return self
 
     @field_validator('target')
@@ -96,10 +126,19 @@ class TrainConfig(BaseModel):
 class TestConfig(BaseModel):
     """Configuration for testing."""
 
+    name: Optional[TestNameEnum] = Field(default=TestNameEnum.temporal)
     start_time: str
     end_time: str
     batch_size: int
     test_epoch: int
+
+    @field_serializer('name')
+    def serialize_name(self, value: TestNameEnum, _info):
+        """
+        If the value exists, return its .value (the string). Otherwise
+        return None.
+        """
+        return value.value if value else None
 
     @model_validator(mode='after')
     def validate_testing_times(self) -> 'TestConfig':
@@ -200,6 +239,16 @@ class ObservationConfig(BaseModel):
     area_name: Optional[str] = None
 
     @model_validator(mode='after')
+    def validate_data_path(cls, self) -> 'ObservationConfig':
+        """Validates data paths exists."""
+        check_path('observations.data_path', self.data_path)
+        if self.gage_info:
+            check_path('observations.gage_info', self.gage_info)
+        if self.subset_path:
+            check_path('observations.subset_path', self.subset_path)
+        return self
+
+    @model_validator(mode='after')
     def validate_dataset_times(cls, values):
         """Validates the dataset start and end times."""
         if values.start_time == 'not_defined' and values.end_time == 'not_defined':
@@ -235,6 +284,12 @@ class Config(BaseModel):
     trainer: Optional[str] = None
     trained_model: Optional[str] = ''
 
+    output_dir: Optional[str] = os.getcwd()
+    model_dir: Optional[str] = None
+    plot_dir: Optional[str] = None
+    sim_dir: Optional[str] = None
+    log_dir: Optional[str] = None
+
     train: TrainConfig
     test: TestConfig
     sim: Optional[SimConfig] = None
@@ -243,22 +298,69 @@ class Config(BaseModel):
     observations: ObservationConfig
     tune: Optional[dict] = None
 
+    @field_serializer('mode')
+    def serialize_mode(self, value: ModeEnum, _info):
+        """
+        If the value exists, return its .value (the string). Otherwise
+        return None.
+        """
+        return value.value if value else None
+
+    @model_validator(mode='after')
+    def check_paths(self) -> 'Config':
+        """Validate paths in the configuration."""
+        check_path('trained_model', self.trained_model)
+        return self
+
     @model_validator(mode='after')
     def check_device(self) -> 'Config':
         """Validates device configuration."""
         if self.device == 'cuda' and self.gpu_id < 0:
             raise ValueError("GPU ID must be >= 0 when using CUDA.")
 
-        # Auto-assign name if not provided
+        ### Auto-assignments if not provided. ###
         if not self.name:
             self.name = 'dmg-exp'
             log.warning(f"No `name` provided in config. Auto-assigning: {self.name}")
 
-        if self.logging == 'none':
+        if self.logging.lower() == 'none':
             self.logging = None
 
-        if self.multimodel_type == 'none':
+        if self.multimodel_type.lower() == 'none':
             self.multimodel_type = None
+
+        if self.output_dir.lower() == 'none':
+            self.output_dir = os.getcwd()
+
+        ### Create output directories and add path to config. ###
+        if not self.model_dir:
+            self.model_dir = os.path.join(self.output_dir, 'model')
+        if not self.plot_dir:
+            self.plot_dir = os.path.join(self.output_dir, 'plot')
+        if not self.sim_dir:
+            self.sim_dir = os.path.join(self.output_dir, 'sim')
+        if (not self.log_dir) and self.logging:
+            self.log_dir = os.path.join(self.output_dir, self.logging)
+
+        # ### Convert timestamps to list format. ###
+        # exp_time_start = min(
+        #     self.train_time.start_time,
+        #     self.train_time.end_time,
+        #     self.test_time.start_time,
+        #     self.test_time.end_time,
+        # )
+        # exp_time_end = max(
+        #     self.train_time.start_time,
+        #     self.train_time.end_time,
+        #     self.test_time.start_time,
+        #     self.test_time.end_time,
+        # )
+
+        # self.train_time = [self.train.start_time, self.train.end_time]
+        # self.test_time = [self.test.start_time, self.test.end_time]
+        # self.sim_time = [self.sim.start_time, self.sim.end_time]
+        # self.exp_time = [exp_time_start, exp_time_end]
+        # self.all_time = [self.observations.start_time, self.observations.end_time]
 
         return self
 

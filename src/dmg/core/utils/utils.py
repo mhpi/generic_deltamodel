@@ -14,7 +14,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from dmg.core.utils.config import Config
 from dmg.core.utils.dates import Dates
 
-log = logging.getLogger(__name__)
+log = logging.getLogger('utils')
 
 
 def set_system_spec(config: dict) -> tuple[str, str]:
@@ -98,8 +98,6 @@ def initialize_config(
     dict
         Formatted configuration settings.
     """
-    # TODO: formalize this initializer
-
     if write_out:
         save_run_summary(config, os.getcwd())
 
@@ -109,8 +107,24 @@ def initialize_config(
             config = OmegaConf.to_container(config, resolve=True)
             config = Config(**config).model_dump()
         except ValidationError as e:
-            log.exception("Configuration validation error", exc_info=e)
-            raise e
+            clean_errors = []
+            for error in e.errors():
+                # Join the error location path (e.g., ('model', 'phy')) into 'model -> phy'
+                location = " -> ".join(map(str, error['loc']))
+                message = error['msg'].replace("Value error, ", "")
+
+                clean_errors.append(f"  - At '{location}': {message}")
+
+            # Join all formatted errors
+            error_message = "\n".join(clean_errors)
+
+            log.critical(
+                f"❌ Configuration validation failed with {len(e.errors())} "
+                f"error(s):\n{error_message}\n Check configuration file and "
+                f"try again.\n"
+            )
+
+            sys.exit(1)  # Exit cleanly
 
     config['device'], config['dtype'] = set_system_spec(config)
 
@@ -139,38 +153,12 @@ def initialize_config(
     config['experiment_time'] = [exp_time_start, exp_time_end]
     config['all_time'] = [all_time.start_time, all_time.end_time]
 
-    if config['train'].get('lr_scheduler', '') in [
-        'none',
-        'None',
-        '',
-    ]:
-        config['train']['lr_scheduler'] = None
-
-    if config.get('trained_model', '') in ['none', 'None', '']:
-        config['trained_model'] = ''
-
     # Create output directories and add path to config.
-    if 'output_dir' not in config or config['output_dir'] in ['none', 'None', '']:
-        config['output_dir'] = os.getcwd()
-    config['model_dir'] = config.get(
-        'model_dir', os.path.join(config['output_dir'], 'model')
-    )
-    config['plot_dir'] = config.get(
-        'plot_dir', os.path.join(config['output_dir'], 'plot')
-    )
-    config['sim_dir'] = config.get('sim_dir', os.path.join(config['output_dir'], 'sim'))
-
-    if config.get('logger', 'none') != 'none':
-        config['log_dir'] = config.get(
-            'log_dir', os.path.join(config['output_dir'], config['logger'])
-        )
-
     if make_dirs:
         os.makedirs(config['model_dir'], exist_ok=True)
         os.makedirs(config['plot_dir'], exist_ok=True)
         os.makedirs(config['sim_dir'], exist_ok=True)
-
-        if config.get('logger', 'none') != 'none':
+        if config['logging']:
             os.makedirs(config['log_dir'], exist_ok=True)
 
     # Convert string back to data type.
@@ -178,9 +166,6 @@ def initialize_config(
 
     # Raytune
     config['do_tune'] = config.get('do_tune', False)
-
-    # test type
-    config['test']['type'] = config.get('test', {}).get('type', 'temporal')
 
     return config
 
@@ -442,6 +427,9 @@ def print_config(config: dict[str, Any]) -> None:
     print()
     print("\033[1m" + "Current Configuration" + "\033[0m")
     print(f"  {'Experiment Mode:':<20}{config['mode']:<20}")
+    if 'test' in config['mode']:
+        print(f"  {'Test Mode:':<20}{config['test']['name']:<20}")
+
     if config['multimodel_type'] is not None:
         print(f"  {'Ensemble Mode:':<20}{config['multimodel_type']:<20}")
     for i, mod in enumerate(config['model']['phy']['name']):

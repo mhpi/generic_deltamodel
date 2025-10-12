@@ -52,17 +52,11 @@ def run_mode(config: DictConfig, model, trainer=None) -> None:
     test_type = config.get('test', {}).get('type', 'temporal')
 
     if test_type == 'spatial':
-        log.info("Running spatial testing mode")
         run_spatial_mode(config, model)
     elif test_type == 'temporal':
-        log.info("Running temporal testing mode")
         if trainer is None:
             raise ValueError("Trainer required for temporal mode")
         run_temporal_mode(config['mode'], trainer)
-    else:
-        raise ValueError(
-            f"Invalid test type: {test_type}. Must be 'temporal' or 'spatial'"
-        )
 
 
 @hydra.main(
@@ -84,7 +78,6 @@ def main(config: DictConfig) -> None:
             run_tuning(config)
             exit()
 
-        log.info(f"Running mode: {config['mode']} | {config['test']['type']}")
         print_config(config)
 
         ### Create/Load differentiable model ###
@@ -92,7 +85,7 @@ def main(config: DictConfig) -> None:
 
         ### Process datasets and create trainer for temporal mode ###
         trainer = None
-        if config['test']['type'] == 'temporal':
+        if config['test']['name'] == 'temporal':
             log.info("Processing data...")
             data_loader_cls = import_data_loader(config['data_loader'])
             data_loader = data_loader_cls(config, test_split=True, overwrite=False)
