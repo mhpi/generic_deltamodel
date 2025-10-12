@@ -11,10 +11,10 @@ from omegaconf import DictConfig, OmegaConf
 from pydantic import ValidationError
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
+from dmg.core.utils.config import Config
 from dmg.core.utils.dates import Dates
 
-log = logging.getLogger(__name__)
+log = logging.getLogger('utils')
 
 
 def set_system_spec(config: dict) -> tuple[str, str]:
@@ -98,18 +98,34 @@ def initialize_config(
     dict
         Formatted configuration settings.
     """
-    # TODO: formalize this initializer
-
     if write_out:
         save_run_summary(config, os.getcwd())
 
     if type(config) is DictConfig:
         try:
-            # TODO: remove for dot-access configs
-            config = OmegaConf.to_container(config, resolve=True)
+            config = OmegaConf.to_container(
+                config, resolve=True
+            )  # Remove for dot-access configs.
+            config = Config(**config).model_dump(mode='json')
         except ValidationError as e:
-            log.exception("Configuration validation error", exc_info=e)
-            raise e
+            clean_errors = []
+            for error in e.errors():
+                # Join the error location path (e.g., ('model', 'phy')) into 'model -> phy'
+                location = " -> ".join(map(str, error['loc']))
+                message = error['msg'].replace("Value error, ", "")
+
+                clean_errors.append(f"  - At '{location}': {message}")
+
+            # Join all formatted errors
+            error_message = "\n".join(clean_errors)
+
+            log.critical(
+                f"❌ Configuration validation failed with {len(e.errors())} "
+                f"error(s):\n{error_message}\n Check configuration file and "
+                f"try again.\n"
+            )
+
+            sys.exit(1)  # Exit cleanly
 
     config['device'], config['dtype'] = set_system_spec(config)
 
@@ -138,43 +154,12 @@ def initialize_config(
     config['experiment_time'] = [exp_time_start, exp_time_end]
     config['all_time'] = [all_time.start_time, all_time.end_time]
 
-    # TODO: add this handling directly to the trainer; this is not generalizable in current form.
-    # change multimodel_type type to None if none.
-    if config.get('multimodel_type', '') in ['none', 'None', '']:
-        config['multimodel_type'] = None
-
-    if config['train'].get('lr_scheduler', '') in [
-        'none',
-        'None',
-        '',
-    ]:
-        config['train']['lr_scheduler'] = None
-
-    if config.get('trained_model', '') in ['none', 'None', '']:
-        config['trained_model'] = ''
-
     # Create output directories and add path to config.
-    if 'output_dir' not in config or config['output_dir'] in ['none', 'None', '']:
-        config['output_dir'] = os.getcwd()
-    config['model_dir'] = config.get(
-        'model_dir', os.path.join(config['output_dir'], 'model')
-    )
-    config['plot_dir'] = config.get(
-        'plot_dir', os.path.join(config['output_dir'], 'plot')
-    )
-    config['sim_dir'] = config.get('sim_dir', os.path.join(config['output_dir'], 'sim'))
-
-    if config.get('logger', 'none') != 'none':
-        config['log_dir'] = config.get(
-            'log_dir', os.path.join(config['output_dir'], config['logger'])
-        )
-
     if make_dirs:
         os.makedirs(config['model_dir'], exist_ok=True)
         os.makedirs(config['plot_dir'], exist_ok=True)
         os.makedirs(config['sim_dir'], exist_ok=True)
-
-        if config.get('logger', 'none') != 'none':
+        if config['logging']:
             os.makedirs(config['log_dir'], exist_ok=True)
 
     # Convert string back to data type.
@@ -182,9 +167,6 @@ def initialize_config(
 
     # Raytune
     config['do_tune'] = config.get('do_tune', False)
-
-    # test type
-    config['test']['type'] = config.get('test', {}).get('type', 'temporal')
 
     return config
 
@@ -446,6 +428,12 @@ def print_config(config: dict[str, Any]) -> None:
     print()
     print("\033[1m" + "Current Configuration" + "\033[0m")
     print(f"  {'Experiment Mode:':<20}{config['mode']:<20}")
+    if 'test' in config['mode']:
+        print(f"  {'Test Mode:':<20}{config['test']['name']:<20}")
+
+    if config['logging']:
+        print(f"  {'Logging:':<20}{str(config['logging']):<20}")
+
     if config['multimodel_type'] is not None:
         print(f"  {'Ensemble Mode:':<20}{config['multimodel_type']:<20}")
     for i, mod in enumerate(config['model']['phy']['name']):
@@ -476,25 +464,18 @@ def print_config(config: dict[str, Any]) -> None:
         )
     print()
 
-    print("\033[1m" + "Model Parameters" + "\033[0m")
+    print("\033[1m" + "Experiment Parameters" + "\033[0m")
     print(
         f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}"
     )
-    if config['model']['nn']['name'] != 'LstmMlpModel':
-        print(
-            f"  {'Dropout:':<20}{config['model']['nn']['dropout']:<20}{'Hidden Size:':<20}{config['model']['nn']['hidden_size']:<20}"
-        )
-    else:
-        print(
-            f"  {'LSTM Dropout:':<20}{config['model']['nn']['lstm_dropout']:<20}{'LSTM Hidden Size:':<20}{config['model']['nn']['lstm_hidden_size']:<20}"
-        )
-        print(
-            f"  {'MLP Dropout:':<20}{config['model']['nn']['mlp_dropout']:<20}{'MLP Hidden Size:':<20}{config['model']['nn']['mlp_hidden_size']:<20}"
-        )
+
     print(
-        f"  {'Warmup:':<20}{config['model']['phy'].get('warm_up', '0'):<20}{'Concurrent Models:':<20}{config['model']['phy']['nmul']:<20}"
+        f"  {'Start Epoch:':<20}{config['train']['start_epoch']:<20}{'Save Epoch:':<20}{config['train']['save_epoch']:<20}"
     )
     print(f"  {'Loss Fn:':<20}{config['train']['loss_function']['name']:<20}")
+    print(
+        f"  {'Optimizer:':<20}{config['train']['optimizer']['name']:<20}{'LR Scheduler:':<20}{config['train'].get('lr_scheduler') or 'None':<20}"
+    )
     print()
 
     if config['multimodel_type'] is not None:
@@ -514,7 +495,8 @@ def print_config(config: dict[str, Any]) -> None:
         print()
 
     print("\033[1m" + 'Machine' + "\033[0m")
-    print(f"  {'Use Device:':<20}{str(config['device']):<20}")
+    print(f"  {'Device:':<20}{str(config['device']):<20}")
+    print(f"  {'Dtype:':<20}{str(config['dtype']):<20}")
     print()
 
 

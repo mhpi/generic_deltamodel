@@ -30,8 +30,11 @@ def test_training_regression(config, mock_dataset, tmp_path):
     # Use temporary directory for outputs
     config['output_dir'] = os.path.join(os.getcwd(), config['output_dir'])
     config['model_dir'] = os.path.join(os.getcwd(), config['model_dir'])
+    config['plot_dir'] = os.path.join(os.getcwd(), config['plot_dir'])
     config['sim_dir'] = os.path.join(os.getcwd(), config['sim_dir'])
     config['log_dir'] = os.path.join(os.getcwd(), config['log_dir'])
+
+    # Create output directories
     os.makedirs(config['model_dir'], exist_ok=True)
     os.makedirs(config['sim_dir'], exist_ok=True)
     set_randomseed(config['seed'])

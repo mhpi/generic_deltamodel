@@ -13,6 +13,7 @@ def config():
         'mode': 'train_test',
         'multimodel_type': 'none',
         'seed': 111111,
+        'logging': 'tensorboard',
         'device': 'cpu',
         'gpu_id': 0,
         'dtype': torch.float32,
@@ -23,10 +24,12 @@ def config():
             'start_time': '2000/01/01',
             'end_time': '2000/01/31',
             'target': ['streamflow'],
-            'optimizer': 'Adadelta',
+            'optimizer': {
+                'name': 'Adadelta',
+            },
             'lr': 1.0,
-            'lr_scheduler': None,
-            'lr_scheduler_params': {
+            'lr_scheduler': {
+                'name': 'StepLR',
                 'step_size': 10,
                 'gamma': 0.5,
             },
@@ -84,6 +87,7 @@ def config():
         },
         'output_dir': 'tests/test_output/',
         'model_dir': 'tests/test_output/model/',
+        'plot_dir': 'tests/test_output/plots/',
         'sim_dir': 'tests/test_output/sim/',
         'log_dir': 'tests/test_output/log/',
         'train_time': ['2000/01/01', '2000/01/31'],

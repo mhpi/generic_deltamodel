@@ -10,7 +10,7 @@ from dmg.models.criterion.range_bound_loss import RangeBoundLoss
 from dmg.models.delta_models.dpl_model import DplModel
 from dmg.models.multimodels.ensemble_generator import EnsembleGenerator
 
-log = logging.getLogger(__name__)
+log = logging.getLogger('model_handler')
 
 
 class ModelHandler(torch.nn.Module):
