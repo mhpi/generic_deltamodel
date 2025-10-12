@@ -127,7 +127,7 @@ class Trainer(BaseTrainer):
         torch.optim.Optimizer
             Initialized optimizer object.
         """
-        name = self.config['train']['optimizer']
+        name = self.config['train']['optimizer']['name']
         learning_rate = self.config['train']['lr']
         optimizer_dict = {
             # 'SGD': torch.optim.SGD,

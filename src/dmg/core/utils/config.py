@@ -18,7 +18,6 @@ from pydantic import (
     ValidationError,
     field_validator,
     model_validator,
-    field_serializer,
 )
 
 log = logging.getLogger(__name__)
@@ -60,6 +59,22 @@ class MultimodelEnum(str, Enum):
     nn_sequential = 'nn_sequential'
 
 
+class OptimizerNameEnum(str, Enum):
+    """Enumeration for different PyTorch optimizers."""
+
+    adadelta = 'Adadelta'
+    adam = 'Adam'
+
+
+class LRSchedulerNameEnum(str, Enum):
+    """Enumeration for different PyTorch learning rate schedulers."""
+
+    none = 'none'
+    steplr = 'StepLR'
+    exponentiallr = 'ExponentialLR'
+    cosineannealinglr = 'CosineAnnealingLR'
+
+
 class TestNameEnum(str, Enum):
     """Enumeration for different test types."""
 
@@ -68,10 +83,16 @@ class TestNameEnum(str, Enum):
 
 
 ## ------ Training Utilities ------- ##
+class OptimizerConfig(BaseModel):
+    """Configuration for optimizer."""
+
+    name: Optional[OptimizerNameEnum] = Field(default=OptimizerNameEnum.adadelta)
+
+
 class LRSchedulerConfig(BaseModel):
     """Configuration for learning rate scheduler parameters."""
 
-    name: Optional[str] = None
+    name: Optional[LRSchedulerNameEnum] = None
     step_size: Optional[int] = None
     gamma: Optional[float] = None
 
@@ -89,7 +110,7 @@ class TrainConfig(BaseModel):
     start_time: str
     end_time: str
     target: list[str]
-    optimizer: str
+    optimizer: OptimizerConfig
     lr: Optional[float] = Field(
         ...,
         gt=0,
@@ -131,14 +152,6 @@ class TestConfig(BaseModel):
     end_time: str
     batch_size: int
     test_epoch: int
-
-    @field_serializer('name')
-    def serialize_name(self, value: TestNameEnum, _info):
-        """
-        If the value exists, return its .value (the string). Otherwise
-        return None.
-        """
-        return value.value if value else None
 
     @model_validator(mode='after')
     def validate_testing_times(self) -> 'TestConfig':
@@ -284,7 +297,7 @@ class Config(BaseModel):
     trainer: Optional[str] = None
     trained_model: Optional[str] = ''
 
-    output_dir: Optional[str] = os.getcwd()
+    output_dir: Optional[str] = None
     model_dir: Optional[str] = None
     plot_dir: Optional[str] = None
     sim_dir: Optional[str] = None
@@ -297,14 +310,6 @@ class Config(BaseModel):
     model: ModelConfig
     observations: ObservationConfig
     tune: Optional[dict] = None
-
-    @field_serializer('mode')
-    def serialize_mode(self, value: ModeEnum, _info):
-        """
-        If the value exists, return its .value (the string). Otherwise
-        return None.
-        """
-        return value.value if value else None
 
     @model_validator(mode='after')
     def check_paths(self) -> 'Config':
@@ -329,10 +334,9 @@ class Config(BaseModel):
         if self.multimodel_type.lower() == 'none':
             self.multimodel_type = None
 
-        if self.output_dir.lower() == 'none':
-            self.output_dir = os.getcwd()
-
         ### Create output directories and add path to config. ###
+        if not self.output_dir:
+            self.output_dir = os.getcwd()
         if not self.model_dir:
             self.model_dir = os.path.join(self.output_dir, 'model')
         if not self.plot_dir:

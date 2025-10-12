@@ -103,9 +103,10 @@ def initialize_config(
 
     if type(config) is DictConfig:
         try:
-            # TODO: remove for dot-access configs
-            config = OmegaConf.to_container(config, resolve=True)
-            config = Config(**config).model_dump()
+            config = OmegaConf.to_container(
+                config, resolve=True
+            )  # Remove for dot-access configs.
+            config = Config(**config).model_dump(mode='json')
         except ValidationError as e:
             clean_errors = []
             for error in e.errors():
@@ -155,6 +156,7 @@ def initialize_config(
 
     # Create output directories and add path to config.
     if make_dirs:
+        print(config['model_dir'])
         os.makedirs(config['model_dir'], exist_ok=True)
         os.makedirs(config['plot_dir'], exist_ok=True)
         os.makedirs(config['sim_dir'], exist_ok=True)
@@ -430,6 +432,9 @@ def print_config(config: dict[str, Any]) -> None:
     if 'test' in config['mode']:
         print(f"  {'Test Mode:':<20}{config['test']['name']:<20}")
 
+    if config['logging']:
+        print(f"  {'Logging:':<20}{str(config['logging']):<20}")
+
     if config['multimodel_type'] is not None:
         print(f"  {'Ensemble Mode:':<20}{config['multimodel_type']:<20}")
     for i, mod in enumerate(config['model']['phy']['name']):
@@ -460,25 +465,18 @@ def print_config(config: dict[str, Any]) -> None:
         )
     print()
 
-    print("\033[1m" + "Model Parameters" + "\033[0m")
+    print("\033[1m" + "Experiment Parameters" + "\033[0m")
     print(
         f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}"
     )
-    if config['model']['nn']['name'] != 'LstmMlpModel':
-        print(
-            f"  {'Dropout:':<20}{config['model']['nn']['dropout']:<20}{'Hidden Size:':<20}{config['model']['nn']['hidden_size']:<20}"
-        )
-    else:
-        print(
-            f"  {'LSTM Dropout:':<20}{config['model']['nn']['lstm_dropout']:<20}{'LSTM Hidden Size:':<20}{config['model']['nn']['lstm_hidden_size']:<20}"
-        )
-        print(
-            f"  {'MLP Dropout:':<20}{config['model']['nn']['mlp_dropout']:<20}{'MLP Hidden Size:':<20}{config['model']['nn']['mlp_hidden_size']:<20}"
-        )
+
     print(
-        f"  {'Warmup:':<20}{config['model']['phy'].get('warm_up', '0'):<20}{'Concurrent Models:':<20}{config['model']['phy']['nmul']:<20}"
+        f"  {'Start Epoch:':<20}{config['train']['start_epoch']:<20}{'Save Epoch:':<20}{config['train']['save_epoch']:<20}"
     )
     print(f"  {'Loss Fn:':<20}{config['train']['loss_function']['name']:<20}")
+    print(
+        f"  {'Optimizer:':<20}{config['train']['optimizer']['name']:<20}{'LR Scheduler:':<20}{config['train'].get('lr_scheduler') or 'None':<20}"
+    )
     print()
 
     if config['multimodel_type'] is not None:
@@ -498,7 +496,8 @@ def print_config(config: dict[str, Any]) -> None:
         print()
 
     print("\033[1m" + 'Machine' + "\033[0m")
-    print(f"  {'Use Device:':<20}{str(config['device']):<20}")
+    print(f"  {'Device:':<20}{str(config['device']):<20}")
+    print(f"  {'Dtype:':<20}{str(config['dtype']):<20}")
     print()
 
 
