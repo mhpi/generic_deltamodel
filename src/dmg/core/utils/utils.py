@@ -156,7 +156,6 @@ def initialize_config(
 
     # Create output directories and add path to config.
     if make_dirs:
-        print(config['model_dir'])
         os.makedirs(config['model_dir'], exist_ok=True)
         os.makedirs(config['plot_dir'], exist_ok=True)
         os.makedirs(config['sim_dir'], exist_ok=True)
