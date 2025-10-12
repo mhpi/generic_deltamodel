@@ -11,7 +11,7 @@ from omegaconf import DictConfig, OmegaConf
 from pydantic import ValidationError
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
+from dmg.core.utils.config import Config
 from dmg.core.utils.dates import Dates
 
 log = logging.getLogger(__name__)
@@ -107,6 +107,7 @@ def initialize_config(
         try:
             # TODO: remove for dot-access configs
             config = OmegaConf.to_container(config, resolve=True)
+            config = Config(**config).model_dump()
         except ValidationError as e:
             log.exception("Configuration validation error", exc_info=e)
             raise e
@@ -137,11 +138,6 @@ def initialize_config(
     config['sim_time'] = [sim_time.start_time, sim_time.end_time]
     config['experiment_time'] = [exp_time_start, exp_time_end]
     config['all_time'] = [all_time.start_time, all_time.end_time]
-
-    # TODO: add this handling directly to the trainer; this is not generalizable in current form.
-    # change multimodel_type type to None if none.
-    if config.get('multimodel_type', '') in ['none', 'None', '']:
-        config['multimodel_type'] = None
 
     if config['train'].get('lr_scheduler', '') in [
         'none',
