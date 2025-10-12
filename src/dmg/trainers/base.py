@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional
+from dmg.core.logging.factory import get_exp_logger
 
 import torch
 
@@ -108,7 +109,17 @@ class BaseTrainer(ABC):
 
     def validate_config(self) -> None:
         """Ensure the configuration contains required keys."""
-        required_keys = ["train", "test", "delta_model"]
+        required_keys = ['rain', 'test', 'delta_model']
         missing_keys = [key for key in required_keys if key not in self.config]
         if missing_keys:
             raise ValueError(f"Configuration is missing required keys: {missing_keys}")
+
+    def _init_loggers(self) -> None:
+        """Setup optional experiment loggers based on configuration."""
+        name = self.config.get('logger', 'none')
+        logger_config = {
+            'log_dir': self.config['log_dir'],
+            'config': self.config,
+        }
+
+        self.exp_logger = get_exp_logger(name=name, **logger_config)

@@ -7,7 +7,6 @@ from .factory import (
     load_criterion,
     load_nn_model,
 )
-from .path import PathBuilder
 from .utils import (
     format_resample_interval,
     initialize_config,
@@ -24,7 +23,6 @@ __all__ = [
     'initialize_config',
     'load_criterion',
     'load_nn_model',
-    'PathBuilder',
     'Dates',
     'print_config',
     'save_model',
