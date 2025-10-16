@@ -106,7 +106,7 @@ class MsTrainer(BaseTrainer):
 
         # Get start and end indices for each batch.
         n_samples = self.dataset['xc_nn_norm'].shape[1]
-        batch_start = np.arange(0, n_samples, self.config['simulation']['batch_size'])
+        batch_start = np.arange(0, n_samples, self.config['sim']['batch_size'])
         batch_end = np.append(batch_start[1:], n_samples)
 
         # Forward loop
@@ -187,7 +187,7 @@ class MsTrainer(BaseTrainer):
             prediction = self.model(dataset_sample, eval=True)
 
             # Save the batch predictions
-            model_name = self.config['delta_model']['phy_model']['model'][0]
+            model_name = self.config['model']['phy']['name'][0]
             prediction = {
                 key: tensor.cpu().detach()
                 for key, tensor in prediction[model_name].items()

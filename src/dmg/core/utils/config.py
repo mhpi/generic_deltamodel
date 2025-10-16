@@ -86,11 +86,15 @@ class TestNameEnum(str, Enum):
 class OptimizerConfig(BaseModel):
     """Configuration for optimizer."""
 
+    model_config = {'extra': 'allow'}
+
     name: Optional[OptimizerNameEnum] = Field(default=OptimizerNameEnum.adadelta)
 
 
 class LRSchedulerConfig(BaseModel):
     """Configuration for learning rate scheduler parameters."""
+
+    model_config = {'extra': 'allow'}
 
     name: Optional[LRSchedulerNameEnum] = None
     step_size: Optional[int] = None
@@ -100,12 +104,16 @@ class LRSchedulerConfig(BaseModel):
 class LossFunctionConfig(BaseModel):
     """Configuration for the loss function used in training."""
 
+    model_config = {'extra': 'allow'}
+
     name: str
 
 
 ## ------ Experiment Modes ------- ##
 class TrainConfig(BaseModel):
     """Configuration for training."""
+
+    model_config = {'extra': 'allow'}
 
     start_time: str
     end_time: str
@@ -147,6 +155,8 @@ class TrainConfig(BaseModel):
 class TestConfig(BaseModel):
     """Configuration for testing."""
 
+    model_config = {'extra': 'allow'}
+
     name: Optional[TestNameEnum] = Field(default=TestNameEnum.temporal)
     start_time: str
     end_time: str
@@ -166,6 +176,8 @@ class TestConfig(BaseModel):
 class SimConfig(BaseModel):
     """Configuration for simulation."""
 
+    model_config = {'extra': 'allow'}
+
     start_time: str
     end_time: str
     batch_size: int
@@ -183,6 +195,8 @@ class SimConfig(BaseModel):
 ## ------ Model Configurations ------- ##
 class PhyModelConfig(BaseModel):
     """Configuration class for the physics-based model."""
+
+    model_config = {'extra': 'allow'}
 
     name: list[str]
     dynamic_params: dict[str, list[str]]
@@ -216,6 +230,8 @@ class PhyModelConfig(BaseModel):
 class NeuralNetworkModelConfig(BaseModel):
     """Configuration for the neural network model."""
 
+    model_config = {'extra': 'allow'}
+
     name: str
     forcings: list[str] = Field(default_factory=list)
     attributes: list[str] = Field(default_factory=list)
@@ -228,6 +244,8 @@ class NeuralNetworkModelConfig(BaseModel):
 class ModelConfig(BaseModel):
     """Configuration for the differentiable model."""
 
+    model_config = {'extra': 'allow'}
+
     rho: int
     nn: NeuralNetworkModelConfig = Field(default_factory=NeuralNetworkModelConfig)
 
@@ -238,6 +256,8 @@ class ModelConfig(BaseModel):
 ## ------ Dataset/Observation Configurations ------- ##
 class ObservationConfig(BaseModel):
     """Configuration for observations/datasets."""
+
+    model_config = {'extra': 'allow'}
 
     name: str
     data_path: str
@@ -281,6 +301,8 @@ class ObservationConfig(BaseModel):
 ## ------ Root Configuration ------- ##
 class Config(BaseModel):
     """Root configuration model for the entire application."""
+
+    model_config = {'extra': 'allow'}
 
     name: Optional[str] = None
     mode: Optional[ModeEnum] = Field(default=ModeEnum.train_test)

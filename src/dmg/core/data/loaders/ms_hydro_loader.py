@@ -46,15 +46,15 @@ class MsHydroLoader(BaseLoader):
         self.overwrite = overwrite
         self.supported_data = ['merit']  # Add new supported observation names here.
         self.data_name = config['observations']['name']
-        self.nn_attributes = config['delta_model']['nn_model'].get('attributes', [])
-        self.nn_forcings = config['delta_model']['nn_model'].get('forcings', [])
-        self.phy_attributes = config['delta_model']['phy_model'].get('attributes', [])
-        self.phy_forcings = config['delta_model']['phy_model'].get('forcings', [])
+        self.nn_attributes = config['model']['nn'].get('attributes', [])
+        self.nn_forcings = config['model']['nn'].get('forcings', [])
+        self.phy_attributes = config['model']['phy'].get('attributes', [])
+        self.phy_forcings = config['model']['phy'].get('forcings', [])
         self.all_forcings = self.config['observations']['all_forcings']
         self.all_attributes = self.config['observations']['all_attributes']
 
         self.target = config['train']['target']
-        self.log_norm_vars = config['delta_model']['phy_model']['use_log_norm']
+        self.log_norm_vars = config['model']['phy']['use_log_norm']
         self.device = config['device']
         self.dtype = config['dtype']
 
@@ -71,7 +71,7 @@ class MsHydroLoader(BaseLoader):
     def load_dataset(self) -> None:
         """Load dataset into dictionary of nn and physics model input arrays."""
         mode = self.config['mode']
-        if mode == 'simulation':
+        if mode == 'sim':
             self.dataset = self._preprocess_data(scope='simulation')
         elif self.test_split:
             self.train_dataset = self._preprocess_data(scope='train')
@@ -168,7 +168,7 @@ class MsHydroLoader(BaseLoader):
 
         # Load data
         root_zone = zarr.open_group(
-            self.config['observations']['subbasin_data_path'],
+            self.config['observations']['data_path'],
             mode='r',
         )
         subbasin_id_all = np.array(
@@ -234,7 +234,7 @@ class MsHydroLoader(BaseLoader):
     def load_norm_stats(self) -> None:
         """Load or calculate normalization statistics if necessary."""
         self.out_path = os.path.join(
-            self.config['model_path'],
+            os.path.dirname(self.config['model_dir']),
             'normalization_statistics.json',
         )
 
@@ -247,7 +247,7 @@ class MsHydroLoader(BaseLoader):
             # NOTE: will be supported with release of multiscale training code.
             raise ValueError(
                 "Normalization statistics not found. Confirm "
-                "`normalization_statistics.json` is in your model directory."
+                "`normalization_statistics.json` is in your model directory: ."
             )
 
     def normalize(
