@@ -51,7 +51,7 @@ class LstmMlpModel(torch.nn.Module):
         self.name = 'LstmMlpModel'
 
         if device == 'cpu':
-            # CPU-compatible LSTM model.
+            # CPU-compatible PyTorch LSTM.
             self.lstminv = LstmModel(
                 nx=nx1,
                 ny=ny1,
@@ -74,18 +74,22 @@ class LstmMlpModel(torch.nn.Module):
             dr=dr2,
         )
 
+        # LSTM states
+        self.hn = None
+        self.cn = None
+
     def forward(
         self,
-        z1: torch.Tensor,
-        z2: torch.Tensor,
+        x1: torch.Tensor,
+        x2: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward pass.
 
         Parameters
         ----------
-        z1
+        x1
             The LSTM input tensor.
-        z2
+        x2
             The MLP input tensor.
 
         Returns
@@ -93,8 +97,21 @@ class LstmMlpModel(torch.nn.Module):
         tuple
             The LSTM and MLP output tensors.
         """
-        lstm_out = self.lstminv(z1)  # dim: timesteps, gages, params
+        self.lstminv.load_states((self.hn, self.cn))
+        lstm_out = self.lstminv(x1)
+        self.hn, self.cn = self.lstminv.get_states()
 
-        ann_out = self.ann(z2)
+        ann_out = self.ann(x2)
 
         return [torch.sigmoid(lstm_out), ann_out]
+
+    def get_states(self) -> tuple[torch.Tensor, torch.Tensor]:
+        """Get hidden and cell states."""
+        return self.hn, self.cn
+
+    def load_states(
+        self,
+        states: tuple[torch.Tensor, torch.Tensor],
+    ) -> None:
+        """Load hidden and cell states."""
+        self.hn, self.cn = states

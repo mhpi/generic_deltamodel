@@ -207,6 +207,7 @@ class LstmModel(torch.nn.Module):
 
         # self.activation_sigmoid = torch.nn.Sigmoid()
 
+        # LSTM states
         self.hn = None
         self.cn = None
 
@@ -230,20 +231,20 @@ class LstmModel(torch.nn.Module):
         x0 = F.relu(self.linear_in(x))
         lstm_out, (self.hn, self.cn) = self.lstm(
             x0,
+            self.hn,
+            self.cn,
             do_drop_mc=do_drop_mc,
             dr_false=dr_false,
         )
         return self.linear_out(lstm_out)
 
-    def get_states(self) -> tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+    def get_states(self) -> tuple[torch.Tensor, torch.Tensor]:
         """Get hidden and cell states."""
         return self.hn, self.cn
 
     def load_states(
         self,
-        hn: Optional[torch.Tensor],
-        cn: Optional[torch.Tensor],
+        states: tuple[torch.Tensor, torch.Tensor],
     ) -> None:
         """Load hidden and cell states."""
-        self.hn = hn
-        self.cn = cn
+        self.hn, self.cn = states
