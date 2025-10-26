@@ -213,6 +213,24 @@ class CudnnLstmModel(torch.nn.Module):
         self.lstm = CudnnLstm(nx=hidden_size, hidden_size=hidden_size, dr=dr)
         self.linear_out = torch.nn.Linear(hidden_size, ny)
 
+    def get_states(self) -> tuple[torch.Tensor, torch.Tensor]:
+        """Get hidden and cell states."""
+        return self._hn_cache, self._cn_cache
+
+    def load_states(
+        self,
+        states: tuple[torch.Tensor, torch.Tensor],
+    ) -> None:
+        """Load hidden and cell states."""
+        for state in states:
+            if not isinstance(state, torch.Tensor):
+                raise ValueError("Each element in `states` must be a tensor.")
+        if not (isinstance(states, tuple) and len(states) == 2):
+            raise ValueError("`states` must be a tuple of 2 tensors.")
+
+        self.hn = states[0].detach()
+        self.cn = states[1].detach()
+
     def forward(
         self,
         x,
@@ -251,15 +269,3 @@ class CudnnLstmModel(torch.nn.Module):
             self.cn = self._cn_cache
 
         return self.linear_out(lstm_out)
-
-    def get_states(self) -> tuple[torch.Tensor, torch.Tensor]:
-        """Get hidden and cell states."""
-        return self._hn_cache, self._cn_cache
-
-    def load_states(
-        self,
-        states: tuple[torch.Tensor, torch.Tensor],
-    ) -> None:
-        """Load hidden and cell states."""
-        self.hn = states[0].detach()
-        self.cn = states[1].detach()
