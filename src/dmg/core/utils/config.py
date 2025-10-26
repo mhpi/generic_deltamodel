@@ -310,6 +310,7 @@ class Config(BaseModel):
     multimodel_type: Optional[MultimodelEnum] = None
     seed: Optional[int] = 0
     logging: Optional[LoggingEnum] = None
+    cache_states: Optional[bool] = False
     device: str
     gpu_id: Optional[int] = 0
     verbose: Optional[bool] = True
@@ -340,31 +341,41 @@ class Config(BaseModel):
         return self
 
     @model_validator(mode='after')
-    def check_device(self) -> 'Config':
-        """Validates device configuration."""
-        if self.device == 'cuda' and self.gpu_id < 0:
-            raise ValueError("GPU ID must be >= 0 when using CUDA.")
-
+    def populate_fields(self) -> 'Config':
+        """
+        Validates device configuration and populates other config fields.
+        that are not explicitly provided (reduce config clutter for redundant
+        settings).
+        """
         ### Auto-assignments if not provided. ###
         if not self.name:
             self.name = 'dmg-exp'
             log.warning(f"No `name` provided in config. Auto-assigning: {self.name}")
 
+        if self.multimodel_type.lower() == 'none':
+            self.multimodel_type = None
+
         if self.logging.lower() == 'none':
             self.logging = None
 
-        if self.multimodel_type.lower() == 'none':
-            self.multimodel_type = None
+        # Assign state caching to sub-models.
+        if self.model.phy:
+            self.model.phy.cache_states = self.cache_states
+        if self.model.nn:
+            self.model.nn.cache_states = self.cache_states
+
+        if self.device == 'cuda' and self.gpu_id < 0:
+            raise ValueError("GPU ID must be >= 0 when using CUDA.")
 
         ### Create output directories and add path to config. ###
         if not self.output_dir:
             self.output_dir = os.getcwd()
         if not self.model_dir:
-            self.model_dir = os.path.join(self.output_dir, 'model')
+            self.model_dir = os.path.join(self.output_dir, 'model/')
         if not self.plot_dir:
-            self.plot_dir = os.path.join(self.output_dir, 'plot')
+            self.plot_dir = os.path.join(self.output_dir, 'plot/')
         if not self.sim_dir:
-            self.sim_dir = os.path.join(self.output_dir, 'sim')
+            self.sim_dir = os.path.join(self.output_dir, 'sim/')
         if (not self.log_dir) and self.logging:
             self.log_dir = os.path.join(self.output_dir, self.logging)
 

@@ -416,28 +416,29 @@ class ModelHandler(torch.nn.Module):
 
     def get_states(self) -> None:
         """
-        Helper function to expose and load hidden states into a deltamodel for sequential
-        simulations.
+        Helper function to expose physical model and nn hidden states
+        into a deltamodel (e.g., for sequential simulations).
         """
         if len(self.model_dict) == 1:
-            states = self.model_dict[
-                list(self.model_dict.keys())[0]
-            ].nn_model.get_states()
-            return states
+            name = list(self.model_dict.keys())[0]
+            nn_states = self.model_dict[name].nn_model.get_states()
+            phy_states = self.model_dict[name].phy_model.get_states()
+
+            return nn_states, phy_states
         else:
             raise NotImplementedError(
                 "Loading hidden states for multimodel ensembles is not yet supported.",
             )
 
-    def load_states(self, hstates: tuple) -> None:
+    def load_states(self, nn_states: tuple, phy_states) -> None:
         """
-        Helper function to expose and load hidden states into a deltamodel for sequential
-        simulations.
+        Helper function to load physical model and nn hidden states
+        into a deltamodel (e.g., for sequential simulations).
         """
         if len(self.model_dict) == 1:
-            self.model_dict[list(self.model_dict.keys())[0]].nn_model.load_states(
-                hstates
-            )
+            name = list(self.model_dict.keys())[0]
+            self.model_dict[name].nn_model.load_states(nn_states)
+            self.model_dict[name].phy_model.load_states(phy_states)
         else:
             raise NotImplementedError(
                 "Loading hidden states for multimodel ensembles is not yet supported.",

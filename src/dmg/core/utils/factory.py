@@ -247,6 +247,7 @@ def load_nn_model(
             ny=ny,
             hidden_size=hidden_size,
             dr=dr,
+            cache_states=config['nn']['cache_states'],
         )
     elif name in ['MLP']:
         model = cls(
@@ -264,6 +265,7 @@ def load_nn_model(
             hiddeninv2=config['nn']['mlp_hidden_size'],
             dr1=config['nn']['lstm_dropout'],
             dr2=config['nn']['mlp_dropout'],
+            cache_states=config['nn']['cache_states'],
             device=device,
         )
     else:

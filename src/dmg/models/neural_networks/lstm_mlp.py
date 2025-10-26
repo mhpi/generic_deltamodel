@@ -30,6 +30,8 @@ class LstmMlpModel(torch.nn.Module):
         Dropout rate for LSTM. Default is 0.5.
     dr2
         Dropout rate for MLP. Default is 0.5.
+    cache_states
+        Whether to cache hidden and cell states for LSTM.
     device
         Device to run the model on. Default is 'cpu'.
     """
@@ -45,10 +47,24 @@ class LstmMlpModel(torch.nn.Module):
         hiddeninv2: int,
         dr1: Optional[float] = 0.5,
         dr2: Optional[float] = 0.5,
+        cache_states: Optional[bool] = False,
         device: Optional[str] = 'cpu',
     ) -> None:
         super().__init__()
         self.name = 'LstmMlpModel'
+        self.nx1 = nx1
+        self.ny1 = ny1
+        self.hiddeninv1 = hiddeninv1
+        self.nx2 = nx2
+        self.ny2 = ny2
+        self.hiddeninv2 = hiddeninv2
+        self.dr1 = dr1
+        self.dr2 = dr2
+        self.cache_states = cache_states
+        self.device = device
+
+        self.hn, self._hn_cache = None, None  # hidden state
+        self.cn, self._cn_cache = None, None  # cell state
 
         if device == 'cpu':
             # CPU-compatible PyTorch LSTM.
@@ -67,6 +83,8 @@ class LstmMlpModel(torch.nn.Module):
                 dr=dr1,
             )
 
+        self.activation = torch.nn.Sigmoid()
+
         self.ann = AnnModel(
             nx=nx2,
             ny=ny2,
@@ -74,16 +92,16 @@ class LstmMlpModel(torch.nn.Module):
             dr=dr2,
         )
 
-        # LSTM states
-        self.hn = None
-        self.cn = None
-
     def forward(
         self,
         x1: torch.Tensor,
         x2: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward pass.
+
+        NOTE (caching): Hidden states are always cached so that they can be
+        accessed by `get_states`, but they are only available to the LSTM if
+        `cache_states` is set to True.
 
         Parameters
         ----------
@@ -99,19 +117,27 @@ class LstmMlpModel(torch.nn.Module):
         """
         self.lstminv.load_states((self.hn, self.cn))
         lstm_out = self.lstminv(x1)
-        self.hn, self.cn = self.lstminv.get_states()
-
+        act_out = self.activation(lstm_out)
         ann_out = self.ann(x2)
 
-        return [torch.sigmoid(lstm_out), ann_out]
+        hn, cn = self.lstminv.get_states()
+        self._hn_cache = hn.detach()
+        self._cn_cache = cn.detach()
+
+        if self.cache_states:
+            self.hn = self._hn_cache
+            self.cn = self._cn_cache
+
+        return (act_out, ann_out)
 
     def get_states(self) -> tuple[torch.Tensor, torch.Tensor]:
         """Get hidden and cell states."""
-        return self.hn, self.cn
+        return self._hn_cache, self._cn_cache
 
     def load_states(
         self,
         states: tuple[torch.Tensor, torch.Tensor],
     ) -> None:
         """Load hidden and cell states."""
-        self.hn, self.cn = states
+        self.hn = states[0].detach()
+        self.cn = states[1].detach()

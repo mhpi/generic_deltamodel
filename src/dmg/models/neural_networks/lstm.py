@@ -28,7 +28,6 @@ class Lstm(torch.nn.Module):
 
     def __init__(
         self,
-        *,
         nx: int,
         hidden_size: int,
         dr: Optional[float] = 0.5,
@@ -62,11 +61,10 @@ class Lstm(torch.nn.Module):
         self.b_hh = Parameter(torch.Tensor(hidden_size * 4))
         self._all_weights = [['w_ih', 'w_hh', 'b_ih', 'b_hh']]
 
-        self.reset_mask()
-        self.reset_parameters()
+        self._init_mask()
+        self._init_parameters()
 
     def __setstate__(self, d: dict) -> None:
-        """Set state of LSTM."""
         super().__setstate__(d)
         self.__dict__.setdefault('_data_ptrs', [])
         if 'all_weights' in d:
@@ -75,13 +73,13 @@ class Lstm(torch.nn.Module):
             return
         self._all_weights = [['w_ih', 'w_hh', 'b_ih', 'b_hh']]
 
-    def reset_mask(self):
-        """Reset dropout mask."""
+    def _init_mask(self):
+        """Initialize dropout mask."""
         with torch.no_grad():
             self.mask_w_ih = createMask(self.w_ih, self.dr)
             self.mask_w_hh = createMask(self.w_hh, self.dr)
 
-    def reset_parameters(self):
+    def _init_parameters(self):
         """Initialize parameters."""
         stdv = 1.0 / math.sqrt(self.hidden_size)
         for param in self.parameters():
@@ -181,6 +179,8 @@ class LstmModel(torch.nn.Module):
         Number of hidden units.
     dr
         Dropout rate.
+    cache_states
+        Whether to cache hidden and cell states.
 
     NOTE: Not validated for training.
     """
@@ -192,24 +192,22 @@ class LstmModel(torch.nn.Module):
         ny: int,
         hidden_size: int,
         dr: Optional[float] = 0.5,
+        cache_states: Optional[bool] = False,
     ) -> None:
         super().__init__()
         self.name = 'LstmModel'
         self.nx = nx
         self.ny = ny
         self.hidden_size = hidden_size
-        self.ct = 0
-        self.n_layers = 1
+        self.dr = dr
+        self.cache_states = cache_states
+
+        self.hn, self._hn_cache = None, None  # hidden state
+        self.cn, self._cn_cache = None, None  # cell state
 
         self.linear_in = torch.nn.Linear(nx, hidden_size)
         self.lstm = Lstm(nx=hidden_size, hidden_size=hidden_size, dr=dr)
         self.linear_out = torch.nn.Linear(hidden_size, ny)
-
-        # self.activation_sigmoid = torch.nn.Sigmoid()
-
-        # LSTM states
-        self.hn = None
-        self.cn = None
 
     def forward(
         self,
@@ -219,32 +217,45 @@ class LstmModel(torch.nn.Module):
     ) -> torch.Tensor:
         """Forward pass.
 
+        NOTE (caching): Hidden states are always cached so that they can be
+        accessed by `get_states`, but they are only available to the LSTM if
+        `cache_states` is set to True.
+
         Parameters
         ----------
         x
             The input tensor.
         do_drop_mc
-            Flag for applying dropout.
+            Flag for applying mc dropout.
         dr_false
             Flag for applying dropout.
         """
         x0 = F.relu(self.linear_in(x))
-        lstm_out, (self.hn, self.cn) = self.lstm(
+        lstm_out, (hn, cn) = self.lstm(
             x0,
             self.hn,
             self.cn,
             do_drop_mc=do_drop_mc,
             dr_false=dr_false,
         )
+
+        self._hn_cache = hn.detach()
+        self._cn_cache = cn.detach()
+
+        if self.cache_states:
+            self.hn = self._hn_cache
+            self.cn = self._cn_cache
+
         return self.linear_out(lstm_out)
 
     def get_states(self) -> tuple[torch.Tensor, torch.Tensor]:
         """Get hidden and cell states."""
-        return self.hn, self.cn
+        return self._hn_cache, self._cn_cache
 
     def load_states(
         self,
         states: tuple[torch.Tensor, torch.Tensor],
     ) -> None:
         """Load hidden and cell states."""
-        self.hn, self.cn = states
+        self.hn = states[0].detach()
+        self.cn = states[1].detach()
