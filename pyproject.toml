@@ -29,7 +29,6 @@ dependencies = [
     "numpy",
     "omegaconf",
     "pandas",
-    "pre-commit",
     "pydantic>=2.0.0",
     "ray[tune]",
     "scikit-learn",
@@ -48,16 +47,15 @@ classifiers = [
 [project.optional-dependencies]
 dev = [
     "ipywidgets",
+    "pre-commit",
     "pytest",
     "ruff",
 ]
 hydrodl2 = [
     "hydrodl2 @ git+https://github.com/mhpi/hydrodl2.git@master"
 ]
-tensorboard = [
+logging = [
     "tensorboard",
-]
-wandb = [
     "wandb",
 ]
 

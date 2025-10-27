@@ -1,6 +1,6 @@
 # 𝛿MG: Generic Differentiable Modeling Framework
 
-[![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.7.0-EE4C2C?logo=pytorch)](https://pytorch.org/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
@@ -72,7 +72,7 @@ See [how to run](./docs/how_to_run.md).
     phy_model = Hbv(config['delta_model']['phy_model'])
     nn = load_nn_model(phy_model, config['delta_model'])
 
-    # Create differentiable model dHBV: a torch.nn.Module that describes how 
+    # Create differentiable model dHBV: a torch.nn.Module that describes how
     # the NN is linked to the physical model HBV.
     dpl_model = DplModel(phy_model=phy_model, nn_model=nn)
 
@@ -87,7 +87,7 @@ This exposes a key characteristic of the differentiable model `DplModel`: compos
 
     ```python
     # NN forward
-    parameters = self.nn_model(dataset_sample['xc_nn_norm'])        
+    parameters = self.nn_model(dataset_sample['xc_nn_norm'])
 
     # Physics model forward
     predictions = self.phy_model(
@@ -116,13 +116,13 @@ In the unseen extreme events spatial test, we used water years with a 5-year or 
 
 A national-scale water modeling study on approximately 180,000 river reaches (with a median length of 7 km) across CONUS using the high-resolution, multiscale, differentiable water model 𝛿HBV 2.0. This model is also operating at global-scales and has been used to generate high-quality, seamless simulations for the entire CONUS. Find more details and results in [Song, Bindas, et al. (2025)](https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2024WR038928).
 
-![Alt text](./docs/images/CONUS_dataset.jpg)
+![Alt text](./docs/images/conus_dataset.jpg)
 
 ### 4. Global-scale Photosynthesis Modeling
 
 Currently in development. Find more details and results in [Aboelyazeed et al. (2024)](https://doi.org/10.22541/au.173101418.87755465/v1).
 
-![Alt text](./docs/images/Vcmax25_learnt_global_combined_2011_2020.png)
+![Alt text](./docs/images/ecosystems_global_vcmax.png)
 
 </br>
 
@@ -151,14 +151,15 @@ Currently in development. Find more details and results in [Aboelyazeed et al. (
     ```text
     .
     ├── src/dmg/
-    │   ├── __main__.py                 # Runs dMG; models, experiments
-    │   ├── core/                       
+    │   ├── __main__.py                 # Runs 𝛿MG; models, experiments
+    │   ├── core/
     │   │   ├── calc/                   # Calculation utilities
     │   │   ├── data/                   # Data loaders and samplers
+    │   │   ├── logging/                # Utilities for Tensorboard and W&B logging
     │   │   ├── post/                   # Post-processing utilities; plotting
     │   │   └── utils/                  # Helper functions
-    │   ├── models/                     
-    │   │   ├── criterion               # Loss functions  
+    │   ├── models/
+    │   │   ├── criterion               # Loss functions
     │   │   ├── delta_models            # Differentiable model modalities
     │   │   ├── multimodels             # Multimodeling processors
     │   │   ├── neural_networks/        # Neural network architectures
@@ -170,8 +171,7 @@ Currently in development. Find more details and results in [Aboelyazeed et al. (
     │   ├── observations/               # Observation configuration files
     │   ├── config.py                   # Configuration validator
     │   └── default.yaml                # Default master configuration file
-    ├── docs/                           
-    ├── envs/                           # Python ENV configurations
+    ├── docs/
     └── example/                        # Tutorials
     ```
 
