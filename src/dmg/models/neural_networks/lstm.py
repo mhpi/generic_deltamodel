@@ -135,7 +135,7 @@ class Lstm(torch.nn.Module):
             )
 
         if do_drop is True:
-            self.reset_mask()
+            self._init_mask()
             weight = [
                 DropMask.apply(self.w_ih, self.mask_w_ih, True),
                 DropMask.apply(self.w_hh, self.mask_w_hh, True),

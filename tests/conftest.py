@@ -14,6 +14,7 @@ def config():
         'multimodel_type': 'none',
         'seed': 111111,
         'logging': 'tensorboard',
+        'cache_states': False,
         'device': 'cpu',
         'gpu_id': 0,
         'dtype': torch.float32,
@@ -68,6 +69,7 @@ def config():
                 'nearzero': 1e-5,
                 'forcings': ['prcp', 'tmean', 'pet'],
                 'attributes': [],
+                'cache_states': False,
             },
             'nn': {
                 'name': 'LstmModel',
@@ -75,6 +77,7 @@ def config():
                 'hidden_size': 32,
                 'forcings': ['prcp', 'tmean', 'pet'],
                 'attributes': ['area_gages2'],
+                'cache_states': False,
             },
         },
         'observations': {
