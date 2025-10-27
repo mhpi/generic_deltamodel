@@ -1,6 +1,6 @@
 # Configuration Glossary
 
-This document is intended to define all configuration options used in (1) model and (2) observation configuration files in dMG.
+This document is intended to define all configuration options used in (1) model and (2) observation configuration files in 𝛿MG.
 
 Universal options will be **bold-faced** to distinguish from options used specifically for MHPI hydrology models like δHBV (see [examples](../example/hydrology/)).
 
@@ -48,6 +48,8 @@ The settings are broken down as they appear in the YAML configuration files, wit
 - `none`: No experiment logging.
 - `tensorboard`: Use [Tensorboard](https://docs.pytorch.org/tutorials/recipes/recipes/tensorboard_with_pytorch.html) for logging.
 - `wandb`: Use [Weight & Biases](https://wandb.ai/site/) for logging.
+
+**cache_states**: [bool] If true, all physical and/or ML models in the runtime will use cached internal states as an initialization (this could be hidden + cell states for an LSTM, or the storages for a process-based model, for instance). This can be useful in instances where forwarding on a full temporal sequence in a single batch is forbidden, or where sequential forwarding is otherwise required.
 
 **device**: [cpu, cuda] Device to run models on.
 
@@ -237,7 +239,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 ## 2. Observations Configuration
 
-*Note* observation settings are up to you to define and use in your data loader. The only requirement is the `name` parameter for the master configuration. We simply provide definitions here for the settings used for hydrological models presented in dMG as an example.
+*Note* observation settings are up to you to define and use in your data loader. The only requirement is the `name` parameter for the master configuration. We simply provide definitions here for the settings used for hydrological models presented in 𝛿MG as an example.
 
 **name**: Name of the observations. This is the name to list in `observations: ...` in the [master configuration](#11-hydra-yaml-argument-parser) when this data is to be used.
 

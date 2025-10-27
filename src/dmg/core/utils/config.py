@@ -86,11 +86,15 @@ class TestNameEnum(str, Enum):
 class OptimizerConfig(BaseModel):
     """Configuration for optimizer."""
 
+    model_config = {'extra': 'allow'}
+
     name: Optional[OptimizerNameEnum] = Field(default=OptimizerNameEnum.adadelta)
 
 
 class LRSchedulerConfig(BaseModel):
     """Configuration for learning rate scheduler parameters."""
+
+    model_config = {'extra': 'allow'}
 
     name: Optional[LRSchedulerNameEnum] = None
     step_size: Optional[int] = None
@@ -100,12 +104,16 @@ class LRSchedulerConfig(BaseModel):
 class LossFunctionConfig(BaseModel):
     """Configuration for the loss function used in training."""
 
+    model_config = {'extra': 'allow'}
+
     name: str
 
 
 ## ------ Experiment Modes ------- ##
 class TrainConfig(BaseModel):
     """Configuration for training."""
+
+    model_config = {'extra': 'allow'}
 
     start_time: str
     end_time: str
@@ -147,6 +155,8 @@ class TrainConfig(BaseModel):
 class TestConfig(BaseModel):
     """Configuration for testing."""
 
+    model_config = {'extra': 'allow'}
+
     name: Optional[TestNameEnum] = Field(default=TestNameEnum.temporal)
     start_time: str
     end_time: str
@@ -166,6 +176,8 @@ class TestConfig(BaseModel):
 class SimConfig(BaseModel):
     """Configuration for simulation."""
 
+    model_config = {'extra': 'allow'}
+
     start_time: str
     end_time: str
     batch_size: int
@@ -183,6 +195,8 @@ class SimConfig(BaseModel):
 ## ------ Model Configurations ------- ##
 class PhyModelConfig(BaseModel):
     """Configuration class for the physics-based model."""
+
+    model_config = {'extra': 'allow'}
 
     name: list[str]
     dynamic_params: dict[str, list[str]]
@@ -216,6 +230,8 @@ class PhyModelConfig(BaseModel):
 class NeuralNetworkModelConfig(BaseModel):
     """Configuration for the neural network model."""
 
+    model_config = {'extra': 'allow'}
+
     name: str
     forcings: list[str] = Field(default_factory=list)
     attributes: list[str] = Field(default_factory=list)
@@ -228,6 +244,8 @@ class NeuralNetworkModelConfig(BaseModel):
 class ModelConfig(BaseModel):
     """Configuration for the differentiable model."""
 
+    model_config = {'extra': 'allow'}
+
     rho: int
     nn: NeuralNetworkModelConfig = Field(default_factory=NeuralNetworkModelConfig)
 
@@ -238,6 +256,8 @@ class ModelConfig(BaseModel):
 ## ------ Dataset/Observation Configurations ------- ##
 class ObservationConfig(BaseModel):
     """Configuration for observations/datasets."""
+
+    model_config = {'extra': 'allow'}
 
     name: str
     data_path: str
@@ -282,12 +302,15 @@ class ObservationConfig(BaseModel):
 class Config(BaseModel):
     """Root configuration model for the entire application."""
 
+    model_config = {'extra': 'allow'}
+
     name: Optional[str] = None
     mode: Optional[ModeEnum] = Field(default=ModeEnum.train_test)
     do_tune: Optional[bool] = False
     multimodel_type: Optional[MultimodelEnum] = None
     seed: Optional[int] = 0
     logging: Optional[LoggingEnum] = None
+    cache_states: Optional[bool] = False
     device: str
     gpu_id: Optional[int] = 0
     verbose: Optional[bool] = True
@@ -318,31 +341,41 @@ class Config(BaseModel):
         return self
 
     @model_validator(mode='after')
-    def check_device(self) -> 'Config':
-        """Validates device configuration."""
-        if self.device == 'cuda' and self.gpu_id < 0:
-            raise ValueError("GPU ID must be >= 0 when using CUDA.")
-
+    def populate_fields(self) -> 'Config':
+        """
+        Validates device configuration and populates other config fields.
+        that are not explicitly provided (reduce config clutter for redundant
+        settings).
+        """
         ### Auto-assignments if not provided. ###
         if not self.name:
             self.name = 'dmg-exp'
             log.warning(f"No `name` provided in config. Auto-assigning: {self.name}")
 
+        if self.multimodel_type.lower() == 'none':
+            self.multimodel_type = None
+
         if self.logging.lower() == 'none':
             self.logging = None
 
-        if self.multimodel_type.lower() == 'none':
-            self.multimodel_type = None
+        # Assign state caching to sub-models.
+        if self.model.phy:
+            self.model.phy.cache_states = self.cache_states
+        if self.model.nn:
+            self.model.nn.cache_states = self.cache_states
+
+        if self.device == 'cuda' and self.gpu_id < 0:
+            raise ValueError("GPU ID must be >= 0 when using CUDA.")
 
         ### Create output directories and add path to config. ###
         if not self.output_dir:
             self.output_dir = os.getcwd()
         if not self.model_dir:
-            self.model_dir = os.path.join(self.output_dir, 'model')
+            self.model_dir = os.path.join(self.output_dir, 'model/')
         if not self.plot_dir:
-            self.plot_dir = os.path.join(self.output_dir, 'plot')
+            self.plot_dir = os.path.join(self.output_dir, 'plot/')
         if not self.sim_dir:
-            self.sim_dir = os.path.join(self.output_dir, 'sim')
+            self.sim_dir = os.path.join(self.output_dir, 'sim/')
         if (not self.log_dir) and self.logging:
             self.log_dir = os.path.join(self.output_dir, self.logging)
 

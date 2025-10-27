@@ -19,7 +19,7 @@ class RayTrainable(tune.Trainable):
         self.epoch = 0
 
         # Load model
-        self.model = dModel(config, verbose=self.config['verbose'])
+        self.model = dModel(config, verbose=True)
 
         # Load data
         data_loader_cls = import_data_loader(self.config['data_loader'])

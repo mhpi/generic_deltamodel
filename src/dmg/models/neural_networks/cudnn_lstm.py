@@ -19,6 +19,9 @@ warnings.filterwarnings(
 class CudnnLstm(torch.nn.Module):
     """HydroDL LSTM model using cuDNN backend (GPU only).
 
+    Modification of original LSTM developed by Dapeng Feng, et al. (2022) for
+    HydroDL.
+
     Parameters
     ----------
     nx
@@ -26,12 +29,11 @@ class CudnnLstm(torch.nn.Module):
     hidden_size
         Number of hidden units.
     dr
-        Dropout rate. Default is 0.5.
+        Dropout rate.
     """
 
     def __init__(
         self,
-        *,
         nx: int,
         hidden_size: int,
         dr: Optional[float] = 0.5,
@@ -49,8 +51,8 @@ class CudnnLstm(torch.nn.Module):
         self._all_weights = [['w_ih', 'w_hh', 'b_ih', 'b_hh']]
         self.cuda()
 
-        self.reset_mask()
-        self.reset_parameters()
+        self._init_mask()
+        self._init_parameters()
 
     def __setstate__(self, d: dict) -> None:
         super().__setstate__(d)
@@ -61,13 +63,13 @@ class CudnnLstm(torch.nn.Module):
             return
         self._all_weights = [['w_ih', 'w_hh', 'b_ih', 'b_hh']]
 
-    def reset_mask(self):
-        """Reset mask."""
+    def _init_mask(self):
+        """Initialize dropout mask."""
         self.mask_w_ih = createMask(self.w_ih, self.dr)
         self.mask_w_hh = createMask(self.w_hh, self.dr)
 
-    def reset_parameters(self):
-        """Reset parameters."""
+    def _init_parameters(self):
+        """Initialize parameters."""
         stdv = 1.0 / math.sqrt(self.hidden_size)
         for weight in self.parameters():
             weight.data.uniform_(-stdv, stdv)
@@ -87,13 +89,13 @@ class CudnnLstm(torch.nn.Module):
         input
             The input tensor.
         hx
-            Hidden state tensor. Default is None.
+            Hidden state tensor.
         cx
-            Cell state tensor. Default is None.
+            Cell state tensor.
         do_drop_mc
-            Flag for applying dropout. Default is False.
+            Flag for applying dropout.
         dr_false
-            Flag for applying dropout. Default is False.
+            Flag for applying dropout.
         """
         # Ensure do_drop is False, unless do_drop_mc is True.
         if dr_false and (not do_drop_mc):
@@ -113,7 +115,7 @@ class CudnnLstm(torch.nn.Module):
         # cuDNN backend - disabled flat weight
         # handle = torch.backends.cudnn.get_handle()
         if do_drop is True:
-            self.reset_mask()
+            self._init_mask()
             weight = [
                 DropMask.apply(self.w_ih, self.mask_w_ih, True),
                 DropMask.apply(self.w_hh, self.mask_w_hh, True),
@@ -184,29 +186,51 @@ class CudnnLstmModel(torch.nn.Module):
         Number of hidden units.
     dr
         Dropout rate.
+    cache_states
+        Whether to cache hidden and cell states.
     """
 
     def __init__(
         self,
-        *,
         nx: int,
         ny: int,
         hidden_size: int,
         dr: Optional[float] = 0.5,
+        cache_states: Optional[bool] = False,
     ) -> None:
         super().__init__()
         self.name = 'CudnnLstmModel'
         self.nx = nx
         self.ny = ny
         self.hidden_size = hidden_size
-        self.ct = 0
-        self.n_layers = 1
+        self.dr = dr
+        self.cache_states = cache_states
+
+        self.hn, self._hn_cache = None, None  # hidden state
+        self.cn, self._cn_cache = None, None  # cell state
 
         self.linear_in = torch.nn.Linear(nx, hidden_size)
         self.lstm = CudnnLstm(nx=hidden_size, hidden_size=hidden_size, dr=dr)
         self.linear_out = torch.nn.Linear(hidden_size, ny)
 
-        # self.activation_sigmoid = torch.nn.Sigmoid()
+    def get_states(self) -> tuple[torch.Tensor, torch.Tensor]:
+        """Get hidden and cell states."""
+        return self._hn_cache, self._cn_cache
+
+    def load_states(
+        self,
+        states: tuple[torch.Tensor, torch.Tensor],
+    ) -> None:
+        """Load hidden and cell states."""
+        for state in states:
+            if not isinstance(state, torch.Tensor):
+                raise ValueError("Each element in `states` must be a tensor.")
+        if not (isinstance(states, tuple) and len(states) == 2):
+            raise ValueError("`states` must be a tuple of 2 tensors.")
+
+        device = next(self.parameters()).device
+        self.hn = states[0].detach().to(device)
+        self.cn = states[1].detach().to(device)
 
     def forward(
         self,
@@ -216,19 +240,33 @@ class CudnnLstmModel(torch.nn.Module):
     ) -> torch.Tensor:
         """Forward pass.
 
+        NOTE (caching): Hidden states are always cached so that they can be
+        accessed by `get_states`, but they are only available to the LSTM if
+        `cache_states` is set to True.
+
         Parameters
         ----------
         x
             The input tensor.
         do_drop_mc
-            Flag for applying dropout.
+            Flag for applying mc dropout.
         dr_false
             Flag for applying dropout.
         """
         x0 = F.relu(self.linear_in(x))
         lstm_out, (hn, cn) = self.lstm(
             x0,
+            self.hn,
+            self.cn,
             do_drop_mc=do_drop_mc,
             dr_false=dr_false,
         )
+
+        self._hn_cache = hn.detach().cpu()
+        self._cn_cache = cn.detach().cpu()
+
+        if self.cache_states:
+            self.hn = self._hn_cache.to(x.device)
+            self.cn = self._cn_cache.to(x.device)
+
         return self.linear_out(lstm_out)

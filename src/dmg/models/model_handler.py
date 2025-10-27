@@ -136,9 +136,8 @@ class ModelHandler(torch.nn.Module):
                     log.info(f"Created new model: {name}")
                 continue
             else:
-                # --- FIX STARTS HERE ---
-                # TODO: find better fix.
-                # If using aLstmModel (CPU-capable equivalent to HydroDL
+                # TODO: find better fix...
+                # If using LstmModel (CPU-capable equivalent to HydroDL
                 # CudnnLstm), run a dummy forward pass to initialize states
                 # before loading the state_dict.
                 model_instance = self.model_dict.get(name)
@@ -152,7 +151,6 @@ class ModelHandler(torch.nn.Module):
                             (1, 1, n_forcings + n_attrs), device=self.device
                         )
                         model_instance.nn_model(dummy_data)
-                # --- FIX ENDS HERE ---
 
                 # Initialize model from checkpoint state dict.
                 path = self.model_path
@@ -413,3 +411,33 @@ class ModelHandler(torch.nn.Module):
 
         if self.verbose:
             log.info(f"All states saved for ep:{epoch}")
+
+    def get_states(self) -> None:
+        """
+        Helper function to expose physical model and nn hidden states
+        into a deltamodel (e.g., for sequential simulations).
+        """
+        if len(self.model_dict) == 1:
+            name = list(self.model_dict.keys())[0]
+            nn_states = self.model_dict[name].nn_model.get_states()
+            phy_states = self.model_dict[name].phy_model.get_states()
+
+            return nn_states, phy_states
+        else:
+            raise NotImplementedError(
+                "Loading hidden states for multimodel ensembles is not yet supported.",
+            )
+
+    def load_states(self, nn_states: tuple, phy_states) -> None:
+        """
+        Helper function to load physical model and nn hidden states
+        into a deltamodel (e.g., for sequential simulations).
+        """
+        if len(self.model_dict) == 1:
+            name = list(self.model_dict.keys())[0]
+            self.model_dict[name].nn_model.load_states(nn_states)
+            self.model_dict[name].phy_model.load_states(phy_states)
+        else:
+            raise NotImplementedError(
+                "Loading hidden states for multimodel ensembles is not yet supported.",
+            )

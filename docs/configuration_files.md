@@ -1,6 +1,6 @@
-# Configuration Files in *dMG*
+# Configuration Files in *𝛿MG*
 
-Every model built in dMG is designed to run on a pair of configuration files to isolate experiment, model, and data settings. These are handled by [Hydra config manager](https://hydra.cc/docs/intro/).
+Every model built in 𝛿MG is designed to run on a pair of configuration files to isolate experiment, model, and data settings. These are handled by [Hydra config manager](https://hydra.cc/docs/intro/).
 
 </br>
 
@@ -29,7 +29,7 @@ Every model built in dMG is designed to run on a pair of configuration files to 
 
     - There are **no** requirements for this except that the config have the *name* attribute. All settings here are intended to be minimally exposed within your data loader, so it's up to you what you want to include.
 
-See the [configuration glossary](./configuration_glossary.md) for definitions of standard and hydrology-specific keys used in dMG.
+See the [configuration glossary](./configuration_glossary.md) for definitions of standard and hydrology-specific keys used in 𝛿MG.
 
 </br>
 
@@ -53,11 +53,11 @@ If you wish to use additional configuration files to store distinguished setting
 
 </br>
 
-## Initializing Configuration Files in *dMG*
+## Initializing Configuration Files in *𝛿MG*
 
 Configuration file managment is handled by the Hydra config manager (see above). Essentially, at the start of a model experiment, Hydra will load configs into a single Python dictionary object of all settings that can be accessed throughout the framework.
 
-You can see this demonstrated in the main dMG run file, `./generic_deltamodel/src/dmg/__main__.py`, at the start of the main function we call the decorator
+You can see this demonstrated in the main 𝛿MG run file, `./generic_deltamodel/src/dmg/__main__.py`, at the start of the main function we call the decorator
 
 ```python
 @hydra.main(

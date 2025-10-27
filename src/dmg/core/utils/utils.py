@@ -40,7 +40,7 @@ def set_system_spec(config: dict) -> tuple[str, str]:
     elif config['device'] == 'cuda':
         # Set the first device as the active device.
         if torch.cuda.is_available() and config['gpu_id'] < torch.cuda.device_count():
-            device = torch.device(f'cuda:{config['gpu_id']}')
+            device = torch.device(f'cuda:{config["gpu_id"]}')
             torch.cuda.set_device(device)
         else:
             raise ValueError(
@@ -156,7 +156,9 @@ def initialize_config(
 
     # Create output directories and add path to config.
     if make_dirs:
-        os.makedirs(config['model_dir'], exist_ok=True)
+        os.makedirs(
+            os.path.dirname(config['model_dir']), exist_ok=True
+        )  # NOTE: necessary for ngen
         os.makedirs(config['plot_dir'], exist_ok=True)
         os.makedirs(config['sim_dir'], exist_ok=True)
         if config['logging']:

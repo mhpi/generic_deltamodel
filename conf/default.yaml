@@ -15,6 +15,7 @@ mode: train
 multimodel_type: none
 seed: 111111
 logging: none
+cache_states: False
 device: cuda
 gpu_id: 0
 
@@ -22,15 +23,14 @@ data_loader: NoneLoader
 data_sampler: NoneSampler
 trainer: NoneTrainer
 
-trained_model: ''
-
 
 ## Training ------------------------------#
 train:
   start_time: 2000/01/01
   end_time: 2000/12/31
   target: [y_var]
-  optimizer: Adadelta
+  optimizer:
+    name: Adadelta
   lr: 1.0
   lr_scheduler:
     name: none
@@ -50,14 +50,14 @@ test:
   start_time: 2001/01/01
   end_time: 2001/12/31
   batch_size: 100
-  test_epoch: 50
+  test_epoch: 1
 
 
 ## Inference -------------------------------#
 sim:
   start_time: 2001/01/01
   end_time: 2001/12/31
-  batch_size: 400
+  batch_size: 100
 
 
 ## Differentiable Model -----------------------------#

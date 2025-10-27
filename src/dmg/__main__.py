@@ -34,7 +34,7 @@ def run_temporal_mode(mode: str, trainer) -> None:
     elif mode == 'train_test':
         trainer.train()
         trainer.evaluate()
-    elif mode == 'simulation':
+    elif mode == 'sim':
         trainer.inference()
     else:
         raise ValueError(f"Invalid mode: {mode}")

@@ -1,4 +1,4 @@
-# *dMG* Style Guide
+# *𝛿MG* Style Guide
 
 This is a shortlist of guidelines and code formalisms used in this package. These are for development reference, and organized in no
 particular order. Recommendations are welcome.
@@ -29,7 +29,7 @@ and extended [example](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/e
             Description of additional positional arguments.
         **kwargs
             Description of additional keyword arguments.
-        
+
         Returns
         -------
         return_type
