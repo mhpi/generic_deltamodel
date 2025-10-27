@@ -136,9 +136,8 @@ class ModelHandler(torch.nn.Module):
                     log.info(f"Created new model: {name}")
                 continue
             else:
-                # --- FIX STARTS HERE ---
-                # TODO: find better fix.
-                # If using aLstmModel (CPU-capable equivalent to HydroDL
+                # TODO: find better fix...
+                # If using LstmModel (CPU-capable equivalent to HydroDL
                 # CudnnLstm), run a dummy forward pass to initialize states
                 # before loading the state_dict.
                 model_instance = self.model_dict.get(name)
@@ -152,7 +151,6 @@ class ModelHandler(torch.nn.Module):
                             (1, 1, n_forcings + n_attrs), device=self.device
                         )
                         model_instance.nn_model(dummy_data)
-                # --- FIX ENDS HERE ---
 
                 # Initialize model from checkpoint state dict.
                 path = self.model_path

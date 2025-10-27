@@ -49,6 +49,8 @@ The settings are broken down as they appear in the YAML configuration files, wit
 - `tensorboard`: Use [Tensorboard](https://docs.pytorch.org/tutorials/recipes/recipes/tensorboard_with_pytorch.html) for logging.
 - `wandb`: Use [Weight & Biases](https://wandb.ai/site/) for logging.
 
+**cache_states**: [bool] If true, all physical and/or ML models in the runtime will use cached internal states as an initialization (this could be hidden + cell states for an LSTM, or the storages for a process-based model, for instance). This can be useful in instances where forwarding on a full temporal sequence in a single batch is forbidden, or where sequential forwarding is otherwise required.
+
 **device**: [cpu, cuda] Device to run models on.
 
 - `cpu`: Run on CPU.

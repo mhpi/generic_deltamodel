@@ -224,8 +224,9 @@ class LstmModel(torch.nn.Module):
         if not (isinstance(states, tuple) and len(states) == 2):
             raise ValueError("`states` must be a tuple of 2 tensors.")
 
-        self.hn = states[0].detach()
-        self.cn = states[1].detach()
+        device = next(self.parameters()).device
+        self.hn = states[0].detach().to(device)
+        self.cn = states[1].detach().to(device)
 
     def forward(
         self,
@@ -257,11 +258,11 @@ class LstmModel(torch.nn.Module):
             dr_false=dr_false,
         )
 
-        self._hn_cache = hn.detach()
-        self._cn_cache = cn.detach()
+        self._hn_cache = hn.detach().cpu()
+        self._cn_cache = cn.detach().cpu()
 
         if self.cache_states:
-            self.hn = self._hn_cache
-            self.cn = self._cn_cache
+            self.hn = self._hn_cache.to(x.device)
+            self.cn = self._cn_cache.to(x.device)
 
         return self.linear_out(lstm_out)
