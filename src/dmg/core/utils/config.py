@@ -81,6 +81,14 @@ class TestNameEnum(str, Enum):
     spatial = 'spatial'
 
 
+class FlowRegimeEnum(str, Enum):
+    """Enumeration for different flow regimes."""
+
+    none = 'none'
+    low = 'low'
+    high = 'high'
+
+
 ## ------ Training Utilities ------- ##
 class OptimizerConfig(BaseModel):
     """Configuration for optimizer."""
@@ -251,6 +259,7 @@ class ModelConfig(BaseModel):
     ## Optional defaults for mhpi models ##
     warm_up: Optional[int] = None
     use_log_norm: Optional[list[str]] = None
+    flow_regime: Optional[FlowRegimeEnum] = None
     phy: Optional[PhyModelConfig] = None
 
 
