@@ -359,9 +359,10 @@ class Config(BaseModel):
         if not self.logging or self.logging.lower() == 'none':
             self.logging = None
 
-        # Assign state caching to sub-models.
+        # Assign state caching and warmup to sub-models.
         if self.model.phy:
             self.model.phy.cache_states = self.cache_states
+            self.model.phy.warm_up = self.model.warm_up
         if self.model.nn:
             self.model.nn.cache_states = self.cache_states
 
