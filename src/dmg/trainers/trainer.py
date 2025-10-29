@@ -468,12 +468,11 @@ class Trainer(BaseTrainer):
             Target variable observation data.
         """
         target_name = self.config['train']['target'][0]
+        warm_up = self.config['model']['warm_up']
         predictions = self._batch_data(batch_predictions, target_name)
         target = np.expand_dims(observations[:, :, 0].cpu().numpy(), 2)
 
-        # Remove warm-up data
-        # if self.config['delta_model']['phy_model']['warm_up_states']:  # NOTE: remove if bug does not reoccur
-        target = target[self.config['model']['phy']['warm_up'] :, :]
+        target = target[warm_up:, :]
 
         # Compute metrics
         metrics = Metrics(
