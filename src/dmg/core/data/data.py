@@ -141,16 +141,17 @@ def create_training_grid(
     t = trange_to_array(t_range)
     rho = min(t.shape[0], config['model']['rho'])
 
+    if config['model']['phy']:
+        warm_up = config['model']['phy'].get('warm_up', 0)
+    else:
+        warm_up = 0
+
     # Calculate number of iterations per epoch.
     n_iter_ep = int(
         np.ceil(
             np.log(0.01)
             / np.log(
-                1
-                - config['train']['batch_size']
-                * rho
-                / n_samples
-                / (n_t - config['model']['phy'].get('warm_up', 0)),
+                1 - config['train']['batch_size'] * rho / n_samples / (n_t - warm_up),
             ),
         ),
     )

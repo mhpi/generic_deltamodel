@@ -69,8 +69,8 @@ See [how to run](./docs/how_to_run.md).
     config = load_config(CONFIG_PATH)
 
     # Initialize physical model and NN.
-    phy_model = Hbv(config['delta_model']['phy_model'])
-    nn = load_nn_model(phy_model, config['delta_model'])
+    phy_model = Hbv(config['model']['phy'])
+    nn = load_nn_model(config['model'], phy_model)
 
     # Create differentiable model dHBV: a torch.nn.Module that describes how
     # the NN is linked to the physical model HBV.

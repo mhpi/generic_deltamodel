@@ -277,6 +277,13 @@ def save_outputs(config, predictions, y_obs=None) -> None:
 
     elif type(predictions) is dict:
         # Handle multiple models
+        if config['model']['phy']:
+            models = config['model']['phy']['name']
+        elif config['model']['nn']:
+            models = config['model']['nn']['name']
+        else:
+            raise ValueError("No models specified in configuration.")
+
         models = config['model']['phy']['model']
         for key in predictions[models[0]][0].keys():
             out_dict = {}
@@ -438,11 +445,13 @@ def print_config(config: dict[str, Any]) -> None:
 
     if config['multimodel_type'] is not None:
         print(f"  {'Ensemble Mode:':<20}{config['multimodel_type']:<20}")
-    for i, mod in enumerate(config['model']['phy']['name']):
-        print(f"  {f'Model {i + 1}:':<20}{mod:<20}")
-        print(
-            f"  {'Dynamic Params: ':<20}{str(config['model']['phy']['dynamic_params'][mod]):<20}"
-        )
+
+    if config['model'].get('phy', None):
+        for i, mod in enumerate(config['model']['phy']['name']):
+            print(f"  {f'Model {i + 1}:':<20}{mod:<20}")
+            print(
+                f"  {'Dynamic Params: ':<20}{str(config['model']['phy']['dynamic_params'][mod]):<20}"
+            )
 
     print()
 

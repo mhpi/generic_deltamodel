@@ -27,17 +27,18 @@ class DplModel(torch.nn.Module):
         physics models from the same config. If not specified, the first
         model provided in the config is used.
     phy_model
-        The physics model.
+        An initialized physics model.
     nn_model
-        The neural network model.
+        An initialized neural network model.
     config
-        The dictionary of model configurations.
+        Configuration settings for the model.
     device
         The device to run the model on.
     """
 
     def __init__(
         self,
+        *,
         phy_model_name: Optional[str] = None,
         phy_model: Optional[torch.nn.Module] = None,
         nn_model: Optional[torch.nn.Module] = None,
@@ -60,7 +61,7 @@ class DplModel(torch.nn.Module):
             self.nn_model = self._init_nn_model()
         else:
             raise ValueError(
-                "A (1) neural network and physics model or (2)"
+                "A (1) initialized neural network and physics model or (2)"
                 / " configuration dictionary is required."
             )
 
@@ -101,8 +102,8 @@ class DplModel(torch.nn.Module):
             The neural network.
         """
         return load_nn_model(
-            self.phy_model,
             self.config,
+            self.phy_model,
             device=self.device,
         )
 

@@ -210,7 +210,6 @@ class PhyModelConfig(BaseModel):
     warm_up_states: Optional[bool] = None
     dy_drop: Optional[float] = None
     routing: Optional[bool] = None
-    use_log_norm: Optional[list[str]] = None
 
     @model_validator(mode='after')
     def validate_dynamic_params(self) -> 'PhyModelConfig':
@@ -247,9 +246,12 @@ class ModelConfig(BaseModel):
     model_config = {'extra': 'allow'}
 
     rho: int
-    nn: NeuralNetworkModelConfig = Field(default_factory=NeuralNetworkModelConfig)
+    nn: Optional[NeuralNetworkModelConfig] = Field(
+        default_factory=NeuralNetworkModelConfig
+    )
 
     ## Optional defaults for mhpi models ##
+    use_log_norm: Optional[list[str]] = None
     phy: Optional[PhyModelConfig] = None
 
 
@@ -352,10 +354,10 @@ class Config(BaseModel):
             self.name = 'dmg-exp'
             log.warning(f"No `name` provided in config. Auto-assigning: {self.name}")
 
-        if self.multimodel_type.lower() == 'none':
+        if not self.multimodel_type or self.multimodel_type.lower() == 'none':
             self.multimodel_type = None
 
-        if self.logging.lower() == 'none':
+        if not self.logging or self.logging.lower() == 'none':
             self.logging = None
 
         # Assign state caching to sub-models.

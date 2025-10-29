@@ -71,6 +71,7 @@ model:
     name: CudnnLstmModel
     dropout: 0.5
     hidden_size: 256
+    out_size: 1
 
     forcings: [
       prcp,

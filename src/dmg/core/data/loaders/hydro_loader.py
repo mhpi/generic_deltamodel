@@ -68,13 +68,18 @@ class HydroLoader(BaseLoader):
         self.data_name = config['observations']['name']
         self.nn_attributes = config['model']['nn'].get('attributes', [])
         self.nn_forcings = config['model']['nn'].get('forcings', [])
-        self.phy_attributes = config['model']['phy'].get('attributes', [])
-        self.phy_forcings = config['model']['phy'].get('forcings', [])
         self.forcing_names = self.config['observations']['all_forcings']
         self.attribute_names = self.config['observations']['all_attributes']
 
+        if config['model']['phy']:
+            self.phy_attributes = config['model']['phy'].get('attributes', [])
+            self.phy_forcings = config['model']['phy'].get('forcings', [])
+        else:
+            self.phy_attributes = []
+            self.phy_forcings = []
+
         self.target = config['train']['target']
-        self.log_norm_vars = config['model']['phy']['use_log_norm']
+        self.log_norm_vars = config['model'].get('use_log_norm', [])
         self.device = config['device']
         self.dtype = config['dtype']
 

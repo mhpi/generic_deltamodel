@@ -54,7 +54,7 @@ class MsHydroLoader(BaseLoader):
         self.all_attributes = self.config['observations']['all_attributes']
 
         self.target = config['train']['target']
-        self.log_norm_vars = config['model']['phy']['use_log_norm']
+        self.log_norm_vars = config['model'].get('use_log_norm', [])
         self.device = config['device']
         self.dtype = config['dtype']
 

@@ -182,8 +182,8 @@ def load_criterion(
 
 
 def load_nn_model(
-    phy_model: torch.nn.Module,
     config: dict[str, dict[str, Any]],
+    phy_model: Optional[torch.nn.Module] = None,
     ensemble_list: Optional[list] = None,
     device: Optional[str] = None,
 ) -> torch.nn.Module:
@@ -192,13 +192,13 @@ def load_nn_model(
 
     Parameters
     ----------
-    phy_model
-        The physics model.
     config
-        The configuration dictionary.
+        Configuration settings for the model.
+    phy_model
+        Physics model to format NN output.
     ensemble_list
         List of models to ensemble. Default is None. This will result in a
-        weighting nn being initialized.
+        weighting NN being initialized.
     device
         The device to run the model on. Default is None.
 
@@ -222,10 +222,17 @@ def load_nn_model(
     else:
         n_forcings = len(config['nn']['forcings'])
         n_attributes = len(config['nn']['attributes'])
-        n_phy_params = phy_model.learnable_param_count
-        ny = n_phy_params
-
         name = config['nn']['name']
+
+        if phy_model:
+            ny = phy_model.learnable_param_count
+        elif 'out_size' in config['nn']:
+            ny = config['nn']['out_size']
+        else:
+            raise ValueError(
+                "Output size 'out_size' must be specified in the config or"
+                " physics model must be provided."
+            )
 
         if name not in ['LstmMlpModel']:
             hidden_size = config['nn']['hidden_size']
@@ -256,12 +263,24 @@ def load_nn_model(
             ny=ny,
         )
     elif name in ['LstmMlpModel']:
+        if phy_model:
+            ny1 = phy_model.learnable_param_count1
+            ny2 = phy_model.learnable_param_count2
+        elif ('out_size1' in config['nn']) and ('out_size2' in config['nn']):
+            ny1 = config['nn']['out_size1']
+            ny2 = config['nn']['out_size2']
+        else:
+            raise ValueError(
+                "Output sizes 'out_size1' and 'out_size2' must be"
+                " specified in the config or physics model must be provided."
+            )
+
         model = cls(
             nx1=nx,
-            ny1=phy_model.learnable_param_count1,
+            ny1=ny1,
             hiddeninv1=config['nn']['lstm_hidden_size'],
             nx2=n_attributes,
-            ny2=phy_model.learnable_param_count2,
+            ny2=ny2,
             hiddeninv2=config['nn']['mlp_hidden_size'],
             dr1=config['nn']['lstm_dropout'],
             dr2=config['nn']['mlp_dropout'],
