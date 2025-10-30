@@ -31,9 +31,9 @@ data_sampler: HydroSampler
 trainer: Trainer
 
 # NOTE: The output path is relative to the current working directory.
-# To evaluate a pretrained model, set save_path to the same path as trained_model and normalization file.
-model_dir: ./your/path/to/model/  # Prerained HydroDL LSTM can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/lstm_trained.zip
-
+output_dir: ./test_out/
+# To evaluate a pretrained model, set model_dir to the same path as trained_model and normalization file.
+# model_dir: ./your/path/to/model/  # Prerained HydroDL LSTM can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/lstm_trained.zip
 
 ## Training ------------------------------#
 train:
@@ -51,7 +51,7 @@ train:
   batch_size: 100
   epochs: 300
   start_epoch: 0
-  save_epoch: 1
+  save_epoch: 50
 
 
 ## Evaluation -------------------------------#

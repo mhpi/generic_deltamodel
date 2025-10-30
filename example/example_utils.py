@@ -4,7 +4,6 @@ from typing import Any
 
 import hydra
 import torch
-from omegaconf import OmegaConf
 
 from dmg.core.utils import initialize_config
 
@@ -19,8 +18,7 @@ __all__ = [
 def load_config(path: str) -> dict[str, Any]:
     """Parse and initialize configuration settings from yaml with Hydra.
 
-    This loader is capable of handling config files in nonlinear directory
-    structures.
+    This loader handles config files in nonlinear directory structures.
 
     Parameters
     ----------
@@ -39,9 +37,6 @@ def load_config(path: str) -> dict[str, Any]:
 
     with hydra.initialize(config_path=parent_path, version_base='1.3'):
         config = hydra.compose(config_name=config_name)
-
-    # Convert the OmegaConf object to a dict.
-    config = OmegaConf.to_container(config, resolve=True)
 
     # Convert date ranges / set device and dtype / create output dirs.
     config = initialize_config(config)

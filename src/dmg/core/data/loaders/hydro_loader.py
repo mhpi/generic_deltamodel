@@ -7,8 +7,7 @@ import json
 import logging
 import os
 import pickle
-from typing import Any, Optional
-
+from typing import Any, Optional, Union
 import numpy as np
 import pandas as pd
 import torch
@@ -295,16 +294,17 @@ class HydroLoader(BaseLoader):
             target = target[:, subset_idx, :]
 
         # Convert flow to mm/day if necessary
-        target = self._flow_conversion(c_nn, target)
+        target = self.flow_conversion(c_nn, target)
 
         return x_phy, c_phy, x_nn, c_nn, target
 
-    def _flow_conversion(
+    def flow_conversion(
         self,
         c_nn: NDArray[np.float32],
         target: NDArray[np.float32],
+        to_norm: bool = True,
     ) -> NDArray[np.float32]:
-        """Convert hydraulic flow from ft3/s to mm/day.
+        """Convert between hydraulic flow and flux (from ft3/s <--> mm/day).
 
         Parameters
         ----------
@@ -313,6 +313,17 @@ class HydroLoader(BaseLoader):
         target
             Target variable data.
         """
+        if self.config['model']['phy'] is None:
+            # Make target dimensionless (e.g., for ML models).
+            prcp_mean_name = self.config['observations']['prcp_mean_name']
+            prcp_mean = c_nn[:, self.nn_attributes.index(prcp_mean_name)]
+            if to_norm:
+                p_factor = 1 / prcp_mean
+            else:
+                p_factor = prcp_mean
+        else:
+            p_factor = 1.0
+
         for name in ['flow_sim', 'streamflow', 'runoff']:
             if name in self.target:
                 target_temp = target[:, :, self.target.index(name)]
@@ -322,15 +333,15 @@ class HydroLoader(BaseLoader):
                 area = np.expand_dims(basin_area, axis=0).repeat(
                     target_temp.shape[0], 0
                 )
-                target[:, :, self.target.index(name)] = (
-                    (10**3) * target_temp * 0.0283168 * 3600 * 24 / (area * (10**6))
-                )
 
-                if self.config['model']['phy'] is None:
-                    # make target dimensionless
-                    prcp_mean_name = self.config['observations']['prcp_mean_name']
-                    prcp_mean = c_nn[:, self.nn_attributes.index(prcp_mean_name)]
-                    target[:, :, self.target.index(name)] /= prcp_mean
+                if to_norm:
+                    target[:, :, self.target.index(name)] = (
+                        target_temp * 0.0283168 * 3600 * 24 * 1e3 / (area * 1e6)
+                    ) * p_factor
+                else:
+                    target[:, :, self.target.index(name)] = (
+                        target_temp * (area * 1e6) / (0.0283168 * 3600 * 24 * 1e3)
+                    ) * p_factor
         return target
 
     def load_norm_stats(
@@ -534,22 +545,13 @@ class HydroLoader(BaseLoader):
         NDArray[np.float32]
             Normalized x_nn and c_nn concatenated together.
         """
-        x_nn_norm = self._to_norm(
-            np.swapaxes(x_nn, 1, 0).copy(),
-            self.nn_forcings,
-        )
-        c_nn_norm = self._to_norm(
-            c_nn,
-            self.nn_attributes,
-        )
+        x_nn_norm = self.to_norm(x_nn, self.nn_forcings)
+        c_nn_norm = self.to_norm(c_nn, self.nn_attributes)
 
         if not self.norm_target:
             y_nn_norm = None
         else:
-            y_nn_norm = self._to_norm(
-                np.swapaxes(target, 1, 0).copy(),
-                self.target,
-            )
+            y_nn_norm = self.to_norm(target, self.target)
 
         # Remove nans
         x_nn_norm[x_nn_norm != x_nn_norm] = 0
@@ -566,12 +568,12 @@ class HydroLoader(BaseLoader):
 
         return xc_nn_norm, y_nn_norm
 
-    def _to_norm(
+    def to_norm(
         self,
         data: NDArray[np.float32],
         vars: list[str],
     ) -> NDArray[np.float32]:
-        """Standard data normalization.
+        """Normalize data with Gaussian or log-Gaussian norm.
 
         Parameters
         ----------
@@ -585,6 +587,9 @@ class HydroLoader(BaseLoader):
         NDArray[np.float32]
             Normalized data.
         """
+        if isinstance(vars, str):
+            vars = [vars]
+
         data_norm = np.zeros(data.shape)
 
         for k, var in enumerate(vars):
@@ -600,24 +605,18 @@ class HydroLoader(BaseLoader):
                 data_norm[:, k] = (data[:, k] - stat[2]) / stat[3]
             else:
                 raise DataDimensionalityWarning("Data dimension must be 2 or 3.")
+        return data_norm
 
-        # NOTE: Should be external, except altering order of first two dims
-        # augments normalization...
-        if len(data_norm.shape) < 3:
-            return data_norm
-        else:
-            return np.swapaxes(data_norm, 1, 0)
-
-    def _from_norm(
+    def from_norm(
         self,
         data_scaled: NDArray[np.float32],
-        vars: list[str],
+        vars: Union[list[str], str],
     ) -> NDArray[np.float32]:
-        """De-normalize data.
+        """De-normalize data with a Gaussian or log-Gaussian norm.
 
         Parameters
         ----------
-        data
+        data_scaled
             Data to de-normalize.
         vars
             List of variable names in data to de-normalize.
@@ -627,6 +626,9 @@ class HydroLoader(BaseLoader):
         NDArray[np.float32]
             De-normalized data.
         """
+        if isinstance(vars, str):
+            vars = [vars]
+
         data = np.zeros(data_scaled.shape)
 
         for k, var in enumerate(vars):
@@ -641,8 +643,4 @@ class HydroLoader(BaseLoader):
                     data[:, k] = (np.power(10, data[:, k]) - 0.1) ** 2
             else:
                 raise DataDimensionalityWarning("Data dimension must be 2 or 3.")
-
-        if len(data.shape) < 3:
-            return data
-        else:
-            return np.swapaxes(data, 1, 0)
+        return data

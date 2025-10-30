@@ -204,8 +204,8 @@ class ModelHandler(torch.nn.Module):
                     self.model_dict[name].to(self.device)
 
                     # Overwrite internal config if there is discontinuity:
-                    if self.model_dict[name].config:
-                        self.model_dict[name].config = self.config
+                    if (self.model_type == 'dm') and self.model_dict[name].config:
+                        self.model_dict[name].config = self.config['model']
 
                 if self.verbose:
                     log.info(f"Loaded model: {name}, Ep {epoch}")
