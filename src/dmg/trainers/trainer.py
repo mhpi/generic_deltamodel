@@ -445,10 +445,9 @@ class Trainer(BaseTrainer):
             prediction = self.model(dataset_sample, eval=True)
 
             # Save the batch predictions
-            model_name = self.config['model']['phy']['name'][0]
             prediction = {
                 key: tensor.cpu().detach()
-                for key, tensor in prediction[model_name].items()
+                for key, tensor in prediction[self.model.models[0]].items()
             }
             batch_predictions.append(prediction)
         return batch_predictions

@@ -9,63 +9,71 @@
 #   3. train: end_time: 1995/09/30
 #   4. test/simulation: start_time: 1995/10/01
 #   5. test/simulation: end_time: 2010/09/30
-
 defaults:
   - _self_
   - hydra: settings
-  - observations: camels_531  # camels_531, camels_671
+  - observations: camels_531
 
 name: ${model.nn.name}
 
 
 ## General -------------------------------#
 mode: train  # train, test, train_test, sim
+multimodel_type: none
 
 seed: 111111
 device: cuda
-gpu_id: 0
+gpu_id: 6
+verbose: True
 
 data_loader: HydroLoader
 data_sampler: HydroSampler
 trainer: Trainer
 
-model_dir: ./path/to/your/model/  # Prerained HydroDL LSTM can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/lstm_trained.zip
+# NOTE: The output path is relative to the current working directory.
+# To evaluate a pretrained model, set save_path to the same path as trained_model and normalization file.
+model_dir: ./your/path/to/model/  # Prerained HydroDL LSTM can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/lstm_trained.zip
+
 
 ## Training ------------------------------#
 train:
   start_time: 1999/10/01
   end_time: 2008/09/30
-  target: [streamflow]
+  target: [runoff]
   optimizer:
     name: Adadelta
   lr: 1.0
+  lr_scheduler:
+    name: none
   loss_function:
-    name: RmseCombLoss
+    name: NseBatchLoss  # RmseCombLoss (low-flow expert), NseBatchLoss (low-flow expert)
 
   batch_size: 100
-  epochs: 100
+  epochs: 300
   start_epoch: 0
-  save_epoch: 5
+  save_epoch: 1
 
 
 ## Evaluation -------------------------------#
 test:
   start_time: 1989/10/01
   end_time: 1999/09/30
-  batch_size: 25
-  test_epoch: 100
+  batch_size: 15
+  test_epoch: 300
 
 
 ## Inference -------------------------------#
 sim:
-  start_time: 2012/10/01
-  end_time: 2014/09/30
-  batch_size: 25
+  start_time: 1989/10/01
+  end_time: 1999/09/30
+  batch_size: 15
 
 
 ## Differentiable Model -----------------------------#
 model:
   rho: 365
+  warm_up: 365
+  flow_regime: 'high'  # low-flow (log norm on runoff and prcp), high-flow (gaussian norm)
 
   nn:
     name: CudnnLstmModel
@@ -74,9 +82,11 @@ model:
     out_size: 1
 
     forcings: [
+      dayl,
       prcp,
+      srad,
       tmean,
-      pet,
+      vp,
     ]
     attributes: [
       p_mean,
