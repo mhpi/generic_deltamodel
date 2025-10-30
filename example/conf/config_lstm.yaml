@@ -23,7 +23,7 @@ multimodel_type: none
 
 seed: 111111
 device: cuda
-gpu_id: 6
+gpu_id: 0
 verbose: True
 
 data_loader: HydroLoader
@@ -33,7 +33,7 @@ trainer: Trainer
 # NOTE: The output path is relative to the current working directory.
 output_dir: ./output/
 # To evaluate a pretrained model, set model_dir to the same path as trained_model and normalization file.
-# model_dir: ./your/path/to/model/  # Prerained HydroDL LSTM can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/lstm_trained.zip
+model_dir: ./your/path/to/model/  # Prerained HydroDL LSTM can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/lstm_trained.zip
 
 ## Training ------------------------------#
 train:
@@ -46,7 +46,7 @@ train:
   lr_scheduler:
     name: none
   loss_function:
-    name: NseBatchLoss  # RmseCombLoss (low-flow expert), NseBatchLoss (low-flow expert)
+    name: NseBatchLoss  # RmseLoss (low-flow expert), NseBatchLoss (low-flow expert)
 
   batch_size: 100
   epochs: 300
