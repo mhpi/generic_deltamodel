@@ -98,7 +98,7 @@ def main(config: DictConfig) -> None:
                 train_dataset=data_loader.train_dataset,
                 eval_dataset=data_loader.eval_dataset,
                 dataset=data_loader.dataset,
-                verbose=True,
+                verbose=config.get('verbose', False),
             )
 
         ### Run mode ###

@@ -323,7 +323,7 @@ class Config(BaseModel):
     cache_states: Optional[bool] = False
     device: str
     gpu_id: Optional[int] = 0
-    verbose: Optional[bool] = True
+    verbose: Optional[bool] = False
 
     data_loader: Optional[str] = None
     data_sampler: Optional[str] = None

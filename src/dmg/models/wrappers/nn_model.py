@@ -84,6 +84,6 @@ class NnModel(torch.nn.Module):
 
         out_dict = {}
         for name in self.target_names:
-            out_dict[name] = prediction
+            out_dict[name] = prediction[self.config['warm_up'] :, ...]
 
         return out_dict

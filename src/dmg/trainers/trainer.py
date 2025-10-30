@@ -75,7 +75,7 @@ class Trainer(BaseTrainer):
         verbose: Optional[bool] = False,
     ) -> None:
         self.config = config
-        self.model = model or ModelHandler(config)
+        self.model = model or ModelHandler(config, verbose=verbose)
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
         self.dataset = dataset

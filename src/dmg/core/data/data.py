@@ -141,8 +141,8 @@ def create_training_grid(
     t = trange_to_array(t_range)
     rho = min(t.shape[0], config['model']['rho'])
 
-    if config['model']['phy']:
-        warm_up = config['model']['phy'].get('warm_up', 0)
+    if config['model']:
+        warm_up = config['model'].get('warm_up', 0)
     else:
         warm_up = 0
 
