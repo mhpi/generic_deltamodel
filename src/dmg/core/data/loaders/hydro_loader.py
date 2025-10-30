@@ -322,7 +322,7 @@ class HydroLoader(BaseLoader):
             else:
                 p_factor = prcp_mean
         else:
-            p_factor = 1.0
+            p_factor = 1
 
         for name in ['flow_sim', 'streamflow', 'runoff']:
             if name in self.target:

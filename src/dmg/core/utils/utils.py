@@ -98,9 +98,6 @@ def initialize_config(
     dict
         Formatted configuration settings.
     """
-    if write_out:
-        save_run_summary(config, os.getcwd())
-
     if type(config) is DictConfig:
         try:
             config = OmegaConf.to_container(
@@ -169,6 +166,9 @@ def initialize_config(
 
     # Raytune
     config['do_tune'] = config.get('do_tune', False)
+
+    if write_out:
+        save_run_summary(config, config['output_dir'])
 
     return config
 
@@ -373,16 +373,18 @@ def save_run_summary(
         f"Dropout       : {config['model'].get('nn', {}).get('dropout', '')}"
     )
     summary_lines.append("")
-    summary_lines.append(
-        f"Phy model     : {config['model'].get('phy', {}).get('name', '')}"
-    )
-    summary_lines.append(
-        f"Dynamic params: {config['model'].get('phy', {}).get('dynamic_params', '')}"
-    )
-    summary_lines.append("")
+
+    if config['model']['phy']:
+        summary_lines.append(
+            f"Phy model     : {config['model'].get('phy', {}).get('name', '')}"
+        )
+        summary_lines.append(
+            f"Dynamic params: {config['model'].get('phy', {}).get('dynamic_params', '')}"
+        )
+        summary_lines.append("")
 
     # Multimodel (if used)
-    if config['multimodel_type'] != "none":
+    if config['multimodel_type']:
         summary_lines.append("=== Multimodel ===")
         summary_lines.append(f"Type          : {config['multimodel_type']}")
         summary_lines.append(f"Model         : {config['multimodel']['model']}")
