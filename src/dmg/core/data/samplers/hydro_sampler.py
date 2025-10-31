@@ -99,9 +99,7 @@ class HydroSampler(BaseSampler):
             'xc_nn_norm': self.select_subset(
                 dataset['xc_nn_norm'], i_sample, i_t, has_grad=False
             ),
-            'target': self.select_subset(dataset['target'], i_sample, i_t)[
-                self.warm_up :, :
-            ],
+            'target': self.select_subset(dataset['target'], i_sample, i_t),
             'batch_sample': i_sample,
         }
 

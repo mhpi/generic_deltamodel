@@ -338,9 +338,10 @@ class ModelHandler(torch.nn.Module):
                 )
             output = output[self.target_names[0]]
 
+            output, target = self._trim(output, dataset_dict['target'])
             loss = loss_func(
                 output.squeeze(),
-                dataset_dict['target'].squeeze(),
+                target.squeeze(),
                 sample_ids=dataset_dict['batch_sample'],
             )
             loss_combined += loss
@@ -465,3 +466,41 @@ class ModelHandler(torch.nn.Module):
             raise NotImplementedError(
                 "Loading hidden states for multimodel ensembles is not yet supported.",
             )
+
+    def _trim(
+        self,
+        output: torch.Tensor,
+        target: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Trim the output and target tensors to the same shape.
+
+        Really, we need to trim warmup at the model interface itself, but this
+        will have to do for now to avoid errors errant.
+
+        Parameters
+        ----------
+        output
+            The model output tensor.
+        target
+            The target tensor.
+
+        Returns
+        -------
+        tuple
+            The trimmed output and target tensors.
+        """
+        output = output.squeeze()
+        target = target.squeeze()
+
+        warm_up = self.config['model'].get('warm_up', 0)
+
+        # Remove warmup timesteps
+        target = target[warm_up:]
+
+        if output.shape != target.shape:
+            if output.shape[0] > target.shape[0]:
+                output = output[warm_up:]
+            elif target.shape[0] > output.shape[0]:
+                target = target[warm_up:]
+        return output, target

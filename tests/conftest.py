@@ -55,17 +55,17 @@ def config():
         },
         'model': {
             'rho': 10,
+            'warm_up': 2,
+            'use_log_norm': ['prcp'],
             'phy': {
                 'name': ['Hbv'],
                 'nmul': 1,
-                'warm_up': 2,
                 'warm_up_states': True,
                 'dy_drop': 0.0,
                 'dynamic_params': {
                     'Hbv': ['parBETA', 'parBETAET'],
                 },
                 'routing': True,
-                'use_log_norm': ['prcp'],
                 'nearzero': 1e-5,
                 'forcings': ['prcp', 'tmean', 'pet'],
                 'attributes': [],
