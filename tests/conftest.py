@@ -1,6 +1,34 @@
 import pytest
 import torch
 import numpy as np
+from omegaconf import OmegaConf
+import os
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).parent.parent))
+
+from dmg.core.utils import initialize_config
+
+
+def build_config(config_dict):
+    """Helper function to build a mock configuration dictionary."""
+    # Convert to OmegaConf dict to run Pydantic field validation.
+    config_tmp = OmegaConf.create(config_dict)
+    config = initialize_config(config_tmp, write_out=False)
+
+    # Use temporary directory for outputs
+    config['output_dir'] = os.path.join(os.getcwd(), config['output_dir'])
+    config['model_dir'] = os.path.join(os.getcwd(), config['model_dir'])
+    config['plot_dir'] = os.path.join(os.getcwd(), config['plot_dir'])
+    config['sim_dir'] = os.path.join(os.getcwd(), config['sim_dir'])
+    config['log_dir'] = os.path.join(os.getcwd(), config['log_dir'])
+
+    # Create output directories
+    os.makedirs(config['model_dir'], exist_ok=True)
+    os.makedirs(config['sim_dir'], exist_ok=True)
+
+    return config
 
 
 @pytest.fixture
@@ -9,95 +37,97 @@ def config():
 
     Looks like config for dHBV1.0 with 2 dynamic parameters.
     """
-    return {
-        'mode': 'train_test',
-        'multimodel_type': 'none',
-        'seed': 111111,
-        'logging': 'tensorboard',
-        'cache_states': False,
-        'device': 'cpu',
-        'gpu_id': 0,
-        'data_loader': 'HydroLoader',
-        'data_sampler': 'HydroSampler',
-        'trainer': 'Trainer',
-        'train': {
-            'start_time': '2000/01/01',
-            'end_time': '2000/01/31',
-            'target': ['streamflow'],
-            'optimizer': {
-                'name': 'Adadelta',
-            },
-            'lr': 1.0,
-            'lr_scheduler': {
-                'name': 'StepLR',
-                'step_size': 10,
-                'gamma': 0.5,
-            },
-            'loss_function': {
-                'name': 'RmseCombLoss',
-            },
-            'batch_size': 5,
-            'epochs': 2,
-            'start_epoch': 0,
-            'save_epoch': 1,
-        },
-        'test': {
-            'start_time': '2000/02/01',
-            'end_time': '2000/02/10',
-            'batch_size': 5,
-            'test_epoch': 2,
-        },
-        'sim': {
-            'start_time': '2000/02/01',
-            'end_time': '2000/02/10',
-            'batch_size': 5,
-        },
-        'model': {
-            'rho': 10,
-            'warm_up': 2,
-            'use_log_norm': ['prcp'],
-            'phy': {
-                'name': ['Hbv'],
-                'nmul': 1,
-                'warm_up_states': True,
-                'dy_drop': 0.0,
-                'dynamic_params': {
-                    'Hbv': ['parBETA', 'parBETAET'],
+    return build_config(
+        {
+            'mode': 'train_test',
+            'multimodel_type': 'none',
+            'seed': 111111,
+            'logging': 'tensorboard',
+            'cache_states': False,
+            'device': 'cpu',
+            'gpu_id': 0,
+            'data_loader': 'HydroLoader',
+            'data_sampler': 'HydroSampler',
+            'trainer': 'Trainer',
+            'train': {
+                'start_time': '2000/01/01',
+                'end_time': '2000/01/31',
+                'target': ['streamflow'],
+                'optimizer': {
+                    'name': 'Adadelta',
                 },
-                'routing': True,
-                'nearzero': 1e-5,
-                'forcings': ['prcp', 'tmean', 'pet'],
-                'attributes': [],
-                'cache_states': False,
+                'lr': 1.0,
+                'lr_scheduler': {
+                    'name': 'StepLR',
+                    'step_size': 10,
+                    'gamma': 0.5,
+                },
+                'loss_function': {
+                    'name': 'RmseCombLoss',
+                },
+                'batch_size': 5,
+                'epochs': 2,
+                'start_epoch': 0,
+                'save_epoch': 1,
             },
-            'nn': {
-                'name': 'LstmModel',
-                'dropout': 0.5,
-                'hidden_size': 32,
-                'forcings': ['prcp', 'tmean', 'pet'],
-                'attributes': ['area_gages2'],
-                'cache_states': False,
+            'test': {
+                'start_time': '2000/02/01',
+                'end_time': '2000/02/10',
+                'batch_size': 5,
+                'test_epoch': 2,
             },
-        },
-        'observations': {
-            'name': 'camels_531',
-            'data_path': '',
-            'area_name': 'area_gages2',
-            'start_time': '2000/01/01',
-            'end_time': '2000/02/28',
-            'all_forcings': ['prcp', 'tmean', 'pet'],
-            'all_attributes': ['area_gages2'],
-        },
-        'output_dir': 'tests/test_output/',
-        'model_dir': 'tests/test_output/model/',
-        'plot_dir': 'tests/test_output/plots/',
-        'sim_dir': 'tests/test_output/sim/',
-        'log_dir': 'tests/test_output/log/',
-        'train_time': ['2000/01/01', '2000/01/31'],
-        'test_time': ['2000/02/01', '2000/02/10'],
-        'sim_time': ['2000/02/01', '2000/02/10'],
-        'all_time': ['2000/01/01', '2000/02/10'],
-    }
+            'sim': {
+                'start_time': '2000/02/01',
+                'end_time': '2000/02/10',
+                'batch_size': 5,
+            },
+            'model': {
+                'rho': 10,
+                'warm_up': 2,
+                'use_log_norm': ['prcp'],
+                'phy': {
+                    'name': ['Hbv'],
+                    'nmul': 1,
+                    'warm_up_states': True,
+                    'dy_drop': 0.0,
+                    'dynamic_params': {
+                        'Hbv': ['parBETA', 'parBETAET'],
+                    },
+                    'routing': True,
+                    'nearzero': 1e-5,
+                    'forcings': ['prcp', 'tmean', 'pet'],
+                    'attributes': [],
+                    'cache_states': False,
+                },
+                'nn': {
+                    'name': 'LstmModel',
+                    'dropout': 0.5,
+                    'hidden_size': 32,
+                    'forcings': ['prcp', 'tmean', 'pet'],
+                    'attributes': ['area_gages2'],
+                    'cache_states': False,
+                },
+            },
+            'observations': {
+                'name': 'camels_531',
+                'data_path': '',
+                'area_name': 'area_gages2',
+                'start_time': '2000/01/01',
+                'end_time': '2000/02/28',
+                'all_forcings': ['prcp', 'tmean', 'pet'],
+                'all_attributes': ['area_gages2'],
+            },
+            'output_dir': 'tests/test_output/',
+            'model_dir': 'tests/test_output/model/',
+            'plot_dir': 'tests/test_output/plots/',
+            'sim_dir': 'tests/test_output/sim/',
+            'log_dir': 'tests/test_output/log/',
+            'train_time': ['2000/01/01', '2000/01/31'],
+            'test_time': ['2000/02/01', '2000/02/10'],
+            'sim_time': ['2000/02/01', '2000/02/10'],
+            'all_time': ['2000/01/01', '2000/02/10'],
+        }
+    )
 
 
 @pytest.fixture

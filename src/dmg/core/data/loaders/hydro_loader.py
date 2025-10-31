@@ -91,7 +91,7 @@ class HydroLoader(BaseLoader):
 
         self.target = config['train']['target']
         self.log_norm_vars = config['model'].get('use_log_norm', [])
-        self.flow_regime = config['model']['flow_regime']
+        self.flow_regime = config['model'].get('flow_regime', None)
         self.device = config['device']
         self.dtype = config['dtype']
 

@@ -5,7 +5,6 @@ from pathlib import Path
 import pickle
 
 sys.path.append(str(Path(__file__).parent.parent))
-import os
 from dmg.core.data.loaders.hydro_loader import HydroLoader
 
 
@@ -21,9 +20,6 @@ def test_hydro_loader_init(config, mock_dataset, tmp_path):
         pickle.dump((forcings, target, attributes), f)
 
     config['observations']['data_path'] = str(data_path)
-
-    os.makedirs(config['output_dir'], exist_ok=True)
-    os.makedirs(config['model_dir'], exist_ok=True)
 
     # Test with test_split = True
     loader_split = HydroLoader(config, test_split=True)

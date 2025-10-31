@@ -5,17 +5,15 @@ NOTE: We can only evaluate CPU-bound models due to constraint of GitHub.
 
 import sys
 from pathlib import Path
-import os
 import shutil
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from omegaconf import OmegaConf
 
 import numpy as np
 from dmg.trainers.trainer import Trainer
 from dmg.models.model_handler import ModelHandler
-from dmg.core.utils import set_randomseed, initialize_config
+from dmg.core.utils import set_randomseed
 
 # --- Expected Train Loss + Test NSE  ---
 # NOTE: If you change the model, data, or training process, these values must
@@ -29,20 +27,7 @@ def test_training_regression(config, mock_dataset, tmp_path):
     """
     Tests the full training and evaluation pipeline for reproducibility.
     """
-    # Use temporary directory for outputs
-    config['output_dir'] = os.path.join(os.getcwd(), config['output_dir'])
-    config['model_dir'] = os.path.join(os.getcwd(), config['model_dir'])
-    config['plot_dir'] = os.path.join(os.getcwd(), config['plot_dir'])
-    config['sim_dir'] = os.path.join(os.getcwd(), config['sim_dir'])
-    config['log_dir'] = os.path.join(os.getcwd(), config['log_dir'])
-
-    # Create output directories
-    os.makedirs(config['model_dir'], exist_ok=True)
-    os.makedirs(config['sim_dir'], exist_ok=True)
     set_randomseed(config['seed'])
-
-    config_tmp = OmegaConf.create(config)
-    config = initialize_config(config_tmp, write_out=False)
 
     model = ModelHandler(config)
     trainer = Trainer(
