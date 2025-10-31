@@ -8,6 +8,7 @@ import tqdm
 from dmg.core.utils import save_model
 from dmg.models.criterion.range_bound_loss import RangeBoundLoss
 from dmg.models.delta_models.dpl_model import DplModel
+from dmg.models.wrappers.nn_model import NnModel
 from dmg.models.multimodels.ensemble_generator import EnsembleGenerator
 
 log = logging.getLogger('model_handler')
@@ -44,6 +45,7 @@ class ModelHandler(torch.nn.Module):
         super().__init__()
         self.config = config
         self.name = 'Differentiable Model Handler'
+        self.model_type = None
         self.model_path = config['model_dir']
         self.verbose = verbose
 
@@ -54,12 +56,13 @@ class ModelHandler(torch.nn.Module):
 
         self.multimodel_type = config['multimodel_type']
         self.model_dict = {}
+        # TODO: add proper support for multiple targets...
+        self.target_names = config['train']['target']
         self.models = self.list_models()
         self._init_models()
 
         self.loss_func = None
         self.loss_dict = dict.fromkeys(self.models, 0)
-        self.target_name = config['train']['target'][0]
 
         if self.multimodel_type in ['nn_parallel']:
             self.is_ensemble = True
@@ -71,16 +74,29 @@ class ModelHandler(torch.nn.Module):
     def list_models(self) -> list[str]:
         """List of models specified in the configuration.
 
+        TODO: Support physics-only forward.
+
         Returns
         -------
         list[str]
             List of model names.
         """
-        models = self.config['model']['phy']['name']
+        if self.config['model']['phy']:
+            models = self.config['model']['phy']['name']
+            self.model_type = 'dm'
+        elif self.config['model']['nn']:
+            models = self.config['model']['nn']['name']
+            self.model_type = 'nn'
+        else:
+            raise ValueError("No models specified in configuration.")
 
         if self.multimodel_type in ['nn_parallel']:
             # Add ensemble weighting NN to the list.
             models.append('wNN')
+
+        if not isinstance(models, list):
+            models = [models]
+
         return models
 
     def _init_models(self) -> None:
@@ -119,6 +135,14 @@ class ModelHandler(torch.nn.Module):
                 self.ensemble_generator = EnsembleGenerator(
                     config=self.config['multimodel'],
                     model_list=self.models[:-1],
+                    device=self.device,
+                )
+
+            elif self.model_type == 'nn':
+                # Standalone neural network model
+                self.model_dict[name] = NnModel(
+                    target_names=self.target_names,
+                    config=self.config['model'],
                     device=self.device,
                 )
             else:
@@ -180,8 +204,8 @@ class ModelHandler(torch.nn.Module):
                     self.model_dict[name].to(self.device)
 
                     # Overwrite internal config if there is discontinuity:
-                    if self.model_dict[name].config:
-                        self.model_dict[name].config = self.config
+                    if (self.model_type == 'dm') and self.model_dict[name].config:
+                        self.model_dict[name].config = self.config['model']
 
                 if self.verbose:
                     log.info(f"Loaded model: {name}, Ep {epoch}")
@@ -308,15 +332,16 @@ class ModelHandler(torch.nn.Module):
 
         # Loss calculation for each model
         for name, output in self.output_dict.items():
-            if self.target_name not in output.keys():
+            if self.target_names[0] not in output.keys():
                 raise ValueError(
-                    f"Target variable '{self.target_name}' not in model outputs."
+                    f"Target variable '{self.target_names[0]}' not in model outputs."
                 )
-            output = output[self.target_name]
+            output = output[self.target_names[0]]
 
+            output, target = self._trim(output, dataset_dict['target'])
             loss = loss_func(
                 output.squeeze(),
-                dataset_dict['target'].squeeze(),
+                target.squeeze(),
                 sample_ids=dataset_dict['batch_sample'],
             )
             loss_combined += loss
@@ -373,7 +398,7 @@ class ModelHandler(torch.nn.Module):
         else:
             rb_loss = 0.0
 
-        output = self.ensemble_output_dict[self.target_name]
+        output = self.ensemble_output_dict[self.target_names[0]]
 
         # Ensemble predictions loss
         ensemble_loss = self.loss_func_wnn(
@@ -441,3 +466,41 @@ class ModelHandler(torch.nn.Module):
             raise NotImplementedError(
                 "Loading hidden states for multimodel ensembles is not yet supported.",
             )
+
+    def _trim(
+        self,
+        output: torch.Tensor,
+        target: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Trim the output and target tensors to the same shape.
+
+        Really, we need to trim warmup at the model interface itself, but this
+        will have to do for now to avoid errors errant.
+
+        Parameters
+        ----------
+        output
+            The model output tensor.
+        target
+            The target tensor.
+
+        Returns
+        -------
+        tuple
+            The trimmed output and target tensors.
+        """
+        output = output.squeeze()
+        target = target.squeeze()
+
+        warm_up = self.config['model'].get('warm_up', 0)
+
+        # Remove warmup timesteps
+        target = target[warm_up:]
+
+        if output.shape != target.shape:
+            if output.shape[0] > target.shape[0]:
+                output = output[warm_up:]
+            elif target.shape[0] > output.shape[0]:
+                target = target[warm_up:]
+        return output, target

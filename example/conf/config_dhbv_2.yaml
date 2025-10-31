@@ -17,8 +17,8 @@ data_loader: MsHydroLoader
 data_sampler: MsHydroSampler
 trainer: MsTrainer
 
-save_path: ./output  
-    # NOTE: The output path is relative to the current working directory. 
+save_path: ./output
+    # NOTE: The output path is relative to the current working directory.
     #       If you want to save the output in a different directory, please specify the absolute path.
     #       * If a valid trained_model path is specified, save_path will be set to trained_model.
 trained_model: ./path/to/your/model/  # Pretrained dHBV 2.0 (+ input data) can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_2_0_trained.zip
@@ -61,7 +61,8 @@ loss_function:
 ## Differentiable Model -----------------------------#
 delta_model:
     rho: 365
-    
+    use_log_norm: []
+
     phy_model:
         ## Citations ##
         # HBV 2.0: Yalan Song, Tadd Bindas, Chaopeng Shen, et al.
@@ -78,7 +79,6 @@ delta_model:
             HBV_2_0: [parBETA, parK0, parBETAET]
 
         routing: True
-        use_log_norm: []
         nearzero: 1e-5
 
         forcings: [
@@ -102,7 +102,7 @@ delta_model:
         lr_scheduler_params:
             step_size: 10
             gamma: 0.5
-        
+
         forcings: [
             P,
             Temp,
@@ -126,14 +126,14 @@ delta_model:
             T_silt,
             aridity,
             glaciers,
-            meanP, 
+            meanP,
             meanTa,
             meanelevation,
             meanslope,
             permafrost,
             permeability,
             seasonality_P,
-            seasonality_PET, 
+            seasonality_PET,
             snow_fraction,
             snowfall_fraction,
             uparea,

@@ -24,8 +24,8 @@ class HydroSampler(BaseSampler):
         super().__init__()
         self.config = config
         self.device = config['device']
-        self.warm_up = config['model']['phy']['warm_up']
         self.rho = config['model']['rho']
+        self.warm_up = config['model'].get('warm_up', 0)
 
     def load_data(self):
         """Custom implementation for loading data."""
@@ -99,9 +99,7 @@ class HydroSampler(BaseSampler):
             'xc_nn_norm': self.select_subset(
                 dataset['xc_nn_norm'], i_sample, i_t, has_grad=False
             ),
-            'target': self.select_subset(dataset['target'], i_sample, i_t)[
-                self.warm_up :, :
-            ],
+            'target': self.select_subset(dataset['target'], i_sample, i_t),
             'batch_sample': i_sample,
         }
 

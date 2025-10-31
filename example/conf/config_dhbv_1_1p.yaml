@@ -1,7 +1,7 @@
 # This configuration file is specifically for the differentiable hydrologic model dHBV 1.1p from Song et al. (2025). If you find this code is useful to your work, please cite the paper below:
 # Yalan Song, Kamlesh Sawadekar, Jonathan Frame, et al. "Physics-informed, Differentiable Hydrologic  Models for Capturing Unseen Extreme Events." ESS Open Archive (2025). https://doi.org/10.22541/essoar.172304428.82707157/v2.
 
-# This config replicates the CAMELS 531-basin, 10-year benchmark. 
+# This config replicates the CAMELS 531-basin, 10-year benchmark.
 # To setup for CAMELS 671-basin, 15-year benchmark, set the following...
 #   1. observations: camels_671
 #   2. train: start_time: 1980/10/01
@@ -12,7 +12,7 @@
 defaults:
     - _self_
     - hydra: settings
-    - observations: camels_531 # camels_531, camels_671 
+    - observations: camels_531 # camels_531, camels_671
 
 
 ## General -------------------------------#
@@ -26,7 +26,7 @@ data_sampler: HydroSampler
 trainer: Trainer
 
 save_path: ./output
-    # NOTE: The output path is relative to the current working directory. 
+    # NOTE: The output path is relative to the current working directory.
     #       If you want to save the output in a different directory, please specify the absolute path.
     #       * If a valid trained_model path is specified, save_path will be set to trained_model.
 trained_model: ./path/to/your/model/  # Pretrained dHBV 1.1p can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_1_1p_trained.zip
@@ -67,7 +67,8 @@ loss_function:
 ## Differentiable Model -----------------------------#
 delta_model:
     rho: 365
-    
+    use_log_norm: []
+
     phy_model:
         ## Citations ##
         # HBV 1.1p: Yalan Song, Kamlesh Sawadekar, Jonathan Frame, et al.
@@ -84,7 +85,6 @@ delta_model:
             Hbv_1_1p: [parBETA, parK0, parBETAET]
 
         routing: True
-        use_log_norm: []
         nearzero: 1e-5
 
         forcings: [
@@ -103,7 +103,7 @@ delta_model:
         lr_scheduler_params:
             step_size: 10
             gamma: 0.5
-        
+
         forcings: [
             prcp,
             tmean,

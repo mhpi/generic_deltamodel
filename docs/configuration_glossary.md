@@ -64,7 +64,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 **trainer**: Class name of the trainer used in training/inference. E.g., *Trainer* located in `./generic_deltamodel/src/dmg/trainers/trainer.py`. Follows same convention as data_loader.
 
-*trained_model*: Path to a directory containing trained model weights, may also include subdirectory of model outputs. Note this path must end with a forward slash ('/').
+*model_dir*: Path to a directory containing trained model weights, may also include subdirectory of model outputs. Note this path must end with a forward slash ('/').
 
 </br>
 
@@ -129,6 +129,10 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 - **rho**: Prediction window.
 
+- *warm_up*: Number of timesteps to use as warmup for model states.
+
+- *use_log_norm*: Apply log normalization to any input variables listed here.
+
 - **phy**: Physical model settings.
   - **name**: [Hbv, Hbv_adj, Hbv_1_1p, Hbv_2_0, custom_model] name of physical model to use. Can be more than one if a list is passed.
     - `Hbv`: δHBV 1.0
@@ -139,8 +143,6 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
   - *nmul*: Number of parallel parameter sets to use. These will be averaged for single physical model output.
 
-  - *warm_up*: Number of timesteps to use as warmup for model states.
-
   - *warm_up_states*: [bool] If False, keep model gradients on during warmup. Increases computational time for training. Can slightly improve accuracy.
 
   - *dy_drop*: Factor to control the chance that some time-dynamic parameters are set to static.
@@ -150,9 +152,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
   - *routing*: [bool] Use unit hydrograph river routing on hydrological model discharge predictions if True.
 
-  - *AD_efficient*: [bool] Use efficient automatic differentiation method if True.
-
-  - *use_log_norm*: Apply log normalization to any input variables listed here.
+  - *ad_efficient*: [bool] Use efficient automatic differentiation method if True.
 
   - **nearzero**: [1e-5] Small perturbation value to avoid zero-devision or zeros in calculations.
 
@@ -266,6 +266,8 @@ The settings are broken down as they appear in the YAML configuration files, wit
 *all_forcings*: List of names of all time-dynamic variables available in the dataset.
 
 *all_attributes*: List of names of all static variables available in the dataset.
+
+</br>
 
 ---
 

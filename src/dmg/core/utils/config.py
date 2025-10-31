@@ -15,7 +15,6 @@ from pathlib import Path
 from pydantic import (
     BaseModel,
     Field,
-    ValidationError,
     field_validator,
     model_validator,
 )
@@ -80,6 +79,14 @@ class TestNameEnum(str, Enum):
 
     temporal = 'temporal'
     spatial = 'spatial'
+
+
+class FlowRegimeEnum(str, Enum):
+    """Enumeration for different flow regimes."""
+
+    none = 'none'
+    low = 'low'
+    high = 'high'
 
 
 ## ------ Training Utilities ------- ##
@@ -206,11 +213,9 @@ class PhyModelConfig(BaseModel):
 
     ## Optional defaults for mhpi models ##
     nmul: Optional[int] = None
-    warm_up: Optional[int] = None
     warm_up_states: Optional[bool] = None
     dy_drop: Optional[float] = None
     routing: Optional[bool] = None
-    use_log_norm: Optional[list[str]] = None
 
     @model_validator(mode='after')
     def validate_dynamic_params(self) -> 'PhyModelConfig':
@@ -247,9 +252,14 @@ class ModelConfig(BaseModel):
     model_config = {'extra': 'allow'}
 
     rho: int
-    nn: NeuralNetworkModelConfig = Field(default_factory=NeuralNetworkModelConfig)
+    nn: Optional[NeuralNetworkModelConfig] = Field(
+        default_factory=NeuralNetworkModelConfig
+    )
 
     ## Optional defaults for mhpi models ##
+    warm_up: Optional[int] = None
+    use_log_norm: Optional[list[str]] = None
+    flow_regime: Optional[FlowRegimeEnum] = None
     phy: Optional[PhyModelConfig] = None
 
 
@@ -313,7 +323,7 @@ class Config(BaseModel):
     cache_states: Optional[bool] = False
     device: str
     gpu_id: Optional[int] = 0
-    verbose: Optional[bool] = True
+    verbose: Optional[bool] = False
 
     data_loader: Optional[str] = None
     data_sampler: Optional[str] = None
@@ -352,15 +362,16 @@ class Config(BaseModel):
             self.name = 'dmg-exp'
             log.warning(f"No `name` provided in config. Auto-assigning: {self.name}")
 
-        if self.multimodel_type.lower() == 'none':
+        if not self.multimodel_type or self.multimodel_type.lower() == 'none':
             self.multimodel_type = None
 
-        if self.logging.lower() == 'none':
+        if not self.logging or self.logging.lower() == 'none':
             self.logging = None
 
-        # Assign state caching to sub-models.
+        # Assign state caching and warmup to sub-models.
         if self.model.phy:
             self.model.phy.cache_states = self.cache_states
+            self.model.phy.warm_up = self.model.warm_up
         if self.model.nn:
             self.model.nn.cache_states = self.cache_states
 
@@ -402,74 +413,74 @@ class Config(BaseModel):
         return self
 
 
-# Example to demo field validation
-if __name__ == '__main__':
-    mock_config_dict = {
-        'name': 'CudnnLstmModel-Hbv_1_1p',
-        'mode': 'train_test',
-        'do_tune': False,
-        'multimodel_type': 'none',
-        'seed': 111111,
-        'logging': {'loggers': ['tensorboard']},
-        'device': 'cuda',
-        'gpu_id': 5,
-        'verbose': True,
-        'data_loader': 'HydroLoader',
-        'data_sampler': 'HydroSampler',
-        'trainer': 'Trainer',
-        'trained_model': '',
-        'train': {
-            'start_time': '1999/10/01',
-            'end_time': '2008/09/30',
-            'target': ['streamflow'],
-            'optimizer': 'Adadelta',
-            'lr': 1.0,
-            'lr_scheduler': None,
-            'loss_function': {'name': 'NseBatchLoss'},
-            'batch_size': 100,
-            'epochs': 100,
-        },
-        'test': {
-            'start_time': '1989/10/01',
-            'end_time': '1999/09/30',
-            'batch_size': 25,
-            'test_epoch': 50,
-        },
-        'sim': {
-            'start_time': '1989/10/01',
-            'end_time': '1999/09/30',
-            'batch_size': 25,
-        },
-        'model': {
-            'rho': 365,
-            'phy': {
-                'name': ['Hbv_1_1p'],
-                'nmul': 16,
-                'warm_up': 365,
-                'warm_up_states': False,
-                'dynamic_params': {'Hbv_1_1p': ['parBETA', 'parK0', 'parBETAET']},
-                'forcings': ['prcp', 'tmean', 'pet'],
-            },
-            'nn': {
-                'name': 'CudnnLstmModel',
-                'dropout': 0.5,
-                'hidden_size': 256,
-                'forcings': ['prcp', 'tmean', 'pet'],
-                'attributes': ['p_mean'],
-            },
-        },
-        'observations': {
-            'name': 'camels_531',
-            'data_path': './your/path',
-            'start_time': '1980/10/01',
-            'end_time': '2014/09/30',
-        },
-    }
+# # Example to demo field validation
+# if __name__ == '__main__':
+#     mock_config_dict = {
+#         'name': 'CudnnLstmModel-Hbv_1_1p',
+#         'mode': 'train_test',
+#         'do_tune': False,
+#         'multimodel_type': 'none',
+#         'seed': 111111,
+#         'logging': {'loggers': ['tensorboard']},
+#         'device': 'cuda',
+#         'gpu_id': 5,
+#         'verbose': True,
+#         'data_loader': 'HydroLoader',
+#         'data_sampler': 'HydroSampler',
+#         'trainer': 'Trainer',
+#         'trained_model': '',
+#         'train': {
+#             'start_time': '1999/10/01',
+#             'end_time': '2008/09/30',
+#             'target': ['streamflow'],
+#             'optimizer': 'Adadelta',
+#             'lr': 1.0,
+#             'lr_scheduler': None,
+#             'loss_function': {'name': 'NseBatchLoss'},
+#             'batch_size': 100,
+#             'epochs': 100,
+#         },
+#         'test': {
+#             'start_time': '1989/10/01',
+#             'end_time': '1999/09/30',
+#             'batch_size': 25,
+#             'test_epoch': 50,
+#         },
+#         'sim': {
+#             'start_time': '1989/10/01',
+#             'end_time': '1999/09/30',
+#             'batch_size': 25,
+#         },
+#         'model': {
+#             'rho': 365,
+#             'phy': {
+#                 'name': ['Hbv_1_1p'],
+#                 'nmul': 16,
+#                 'warm_up': 365,
+#                 'warm_up_states': False,
+#                 'dynamic_params': {'Hbv_1_1p': ['parBETA', 'parK0', 'parBETAET']},
+#                 'forcings': ['prcp', 'tmean', 'pet'],
+#             },
+#             'nn': {
+#                 'name': 'CudnnLstmModel',
+#                 'dropout': 0.5,
+#                 'hidden_size': 256,
+#                 'forcings': ['prcp', 'tmean', 'pet'],
+#                 'attributes': ['p_mean'],
+#             },
+#         },
+#         'observations': {
+#             'name': 'camels_531',
+#             'data_path': './your/path',
+#             'start_time': '1980/10/01',
+#             'end_time': '2014/09/30',
+#         },
+#     }
 
-    try:
-        # Validate the dictionary
-        config_model = Config(**mock_config_dict)
-        print("✅ Configuration is valid!")
-        # print(config_model.model_dump_json(indent=2))
-    except ValidationError as e:
-        print(f"❌ Configuration is invalid:\n{e}")
+#     try:
+#         # Validate the dictionary
+#         config_model = Config(**mock_config_dict)
+#         print("✅ Configuration is valid!")
+#         # print(config_model.model_dump_json(indent=2))
+#     except ValidationError as e:
+#         print(f"❌ Configuration is invalid:\n{e}")

@@ -63,8 +63,8 @@ class EnsembleGenerator(torch.nn.Module):
             The neural network model.
         """
         return load_nn_model(
-            None,
             self.config,
+            None,
             ensemble_list=self.model_list,
             device=self.device,
         )
