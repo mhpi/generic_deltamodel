@@ -10,6 +10,8 @@ import shutil
 
 sys.path.append(str(Path(__file__).parent.parent))
 
+from omegaconf import OmegaConf
+
 import numpy as np
 from dmg.trainers.trainer import Trainer
 from dmg.models.model_handler import ModelHandler
@@ -39,7 +41,9 @@ def test_training_regression(config, mock_dataset, tmp_path):
     os.makedirs(config['sim_dir'], exist_ok=True)
     set_randomseed(config['seed'])
 
-    config = initialize_config(config, write_out=False)
+    config_tmp = OmegaConf.create(config)
+    config = initialize_config(config_tmp, write_out=False)
+
     model = ModelHandler(config)
     trainer = Trainer(
         config,

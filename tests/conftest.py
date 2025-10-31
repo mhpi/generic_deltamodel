@@ -17,7 +17,6 @@ def config():
         'cache_states': False,
         'device': 'cpu',
         'gpu_id': 0,
-        'dtype': torch.float32,
         'data_loader': 'HydroLoader',
         'data_sampler': 'HydroSampler',
         'trainer': 'Trainer',
@@ -82,6 +81,7 @@ def config():
         },
         'observations': {
             'name': 'camels_531',
+            'data_path': '',
             'area_name': 'area_gages2',
             'start_time': '2000/01/01',
             'end_time': '2000/02/28',
