@@ -61,6 +61,12 @@ class ModelHandler(torch.nn.Module):
         self.models = self.list_models()
         self._init_models()
 
+        if 'train' not in config['mode']:
+            try:
+                self.load_states(config['load_state_path'])
+            except RuntimeError as e:
+                log.error(f"Failed to load states: {e}")
+
         self.epoch = None
         self.loss_func = None
         self.loss_dict = dict.fromkeys(self.models, 0)
