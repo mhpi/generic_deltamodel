@@ -26,10 +26,7 @@ EXP_FINAL_LOSS_VALUES = [
     32.135179460048676,  # The GHA runner loss
     32.115299105644226,  # Your local machine loss
 ]
-EXP_NSE_VALUES = [
-    -2.989192485809326,  # The GHA runner loss
-    -2.989192485809326,  # Your local machine loss
-]
+EXP_NSE = -2.989192485809326
 # --------------------------------------------
 
 
@@ -84,11 +81,8 @@ def test_training_regression(config, mock_dataset, tmp_path):
         metrics = json.load(f)
 
     actual_nse = metrics['nse']['median']
-    is_nse_close = np.isclose(actual_nse, EXP_NSE_VALUES, atol=1e-3)
-    assert np.any(is_nse_close), (
-        f"Evaluation NSE regression failed. "
-        f"Got: {actual_nse}, "
-        f"Expected one of: {EXP_NSE_VALUES}"
+    assert np.isclose(actual_nse, EXP_NSE, atol=1e-3), (
+        f"Evaluation NSE regression failed. Got: {actual_nse}, Expected: {EXP_NSE}"
     )
 
     shutil.rmtree(tmp_path)
