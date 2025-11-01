@@ -189,7 +189,7 @@ class MsTrainer(BaseTrainer):
             # Save the batch predictions
             model_name = self.config['model']['phy']['name'][0]
             prediction = {
-                key: tensor.cpu().detach()
+                key: tensor.detach().cpu()
                 for key, tensor in prediction[model_name].items()
             }
             batch_predictions.append(prediction)

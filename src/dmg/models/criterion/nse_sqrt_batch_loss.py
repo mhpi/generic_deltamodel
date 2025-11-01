@@ -48,7 +48,7 @@ class NseSqrtBatchLoss(BaseCriterion):
 
         try:
             y_obs = kwargs['y_obs']
-            self.std = np.nanstd(y_obs[:, :, 0].cpu().detach().numpy(), axis=0)
+            self.std = np.nanstd(y_obs[:, :, 0].detach().cpu().numpy(), axis=0)
         except KeyError as e:
             raise KeyError("'y_obs' is not provided in kwargs") from e
 

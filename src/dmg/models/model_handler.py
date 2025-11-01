@@ -234,9 +234,9 @@ class ModelHandler(torch.nn.Module):
         eval: bool = False,
     ) -> dict[str, torch.Tensor]:
         """
-        Sequentially forward for one or more differentiable models with an
-        optional weighting NN for multimodel ensembles trained in parallel or
-        series (differentiable model parameterization NNs frozen).
+        Sequentially forward one or more models with an optional weighting NN
+        for multimodel ensembles trained in parallel or series (model
+        parameterization NNs frozen).
 
         Parameters
         ----------
@@ -248,7 +248,7 @@ class ModelHandler(torch.nn.Module):
 
         Returns
         -------
-        Dict[str, torch.Tensor]
+        dict[str, torch.Tensor]
             Dictionary of model outputs. Each key corresponds to a model name.
         """
         self.output_dict = {}
