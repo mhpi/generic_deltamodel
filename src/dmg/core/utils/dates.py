@@ -51,7 +51,6 @@ class Dates(BaseModel):
         )
 
     @model_validator(mode="after")
-    @classmethod
     def validate_dates(self) -> Any:
         """Validate the dates configuration.
 

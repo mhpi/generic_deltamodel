@@ -191,8 +191,7 @@ class Metrics(BaseModel):
         return super().model_post_init(__context)
 
     @model_validator(mode='after')
-    @classmethod
-    def validate_pred(self) -> Any:
+    def validate_pred(self):
         """Checks that there are no NaN predictions.
 
         Parameters
