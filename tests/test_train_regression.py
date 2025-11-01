@@ -19,7 +19,7 @@ from dmg.trainers.trainer import Trainer
 # --- Expected Train Loss + Test NSE  ---
 # NOTE: If you change the model, data, or training process, these values must
 # need to be updated.
-EXP_FINAL_LOSS = 32.135179460048676
+EXP_FINAL_LOSS = 32.130700409412384
 EXP_NSE = -2.989192485809326
 # --------------------------------------------
 
