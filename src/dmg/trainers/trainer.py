@@ -263,7 +263,6 @@ class Trainer(BaseTrainer):
             Number of timesteps in the training dataset.
         """
         start_time = time.perf_counter()
-        prog_str = f"Epoch {epoch}/{self.epochs}"
 
         self.current_epoch = epoch
         self.total_loss = 0.0
@@ -272,10 +271,15 @@ class Trainer(BaseTrainer):
             for key in self.model.loss_dict:
                 self.model.loss_dict[key] = 0.0
 
+        prog_bar = tqdm.tqdm(
+            range(1, n_minibatch + 1),
+            desc=f"Epoch {epoch}/{self.epochs}",
+            leave=False,
+            dynamic_ncols=True,
+        )
+
         # Iterate through epoch in minibatches.
-        for mb in tqdm.tqdm(
-            range(1, n_minibatch + 1), desc=prog_str, leave=False, dynamic_ncols=True
-        ):
+        for mb in prog_bar:
             self.current_batch = mb
 
             dataset_sample = self.sampler.get_training_sample(
@@ -430,23 +434,26 @@ class Trainer(BaseTrainer):
         # Track predictions accross batches
         batch_predictions = []
 
-        for i in tqdm.tqdm(
-            range(len(batch_start)), desc='Forwarding', leave=False, dynamic_ncols=True
-        ):
-            self.current_batch = i
+        prog_bar = tqdm.tqdm(
+            range(len(batch_start)),
+            desc='Forwarding',
+            leave=False,
+            dynamic_ncols=True,
+        )
 
+        for mb in prog_bar:
             # Select a batch of data
             dataset_sample = self.sampler.get_validation_sample(
                 data,
-                batch_start[i],
-                batch_end[i],
+                batch_start[mb],
+                batch_end[mb],
             )
 
             prediction = self.model(dataset_sample, eval=True)
 
             # Save the batch predictions
             prediction = {
-                key: tensor.cpu().detach()
+                key: tensor.detach().cpu()
                 for key, tensor in prediction[self.model.models[0]].items()
             }
             batch_predictions.append(prediction)
@@ -467,7 +474,7 @@ class Trainer(BaseTrainer):
             Target variable observation data.
         """
         target_name = self.config['train']['target'][0]
-        warm_up = self.config['model']['warm_up']
+        warm_up = self.config['model'].get('warm_up', 0)
         predictions = self._batch_data(batch_predictions, target_name)
         target = np.expand_dims(observations[:, :, 0].cpu().numpy(), 2)
 

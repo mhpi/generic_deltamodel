@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional
-from dmg.core.logging.factory import get_exp_logger
 
 import torch
+
+from dmg.core.logging.factory import get_exp_logger
 
 
 class BaseTrainer(ABC):

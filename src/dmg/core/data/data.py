@@ -344,7 +344,7 @@ def timestep_resample(
     if isinstance(data, pd.DataFrame):
         pass
     elif isinstance(data, torch.Tensor):
-        data = data.cpu().detach().numpy()
+        data = data.detach().cpu().numpy()
         data = pd.DataFrame(data)
         data['time'] = pd.to_datetime(data['time'])
     elif isinstance(data, NDArray[np.float32]):

@@ -8,18 +8,18 @@ Add flag `--config-name <config_name>` to (1) or (2) to use a different config.
 """
 
 import logging
+import os
 import time
 
 import hydra
 import torch
 from omegaconf import DictConfig
 
+from dmg._version import __version__
 from dmg.core.tune.utils import run_tuning
 from dmg.core.utils.factory import import_data_loader, import_trainer
 from dmg.core.utils.utils import initialize_config, print_config, set_randomseed
 from dmg.models.model_handler import ModelHandler as dModel
-from dmg._version import __version__
-import os
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -115,7 +115,7 @@ def main(config: DictConfig) -> None:
         total_time = time.perf_counter() - start_time
         log.info(
             f"| {config['mode']} completed | "
-            f"Time Elapsed: {(total_time / 60):.6f} minutes",
+            f"Time Elapsed: {(total_time / 60):.6f} minutes"
         )
 
 

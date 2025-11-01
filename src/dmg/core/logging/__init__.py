@@ -1,5 +1,5 @@
 from .base import BaseLogger
-from .factory import get_exp_logger, NullLogger
+from .factory import NullLogger, get_exp_logger
 from .tensorboard_logger import TensorBoardLogger
 from .wandb_logger import WandbLogger
 

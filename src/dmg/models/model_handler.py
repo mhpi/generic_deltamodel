@@ -8,8 +8,8 @@ import tqdm
 from dmg.core.utils import save_model
 from dmg.models.criterion.range_bound_loss import RangeBoundLoss
 from dmg.models.delta_models.dpl_model import DplModel
-from dmg.models.wrappers.nn_model import NnModel
 from dmg.models.multimodels.ensemble_generator import EnsembleGenerator
+from dmg.models.wrappers.nn_model import NnModel
 
 log = logging.getLogger('model_handler')
 
@@ -234,9 +234,9 @@ class ModelHandler(torch.nn.Module):
         eval: bool = False,
     ) -> dict[str, torch.Tensor]:
         """
-        Sequentially forward for one or more differentiable models with an
-        optional weighting NN for multimodel ensembles trained in parallel or
-        series (differentiable model parameterization NNs frozen).
+        Sequentially forward one or more models with an optional weighting NN
+        for multimodel ensembles trained in parallel or series (model
+        parameterization NNs frozen).
 
         Parameters
         ----------
@@ -248,7 +248,7 @@ class ModelHandler(torch.nn.Module):
 
         Returns
         -------
-        Dict[str, torch.Tensor]
+        dict[str, torch.Tensor]
             Dictionary of model outputs. Each key corresponds to a model name.
         """
         self.output_dict = {}

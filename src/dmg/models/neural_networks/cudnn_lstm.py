@@ -186,16 +186,20 @@ class CudnnLstmModel(torch.nn.Module):
         Number of hidden units.
     dr
         Dropout rate.
+    dpl
+        Flag for applying sigmoid activation to output. This is necessary if the
+        model is used for differentiable parameter learning.
     cache_states
         Whether to cache hidden and cell states.
     """
 
     def __init__(
         self,
-        nx: int,
+        *nx: int,
         ny: int,
         hidden_size: int,
         dr: Optional[float] = 0.5,
+        dpl: Optional[bool] = False,
         cache_states: Optional[bool] = False,
     ) -> None:
         super().__init__()
@@ -204,6 +208,7 @@ class CudnnLstmModel(torch.nn.Module):
         self.ny = ny
         self.hidden_size = hidden_size
         self.dr = dr
+        self.dpl = dpl
         self.cache_states = cache_states
 
         self.hn, self._hn_cache = None, None  # hidden state
@@ -269,4 +274,8 @@ class CudnnLstmModel(torch.nn.Module):
             self.hn = self._hn_cache.to(x.device)
             self.cn = self._cn_cache.to(x.device)
 
-        return self.linear_out(lstm_out)
+        out = self.linear_out(lstm_out)
+        if self.dpl:
+            return torch.sigmoid(out)
+        else:
+            return out

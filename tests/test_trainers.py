@@ -16,7 +16,7 @@ PATH = Path(__file__).parent.parent / 'src' / 'dmg' / 'trainers'
 PKG_PATH = 'dmg.trainers'
 
 
-loaders = get_available_classes(PATH, PKG_PATH, BaseTrainer)
+trainers = get_available_classes(PATH, PKG_PATH, BaseTrainer)
 
 
 @pytest.fixture
@@ -38,7 +38,7 @@ def mock_datasets():
 
 def test_init(config):
     """Test initialization of trainer classes."""
-    for trainer_class in loaders:
+    for trainer_class in trainers:
         trainer = trainer_class(config)
         # assert isinstance(trainer, BaseTrainer)
         assert trainer.config == config

@@ -51,8 +51,7 @@ class Dates(BaseModel):
         )
 
     @model_validator(mode="after")
-    @classmethod
-    def validate_dates(cls, dates: Any) -> Any:
+    def validate_dates(self) -> Any:
         """Validate the dates configuration.
 
         Parameters
@@ -65,9 +64,9 @@ class Dates(BaseModel):
         Any
             The validated dates configuration
         """
-        rho = dates.rho
+        rho = self.rho
         if isinstance(rho, int):
-            if rho > len(dates.daily_time_range):
+            if rho > len(self.daily_time_range):
                 log.exception(
                     ValueError(
                         "Rho needs to be smaller than the routed period between start and end times",
@@ -76,7 +75,7 @@ class Dates(BaseModel):
                 raise ValueError(
                     "Rho needs to be smaller than the routed period between start and end times",
                 )
-        return dates
+        return self
 
     def model_post_init(self, __context: Any) -> None:
         """Initialize the Dates class.

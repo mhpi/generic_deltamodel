@@ -191,8 +191,7 @@ class Metrics(BaseModel):
         return super().model_post_init(__context)
 
     @model_validator(mode='after')
-    @classmethod
-    def validate_pred(cls, metrics: Any) -> Any:
+    def validate_pred(self):
         """Checks that there are no NaN predictions.
 
         Parameters
@@ -210,12 +209,12 @@ class Metrics(BaseModel):
         Any
             Metrics object.
         """
-        pred = metrics.pred
+        pred = self.pred
         if np.isnan(pred).sum() > 0:
             msg = "Pred contains NaN, check your gradient chain"
             log.exception(msg)
             raise ValueError(msg)
-        return metrics
+        return self
 
     def calc_stats(self, *args, **kwargs) -> dict[str, dict[str, float]]:
         """Calculate aggregate statistics of metrics."""

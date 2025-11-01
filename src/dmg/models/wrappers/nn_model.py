@@ -1,5 +1,7 @@
-import torch
 from typing import Any, Optional
+
+import torch
+
 from dmg.core.utils.factory import load_nn_model
 
 
