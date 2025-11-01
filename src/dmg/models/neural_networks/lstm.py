@@ -2,11 +2,11 @@ import math
 from typing import Optional
 
 import torch
+import torch._VF as _VF
 import torch.nn.functional as F
 from torch.nn import Parameter
 
 from dmg.core.calc.dropout import DropMask, createMask
-import torch._VF as _VF
 
 
 class Lstm(torch.nn.Module):

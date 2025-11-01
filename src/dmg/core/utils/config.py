@@ -5,19 +5,14 @@ Run this script to validate an example config object (see bottom of file).
 -leoglonz, taddbindas 2024
 """
 
-import os
 import logging
+import os
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 from pathlib import Path
+from typing import Optional
 
-from pydantic import (
-    BaseModel,
-    Field,
-    field_validator,
-    model_validator,
-)
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 log = logging.getLogger(__name__)
 

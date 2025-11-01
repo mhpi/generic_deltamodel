@@ -3,17 +3,18 @@
 NOTE: We can only evaluate CPU-bound models due to constraint of GitHub.
 """
 
+import shutil
 import sys
 from pathlib import Path
-import shutil
 
 sys.path.append(str(Path(__file__).parent.parent))
 
 
 import numpy as np
-from dmg.trainers.trainer import Trainer
-from dmg.models.model_handler import ModelHandler
+
 from dmg.core.utils import set_randomseed
+from dmg.models.model_handler import ModelHandler
+from dmg.trainers.trainer import Trainer
 
 # --- Expected Train Loss + Test NSE  ---
 # NOTE: If you change the model, data, or training process, these values must

@@ -8,8 +8,8 @@ import tqdm
 from dmg.core.utils import save_model
 from dmg.models.criterion.range_bound_loss import RangeBoundLoss
 from dmg.models.delta_models.dpl_model import DplModel
-from dmg.models.wrappers.nn_model import NnModel
 from dmg.models.multimodels.ensemble_generator import EnsembleGenerator
+from dmg.models.wrappers.nn_model import NnModel
 
 log = logging.getLogger('model_handler')
 

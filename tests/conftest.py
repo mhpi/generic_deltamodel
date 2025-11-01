@@ -1,10 +1,11 @@
-import pytest
-import torch
-import numpy as np
-from omegaconf import OmegaConf
 import os
 import sys
 from pathlib import Path
+
+import numpy as np
+import pytest
+import torch
+from omegaconf import OmegaConf
 
 sys.path.append(str(Path(__file__).parent.parent))
 
