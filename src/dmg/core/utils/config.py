@@ -277,7 +277,7 @@ class ObservationConfig(BaseModel):
     area_name: Optional[str] = None
 
     @model_validator(mode='after')
-    def validate_data_path(cls, self) -> 'ObservationConfig':
+    def validate_data_path(self) -> 'ObservationConfig':
         """Validates data paths exists."""
         check_path('observations.data_path', self.data_path)
         if self.gage_info:
@@ -287,20 +287,20 @@ class ObservationConfig(BaseModel):
         return self
 
     @model_validator(mode='after')
-    def validate_dataset_times(cls, values):
+    def validate_dataset_times(self):
         """Validates the dataset start and end times."""
-        if values.start_time == 'not_defined' and values.end_time == 'not_defined':
-            return values
-        elif values.start_time == 'not_defined' or values.end_time == 'not_defined':
+        if self.start_time == 'not_defined' and self.end_time == 'not_defined':
+            return self
+        elif self.start_time == 'not_defined' or self.end_time == 'not_defined':
             raise ValueError(
                 "Both train_path and test_path must be defined if either is specified."
             )
         else:
-            start_time = datetime.strptime(values.start_time, '%Y/%m/%d')
-            end_time = datetime.strptime(values.end_time, '%Y/%m/%d')
+            start_time = datetime.strptime(self.start_time, '%Y/%m/%d')
+            end_time = datetime.strptime(self.end_time, '%Y/%m/%d')
             if start_time >= end_time:
                 raise ValueError("Dataset start time must be earlier than end time.")
-            return values
+            return self
 
 
 ## ------ Root Configuration ------- ##
