@@ -165,22 +165,6 @@ class ModelHandler(torch.nn.Module):
             else:
                 self.epoch = epoch
 
-                # TODO: find better fix...
-                # If using LstmModel (CPU-capable equivalent to HydroDL
-                # CudnnLstm), run a dummy forward pass to initialize states
-                # before loading the state_dict.
-                # model_instance = self.model_dict.get(name)
-                # if model_instance and self.config['model']['nn']['name'] == 'LstmModel':
-                #     model_instance.eval()
-                #     with torch.no_grad():
-                #         # Create minimal dummy data based on config
-                #         n_forcings = len(self.config['model']['nn']['forcings'])
-                #         n_attrs = len(self.config['model']['nn']['attributes'])
-                #         dummy_data = torch.zeros(
-                #             (1, 1, n_forcings + n_attrs), device=self.device
-                #         )
-                #         model_instance.nn_model(dummy_data)
-
                 # Initialize model from checkpoint state dict.
                 path = self.model_path
                 if f"{name.lower()}_ep" not in path:
