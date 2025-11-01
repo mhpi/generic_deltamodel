@@ -1,7 +1,7 @@
-import math
 from typing import Optional
 
 import torch
+import torch._VF as _VF
 import torch.nn.functional as F
 from torch.nn import Parameter
 
@@ -38,28 +38,15 @@ class Lstm(torch.nn.Module):
         self.hidden_size = hidden_size
         self.dr = dr
 
-        # Initialize new torch LSTM; disable dropout (it's handled manually).
-        self.lstm = torch.nn.LSTM(
-            input_size=self.nx,
-            hidden_size=self.hidden_size,
-            num_layers=1,
-            batch_first=False,
-            bias=True,
-            dropout=0,
-            bidirectional=False,
-        )
-        # Remove default parameters. These are manually assigned in forward().
-        delattr(self.lstm, 'weight_ih_l0')
-        delattr(self.lstm, 'weight_hh_l0')
-        delattr(self.lstm, 'bias_ih_l0')
-        delattr(self.lstm, 'bias_hh_l0')
-
-        # Name parameters to match CudannLstm.
-        self.w_ih = Parameter(torch.Tensor(hidden_size * 4, nx))
-        self.w_hh = Parameter(torch.Tensor(hidden_size * 4, hidden_size))
-        self.b_ih = Parameter(torch.Tensor(hidden_size * 4))
-        self.b_hh = Parameter(torch.Tensor(hidden_size * 4))
+        # Name parameters to match CudnnLstm.
+        self.w_ih = Parameter(torch.empty(hidden_size * 4, nx))
+        self.w_hh = Parameter(torch.empty(hidden_size * 4, hidden_size))
+        self.b_ih = Parameter(torch.empty(hidden_size * 4))
+        self.b_hh = Parameter(torch.empty(hidden_size * 4))
         self._all_weights = [['w_ih', 'w_hh', 'b_ih', 'b_hh']]
+
+        if torch.cuda.is_available():
+            self.cuda()  # Ensures weight initialization matches CudnnLstm.
 
         self._init_mask()
         self._init_parameters()
@@ -75,16 +62,14 @@ class Lstm(torch.nn.Module):
 
     def _init_mask(self):
         """Initialize dropout mask."""
-        with torch.no_grad():
-            self.mask_w_ih = createMask(self.w_ih, self.dr)
-            self.mask_w_hh = createMask(self.w_hh, self.dr)
+        self.mask_w_ih = createMask(self.w_ih, self.dr)
+        self.mask_w_hh = createMask(self.w_hh, self.dr)
 
     def _init_parameters(self):
         """Initialize parameters."""
-        stdv = 1.0 / math.sqrt(self.hidden_size)
-        for param in self.parameters():
-            if param.requires_grad:
-                param.data.uniform_(-stdv, stdv)
+        stdv = 1.0 / self.hidden_size**0.5
+        for weight in self.parameters():
+            torch.nn.init.uniform_(weight, -stdv, stdv)
 
     def forward(
         self,
@@ -109,7 +94,12 @@ class Lstm(torch.nn.Module):
         dr_false
             Flag for applying dropout.
         """
-        # Ensure do_drop is False, unless do_drop_mc is True.
+        self.w_ih.contiguous()
+        self.w_hh.contiguous()
+        self.b_ih.contiguous()
+        self.b_hh.contiguous()
+
+        # Determine if dropout should be applied
         if dr_false and (not do_drop_mc):
             do_drop = False
         elif self.dr > 0 and (do_drop_mc is True or self.training is True):
@@ -120,38 +110,47 @@ class Lstm(torch.nn.Module):
         batch_size = input.size(1)
 
         if hx is None:
-            hx = input.new_zeros(
+            hx = torch.zeros(
                 1,
                 batch_size,
                 self.hidden_size,
+                device=input.device,
+                dtype=input.dtype,
                 requires_grad=False,
             )
         if cx is None:
-            cx = input.new_zeros(
+            cx = torch.zeros(
                 1,
                 batch_size,
                 self.hidden_size,
+                device=input.device,
+                dtype=input.dtype,
                 requires_grad=False,
             )
 
+        # Apply dropout mask if needed
         if do_drop is True:
             self._init_mask()
-            weight = [
+            weight_list = [
                 DropMask.apply(self.w_ih, self.mask_w_ih, True),
                 DropMask.apply(self.w_hh, self.mask_w_hh, True),
                 self.b_ih,
                 self.b_hh,
             ]
         else:
-            weight = [self.w_ih, self.w_hh, self.b_ih, self.b_hh]
+            weight_list = [self.w_ih, self.w_hh, self.b_ih, self.b_hh]
 
-        # Manually assign parameters to torch LSTM.
-        self.lstm.weight_ih_l0 = torch.nn.Parameter(weight[0])
-        self.lstm.weight_hh_l0 = torch.nn.Parameter(weight[1])
-        self.lstm.bias_ih_l0 = torch.nn.Parameter(weight[2])
-        self.lstm.bias_hh_l0 = torch.nn.Parameter(weight[3])
-        output, (hy, cy) = self.lstm(input, (hx, cx))
-
+        output, hy, cy = _VF.lstm(
+            input=input,
+            hx=(hx, cx),
+            params=weight_list,
+            has_biases=True,
+            num_layers=1,
+            dropout=0.0,
+            train=self.training,
+            bidirectional=False,
+            batch_first=False,
+        )
         return output, (hy, cy)
 
     @property
@@ -179,6 +178,9 @@ class LstmModel(torch.nn.Module):
         Number of hidden units.
     dr
         Dropout rate.
+    dpl
+        Flag for applying sigmoid activation to output. This is necessary if the
+        model is used for differentiable parameter learning.
     cache_states
         Whether to cache hidden and cell states.
 
@@ -192,6 +194,7 @@ class LstmModel(torch.nn.Module):
         ny: int,
         hidden_size: int,
         dr: Optional[float] = 0.5,
+        dpl: Optional[bool] = False,
         cache_states: Optional[bool] = False,
     ) -> None:
         super().__init__()
@@ -199,6 +202,7 @@ class LstmModel(torch.nn.Module):
         self.nx = nx
         self.ny = ny
         self.hidden_size = hidden_size
+        self.dpl = dpl
         self.dr = dr
         self.cache_states = cache_states
 
@@ -265,4 +269,8 @@ class LstmModel(torch.nn.Module):
             self.hn = self._hn_cache.to(x.device)
             self.cn = self._cn_cache.to(x.device)
 
-        return self.linear_out(lstm_out)
+        out = self.linear_out(lstm_out)
+        if self.dpl:
+            return torch.sigmoid(out)
+        else:
+            return out
