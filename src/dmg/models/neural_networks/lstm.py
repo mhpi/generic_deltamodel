@@ -1,3 +1,4 @@
+import math
 from typing import Optional
 
 import torch
@@ -39,10 +40,10 @@ class Lstm(torch.nn.Module):
         self.dr = dr
 
         # Name parameters to match CudnnLstm.
-        self.w_ih = Parameter(torch.empty(hidden_size * 4, nx))
-        self.w_hh = Parameter(torch.empty(hidden_size * 4, hidden_size))
-        self.b_ih = Parameter(torch.empty(hidden_size * 4))
-        self.b_hh = Parameter(torch.empty(hidden_size * 4))
+        self.w_ih = Parameter(torch.Tensor(hidden_size * 4, nx))
+        self.w_hh = Parameter(torch.Tensor(hidden_size * 4, hidden_size))
+        self.b_ih = Parameter(torch.Tensor(hidden_size * 4))
+        self.b_hh = Parameter(torch.Tensor(hidden_size * 4))
         self._all_weights = [['w_ih', 'w_hh', 'b_ih', 'b_hh']]
 
         if torch.cuda.is_available():
@@ -67,9 +68,9 @@ class Lstm(torch.nn.Module):
 
     def _init_parameters(self):
         """Initialize parameters."""
-        stdv = 1.0 / self.hidden_size**0.5
+        stdv = 1.0 / math.sqrt(self.hidden_size)
         for weight in self.parameters():
-            torch.nn.init.uniform_(weight, -stdv, stdv)
+            weight.data.uniform_(-stdv, stdv)
 
     def forward(
         self,
@@ -94,11 +95,6 @@ class Lstm(torch.nn.Module):
         dr_false
             Flag for applying dropout.
         """
-        self.w_ih.contiguous()
-        self.w_hh.contiguous()
-        self.b_ih.contiguous()
-        self.b_hh.contiguous()
-
         # Determine if dropout should be applied
         if dr_false and (not do_drop_mc):
             do_drop = False

@@ -10,6 +10,8 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 
+import torch
+import os
 import numpy as np
 
 from dmg.core.utils import set_randomseed
@@ -29,6 +31,15 @@ def test_training_regression(config, mock_dataset, tmp_path):
     Tests the full training and evaluation pipeline for reproducibility.
     """
     set_randomseed(config['seed'])
+
+    # 2. Force PyTorch to use deterministic (slower) algorithms
+    try:
+        print("Attempting to set deterministic algorithms...")
+        torch.use_deterministic_algorithms(True)
+        # This is for CUDA, but good to include.
+        os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+    except RuntimeError:
+        print("Warning: Could not set deterministic algorithms.")
 
     model = ModelHandler(config)
     trainer = Trainer(
