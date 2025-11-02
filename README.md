@@ -62,7 +62,7 @@ See [how to run](./docs/how_to_run.md).
     from dmg.models.delta_models import DplModel
     from example import load_config, take_data_sample
 
-    CONFIG_PATH = '../example/conf/config_dhbv_1_0.yaml'
+    CONFIG_PATH = '../example/conf/config_dhbv.yaml'
 
 
     # Model configuration

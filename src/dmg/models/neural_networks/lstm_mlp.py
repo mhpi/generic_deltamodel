@@ -102,13 +102,14 @@ class LstmMlpModel(torch.nn.Module):
     ) -> None:
         """Load hidden and cell states."""
         for state in states:
-            if not isinstance(state, torch.Tensor):
+            if state and not isinstance(state, torch.Tensor):
                 raise ValueError("Each element in `states` must be a tensor.")
         if not (isinstance(states, tuple) and len(states) == 2):
             raise ValueError("`states` must be a tuple of 2 tensors.")
 
-        self.hn = states[0].detach()
-        self.cn = states[1].detach()
+        device = next(self.parameters()).device
+        self.hn = states[0].detach().to(device)
+        self.cn = states[1].detach().to(device)
 
     def forward(
         self,
@@ -133,7 +134,6 @@ class LstmMlpModel(torch.nn.Module):
         tuple
             The LSTM and MLP output tensors.
         """
-        self.lstminv.load_states((self.hn, self.cn))
         lstm_out = self.lstminv(x1)
         act_out = self.activation(lstm_out)
         ann_out = self.ann(x2)

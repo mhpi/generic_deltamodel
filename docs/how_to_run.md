@@ -41,7 +41,7 @@ If you have installed 𝛿MG to use differentiable hydrology models developed by
 2. You can use the master + observation configuration files from [`./generic_deltamodel/example/conf/`](../example/conf/) to train or forward using the command line arguments in [Section 1](#1-command-line). Simply move these files to the [`./generic_deltamodel/conf/`](../conf/) directory, and then run, for example,
 
 ```bash
-python -m dmg --config-name config_dhbv_1_0.yaml
+python -m dmg --config-name config_dhbv.yaml
 ```
 
 </br>
@@ -50,7 +50,7 @@ python -m dmg --config-name config_dhbv_1_0.yaml
 
 To use 𝛿MG to build and experiment with your own differentiable model, a few things need to happen.
 
-1. Build a master configuration file to encapsulate your model and experiment settings. This must minimally include settings in [`./generic_deltamodel/conf/default.yaml`](../conf/default.yaml). Any additional settings can be added as needed for your custom modules (see below).
+1. Build a master configuration file to encapsulate your model and experiment settings. This must minimally include settings in [`default.yaml`](../conf/default.yaml). Any additional settings can be added as needed for your custom modules (see below).
 
 2. Build an observations configuration file. This contains all settings/data paths needed to load data in your data loader. You can see the hydrology examples for inspiration.
 
@@ -67,14 +67,14 @@ To use 𝛿MG to build and experiment with your own differentiable model, a few 
     - NN: Neural network
         - `../dmg/models/neural_networks/`
         - Specify as `delta_model: nn_model: model` setting in master configuration.
-    - Physical model: Physical model written in a differentiable way with PyTorch. (See [hydrodl2/models](https://github.com/mhpi/hydrodl2/tree/master/src/hydrodl2/models/hbv) for examples from hydrology.)
+    - Physical model: Physical model written in a differentiable way with PyTorch. (See [hydrodl2/models](https://github.com/mhpi/hydrodl2/tree/master/src/hydrodl2/models/hbv) for examples in hydrology.)
         - `../dmg/models/phy_models/`
         - Specify as `delta_model: phy_model: model` setting in master configuration.
 
 4. Run 𝛿MG from the command line. For example,
 
     ```bash
-    python -m dmg --config-name config_dhbv_1_0.yaml
+    python -m dmg --config-name config_dhbv.yaml
     ```
 
 </br>

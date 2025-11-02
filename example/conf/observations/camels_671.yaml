@@ -1,8 +1,8 @@
 # CAMELS 671-basin data extraction
-# Download: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/camels/camels_data.zip
+# Download: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/data/1-camels.zip
 
 name: camels_671
-data_path: ./your/path/to/camels_dataset
+data_path: ./your/path/to/camels_daymetv2
 
 gage_info: ./your/path/to/gage_id.npy
 

@@ -10,7 +10,7 @@ There is a minimal set of standards we would ask you to consider to speed up the
    - If you have not already done so, create a fork of the `generic_deltamodel` repo (master branch) and make changes to this copy.
 
 2. **Lint & test your code**
-   - Make sure development packages for 𝛿MG are installed. This can be done by flagging dev packages during pip install like `uv pip install "./generic_deltamodel[dev]` (see also: [setup](./setup.md)).
+   - Make sure development packages for 𝛿MG are installed. This can be done by flagging dev packages during pip install like `uv pip install "./generic_deltamodel[dev]"` (see also: [setup](./setup.md)).
 
    - Once your changes are complete, run the following in your Python environement:
 

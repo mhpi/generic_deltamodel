@@ -44,7 +44,10 @@ class MsHydroLoader(BaseLoader):
         self.config = config
         self.test_split = test_split
         self.overwrite = overwrite
-        self.supported_data = ['merit']  # Add new supported observation names here.
+        self.supported_data = [
+            'merit',
+            'merit71',
+        ]  # Add new supported observation names here.
         self.data_name = config['observations']['name']
         self.nn_attributes = config['model']['nn'].get('attributes', [])
         self.nn_forcings = config['model']['nn'].get('forcings', [])

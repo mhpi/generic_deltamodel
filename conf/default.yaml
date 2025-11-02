@@ -2,6 +2,7 @@
 #
 # this is a template and will not run unless modified.
 # See ./docs/configuration_glossary.md for definitions and options.
+
 defaults:
   - _self_
   - hydra: settings
@@ -63,11 +64,11 @@ sim:
 ## Differentiable Model -----------------------------#
 model:
   rho: 365
+  warm_up: 365
 
   phy:
     name: [NonePhyModel]
     nmul: 16
-    warm_up: 365
     dynamic_params:
       NonePhyModel: [z1, z2]
 
