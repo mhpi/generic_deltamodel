@@ -330,6 +330,7 @@ class Config(BaseModel):
     plot_dir: Optional[str] = None
     sim_dir: Optional[str] = None
     log_dir: Optional[str] = None
+    load_state_path: Optional[str] = None
 
     train: TrainConfig
     test: TestConfig
@@ -406,76 +407,3 @@ class Config(BaseModel):
         # self.all_time = [self.observations.start_time, self.observations.end_time]
 
         return self
-
-
-# # Example to demo field validation
-# if __name__ == '__main__':
-#     mock_config_dict = {
-#         'name': 'CudnnLstmModel-Hbv_1_1p',
-#         'mode': 'train_test',
-#         'do_tune': False,
-#         'multimodel_type': 'none',
-#         'seed': 111111,
-#         'logging': {'loggers': ['tensorboard']},
-#         'device': 'cuda',
-#         'gpu_id': 5,
-#         'verbose': True,
-#         'data_loader': 'HydroLoader',
-#         'data_sampler': 'HydroSampler',
-#         'trainer': 'Trainer',
-#         'trained_model': '',
-#         'train': {
-#             'start_time': '1999/10/01',
-#             'end_time': '2008/09/30',
-#             'target': ['streamflow'],
-#             'optimizer': 'Adadelta',
-#             'lr': 1.0,
-#             'lr_scheduler': None,
-#             'loss_function': {'name': 'NseBatchLoss'},
-#             'batch_size': 100,
-#             'epochs': 100,
-#         },
-#         'test': {
-#             'start_time': '1989/10/01',
-#             'end_time': '1999/09/30',
-#             'batch_size': 25,
-#             'test_epoch': 50,
-#         },
-#         'sim': {
-#             'start_time': '1989/10/01',
-#             'end_time': '1999/09/30',
-#             'batch_size': 25,
-#         },
-#         'model': {
-#             'rho': 365,
-#             'phy': {
-#                 'name': ['Hbv_1_1p'],
-#                 'nmul': 16,
-#                 'warm_up': 365,
-#                 'warm_up_states': False,
-#                 'dynamic_params': {'Hbv_1_1p': ['parBETA', 'parK0', 'parBETAET']},
-#                 'forcings': ['prcp', 'tmean', 'pet'],
-#             },
-#             'nn': {
-#                 'name': 'CudnnLstmModel',
-#                 'dropout': 0.5,
-#                 'hidden_size': 256,
-#                 'forcings': ['prcp', 'tmean', 'pet'],
-#                 'attributes': ['p_mean'],
-#             },
-#         },
-#         'observations': {
-#             'name': 'camels_531',
-#             'data_path': './your/path',
-#             'start_time': '1980/10/01',
-#             'end_time': '2014/09/30',
-#         },
-#     }
-
-#     try:
-#         # Validate the dictionary
-#         config_model = Config(**mock_config_dict)
-#         print("✅ Configuration is valid!")
-#         # print(config_model.model_dump_json(indent=2))
-#     except ValidationError as e:
-#         print(f"❌ Configuration is invalid:\n{e}")

@@ -195,7 +195,8 @@ class CudnnLstmModel(torch.nn.Module):
 
     def __init__(
         self,
-        *nx: int,
+        *,
+        nx: int,
         ny: int,
         hidden_size: int,
         dr: Optional[float] = 0.5,

@@ -353,6 +353,7 @@ class Trainer(BaseTrainer):
         # Save predictions and calculate metrics
         log.info("Saving model outputs + Calculating metrics")
         save_outputs(self.config, batch_predictions, observations)
+        self.model.save_states()
         self.predictions = self._batch_data(batch_predictions)
 
         # Calculate metrics
@@ -377,6 +378,7 @@ class Trainer(BaseTrainer):
         # Save predictions
         log.info("Saving model outputs")
         save_outputs(self.config, batch_predictions)
+        self.model.save_states()
         self.predictions = self._batch_data(batch_predictions)
 
         return self.predictions

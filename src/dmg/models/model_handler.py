@@ -61,6 +61,11 @@ class ModelHandler(torch.nn.Module):
         self.models = self.list_models()
         self._init_models()
 
+        if 'train' not in config['mode']:
+            if config['load_state_path']:
+                self.load_states(config['load_state_path'])
+
+        self.epoch = None
         self.loss_func = None
         self.loss_dict = dict.fromkeys(self.models, 0)
 
@@ -155,26 +160,14 @@ class ModelHandler(torch.nn.Module):
                 )
 
             if epoch == 0:
+                self.epoch = 0
+
                 # Leave model uninitialized for training.
                 if self.verbose:
                     log.info(f"Created new model: {name}")
                 continue
             else:
-                # TODO: find better fix...
-                # If using LstmModel (CPU-capable equivalent to HydroDL
-                # CudnnLstm), run a dummy forward pass to initialize states
-                # before loading the state_dict.
-                model_instance = self.model_dict.get(name)
-                if model_instance and self.config['model']['nn']['name'] == 'LstmModel':
-                    model_instance.eval()
-                    with torch.no_grad():
-                        # Create minimal dummy data based on config
-                        n_forcings = len(self.config['model']['nn']['forcings'])
-                        n_attrs = len(self.config['model']['nn']['attributes'])
-                        dummy_data = torch.zeros(
-                            (1, 1, n_forcings + n_attrs), device=self.device
-                        )
-                        model_instance.nn_model(dummy_data)
+                self.epoch = epoch
 
                 # Initialize model from checkpoint state dict.
                 path = self.model_path
@@ -439,33 +432,107 @@ class ModelHandler(torch.nn.Module):
 
     def get_states(self) -> None:
         """
-        Helper function to expose physical model and nn hidden states
-        into a deltamodel (e.g., for sequential simulations).
+        Helper function to expose physical and hidden (non-trainable) nn model
+        states (e.g., for sequential simulations).
         """
         if len(self.model_dict) == 1:
             name = list(self.model_dict.keys())[0]
             nn_states = self.model_dict[name].nn_model.get_states()
-            phy_states = self.model_dict[name].phy_model.get_states()
+            try:
+                phy_states = self.model_dict[name].phy_model.get_states()
+            except AttributeError:
+                phy_states = None
 
             return nn_states, phy_states
         else:
             raise NotImplementedError(
-                "Loading hidden states for multimodel ensembles is not yet supported.",
+                "Operations on hidden states for multimodel ensembles is not yet supported.",
             )
 
-    def load_states(self, nn_states: tuple, phy_states) -> None:
+    def load_states(
+        self,
+        *,
+        path: Optional[str] = None,
+        nn_states: Optional[tuple[torch.Tensor, ...]] = None,
+        phy_states: Optional[tuple[torch.Tensor, ...]] = None,
+    ) -> None:
         """
-        Helper function to load physical model and nn hidden states
-        into a deltamodel (e.g., for sequential simulations).
+        Helper function to load physical and hidden (non-trainable) nn model
+        states (e.g., for sequential simulations).
         """
+        if path:
+            if path and nn_states and phy_states:
+                raise ValueError(
+                    "Provide either `path` or `nn_states` and `phy_states`, not both."
+                )
+            if not os.path.exists(path):
+                raise FileNotFoundError(f"State path {path} not found.")
+
+            state_dict = torch.load(path, map_location=self.device)
+            nn_states = state_dict.get('nn_states', None)
+            phy_states = state_dict.get('phy_states', None)
+            if self.verbose:
+                log.info(
+                    f"Loaded states from file | "
+                    f"epoch: {state_dict.get('epoch', 'N/A')} | "
+                    f"Resume from timestep: {state_dict.get('last_timestep', 'N/A')}"
+                )
+        elif nn_states:
+            if not isinstance(nn_states, tuple):
+                raise ValueError("`nn_states` must be a tuple of tensors.")
+        elif phy_states:
+            if not isinstance(phy_states, tuple):
+                raise ValueError("`phy_states` must be a tuple of tensors.")
+        else:
+            raise ValueError(
+                "Either `path` or `nn_states` and `phy_states` must be provided."
+            )
+
         if len(self.model_dict) == 1:
             name = list(self.model_dict.keys())[0]
             self.model_dict[name].nn_model.load_states(nn_states)
-            self.model_dict[name].phy_model.load_states(phy_states)
+
+            if phy_states is not None:
+                try:
+                    self.model_dict[name].phy_model.load_states(phy_states)
+                except AttributeError:
+                    pass
         else:
             raise NotImplementedError(
-                "Loading hidden states for multimodel ensembles is not yet supported.",
+                "Operations on hidden states for multimodel ensembles is not yet supported.",
             )
+
+    def save_states(self) -> None:
+        """
+        Helper function to save physical and nn model states (trainable and
+        non-trainable) to disk.
+        """
+        if 'test' in self.config['mode']:
+            mode = 'test'
+        else:
+            mode = 'sim'
+        time = self.config[mode]['end_time']
+
+        if len(self.model_dict) == 1:
+            name = list(self.model_dict.keys())[0]
+
+            nn_states, phy_states = self.get_states()
+
+            state_dict = {
+                'nn_states': nn_states,
+                'nn_trainable': self.model_dict[
+                    name
+                ].state_dict(),  # weights and biases
+                'phy_states': phy_states,
+                'epoch': self.epoch,
+                'last_timestep': time if time else 'N/A',
+            }
+            torch.save(state_dict, self.config['model_dir'] + "model_states.pt")
+        else:
+            raise NotImplementedError(
+                "Operations on hidden states for multimodel ensembles is not yet supported.",
+            )
+        torch.save(state_dict, self.config['model_dir'] + "model_states.pt")
 
     def _trim(
         self,
