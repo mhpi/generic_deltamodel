@@ -31,12 +31,11 @@ data_loader: HydroLoader
 data_sampler: HydroSampler
 trainer: Trainer
 
-# output_dir: ./output
-#     # NOTE: This is relative to the current working directory.
-#     #       If you want to save the output to a different directory, specify the absolute path.
-# model_dir: ./path/to/your/model/ # Prerained HydroDL LSTM can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/1-lstm.zip
-output_dir: /projects/mhpi/leoglonz/project_silmaril/dmg/_dev/test/
-model_dir: /projects/mhpi/leoglonz/project_silmaril/dmg/_dev/lstm/
+output_dir: ./output
+    # NOTE: This is relative to the current working directory.
+    #       If you want to save the output to a different directory, specify the absolute path.
+model_dir: ./path/to/your/model/ # Prerained HydroDL LSTM can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/1-lstm.zip
+
 
 ## Training ------------------------------#
 train:

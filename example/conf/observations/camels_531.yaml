@@ -2,11 +2,10 @@
 # Download: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/data/1-camels.zip
 
 name: camels_531
-data_path: ./your/path/to/camels_dataset
+data_path: ./your/path/to/camels_daymetv2
 
 gage_info: ./your/path/to/gage_id.npy
 subset_path: ./your/path/to/531sub_id.txt
-
 
 area_name: area_gages2
 prcp_mean_name: p_mean
