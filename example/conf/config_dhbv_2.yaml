@@ -4,7 +4,7 @@
 defaults:
   - _self_
   - hydra: settings
-  - observations: merit
+  - observations: merit71
 
 name: ${model.nn.name}-${model.phy.name}
 
@@ -12,11 +12,9 @@ name: ${model.nn.name}-${model.phy.name}
 ## General -------------------------------#
 mode: sim  # train, test, train_test, sim
 
-multimodel_type: none  # none, nn_parallel, nn_sequential
 seed: 111111
-logging: tensorboard  # tensorboard, wandb, None
 cache_states: False
-device: cpu
+device: cuda
 gpu_id: 0
 
 data_loader: MsHydroLoader
@@ -26,7 +24,7 @@ trainer: MsTrainer
 output_dir: ./output
     # NOTE: This is relative to the current working directory.
     #       If you want to save the output to a different directory, please specify the absolute path.
-model_dir: ./path/to/your/model/  # Pretrained dHBV 2.0 (+ input data) can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/4-dhbv_2_0.zip
+model_dir: ./path/to/your/model/  # Pretrained dHBV 2.0 (+ input data) can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/4-dhbv_2.zip
 
 
 ## Training ------------------------------#
@@ -62,7 +60,7 @@ test:
 sim:
   start_time: 1980/01/01
   end_time: 2020/12/31
-  batch_size: 100
+  batch_size: 25
 
 
 ## Differentiable Model -----------------------------#

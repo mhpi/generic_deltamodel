@@ -21,7 +21,6 @@ name: ${model.nn.name}-${model.phy.name}
 mode: train  # train, test, train_test, sim
 
 seed: 111111
-logging: tensorboard
 cache_states: False
 device: cuda
 gpu_id: 0

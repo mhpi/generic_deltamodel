@@ -229,7 +229,7 @@ class CudnnLstmModel(torch.nn.Module):
     ) -> None:
         """Load hidden and cell states."""
         for state in states:
-            if not isinstance(state, torch.Tensor):
+            if state and not isinstance(state, torch.Tensor):
                 raise ValueError("Each element in `states` must be a tensor.")
         if not (isinstance(states, tuple) and len(states) == 2):
             raise ValueError("`states` must be a tuple of 2 tensors.")
