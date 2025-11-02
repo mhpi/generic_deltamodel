@@ -1,8 +1,8 @@
-# MERIT data extraction
-# Download: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/merit71_data.zip
+# MERIT data extraction with GAGES-II forcings
+# Download: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/data/2-merit71.zip
 
 name: merit
-subbasin_data_path: ./your/path/to/merit_71_0/
+subbasin_data_path: ./your/path/to/merit_71/
 
 subbasin_id_name: COMID
 upstream_area_name: uparea

@@ -41,7 +41,7 @@ If you have installed 𝛿MG to use differentiable hydrology models developed by
 2. You can use the master + observation configuration files from [`./generic_deltamodel/example/conf/`](../example/conf/) to train or forward using the command line arguments in [Section 1](#1-command-line). Simply move these files to the [`./generic_deltamodel/conf/`](../conf/) directory, and then run, for example,
 
 ```bash
-python -m dmg --config-name config_dhbv_1_0.yaml
+python -m dmg --config-name config_dhbv.yaml
 ```
 
 </br>
@@ -74,7 +74,7 @@ To use 𝛿MG to build and experiment with your own differentiable model, a few 
 4. Run 𝛿MG from the command line. For example,
 
     ```bash
-    python -m dmg --config-name config_dhbv_1_0.yaml
+    python -m dmg --config-name config_dhbv.yaml
     ```
 
 </br>
