@@ -66,6 +66,8 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 *model_dir*: Path to a directory containing trained model weights, may also include subdirectory of model outputs. Note this path must end with a forward slash ('/').
 
+*load_state_dir*: Path to a PyTorch save file (`.pt`) containing cached model states for a neural network or differentiabl model (e.g., hidden and cell states for an LSTM, buckets for a physical model). If this path is provided, the Model Handler will attempt to load these states into the current model.
+
 </br>
 
 ### 1.3 Training

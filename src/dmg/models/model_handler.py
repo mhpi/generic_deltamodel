@@ -62,10 +62,8 @@ class ModelHandler(torch.nn.Module):
         self._init_models()
 
         if 'train' not in config['mode']:
-            try:
+            if config['load_state_path']:
                 self.load_states(config['load_state_path'])
-            except RuntimeError as e:
-                log.error(f"Failed to load states: {e}")
 
         self.epoch = None
         self.loss_func = None
@@ -473,11 +471,12 @@ class ModelHandler(torch.nn.Module):
             state_dict = torch.load(path, map_location=self.device)
             nn_states = state_dict.get('nn_states', None)
             phy_states = state_dict.get('phy_states', None)
-            print(
-                f"Loaded states from file | "
-                f"epoch: {state_dict.get('epoch', 'N/A')} | "
-                f"Resume from timestep: {state_dict.get('last_timestep', 'N/A')}"
-            )
+            if self.verbose:
+                log.info(
+                    f"Loaded states from file | "
+                    f"epoch: {state_dict.get('epoch', 'N/A')} | "
+                    f"Resume from timestep: {state_dict.get('last_timestep', 'N/A')}"
+                )
         elif nn_states:
             if not isinstance(nn_states, tuple):
                 raise ValueError("`nn_states` must be a tuple of tensors.")
