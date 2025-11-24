@@ -193,6 +193,7 @@ class ModelHandler(torch.nn.Module):
                             weights_only=True,
                             map_location=self.device,
                         ),
+                        strict=False,
                     )
                     self.model_dict[name].to(self.device)
 

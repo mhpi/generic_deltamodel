@@ -298,6 +298,8 @@ class Trainer(BaseTrainer):
 
             self.total_loss += loss.item()
 
+            # print(self.total_loss / (mb+1))
+
             if self.verbose:
                 tqdm.tqdm.write(f"Epoch {epoch}, batch {mb} | loss: {loss.item()}")
 
