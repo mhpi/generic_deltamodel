@@ -1,9 +1,9 @@
 from .base import BaseTrainer
-from .ms_trainer import MsTrainer
 from .trainer import Trainer
+from .ms_trainer import MsTrainer
 
 __all__ = [
     'BaseTrainer',
     'Trainer',
-    'MSTrainer',
+    'MsTrainer',
 ]

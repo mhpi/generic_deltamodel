@@ -30,6 +30,7 @@ dependencies = [
     "omegaconf",
     "pandas",
     "pydantic>=2.0.0",
+    "pykan",
     "ray[tune]",
     "scikit-learn",
     "scipy",
