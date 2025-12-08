@@ -22,7 +22,7 @@ jobs:
         uses: astral-sh/setup-uv@v7.1.5
         with:
           python-version: ${{ matrix.python-version }}
-          enable-cache: true
+          enable-cache: False
 
       - name: Install dependencies
         run: |
