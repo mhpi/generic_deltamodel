@@ -4,7 +4,7 @@ import torch
 from typing import Optional, Any
 
 
-class DplModel(torch.nn.Module):
+class MtsDplModel(torch.nn.Module):
     """Differentiable parameter learning (dPL) model for MTS.
 
     Learn parameters for a physics model using a neural network (NN).

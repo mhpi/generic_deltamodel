@@ -14,7 +14,7 @@ from dmg.core.calc import Metrics
 
 from dmg.models.phy_models.hbv_2_mts import Hbv_2_mts
 from dmg.models.neural_networks import LstmMlpModel, LstmMlp2Model, StackLstmMlpModel
-from dmg.models.delta_models.dpl_model import DplModel
+from dmg.models.delta_models.mts_dpl_model import MtsDplModel as DplModel
 
 
 log = logging.getLogger(__name__)

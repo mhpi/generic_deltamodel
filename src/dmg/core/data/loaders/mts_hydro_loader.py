@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Union, list
+from typing import Any, Union
 import numpy as np
 import pandas as pd
 import torch
