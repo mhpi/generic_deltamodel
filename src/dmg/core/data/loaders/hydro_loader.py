@@ -8,12 +8,10 @@ import logging
 import os
 import pickle
 from typing import Any, Optional, Union
-
 import numpy as np
 import pandas as pd
 import torch
 from numpy.typing import NDArray
-from sklearn.exceptions import DataDimensionalityWarning
 
 from dmg.core.data.data import intersect, split_dataset_by_basin
 from dmg.core.data.loaders.base import BaseLoader
@@ -114,6 +112,7 @@ class HydroLoader(BaseLoader):
         elif self.flow_regime == 'low':
             # Low flow regime: Log-Gamma normalization for runoff and precipitation
             self.log_norm_vars = ['prcp', 'runoff']
+            self.norm_target = True
         else:
             self.norm_target = False
 
@@ -591,21 +590,24 @@ class HydroLoader(BaseLoader):
         if isinstance(vars, str):
             vars = [vars]
 
-        data_norm = np.zeros(data.shape)
+        data = np.asarray(data, dtype=np.float32)
+        data_norm = np.zeros_like(data, dtype=np.float32)
 
         for k, var in enumerate(vars):
             stat = self.norm_stats[var]
+            mean, std = stat[2], stat[3]
 
-            if len(data.shape) == 3:
-                if var in self.log_norm_vars:
-                    data[:, :, k] = np.log10(np.sqrt(data[:, :, k]) + 0.1)
-                data_norm[:, :, k] = (data[:, :, k] - stat[2]) / stat[3]
-            elif len(data.shape) == 2:
-                if var in self.log_norm_vars:
-                    data[:, k] = np.log10(np.sqrt(data[:, k]) + 0.1)
-                data_norm[:, k] = (data[:, k] - stat[2]) / stat[3]
+            if var in self.log_norm_vars:
+                # Guard against negatives
+                if np.any(data[..., k] < 0):
+                    raise ValueError(
+                        f"Variable '{var}' contains negative values before log transform."
+                    )
+                transformed = np.log10(np.sqrt(data[..., k]) + 0.1)
             else:
-                raise DataDimensionalityWarning("Data dimension must be 2 or 3.")
+                transformed = data[..., k]
+
+            data_norm[..., k] = (transformed - mean) / std
         return data_norm
 
     def from_norm(
@@ -630,18 +632,19 @@ class HydroLoader(BaseLoader):
         if isinstance(vars, str):
             vars = [vars]
 
-        data = np.zeros(data_scaled.shape)
+        data_scaled = np.asarray(data_scaled, dtype=np.float32)
+        data = np.zeros_like(data_scaled, dtype=np.float32)
 
         for k, var in enumerate(vars):
             stat = self.norm_stats[var]
-            if len(data_scaled.shape) == 3:
-                data[:, :, k] = data_scaled[:, :, k] * stat[3] + stat[2]
-                if var in self.log_norm_vars:
-                    data[:, :, k] = (np.power(10, data[:, :, k]) - 0.1) ** 2
-            elif len(data_scaled.shape) == 2:
-                data[:, k] = data_scaled[:, k] * stat[3] + stat[2]
-                if var in self.log_norm_vars:
-                    data[:, k] = (np.power(10, data[:, k]) - 0.1) ** 2
+            mean, std = stat[2], stat[3]
+
+            denormed = data_scaled[..., k] * std + mean
+
+            if var in self.log_norm_vars:
+                # Invert the log-sqrt transform
+                data[..., k] = (np.power(10.0, denormed) - 0.1) ** 2
             else:
-                raise DataDimensionalityWarning("Data dimension must be 2 or 3.")
+                data[..., k] = denormed
+
         return data
