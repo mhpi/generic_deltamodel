@@ -1,22 +1,19 @@
 import json
 import logging
+from copy import deepcopy
+from pathlib import Path
 from typing import Any, Union
+
+import geopandas as gpd
+import networkx as nx
 import numpy as np
 import pandas as pd
 import torch
-from pydantic import BaseModel, ConfigDict
-from pathlib import Path
 import xarray as xr
-import geopandas as gpd
-import networkx as nx
-from copy import deepcopy
+from pydantic import BaseModel, ConfigDict
 
 from dmg.core.data.loaders.base import BaseLoader
-
-from dmg.core.utils import (
-    reachability_matrix,
-    PathWeightedAgg,
-)
+from dmg.core.utils import PathWeightedAgg, reachability_matrix
 
 log = logging.getLogger(__name__)
 

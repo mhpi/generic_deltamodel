@@ -1,7 +1,8 @@
-from dmg.core.utils.factory import import_phy_model, load_nn_model
+from typing import Any, Optional
 
 import torch
-from typing import Optional, Any
+
+from dmg.core.utils.factory import import_phy_model, load_nn_model
 
 
 class MtsDplModel(torch.nn.Module):

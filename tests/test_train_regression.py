@@ -10,9 +10,10 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 
-import torch
 import os
+
 import numpy as np
+import torch
 
 from dmg.core.utils import set_randomseed
 from dmg.models.model_handler import ModelHandler

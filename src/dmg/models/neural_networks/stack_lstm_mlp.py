@@ -1,8 +1,9 @@
-import torch
 from typing import Optional
-from kan import KAN
+
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from kan import KAN
 
 
 class KAN_2(nn.Module):

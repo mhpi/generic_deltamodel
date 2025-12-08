@@ -1,9 +1,10 @@
-from dmg.models.phy_models.hbv_2 import Hbv_2
-from dmg.models.phy_models.hbv_2h import Hbv_2h
+from typing import Any, Optional
 
 import torch
-from typing import Any, Optional
 from tqdm import tqdm
+
+from dmg.models.phy_models.hbv_2 import Hbv_2
+from dmg.models.phy_models.hbv_2h import Hbv_2h
 
 
 class Hbv_2_mts(torch.nn.Module):

@@ -1,8 +1,9 @@
-import numpy as np
-import networkx as nx
-import scipy.sparse as sp
-from scipy.sparse.linalg import spsolve_triangular, splu
 from collections import deque
+
+import networkx as nx
+import numpy as np
+import scipy.sparse as sp
+from scipy.sparse.linalg import splu, spsolve_triangular
 
 
 def reachability_matrix(G, row_nodes, col_nodes):

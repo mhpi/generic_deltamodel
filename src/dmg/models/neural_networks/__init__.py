@@ -4,7 +4,7 @@ from .lstm import LstmModel
 
 # from .lstm_mlp import LstmMlpModel
 from .mlp import MlpModel
-from .stack_lstm_mlp import LstmMlpModel, LstmMlp2Model, StackLstmMlpModel
+from .stack_lstm_mlp import LstmMlp2Model, LstmMlpModel, StackLstmMlpModel
 
 __all__ = [
     'CudnnLstmModel',

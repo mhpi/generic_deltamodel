@@ -1,6 +1,6 @@
 from .base import BaseTrainer
-from .trainer import Trainer
 from .ms_trainer import MsTrainer
+from .trainer import Trainer
 
 __all__ = [
     'BaseTrainer',

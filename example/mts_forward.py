@@ -3,19 +3,28 @@
 @Wencong Yang, Leo Lonzarich
 """
 
+import json
+import math
+import multiprocessing
 import os
 import sys
-from tqdm import tqdm
-import math
-import torch
-import yaml
+import time
 from pathlib import Path
+
 import numpy as np
-import xarray as xr
 import pandas as pd
-import json
-from dmg.models import MtsModelHandler as ModelHandler
+import torch
+import xarray as xr
+import yaml
+from tqdm import tqdm
+
 from conf.utils import convert_nested
+from dmg.models import MtsModelHandler as ModelHandler
+
+### ----------- Settings ---------------- ###
+GPU_IDS = [0, 1, 2]  # List of GPU IDs to use
+PARALLEL = False  # Whether to run in parallel mode
+### ------------------------------------- ###
 
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
@@ -317,45 +326,46 @@ def hourly_forward(input):
 
 
 if __name__ == "__main__":
-    import time
-    import multiprocessing
-
     startTime = time.time()
 
     # GPU CONFIGURATION
-    GPU_ids = [0, 1, 2, 3]
-    num_gpus = len(GPU_ids)
+    num_gpus = len(GPU_IDS)
 
-    # DATA CHUNKING
-    items = list(range(n_chunks))
-    GPU_ids_list = [GPU_ids[x % len(GPU_ids)] for x in items]
+    if PARALLEL:
+        # DATA CHUNKING
+        items = list(range(n_chunks))
+        GPU_ids_list = [GPU_IDS[x % len(GPU_IDS)] for x in items]
 
-    # BATCHING PROCESSES
-    # Note: Creating a new pool inside a loop is inefficient,
-    # but I will keep your logic structure to minimize changes.
-    processeornumber = num_gpus * 8
-    iS = np.arange(0, len(items), processeornumber)
-    iE = np.append(iS[1:], len(items))
+        # BATCHING PROCESSES
+        # Note: Creating a new pool inside a loop is inefficient,
+        # but I will keep your logic structure to minimize changes.
+        processeornumber = num_gpus * 8
+        iS = np.arange(0, len(items), processeornumber)
+        iE = np.append(iS[1:], len(items))
 
-    for i in range(len(iS)):
-        subGPU_ids_list = GPU_ids_list[iS[i] : iE[i]]
-        subitem = items[iS[i] : iE[i]]
+        for i in range(len(iS)):
+            subGPU_ids_list = GPU_ids_list[iS[i] : iE[i]]
+            subitem = items[iS[i] : iE[i]]
 
-        print(f"Starting Batch {i}")
-        print("zone idx ", subitem)
-        print("GPUs ", subGPU_ids_list)
+            print(f"Starting Batch {i}")
+            print("zone idx ", subitem)
+            print("GPUs ", subGPU_ids_list)
 
-        # Create the pool
-        pool = multiprocessing.Pool(processes=num_gpus * 8)
+            # Create the pool
+            pool = multiprocessing.Pool(processes=num_gpus * 8)
 
-        # Prepare arguments generator
-        args = ((subitem[idx], gpuid) for idx, gpuid in enumerate(subGPU_ids_list))
+            # Prepare arguments generator
+            args = ((subitem[idx], gpuid) for idx, gpuid in enumerate(subGPU_ids_list))
 
-        # --- FIX IS HERE ---
-        # We wrap the imap call in list() to force execution
-        results = list(pool.imap(hourly_forward, args))
+            # --- FIX IS HERE ---
+            # We wrap the imap call in list() to force execution
+            results = list(pool.imap(hourly_forward, args))
 
-        pool.close()
-        pool.join()
+            pool.close()
+            pool.join()
+
+    else:
+        for ichunk in range(n_chunks):
+            hourly_forward((ichunk, GPU_IDS[0]))
 
     print("Cost time: ", time.time() - startTime)
