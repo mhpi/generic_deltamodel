@@ -133,7 +133,7 @@ lint.ignore = [
     # Disable checks on | operator notation in type hints
     "UP007",
     # Use `X | None` for type annotations
-    "UP045"
+    "UP045",
 ]
 
 [tool.ruff.lint.pydocstyle]

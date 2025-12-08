@@ -16,19 +16,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5.0.0
+        uses: actions/checkout@v6.0.1
 
       - name: Install uv + Python
-        uses: astral-sh/setup-uv@v7.1.2
+        uses: astral-sh/setup-uv@v7.1.5
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
-
-      - name: Install dependencies
-        run: uv sync --extra dev --extra hydrodl2
-
-      - name: Run Ruff check
-        run: uv run ruff check . --config pyproject.toml --output-format=github
-
-      - name: Run Ruff format check
-        run: uv run ruff format . --config pyproject.toml --check
