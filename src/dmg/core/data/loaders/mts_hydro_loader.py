@@ -13,7 +13,7 @@ from copy import deepcopy
 
 from dmg.core.data.loaders.base import BaseLoader
 
-from distributedDS.core.data.utils.topo_operator import (
+from dmg.core.utils import (
     reachability_matrix,
     PathWeightedAgg,
 )

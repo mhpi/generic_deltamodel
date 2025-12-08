@@ -14,6 +14,7 @@ from .utils import (
     save_model,
     set_randomseed,
 )
+from .topo_operator import reachability_matrix, PathWeightedAgg
 
 __all__ = [
     'import_data_loader',
@@ -28,4 +29,6 @@ __all__ = [
     'save_model',
     'set_randomseed',
     'format_resample_interval',
+    'reachability_matrix',
+    'PathWeightedAgg',
 ]
