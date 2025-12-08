@@ -1,4 +1,5 @@
 """Cascade LSTM with inherited hidden states."""
+
 import torch
 from typing import Optional
 from kan import KAN
@@ -8,8 +9,20 @@ import torch.nn.functional as F
 
 class KAN_2(nn.Module):
     """A Kolmogorov-Arnold Neural Network (KAN)."""
-    def __init__(self, *, nx, ny, hiddenSize, k=3, grid=5, num_hidden_layers=2, dropout_rate=0.5, use_dropout=True):
-        super(KAN_2, self).__init__()
+
+    def __init__(
+        self,
+        *,
+        nx,
+        ny,
+        hiddenSize,
+        k=3,
+        grid=5,
+        num_hidden_layers=2,
+        dropout_rate=0.5,
+        use_dropout=True,
+    ):
+        super().__init__()
         self.input_size = nx
         self.hidden_size = hiddenSize
         self.num_hidden_layers = num_hidden_layers
@@ -32,9 +45,9 @@ class KAN_2(nn.Module):
         # Add hidden KAN layers
         for _ in range(self.num_hidden_layers):
             layer = KAN(
-                width=[self.hidden_size,2*self.hidden_size+1,self.hidden_size],
+                width=[self.hidden_size, 2 * self.hidden_size + 1, self.hidden_size],
                 k=k,
-                grid=grid
+                grid=grid,
             )
             self.layers.append(layer)
 
@@ -42,12 +55,12 @@ class KAN_2(nn.Module):
         self.initialize_kan_layers()
 
     def xavier_normal_initializer(self, x) -> None:
-        """Xavier normal initialization"""
+        """Xavier normal initialization."""
         gain = nn.init.calculate_gain('relu')  # Adjust based on activation (ReLU here)
         nn.init.xavier_normal_(x, gain=gain)
 
     def initialize_kan_layers(self):
-        """Apply Xavier initialization to all KAN layers"""
+        """Apply Xavier initialization to all KAN layers."""
         for layer in self.layers:
             for name, param in layer.named_parameters():
                 if 'weight' in name or 'coeff' in name:
@@ -56,7 +69,7 @@ class KAN_2(nn.Module):
                     nn.init.zeros_(param)
 
     def forward(self, x, y=None):
-        """Forward pass of the neural network"""
+        """Forward pass of the neural network."""
         _x = F.relu(self.input(x))
 
         for layer in self.layers:
@@ -68,7 +81,6 @@ class KAN_2(nn.Module):
         _x = self.output(_x)
         y = torch.sigmoid(_x)
         return y
-
 
 
 class LstmMlpModel(torch.nn.Module):
@@ -116,18 +128,23 @@ class LstmMlpModel(torch.nn.Module):
         self.name = 'LstmMlpModel'
 
         self.lstm_inv = torch.nn.LSTM(
-            input_size=nx1,
-            hidden_size=hiddeninv1,
-            dropout=dr1
+            input_size=nx1, hidden_size=hiddeninv1, dropout=dr1
         )
         self.linear_out = torch.nn.Linear(hiddeninv1, ny1)
         self.hiddeninv1 = hiddeninv1
 
         self.ann = torch.nn.Sequential(
-            torch.nn.Linear(nx2, hiddeninv2), torch.nn.ReLU(), torch.nn.Dropout(dr2),
-            torch.nn.Linear(hiddeninv2, hiddeninv2), torch.nn.ReLU(), torch.nn.Dropout(dr2),
-            torch.nn.Linear(hiddeninv2, hiddeninv2), torch.nn.ReLU(), torch.nn.Dropout(dr2),
-            torch.nn.Linear(hiddeninv2, ny2), torch.nn.Sigmoid()
+            torch.nn.Linear(nx2, hiddeninv2),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(dr2),
+            torch.nn.Linear(hiddeninv2, hiddeninv2),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(dr2),
+            torch.nn.Linear(hiddeninv2, hiddeninv2),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(dr2),
+            torch.nn.Linear(hiddeninv2, ny2),
+            torch.nn.Sigmoid(),
         )
         # self.ann = KAN_2(nx=nx2, ny=ny2, hiddenSize=hiddeninv2, dropout_rate=dr2)
 
@@ -177,7 +194,9 @@ class LstmMlpModel(torch.nn.Module):
             c_out = torch.cat(c_out_list, dim=1)
             ann_out = torch.cat(ann_out_list, dim=0)
         else:
-            lstm_out, (h_out, c_out) = self.lstm_inv(z1)  # dim: timesteps, units, params
+            lstm_out, (h_out, c_out) = self.lstm_inv(
+                z1
+            )  # dim: timesteps, units, params
             lstm_out = torch.sigmoid(self.linear_out(lstm_out))
             ann_out = self.ann(z2)
         return [lstm_out, h_out, c_out, ann_out]
@@ -219,45 +238,57 @@ class LstmMlp2Model(torch.nn.Module):
     """
 
     def __init__(
-            self,
-            *,
-            nx1: int,
-            ny1: int,
-            hiddeninv1: int,
-            nx2: int,
-            ny2: int,
-            hiddeninv2: int,
-            nx3: int,
-            ny3: int,
-            hiddeninv3: int,
-            dr1: Optional[float] = 0.5,
-            dr2: Optional[float] = 0.5,
-            dr3: Optional[float] = 0.5,
-            sub_batch_size: Optional[int] = 500,
-            device: Optional[str] = 'cpu',
+        self,
+        *,
+        nx1: int,
+        ny1: int,
+        hiddeninv1: int,
+        nx2: int,
+        ny2: int,
+        hiddeninv2: int,
+        nx3: int,
+        ny3: int,
+        hiddeninv3: int,
+        dr1: Optional[float] = 0.5,
+        dr2: Optional[float] = 0.5,
+        dr3: Optional[float] = 0.5,
+        sub_batch_size: Optional[int] = 500,
+        device: Optional[str] = 'cpu',
     ) -> None:
         super().__init__()
         self.name = 'LstmMlpModel'
 
         self.lstm_inv = torch.nn.LSTM(
-            input_size=nx1,
-            hidden_size=hiddeninv1,
-            dropout=dr1
+            input_size=nx1, hidden_size=hiddeninv1, dropout=dr1
         )
         self.linear_out = torch.nn.Linear(hiddeninv1, ny1)
         self.hiddeninv1 = hiddeninv1
 
         self.ann1 = torch.nn.Sequential(
-            torch.nn.Linear(nx2, hiddeninv2), torch.nn.ReLU(), torch.nn.Dropout(dr2),
-            torch.nn.Linear(hiddeninv2, hiddeninv2), torch.nn.ReLU(), torch.nn.Dropout(dr2),
-            torch.nn.Linear(hiddeninv2, hiddeninv2), torch.nn.ReLU(), torch.nn.Dropout(dr2),
-            torch.nn.Linear(hiddeninv2, ny2), torch.nn.Sigmoid()
+            torch.nn.Linear(nx2, hiddeninv2),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(dr2),
+            torch.nn.Linear(hiddeninv2, hiddeninv2),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(dr2),
+            torch.nn.Linear(hiddeninv2, hiddeninv2),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(dr2),
+            torch.nn.Linear(hiddeninv2, ny2),
+            torch.nn.Sigmoid(),
         )
         self.ann2 = torch.nn.Sequential(
-            torch.nn.Linear(nx3, hiddeninv3), torch.nn.ReLU(), torch.nn.Dropout(dr3),
-            torch.nn.Linear(hiddeninv3, hiddeninv3), torch.nn.ReLU(), torch.nn.Dropout(dr3),
-            torch.nn.Linear(hiddeninv3, hiddeninv3), torch.nn.ReLU(), torch.nn.Dropout(dr3),
-            torch.nn.Linear(hiddeninv3, ny3), torch.nn.Sigmoid()
+            torch.nn.Linear(nx3, hiddeninv3),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(dr3),
+            torch.nn.Linear(hiddeninv3, hiddeninv3),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(dr3),
+            torch.nn.Linear(hiddeninv3, hiddeninv3),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(dr3),
+            torch.nn.Linear(hiddeninv3, ny3),
+            torch.nn.Sigmoid(),
         )
         # self.ann1 = KAN_2(nx=nx2, ny=ny2, hiddenSize=hiddeninv2, dropout_rate=dr2)
         # self.ann2 = KAN_2(nx=nx3, ny=ny3, hiddenSize=hiddeninv3, dropout_rate=dr3)
@@ -267,12 +298,12 @@ class LstmMlp2Model(torch.nn.Module):
         self.sub_batch_mode = False
 
     def forward(
-            self,
-            z1: torch.Tensor,
-            z2: torch.Tensor,
-            z3: torch.Tensor,
-            h0: torch.Tensor,
-            c0: torch.Tensor,
+        self,
+        z1: torch.Tensor,
+        z2: torch.Tensor,
+        z3: torch.Tensor,
+        h0: torch.Tensor,
+        c0: torch.Tensor,
     ) -> list[torch.Tensor]:
         """Forward pass.
 
@@ -317,7 +348,9 @@ class LstmMlp2Model(torch.nn.Module):
             ann_out1 = torch.cat(ann_out1_list, dim=0)
             ann_out2 = torch.cat(ann_out2_list, dim=0)
         else:
-            lstm_out, (_, _) = self.lstm_inv(z1, (h0, c0))  # dim: timesteps, gages, params
+            lstm_out, (_, _) = self.lstm_inv(
+                z1, (h0, c0)
+            )  # dim: timesteps, gages, params
             lstm_out = torch.sigmoid(self.linear_out(lstm_out))
             ann_out1 = self.ann1(z2)
             ann_out2 = self.ann2(z3)
@@ -325,14 +358,16 @@ class LstmMlp2Model(torch.nn.Module):
 
 
 class StackLstmMlpModel(torch.nn.Module):
+    """Stacked LSTM-MLP model for multi-scale learning."""
 
     def __init__(self, lstm_mlp: LstmMlpModel, lstm_mlp2: LstmMlp2Model):
-        super(StackLstmMlpModel, self).__init__()
+        super().__init__()
         self.lstm_mlp = lstm_mlp
         self.lstm_mlp2 = lstm_mlp2
         self.state_transfer = nn.Linear(lstm_mlp.hiddeninv1, lstm_mlp2.hiddeninv1)
 
     def set_mode(self, is_simulate: bool):
+        """Set sub_batch_mode for simulation or training."""
         if is_simulate:
             self.lstm_mlp.sub_batch_mode = True
             self.lstm_mlp2.sub_batch_mode = True
@@ -340,12 +375,17 @@ class StackLstmMlpModel(torch.nn.Module):
             self.lstm_mlp.sub_batch_mode = False
             self.lstm_mlp2.sub_batch_mode = False
 
-    def forward(self,
-                input1: tuple[torch.Tensor, torch.Tensor],
-                input2: tuple[torch.Tensor, torch.Tensor, torch.Tensor]) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
-        """
-        input1 and input2 can be in cpu for sub_batch_mode
-        """
+    def forward(
+        self,
+        input1: tuple[torch.Tensor, torch.Tensor],
+        input2: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+    ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
+        """input1 and input2 can be in cpu for sub_batch_mode."""
         lstm_out_1, h_out_1, c_out_1, ann_out_1 = self.lstm_mlp(*input1)
-        h_out_init, c_out_init = self.state_transfer(h_out_1), self.state_transfer(c_out_1)
-        return [lstm_out_1, ann_out_1], self.lstm_mlp2(*input2, h0=h_out_init, c0=c_out_init)
+        h_out_init, c_out_init = (
+            self.state_transfer(h_out_1),
+            self.state_transfer(c_out_1),
+        )
+        return [lstm_out_1, ann_out_1], self.lstm_mlp2(
+            *input2, h0=h_out_init, c0=c_out_init
+        )

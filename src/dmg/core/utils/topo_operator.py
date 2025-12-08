@@ -1,4 +1,3 @@
-
 import numpy as np
 import networkx as nx
 import scipy.sparse as sp
@@ -34,7 +33,7 @@ def reachability_matrix(G, row_nodes, col_nodes):
                 js.add(j)
             for v in RG[u]:
                 if v not in seen:
-                    seen.add(v);
+                    seen.add(v)
                     dq.append(v)
         cache_row_to_js[r] = list(js)
 
@@ -60,7 +59,9 @@ class PathWeightedAgg:
     def __init__(self, G: nx.DiGraph, x_attr="x", y_attr="y"):
         # Structure checks
         if any(G.out_degree(n) > 1 for n in G.nodes()):
-            raise ValueError("Graph must have out-degree ≤ 1 per node (unique downstream).")
+            raise ValueError(
+                "Graph must have out-degree ≤ 1 per node (unique downstream)."
+            )
         if not nx.is_directed_acyclic_graph(G):
             raise ValueError("Graph must be a DAG (no cycles).")
 
@@ -117,7 +118,7 @@ class PathWeightedAgg:
             while stack:
                 u, state = stack.pop()
                 if state == 0:  # enter
-                    tin[u] = timer;
+                    tin[u] = timer
                     timer += 1
                     stack.append((u, 1))
                     for v in children[u]:
@@ -139,11 +140,13 @@ class PathWeightedAgg:
         self.Cnt = Cnt
         self.Sy = Sy
         self.Sxy = Sxy
-        self.has_weights = (y is not None)
+        self.has_weights = y is not None
 
     def _is_ancestor(self, b_idx: int, a_idx: int) -> bool:
         # In reversed forest: b ancestor of a  <=>  b is downstream of a in original graph
-        return (self.tin[b_idx] <= self.tin[a_idx]) and (self.tout[a_idx] <= self.tout[b_idx])
+        return (self.tin[b_idx] <= self.tin[a_idx]) and (
+            self.tout[a_idx] <= self.tout[b_idx]
+        )
 
     def _inclusive_prefix_slice(self, arr, a_idx, b_idx):
         """Sum over inclusive path a->b using root-to-node prefixes; arr is a prefix array."""
@@ -183,9 +186,7 @@ class PathWeightedAgg:
             return sum_x / cnt  # cnt >= 1 for a valid path
 
     def query_many(self, pairs, reduction="mean"):
-        """
-        Vectorized batch for many (a, b). Directional (a->b only).
-        """
+        """Vectorized batch for many (a, b). Directional (a->b only)."""
         ia = np.fromiter((self.nid[a] for a, _ in pairs), dtype=np.int64)
         ib = np.fromiter((self.nid[b] for _, b in pairs), dtype=np.int64)
 
@@ -212,10 +213,10 @@ class PathWeightedAgg:
             sum_y = np.where(pb == -1, self.Sy[ia], self.Sy[ia] - self.Sy[pb])
             sum_xy = np.where(pb == -1, self.Sxy[ia], self.Sxy[ia] - self.Sxy[pb])
             valid = ab & (sum_y != 0)
-            out[valid] = (sum_xy[valid] / sum_y[valid])
+            out[valid] = sum_xy[valid] / sum_y[valid]
             # remain NaN where no path or zero total weight
         else:
-            out[ab] = (sum_x[ab] / cnt[ab])
+            out[ab] = sum_x[ab] / cnt[ab]
         return out
 
 
@@ -224,8 +225,8 @@ def outlet_accum_attribute(
     outlets,
     A,
     W,
-    agg="mean",           # "mean" or "sum"
-    fill_value=np.nan     # value to fill for unreachable nodes (default NaN)
+    agg="mean",  # "mean" or "sum"
+    fill_value=np.nan,  # value to fill for unreachable nodes (default NaN)
 ):
     """
     Compute aggregated attribute along flow-paths to each outlet.
@@ -237,7 +238,9 @@ def outlet_accum_attribute(
                  If agg == "sum" you can pass W=None (then W treated as 1).
       agg      : "mean" (weighted mean = sum(A*W)/sum(W)) or "sum" (sum of A*W).
       fill_value: value to put where node does not reach outlet (or denom==0).
-    Returns:
+
+    Returns
+    -------
       Out: numpy array shape (No, N) where No=len(outlets) and N=number of topo nodes.
            Columns are in topo-node order (returned topo_nodes maps col idx->node id).
       topo_nodes: list of nodes in topological (upstream->downstream) order (columns order).
@@ -255,7 +258,9 @@ def outlet_accum_attribute(
             return np.full(N, default, dtype=float)
         if isinstance(x, np.ndarray):
             if x.shape[0] != N:
-                raise ValueError("If array, it must be length N and already in topo order.")
+                raise ValueError(
+                    "If array, it must be length N and already in topo order."
+                )
             return x.astype(float).copy()
         # dict-like
         arr = np.empty(N, dtype=float)
@@ -264,7 +269,7 @@ def outlet_accum_attribute(
         return arr
 
     A_arr = to_array(A)
-    W_arr = to_array(W, default=1.0)   # default weight = 1 if W is None
+    W_arr = to_array(W, default=1.0)  # default weight = 1 if W is None
 
     # 2) b = A * W (numerator)
     b_arr = A_arr * W_arr
@@ -285,22 +290,24 @@ def outlet_accum_attribute(
 
     # 5) R_out = (I - D)^{-1} E  (N x No)  -> reachability columns
     try:
-        R_out = spsolve_triangular(I_minus_D, E, lower=False)   # fast when triangular solver available
-    except Exception:
+        R_out = spsolve_triangular(
+            I_minus_D, E, lower=False
+        )  # fast when triangular solver available
+    except RuntimeError:
         lu = splu(I_minus_D.tocsc())
         R_out = lu.solve(E)
 
     if agg == "sum":
         # Single pair of solves: RHS = b * R_out; then S = (I - D)^{-1} RHS
-        RHS = (b_arr[:, None]) * R_out    # N x No
+        RHS = (b_arr[:, None]) * R_out  # N x No
         try:
             S = spsolve_triangular(I_minus_D, RHS, lower=False)
-        except Exception:
+        except RuntimeError:
             lu = splu(I_minus_D.tocsc())
             S = np.column_stack([lu.solve(RHS[:, k]) for k in range(No)])
         Out = S.T  # No x N ; each entry is sum_{v on path u->outlet} A[v]*W[v]
         # Mask unreachable nodes (where R_out==0): set fill_value
-        reach_mask = (R_out.T > 0.5)  # No x N
+        reach_mask = R_out.T > 0.5  # No x N
         Out[~reach_mask] = fill_value
         return Out, topo_nodes
 
@@ -311,7 +318,7 @@ def outlet_accum_attribute(
         try:
             S_b = spsolve_triangular(I_minus_D, RHS_b, lower=False)
             S_w = spsolve_triangular(I_minus_D, RHS_w, lower=False)
-        except Exception:
+        except RuntimeError:
             lu = splu(I_minus_D.tocsc())
             S_b = np.column_stack([lu.solve(RHS_b[:, k]) for k in range(No)])
             S_w = np.column_stack([lu.solve(RHS_w[:, k]) for k in range(No)])
@@ -323,15 +330,9 @@ def outlet_accum_attribute(
         denom_pos = S_w_T != 0.0
         Out[denom_pos] = S_b_T[denom_pos] / S_w_T[denom_pos]
         # enforce unreachable nodes -> fill_value (if unreachable but denom>0 through numerical weirdness)
-        reach_mask = (R_out.T > 0.5)
+        reach_mask = R_out.T > 0.5
         Out[~reach_mask] = fill_value
         return Out, topo_nodes
 
     else:
         raise ValueError("agg must be 'mean' or 'sum'")
-
-
-
-
-
-

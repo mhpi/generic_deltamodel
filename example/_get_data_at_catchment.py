@@ -2,13 +2,13 @@ import os
 import sys
 import json
 import yaml
-import math
 import numpy as np
 import xarray as xr
 import pandas as pd
 from pathlib import Path
 
 import re
+
 
 def convert_nested(obj):
     def convert_value(v):
@@ -25,8 +25,9 @@ def convert_nested(obj):
             # Handle numeric forms (integer, float, scientific notation)
             if re.fullmatch(r"[-+]?\d+", v):
                 return int(v)
-            if re.fullmatch(r"[-+]?\d*\.\d+(e[-+]?\d+)?", v, re.IGNORECASE) or re.fullmatch(r"[-+]?\d+e[-+]?\d+", v,
-                                                                                            re.IGNORECASE):
+            if re.fullmatch(
+                r"[-+]?\d*\.\d+(e[-+]?\d+)?", v, re.IGNORECASE
+            ) or re.fullmatch(r"[-+]?\d+e[-+]?\d+", v, re.IGNORECASE):
                 try:
                     return float(v)
                 except ValueError:
@@ -43,12 +44,12 @@ def convert_nested(obj):
         return [convert_nested(convert_value(i)) for i in obj]
     else:
         return convert_value(obj)
-    
+
 
 # ==========================================
 # USER SETTINGS
 # ==========================================
-target_gauge_id = '2453' # <--- REPLACE WITH YOUR DESIRED GAUGE ID (String)
+target_gauge_id = '2453'  # <--- REPLACE WITH YOUR DESIRED GAUGE ID (String)
 output_dir = '/projects/mhpi/leoglonz/ciroh-ua/_ngen-data/extracted_data'
 model_version = 3
 os.makedirs(output_dir, exist_ok=True)
@@ -62,12 +63,14 @@ if PROJECT_ROOT not in sys.path:
 
 # Load Configs to get variable lists
 config_path = f'/projects/mhpi/yxs275/hourly_model/DShourly/trainedModel/h-dhbv2_{model_version}/config.json'
-with open(Path(config_path), 'r') as f:
+with open(Path(config_path)) as f:
     config = json.load(f)
 config = convert_nested(config)
 
-obs_cfg_path = os.path.join(PROJECT_ROOT, "distributedDS", "config", "observations_camels.yaml")
-obs_config = yaml.safe_load(open(Path(obs_cfg_path), 'r'))
+obs_cfg_path = os.path.join(
+    PROJECT_ROOT, "distributedDS", "config", "observations_camels.yaml"
+)
+obs_config = yaml.safe_load(open(Path(obs_cfg_path)))
 config['observations'] = obs_config
 
 # Define Variable Lists
@@ -76,7 +79,9 @@ var_c_list = config['delta_model']['nn_model']['high_freq_model']['attributes']
 var_c_list2 = config['delta_model']['nn_model']['high_freq_model']['attributes2']
 
 # Define Time Range (Matching your original script)
-zTest_full_time = pd.date_range('2004-10-01 00:00:00','2018-10-01 00:00:00', freq = 'h')[:-1]
+zTest_full_time = pd.date_range('2004-10-01 00:00:00', '2018-10-01 00:00:00', freq='h')[
+    :-1
+]
 
 # ==========================================
 # LOCATE GAUGE & LOAD DATA
@@ -88,7 +93,7 @@ attr_path = '/projects/mhpi/yxs275/hourly_model/mtsHBV/data/CAMELS_HFs_attr_new.
 attrs_ds_all = xr.open_dataset(attr_path)
 
 # Normalize attribute gauges to string for search
-all_gauges_str = attrs_ds_all['gauge'].values.astype(str) 
+all_gauges_str = attrs_ds_all['gauge'].values.astype(str)
 
 if str(target_gauge_id) not in all_gauges_str:
     raise ValueError(f"Gauge {target_gauge_id} not found in attribute dataset.")
@@ -101,15 +106,17 @@ ichunk = gauge_idx // gauge_chunk_size
 g_start = ichunk * gauge_chunk_size
 g_end = min((ichunk + 1) * gauge_chunk_size, len(all_gauges_str))
 
-print(f"Gauge found at index {gauge_idx}. Loading chunk {ichunk} ({g_start:05d}-{g_end-1:05d})...")
+print(
+    f"Gauge found at index {gauge_idx}. Loading chunk {ichunk} ({g_start:05d}-{g_end - 1:05d})..."
+)
 
 # 2. Define File Paths for this chunk
-hourly_x_path = f'/gpfs/yxs275/data/hourly/CAMELS_HF/forcing/forcing_1990_2018_gauges_hourly_{g_start:05d}_{g_end-1:05d}.nc'
+hourly_x_path = f'/gpfs/yxs275/data/hourly/CAMELS_HF/forcing/forcing_1990_2018_gauges_hourly_{g_start:05d}_{g_end - 1:05d}.nc'
 
 # 3. Load Data
 print(f"Reading {hourly_x_path}")
 hourly_x = xr.open_dataset(hourly_x_path).sel(time=zTest_full_time)
-hourly_x = hourly_x.rename({"T": "Temp"}) 
+hourly_x = hourly_x.rename({"T": "Temp"})
 
 # --- FIX: Match the Data Type of the NetCDF ---
 search_id = target_gauge_id
@@ -120,7 +127,9 @@ if np.issubdtype(hourly_x['gauge'].dtype, np.integer):
     try:
         search_id = int(target_gauge_id)
     except ValueError:
-        print(f"WARNING: Could not convert '{target_gauge_id}' to integer, but dataset expects integers.")
+        print(
+            f"WARNING: Could not convert '{target_gauge_id}' to integer, but dataset expects integers."
+        )
 
 # Select specific gauge
 ds_forcing = hourly_x.sel(gauge=search_id)
@@ -154,7 +163,10 @@ if 'gauge' in forcing_df.columns:
 
 forcing_save_path = os.path.join(output_dir, f'{target_gauge_id}_hourly_forcings.csv')
 
-forcing_df.rename(columns={'P':'precip_rate', 'Temp':'TMP_2maboveground', 'PET':'PET_hargreaves'}, inplace=True)
+forcing_df.rename(
+    columns={'P': 'precip_rate', 'Temp': 'TMP_2maboveground', 'PET': 'PET_hargreaves'},
+    inplace=True,
+)
 
 forcing_df.to_csv(forcing_save_path)
 print(f"Saved forcings to: {forcing_save_path}")
@@ -162,7 +174,7 @@ print(f"Saved forcings to: {forcing_save_path}")
 # --- 2. Attributes CSV ---
 print("Extracting Attributes...")
 # Combine both attribute lists
-all_attrs = list(set(var_c_list + var_c_list2)) 
+all_attrs = list(set(var_c_list + var_c_list2))
 
 # Add crucial metadata if present
 extra_attrs = ['catchsize', 'meanelevation', 'uparea']
