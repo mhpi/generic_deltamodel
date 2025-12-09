@@ -42,6 +42,9 @@ class Hbv_2_mts(torch.nn.Module):
         self.low_freq_model = Hbv_2(low_freq_config, device=device)
         self.low_freq_model.initialize = True
         self.high_freq_model = Hbv_2_hourly(high_freq_config, device=device)
+        self._state_cache = (None, None)
+        self.load_from_cache = False
+        self.lof_from_cache = False
 
         # learnable transfer
         self.state_transfer_model = torch.nn.ModuleDict(
@@ -69,6 +72,25 @@ class Hbv_2_mts(torch.nn.Module):
         # warmup steps for routing during training.
         self.train_warmup = high_freq_config['train_warmup']
 
+    def get_states(self) -> Optional[tuple[torch.Tensor, ...]]:
+        """Return internal states for high and low frequency models."""
+        low_freq_states = self.low_freq_model.get_states()
+        high_freq_states = self.high_freq_model.get_states()
+        return (low_freq_states, high_freq_states)
+
+    def load_states(
+        self,
+        state_tuple: tuple[tuple[torch.Tensor, ...], tuple[torch.Tensor, ...]],
+    ) -> None:
+        """Load internal model states sideload low frequency states."""
+        if not isinstance(state_tuple, tuple) or len(state_tuple) != 2:
+            raise ValueError("`states` must be a tuple of two tuples of tensors.")
+        self._state_cache = state_tuple
+
+        if self.load_from_cache:
+            # Only sideload low-frequency states.
+            self.low_freq_model.load_states(state_tuple[0])
+
     def _forward(
         self,
         x_dict: dict[str, torch.Tensor],
@@ -77,23 +99,26 @@ class Hbv_2_mts(torch.nn.Module):
         """Base forward."""
         low_freq_parameters, high_freq_parameters = parameters
 
-        # transfer states
-        low_freq_x_dict = {
-            'x_phy': x_dict['x_phy_low_freq'],
-            'ac_all': x_dict['ac_all'],
-            'elev_all': x_dict['elev_all'],
-            'muwts': x_dict.get('muwts', None),
-        }
-        self.low_freq_model(
-            low_freq_x_dict,
-            low_freq_parameters,
-        )
+        # 1. Transfer states
+        if self.lof_from_cache and (self._state_cache[0] is not None):
+            lof_states = self._state_cache[0]
+        else:
+            low_freq_x_dict = {
+                'x_phy': x_dict['x_phy_low_freq'],
+                'ac_all': x_dict['ac_all'],
+                'elev_all': x_dict['elev_all'],
+                'muwts': x_dict.get('muwts', None),
+            }
+            self.low_freq_model(
+                low_freq_x_dict,
+                low_freq_parameters,
+            )
 
-        # Get low-frequency states at last timestep
-        low_freq_states = [st[-1] for st in self.low_freq_model._state_cache]
-        states = self.state_transfer(low_freq_states)
+            # Low-frequency states at last timestep
+            low_freq_states = [st[-1] for st in self.low_freq_model._state_cache]
+            lof_states = self.state_transfer(low_freq_states)
 
-        # transfer parameters
+        # 2. Transfer parameters
         phy_dy_params_dict, phy_static_params_dict, distr_params_dict = (
             self.param_transfer(
                 low_freq_parameters,
@@ -101,7 +126,7 @@ class Hbv_2_mts(torch.nn.Module):
             )
         )
 
-        # run the model
+        # Run the model
         x = x_dict['x_phy_high_freq']
 
         Ac = x_dict['ac_all'].unsqueeze(-1).expand(-1, self.high_freq_model.nmul)
@@ -111,17 +136,26 @@ class Hbv_2_mts(torch.nn.Module):
         outlet_topo = x_dict['outlet_topo']
         areas = x_dict['areas']
 
-        predictions, _ = self.high_freq_model._PBM(
+        predictions, hif_states = self._PBM(
             forcing=x,
             Ac=Ac,
             Elevation=Elevation,
-            states=tuple(states),
+            states=tuple(lof_states),
             phy_dy_params_dict=phy_dy_params_dict,
             phy_static_params_dict=phy_static_params_dict,
             outlet_topo=outlet_topo,
             areas=areas,
             distr_params_dict=distr_params_dict,
         )
+
+        # State caching
+        self._state_cache = (lof_states, hif_states)
+
+        if self.cache_states:
+            self.states = tuple(
+                tuple(s[-1].detach() for s in states) for states in self._state_cache
+            )
+
         return predictions
 
     def forward(
