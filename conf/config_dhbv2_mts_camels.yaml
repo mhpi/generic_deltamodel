@@ -8,8 +8,8 @@ defaults:
 
 
 ## General -------------------------------#
-mode: train  # 'train', 'train_test', 'test', or 'simulation'
-random_seed: 42
+mode: sim  # 'train', 'train_test', 'test', or 'sim'
+random_seed: 111111
 device: cuda
 gpu_id: 0
 
@@ -17,11 +17,11 @@ data_loader: MtsHydroLoader
 data_sampler: MtsHydroSampler
 trainer: MtsTrainer
 
-save_path: /data/wby5078/data/distributed-ds-camels/trained_models/h-dhbv2_3/
+save_path: /storage/group/cxs1024/default/wby5078/data/distributed-ds-camels/trained_models/h-dhbv2_3/
     # NOTE: The output path is relative to the current working directory.
     #       If you want to save the output in a different directory, please specify the absolute path.
     #       * If a valid trained_model path is specified, save_path will be set to trained_model.
-model_path: /data/wby5078/data/distributed-ds-camels/trained_models/h-dhbv2_3/model/  # Pretrained dHBV 2.0 (+ input data) can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_2_0_trained.zip
+model_path: /storage/group/cxs1024/default/wby5078/data/distributed-ds-camels/trained_models/h-dhbv2_3/  # Pretrained dHBV 2.0 (+ input data) can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_2_0_trained.zip
 
 
 ## Training ------------------------------#
@@ -66,9 +66,9 @@ loss_function:
 
 ## Differentiable Model -----------------------------#
 delta_model:
+    rho: 365
 
     phy_model:
-
         name: [Hbv_2_mts]
 
         ## Citations ##
@@ -78,13 +78,13 @@ delta_model:
         # Resources Research (2025). https://doi.org/10.1029/2024WR038928.
 
         high_freq_model:
-            model: [Hbv_2h]
+            model: [Hbv_2_hourly]
             nmul: 1  # 4
             warm_up: 0
             warm_up_states: True
             dy_drop: 0.0
             dynamic_params:
-                Hbv_2h: [parBETA, parK0, parBETAET]
+                Hbv_2_hourly: [parBETA, parK0, parBETAET]
 
             routing: False
             use_log_norm: []
@@ -101,7 +101,7 @@ delta_model:
             train_warmup: 168  # high-freq model warmup steps for training loss, also for routing
             agg_timescale_dim: [0, 2]  # indexes of P and PET in forcings, sum aggregation from high to low freq
             train_spatial_chunk_size: 32768  # number of unit-basins per sub-batch for high-freq model training
-            simulate_spatial_chunk_size: 10000  # number of unit-basins per sub-batch for runoff generation during simulation
+            simulate_spatial_chunk_size: 500  # number of unit-basins per sub-batch for runoff generation during simulation
             simulate_temporal_chunk_size: 168  # number of time steps per sub-batch for runoff routing during simulation
 
 
@@ -128,7 +128,7 @@ delta_model:
             window_size: 351
 
     nn_model:
-        sub_batch_size: 500  # avoid cuda OOM for distributed model
+        sub_batch_size: 100  # avoid cuda OOM for distributed model
 
         high_freq_model:
             model: LstmMlp2Model
@@ -150,7 +150,9 @@ delta_model:
             attributes: [
               aridity, meanP, ETPOT_Hargr, NDVI, FW, meanslope, SoilGrids1km_sand, SoilGrids1km_clay, SoilGrids1km_silt, glaciers, HWSD_clay, HWSD_gravel, HWSD_sand, HWSD_silt, meanelevation, meanTa, permafrost, permeability, seasonality_P, seasonality_PET, snow_fraction, snowfall_fraction, T_clay, T_gravel, T_sand, T_silt, Porosity, catchsize
             ]
-            attributes2: [aridity, NDVI, FW, meanslope, SoilGrids1km_sand, SoilGrids1km_clay, SoilGrids1km_silt, glaciers, HWSD_clay, HWSD_gravel, HWSD_sand, HWSD_silt, meanelevation, permafrost, permeability, snow_fraction, T_clay, T_gravel, T_sand, T_silt, Porosity, catchsize, lengthkm]
+            attributes2: [
+              aridity, NDVI, FW, meanslope, SoilGrids1km_sand, SoilGrids1km_clay, SoilGrids1km_silt, glaciers, HWSD_clay, HWSD_gravel, HWSD_sand, HWSD_silt, meanelevation, permafrost, permeability, snow_fraction, T_clay, T_gravel, T_sand, T_silt, Porosity, catchsize, lengthkm
+            ]
 
         low_freq_model:
             model: LstmMlpModel

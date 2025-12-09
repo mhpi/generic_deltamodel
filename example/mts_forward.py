@@ -34,16 +34,11 @@ if PROJECT_ROOT not in sys.path:
 model_version = 3
 epoch = 30
 
-forward_save_path = '/projects/mhpi/leoglonz/ciroh-ua/dmg/hf_outputs/'
+forward_save_path = '/projects/mhpi/leoglonz/ciroh-ua/dmg/hf_outputs/hydrodl2/'
 forward_save_path = forward_save_path + f'h-dhbv2_{model_version}_Qprimeprime_fixed/'
 os.makedirs(forward_save_path, exist_ok=True)
 
-with open(
-    Path(
-        f'/projects/mhpi/yxs275/hourly_model/DShourly/trainedModel/h-dhbv2_{model_version}/'
-    )
-    / 'config.json'
-) as f:
+with open('/projects/mhpi/leoglonz/ciroh-ua/dmg/conf/main_config.json') as f:
     config = json.load(f)
 config = convert_nested(config)
 obs_cfg_path = os.path.join(
