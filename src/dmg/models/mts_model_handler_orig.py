@@ -10,9 +10,8 @@ import xarray as xr
 
 from dmg.core.calc import Metrics
 from dmg.core.utils import save_model
-from dmg.models.delta_models.mts_dpl_model import MtsDplModel as DplModel
+from dmg.models.delta_models.mts_dpl_model_orig import MtsDplModel as DplModel
 from dmg.models.neural_networks import LstmMlp2Model, LstmMlpModel, StackLstmMlpModel
-
 from hydrodl2.models.hbv.hbv_2_mts import Hbv_2_mts
 
 log = logging.getLogger(__name__)
@@ -52,7 +51,7 @@ class MtsModelHandler(torch.nn.Module):
         super().__init__()
         self.config = config
         self.name = 'Differentiable Model Handler'
-        self.model_path = config['model_dir']
+        self.model_path = config['model_path']
         self.verbose = verbose
         self.target_name = config['train']['target'][0]
         self.models = self.list_models()
@@ -74,45 +73,57 @@ class MtsModelHandler(torch.nn.Module):
         device = self.device
 
         phy_model = Hbv_2_mts(
-            low_freq_config=config['model']['phy']['lof_model'],
-            high_freq_config=config['model']['phy']['hif_model'],
+            low_freq_config=config['delta_model']['phy_model']['low_freq_model'],
+            high_freq_config=config['delta_model']['phy_model']['high_freq_model'],
             device=torch.device(device),
         )
         low_freq_nn_model = LstmMlpModel(
-            nx1=len(config['model']['nn']['lof_model']['forcings'])
-            + len(config['model']['nn']['lof_model']['attributes']),
+            nx1=len(config['delta_model']['nn_model']['low_freq_model']['forcings'])
+            + len(config['delta_model']['nn_model']['low_freq_model']['attributes']),
             ny1=phy_model.low_freq_model.learnable_param_count1,
-            hiddeninv1=config['model']['nn']['lof_model']['lstm_hidden_size'],
-            nx2=len(config['model']['nn']['lof_model']['attributes']),
+            hiddeninv1=config['delta_model']['nn_model']['low_freq_model'][
+                'lstm_hidden_size'
+            ],
+            nx2=len(config['delta_model']['nn_model']['low_freq_model']['attributes']),
             ny2=phy_model.low_freq_model.learnable_param_count2,
-            hiddeninv2=config['model']['nn']['lof_model']['mlp_hidden_size'],
-            dr1=config['model']['nn']['lof_model']['lstm_dropout'],
-            dr2=config['model']['nn']['lof_model']['mlp_dropout'],
-            sub_batch_size=config['model']['nn']['sub_batch_size'],
+            hiddeninv2=config['delta_model']['nn_model']['low_freq_model'][
+                'mlp_hidden_size'
+            ],
+            dr1=config['delta_model']['nn_model']['low_freq_model']['lstm_dropout'],
+            dr2=config['delta_model']['nn_model']['low_freq_model']['mlp_dropout'],
+            sub_batch_size=config['delta_model']['nn_model']['sub_batch_size'],
             device=torch.device(device),
         )
         high_freq_nn_model = LstmMlp2Model(
-            nx1=len(config['model']['nn']['hif_model']['forcings'])
-            + len(config['model']['nn']['hif_model']['attributes']),
+            nx1=len(config['delta_model']['nn_model']['high_freq_model']['forcings'])
+            + len(config['delta_model']['nn_model']['high_freq_model']['attributes']),
             ny1=phy_model.high_freq_model.learnable_param_count1,
-            hiddeninv1=config['model']['nn']['hif_model']['lstm_hidden_size'],
-            nx2=len(config['model']['nn']['hif_model']['attributes']),
+            hiddeninv1=config['delta_model']['nn_model']['high_freq_model'][
+                'lstm_hidden_size'
+            ],
+            nx2=len(config['delta_model']['nn_model']['high_freq_model']['attributes']),
             ny2=phy_model.high_freq_model.learnable_param_count2,
-            hiddeninv2=config['model']['nn']['hif_model']['mlp_hidden_size'],
-            nx3=len(config['model']['nn']['hif_model']['attributes2']),
+            hiddeninv2=config['delta_model']['nn_model']['high_freq_model'][
+                'mlp_hidden_size'
+            ],
+            nx3=len(
+                config['delta_model']['nn_model']['high_freq_model']['attributes2']
+            ),
             ny3=phy_model.high_freq_model.learnable_param_count3,
-            hiddeninv3=config['model']['nn']['hif_model']['mlp2_hidden_size'],
-            dr1=config['model']['nn']['hif_model']['lstm_dropout'],
-            dr2=config['model']['nn']['hif_model']['mlp_dropout'],
-            dr3=config['model']['nn']['hif_model']['mlp2_dropout'],
-            sub_batch_size=config['model']['nn']['sub_batch_size'],
+            hiddeninv3=config['delta_model']['nn_model']['high_freq_model'][
+                'mlp2_hidden_size'
+            ],
+            dr1=config['delta_model']['nn_model']['high_freq_model']['lstm_dropout'],
+            dr2=config['delta_model']['nn_model']['high_freq_model']['mlp_dropout'],
+            dr3=config['delta_model']['nn_model']['high_freq_model']['mlp2_dropout'],
+            sub_batch_size=config['delta_model']['nn_model']['sub_batch_size'],
             device=torch.device(device),
         )
         nn_model = StackLstmMlpModel(low_freq_nn_model, high_freq_nn_model)
         dpl_model = DplModel(
             phy_model=phy_model,
             nn_model=nn_model,
-            config=config['model'],
+            config=config['delta_model'],
             device=torch.device(device),
         )
         self.dpl_model = dpl_model
@@ -126,7 +137,7 @@ class MtsModelHandler(torch.nn.Module):
         list[str]
             List of model names.
         """
-        models = self.config['model']['phy']['name']
+        models = self.config['delta_model']['phy_model']['name']
         return models
 
     def load_model(self, epoch: int = 0):

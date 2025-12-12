@@ -363,4 +363,9 @@ class StackLstmMlpModel(torch.nn.Module):
         input2: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
     ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
         """input1 and input2 can be in cpu for sub_batch_mode."""
-        return self.lstm_mlp(*input1), self.lstm_mlp2(*input2)
+        if input1[0] is not None:
+            out1 = self.lstm_mlp(*input1)
+        else:
+            out1 = None
+
+        return out1, self.lstm_mlp2(*input2)

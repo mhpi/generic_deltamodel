@@ -19,10 +19,10 @@ import yaml
 from tqdm import tqdm
 
 from conf.utils import convert_nested
-from dmg.models import MtsModelHandler as ModelHandler
+from dmg.models.mts_model_handler_orig import MtsModelHandler as ModelHandler
 
 ### ----------- Settings ---------------- ###
-GPU_IDS = [0, 1, 2]  # List of GPU IDs to use
+GPU_IDS = ['cpu', 1, 2]  # List of GPU IDs to use
 PARALLEL = False  # Whether to run in parallel mode
 ### ------------------------------------- ###
 

@@ -86,8 +86,8 @@ class MtsDplModel(torch.nn.Module):
         """
         if phy_model_name:
             model_name = phy_model_name
-        elif self.config['phy']:
-            model_name = self.config['phy']['name'][0]
+        elif self.config['phy_model']:
+            model_name = self.config['phy_model']['model'][0]
         else:
             raise ValueError(
                 "A (1) physics model name or (2) model spec in"
@@ -95,7 +95,7 @@ class MtsDplModel(torch.nn.Module):
             )
 
         model = import_phy_model(model_name)
-        return model(self.config['phy'], device=self.device)
+        return model(self.config['phy_model'], device=self.device)
 
     def _init_nn_model(self) -> torch.nn.Module:
         # TODO: add LstmMlp2Model and StackLstmMlpModel to load_nn_model
