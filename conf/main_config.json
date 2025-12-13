@@ -5,18 +5,18 @@
             "hydra": "settings"
         },
         {
-            "observations": "merit"
+            "observations": "hydrofabric"
         }
     ],
     "mode": "train",
-    "random_seed": 111111,
+    "random_seed": 42,
     "device": "cuda",
     "gpu_id": 0,
     "data_loader": "MtsHydroLoader",
     "data_sampler": "MtsHydroSampler",
     "trainer": "MtsTrainer",
-    "save_path": "/storage/group/cxs1024/default/wby5078/data/distributed-ds-camels/trained_models/h-dhbv2_3/",
-    "model_path": "/storage/group/cxs1024/default/wby5078/data/distributed-ds-camels/trained_models/h-dhbv2_3/model/",
+    "save_path": "/storage/group/cxs1024/default/wby5078/data/distributed-ds-camels/trained_models/h-dhbv2_1/",
+    "model_path": "/storage/group/cxs1024/default/wby5078/data/distributed-ds-camels/trained_models/h-dhbv2_1/model/",
     "train": {
         "start_time": "1991/01/01",
         "end_time": "2003/12/31",
@@ -24,7 +24,7 @@
             "streamflow"
         ],
         "optimizer": "Adam",
-        "batch_size": 100,
+        "batch_size": 200,
         "epochs": 30,
         "start_epoch": 0,
         "save_epoch": 1,
@@ -34,12 +34,12 @@
     "valid": {
         "start_time": "2004/01/01",
         "end_time": "2008/12/31",
-        "batch_size": 100
+        "batch_size": 200
     },
     "test": {
         "start_time": "2009/01/01",
         "end_time": "2018/12/31",
-        "batch_size": 100,
+        "batch_size": 200,
         "test_epoch": 20
     },
     "loss_function": {
@@ -51,21 +51,20 @@
         }
     },
     "delta_model": {
-        "rho": 365,
         "phy_model": {
             "name": [
                 "Hbv_2_mts"
             ],
             "high_freq_model": {
                 "model": [
-                    "Hbv_2_hourly"
+                    "Hbv_2h"
                 ],
                 "nmul": 1,
                 "warm_up": 0,
                 "warm_up_states": true,
                 "dy_drop": 0.0,
                 "dynamic_params": {
-                    "Hbv_2_hourly": [
+                    "Hbv_2h": [
                         "parBETA",
                         "parK0",
                         "parBETAET"
@@ -76,18 +75,14 @@
                 "nearzero": 1e-05,
                 "forcings": [
                     "P",
-                    "Temp",
+                    "T",
                     "PET"
                 ],
                 "attributes": [],
                 "window_size": 336,
                 "train_warmup": 168,
-                "agg_timescale_dim": [
-                    0,
-                    2
-                ],
-                "train_spatial_chunk_size": 32768,
-                "simulate_spatial_chunk_size": 500,
+                "train_spatial_chunk_size": 65536,
+                "simulate_spatial_chunk_size": 10000,
                 "simulate_temporal_chunk_size": 168
             },
             "low_freq_model": {
@@ -110,7 +105,7 @@
                 "nearzero": 1e-05,
                 "forcings": [
                     "P",
-                    "Temp",
+                    "T",
                     "PET"
                 ],
                 "attributes": [],
@@ -129,7 +124,7 @@
                 "mlp2_hidden_size": 64,
                 "forcings": [
                     "P",
-                    "Temp",
+                    "T",
                     "PET"
                 ],
                 "attributes": [
@@ -196,7 +191,7 @@
                 "mlp_hidden_size": 64,
                 "forcings": [
                     "P",
-                    "Temp",
+                    "T",
                     "PET"
                 ],
                 "attributes": [
