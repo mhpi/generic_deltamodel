@@ -145,7 +145,7 @@ class MtsModelHandler(torch.nn.Module):
                 log.info(f"Created new model: {name}")
         else:
             # Initialize model from checkpoint state dict.
-            path = os.path.join(self.model_path, f"d{str(name)}_Ep{str(epoch)}.pt")
+            path = os.path.join(self.model_path, f"d{name.lower()}_ep{epoch}.pt")
             if not os.path.exists(path):
                 raise FileNotFoundError(
                     f"{path} not found for model {name}.",
