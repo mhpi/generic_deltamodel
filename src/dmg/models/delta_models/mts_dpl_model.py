@@ -112,34 +112,40 @@ class MtsDplModel(torch.nn.Module):
             device=self.device,
         )
 
-    def forward(self, data_dict: dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(
+        self, data_dict: dict[str, torch.Tensor], batched: bool = False
+    ) -> torch.Tensor:
         """Forward pass.
 
         Parameters
         ----------
         data_dict
-            The input data dictionary.
-
-        Returns
-        -------
-        torch.Tensor
-            The output predictions.
+            Input tensors (xc_nn_norm_low_freq, etc.)
+        batch
+            If True, use sequential forward pass (for stepwise prediction).
+            If False, use batched forward pass (for warmup).
         """
         # Neural network
         ##################### New: Multi-timescale #################
-
         if type(self.nn_model).__name__ == 'StackLstmMlpModel' or (
             hasattr(self.nn_model, '_orig_mod')
             and type(self.nn_model._orig_mod).__name__ == 'StackLstmMlpModel'
         ):
-            parameters = self.nn_model(
-                (data_dict['xc_nn_norm_low_freq'], data_dict['c_nn_norm']),
-                (
-                    data_dict['xc_nn_norm_high_freq'],
-                    data_dict['c_nn_norm'],
-                    data_dict['rc_nn_norm'],
-                ),
+            hif_input = (
+                data_dict['xc_nn_norm_high_freq'],
+                data_dict['c_nn_norm'],
+                data_dict['rc_nn_norm'],
             )
+            if batched:
+                # Call full forward (updates caches)
+                lof_input = (data_dict['xc_nn_norm_low_freq'], data_dict['c_nn_norm'])
+                params_lf, params_hf = self.nn_model(lof_input, hif_input)
+
+            else:
+                # Call step forward (uses caches)
+                params_lf, params_hf = self.nn_model.forward_sequential(hif_input)
+            parameters = (params_lf, params_hf)
+
         ############################################################
         elif type(self.nn_model).__name__ == 'LstmMlpModel':
             parameters = self.nn_model(data_dict['xc_nn_norm'], data_dict['c_nn_norm'])

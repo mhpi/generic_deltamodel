@@ -254,10 +254,15 @@ class LstmMlp2Model(torch.nn.Module):
         dr2: Optional[float] = 0.5,
         dr3: Optional[float] = 0.5,
         sub_batch_size: Optional[int] = 500,
+        cache_states: bool = False,
         device: Optional[str] = 'cpu',
     ) -> None:
         super().__init__()
         self.name = 'LstmMlpModel'
+        self.cache_states = cache_states
+
+        self.hn, self._hn_cache = None, None  # hidden state
+        self.cn, self._cn_cache = None, None  # cell state
 
         self.lstm_inv = torch.nn.LSTM(
             input_size=nx1, hidden_size=hiddeninv1, dropout=dr1
@@ -291,8 +296,6 @@ class LstmMlp2Model(torch.nn.Module):
             torch.nn.Linear(hiddeninv3, ny3),
             torch.nn.Sigmoid(),
         )
-        # self.ann1 = KAN_2(nx=nx2, ny=ny2, hiddenSize=hiddeninv2, dropout_rate=dr2)
-        # self.ann2 = KAN_2(nx=nx3, ny=ny3, hiddenSize=hiddeninv3, dropout_rate=dr3)
 
         # chunk prediction for distributed modeling
         self.sub_batch_size = sub_batch_size
@@ -303,8 +306,8 @@ class LstmMlp2Model(torch.nn.Module):
         z1: torch.Tensor,
         z2: torch.Tensor,
         z3: torch.Tensor,
-        h0: torch.Tensor,
-        c0: torch.Tensor,
+        h0: Optional[torch.Tensor] = None,
+        c0: Optional[torch.Tensor] = None,
     ) -> list[torch.Tensor]:
         """Forward pass.
 
@@ -321,6 +324,7 @@ class LstmMlp2Model(torch.nn.Module):
         -------
         tuple
             The LSTM and MLP output tensors.
+            [lstm_out, ann_out1, ann_out2]
         """
         if self.sub_batch_mode:  # output cpu tensor to save gpu memory
             device = next(self.parameters()).device
@@ -349,12 +353,29 @@ class LstmMlp2Model(torch.nn.Module):
             ann_out1 = torch.cat(ann_out1_list, dim=0)
             ann_out2 = torch.cat(ann_out2_list, dim=0)
         else:
-            lstm_out, (_, _) = self.lstm_inv(
-                z1, (h0, c0)
-            )  # dim: timesteps, gages, params
+            # --- State Handling ---
+            # If explicit state not provided and caching is enabled, use cached states
+            if h0 is None and c0 is None and self.cache_states:
+                # Ensure device match
+                if self.hn is not None:
+                    h0, c0 = self.hn, self.cn
+
+            # Run LSTM
+            if h0 is not None and c0 is not None:
+                # dim: timesteps, gages, params
+                lstm_out, (hn_new, cn_new) = self.lstm_inv(z1, (h0, c0))
+            else:
+                lstm_out, (hn_new, cn_new) = self.lstm_inv(z1)
+
+            # Cache new states
+            if self.cache_states:
+                self.hn = hn_new.detach()
+                self.cn = cn_new.detach()
+
             lstm_out = torch.sigmoid(self.linear_out(lstm_out))
             ann_out1 = self.ann1(z2)
             ann_out2 = self.ann2(z3)
+
         return [lstm_out, ann_out1, ann_out2]
 
 
@@ -366,6 +387,9 @@ class StackLstmMlpModel(torch.nn.Module):
         self.lstm_mlp = lstm_mlp
         self.lstm_mlp2 = lstm_mlp2
         self.state_transfer = nn.Linear(lstm_mlp.hiddeninv1, lstm_mlp2.hiddeninv1)
+
+        # Cache for low-freq model output parameters
+        self.lof_params_cache = None
 
     def set_mode(self, is_simulate: bool):
         """Set sub_batch_mode for simulation or training."""
@@ -381,12 +405,39 @@ class StackLstmMlpModel(torch.nn.Module):
         input1: tuple[torch.Tensor, torch.Tensor],
         input2: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
     ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
-        """input1 and input2 can be in cpu for sub_batch_mode."""
+        """Batched forward pass (e.g. for warmup).
+        Runs LF model -> State transfer -> HF model.
+        Updates internal cache of both LF params and HF states.
+        """
         lstm_out_1, h_out_1, c_out_1, ann_out_1 = self.lstm_mlp(*input1)
-        h_out_init, c_out_init = (
-            self.state_transfer(h_out_1),
-            self.state_transfer(c_out_1),
-        )
-        return [lstm_out_1, ann_out_1], self.lstm_mlp2(
-            *input2, h0=h_out_init, c0=c_out_init
-        )
+
+        # Cache LF params for reuse in step mode
+        self.lof_params_cache = [lstm_out_1.detach(), ann_out_1.detach()]
+
+        # State transfer
+        h_out_init = self.state_transfer(h_out_1)
+        c_out_init = self.state_transfer(c_out_1)
+
+        # Forward high-freq model with transferred state
+        # Note: lstm_mlp2 will implicitly cache the final state
+        hif_out = self.lstm_mlp2(*input2, h0=h_out_init, c0=c_out_init)
+
+        return [lstm_out_1, ann_out_1], hif_out
+
+    def forward_sequential(
+        self,
+        input2: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+    ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
+        """Sequential forward pass.
+        Only runs high-freq model using cached state. Reuses cached low-freq
+        model params.
+        """
+        if self.lof_params_cache is None:
+            raise RuntimeError(
+                "Must run full `forward` (warmup) before `forward_step`."
+            )
+
+        # No h0/c0 provided -> model uses its internal self.hn/cn
+        hif_out = self.lstm_mlp2(*input2)
+
+        return self.lof_params_cache, hif_out

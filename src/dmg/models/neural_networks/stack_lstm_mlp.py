@@ -144,7 +144,6 @@ class LstmMlpModel(torch.nn.Module):
             torch.nn.Linear(hiddeninv2, ny2),
             torch.nn.Sigmoid(),
         )
-        # self.ann = KAN_2(nx=nx2, ny=ny2, hiddenSize=hiddeninv2, dropout_rate=dr2)
 
         # chunk prediction for distributed modeling
         self.sub_batch_size = sub_batch_size
@@ -243,10 +242,15 @@ class LstmMlp2Model(torch.nn.Module):
         dr2: Optional[float] = 0.5,
         dr3: Optional[float] = 0.5,
         sub_batch_size: Optional[int] = 500,
+        cache_states: bool = False,
         device: Optional[str] = 'cpu',
     ) -> None:
         super().__init__()
         self.name = 'LstmMlpModel'
+        self.cache_states = cache_states
+
+        # Internal state cache
+        self.hn, self.cn = None, None
 
         self.lstm_inv = torch.nn.LSTM(
             input_size=nx1, hidden_size=hiddeninv1, dropout=dr1
@@ -279,10 +283,8 @@ class LstmMlp2Model(torch.nn.Module):
             torch.nn.Linear(hiddeninv3, ny3),
             torch.nn.Sigmoid(),
         )
-        # self.ann1 = KAN_2(nx=nx2, ny=ny2, hiddenSize=hiddeninv2, dropout_rate=dr2)
-        # self.ann2 = KAN_2(nx=nx3, ny=ny3, hiddenSize=hiddeninv3, dropout_rate=dr3)
 
-        # chunk prediction for distributed modeling
+        # Chunk prediction for distributed modeling
         self.sub_batch_size = sub_batch_size
         self.sub_batch_mode = False
 
@@ -291,6 +293,8 @@ class LstmMlp2Model(torch.nn.Module):
         z1: torch.Tensor,
         z2: torch.Tensor,
         z3: torch.Tensor,
+        h0: Optional[torch.Tensor] = None,
+        c0: Optional[torch.Tensor] = None,
     ) -> list[torch.Tensor]:
         """Forward pass.
 
@@ -307,6 +311,7 @@ class LstmMlp2Model(torch.nn.Module):
         -------
         tuple
             The LSTM and MLP output tensors.
+            [lstm_out, ann_out1, ann_out2]
         """
         if self.sub_batch_mode:  # output cpu tensor to save gpu memory
             device = next(self.parameters()).device
@@ -318,8 +323,14 @@ class LstmMlp2Model(torch.nn.Module):
             for start in range(0, total_size_static_1, self.sub_batch_size):
                 end = min(start + self.sub_batch_size, total_size_static_1)
                 batch_z1 = z1[:, start:end, :].to(device)
+                batch_h0 = h0[:, start:end, :].to(device) if h0 is not None else None
+                batch_c0 = c0[:, start:end, :].to(device) if c0 is not None else None
                 batch_z2 = z2[start:end, :].to(device)
-                lstm_out_sub, (_, _) = self.lstm_inv(batch_z1)
+
+                # Note: Sub-batch logic for state is tricky, assuming stateless or provided h0
+                hx = (batch_h0, batch_c0) if (batch_h0 is not None) else None
+                lstm_out_sub, (_, _) = self.lstm_inv(batch_z1, hx)
+
                 lstm_out_sub = torch.sigmoid(self.linear_out(lstm_out_sub))
                 lstm_out_list.append(lstm_out_sub.detach().cpu())
                 ann_out1_sub = self.ann1(batch_z2)
@@ -333,10 +344,26 @@ class LstmMlp2Model(torch.nn.Module):
             ann_out1 = torch.cat(ann_out1_list, dim=0)
             ann_out2 = torch.cat(ann_out2_list, dim=0)
         else:
-            lstm_out, (_, _) = self.lstm_inv(z1)  # dim: timesteps, gages, params
+            # --- State Handling ---
+            hx = None
+            if h0 is not None and c0 is not None:
+                hx = (h0, c0)
+            elif self.cache_states and self.hn is not None:
+                # Use internal cache if no explicit state provided
+                hx = (self.hn, self.cn)
+
+            # Run LSTM
+            lstm_out, (hn_new, cn_new) = self.lstm_inv(z1, hx)
+
+            # Update Cache
+            if self.cache_states:
+                self.hn = hn_new.detach()
+                self.cn = cn_new.detach()
+
             lstm_out = torch.sigmoid(self.linear_out(lstm_out))
             ann_out1 = self.ann1(z2)
             ann_out2 = self.ann2(z3)
+
         return [lstm_out, ann_out1, ann_out2]
 
 
@@ -347,6 +374,9 @@ class StackLstmMlpModel(torch.nn.Module):
         super().__init__()
         self.lstm_mlp = lstm_mlp
         self.lstm_mlp2 = lstm_mlp2
+
+        # Cache for low-freq model output parameters
+        self.lof_params_cache = None
 
     def set_mode(self, is_simulate: bool):
         """Set sub_batch_mode for simulation or training."""
@@ -362,10 +392,36 @@ class StackLstmMlpModel(torch.nn.Module):
         input1: tuple[torch.Tensor, torch.Tensor],
         input2: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
     ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
-        """input1 and input2 can be in cpu for sub_batch_mode."""
+        """Forward pass (batched).
+        Runs LF Model -> Caches LF Params -> Runs HF Model.
+        """
+        # 1. low frequency
         if input1[0] is not None:
-            out1 = self.lstm_mlp(*input1)
+            out1 = self.lstm_mlp(*input1)  # [lstm_out, ann_out]
+
+            # Cache low frequency parameters for future steps
+            self.lof_params_cache = [p[-1:].detach() for p in out1]
         else:
             out1 = None
+            self.lof_params_cache = None
 
-        return out1, self.lstm_mlp2(*input2)
+        # 2. high frequency
+        out2 = self.lstm_mlp2(*input2)  # [lstm_out, ann_out1, ann_out2]
+
+        return out1, out2
+
+    def forward_sequential(
+        self,
+        input2: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+    ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
+        """Sequential forward pass.
+        Only runs high-freq model using cached state. Reuses cached low-freq
+        model params.
+        """
+        # low frequency
+        out1 = self.lof_params_cache
+
+        # high frequency (using internal cache)
+        out2 = self.lstm_mlp2(*input2)
+
+        return out1, out2
