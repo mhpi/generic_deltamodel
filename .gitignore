@@ -168,6 +168,7 @@ cython_debug/
 # Scratch / development / old / and other temporary files
 *scratch*
 *_old*
+*_dev*
 temp/
 tmp/
 *.tmp

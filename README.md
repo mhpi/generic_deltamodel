@@ -1,4 +1,4 @@
-# 𝛿MG: Generic Differentiable Modeling Framework
+# 𝛿MG: PyTorch Differentiable Modeling Framework
 
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.9.0-EE4C2C?logo=pytorch)](https://pytorch.org/)

@@ -6,7 +6,7 @@ requires = ["hatchling", "hatch-vcs"]
 
 [project]
 name = "dmg"
-description = "Generic Differentiable Modeling Framework on PyTorch"
+description = "PyTorch Differentiable Modeling Framework"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
