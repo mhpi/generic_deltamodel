@@ -1,11 +1,11 @@
 # 𝛿MG: PyTorch Differentiable Modeling Framework
 
-[![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/downloads/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.9.0-EE4C2C?logo=pytorch)](https://pytorch.org/)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12%20%7C%203.13-blue?labelColor=333333)](https://www.python.org/downloads/)
+[![PyTorch Version](https://img.shields.io/badge/dynamic/json?label=PyTorch&query=info.version&url=https%3A%2F%2Fpypi.org%2Fpypi%2Ftorch%2Fjson&logo=pytorch&color=EE4C2C&logoColor=F900FF&labelColor=333333)](https://pypi.org/project/torch/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&labelColor=333333)](https://github.com/astral-sh/ruff)
 
-[![Build](https://github.com/mhpi/generic_deltamodel/actions/workflows/pytest.yaml/badge.svg?branch=master)](https://github.com/mhpi/generic_deltamodel/actions/workflows/pytest.yaml)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14868671.svg)](https://doi.org/10.5281/zenodo.14868671)
+[![Build](https://img.shields.io/github/actions/workflow/status/mhpi/generic_deltamodel/pytest.yaml?branch=master&logo=github&label=tests&labelColor=333333)](https://github.com/mhpi/generic_deltamodel/actions/workflows/pytest.yaml)
+[![DOI](https://img.shields.io/badge/DOI-10.5281/zenodo.14868671-blue?labelColor=333333&lab)](https://doi.org/10.5281/zenodo.14868671)
 
 ---
 
