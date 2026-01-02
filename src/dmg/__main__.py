@@ -16,7 +16,6 @@ import torch
 from omegaconf import DictConfig
 
 from dmg._version import __version__
-from dmg.core.tune.utils import run_tuning
 from dmg.core.utils.factory import import_data_loader, import_trainer
 from dmg.core.utils.utils import initialize_config, print_config, set_randomseed
 from dmg.models.model_handler import ModelHandler as dModel
@@ -75,8 +74,16 @@ def main(config: DictConfig) -> None:
 
         ### Do model tuning ###
         if config['do_tune']:
-            run_tuning(config)
-            exit()
+            try:
+                from dmg.core.tune.utils import run_tuning
+
+                run_tuning(config)
+                exit()
+            except ImportError:
+                log.error(
+                    "Ray Tune is required for tuning. To install: uv pip install 'dmg[raytune]'"
+                )
+                return
 
         print_config(config)
 
