@@ -7,7 +7,8 @@ from typing import Any, Optional
 import numpy as np
 import scipy.stats as stats
 from numpy.typing import NDArray
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel
+from dmg.core.utils.pydantic_compat import universal_model_validator
 
 log = logging.getLogger()
 
@@ -21,7 +22,12 @@ class Metrics(BaseModel):
     Adapted from Tadd Bindas, Yalan Song, Farshid Rahmani.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    # NOTE: Use class Config for Pydantic v1/v2 compatibility.
+    class Config:
+        """Pydantic configuration."""
+
+        arbitrary_types_allowed = True
+
     pred: NDArray[np.float32]
     target: NDArray[np.float32]
     bias: NDArray[np.float32] = np.ndarray([])
@@ -190,25 +196,9 @@ class Metrics(BaseModel):
 
         return super().model_post_init(__context)
 
-    @model_validator(mode='after')
+    @universal_model_validator
     def validate_pred(self):
-        """Checks that there are no NaN predictions.
-
-        Parameters
-        ----------
-        metrics : Any
-            Metrics object.
-
-        Raises
-        ------
-        ValueError
-            If there are NaN predictions.
-
-        Returns
-        -------
-        Any
-            Metrics object.
-        """
+        """Checks that there are no NaN predictions."""
         pred = self.pred
         if np.isnan(pred).sum() > 0:
             msg = "Pred contains NaN, check your gradient chain"

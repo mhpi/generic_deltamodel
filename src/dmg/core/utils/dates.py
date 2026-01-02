@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 import torch
 from numpy.typing import NDArray
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel
+from dmg.core.utils.pydantic_compat import universal_model_validator
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +18,12 @@ class Dates(BaseModel):
     Adapted from Tadd Bindas.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    # NOTE: Use class Config for Pydantic v1/v2 compatibility.
+    class Config:
+        """Pydantic configuration."""
+
+        arbitrary_types_allowed = True
+
     daily_format: str = "%Y/%m/%d"
     hourly_format: str = "%Y/%m/%d %H:%M:%S"
     origin_start_date: str = "1980/01/01"
@@ -50,7 +56,7 @@ class Dates(BaseModel):
             rho=rho,
         )
 
-    @model_validator(mode="after")
+    @universal_model_validator
     def validate_dates(self) -> Any:
         """Validate the dates configuration.
 

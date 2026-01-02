@@ -1,0 +1,136 @@
+defaults:
+  - _self_
+  - hydra: settings
+  - observations: camels_531  # camels_531, camels_671
+  - tune: raytune
+
+name: ${model.nn.name}-${model.phy.name}
+
+
+## General -------------------------------#
+mode: train  # train, test, train_test, sim
+do_tune: False  # python -m dmg +tune=true
+
+multimodel_type: none  # none, nn_parallel, nn_sequential
+seed: 111111
+logging: tensorboard  # tensorboard, wandb, None
+cache_states: False
+device: cuda
+gpu_id: 0
+
+data_loader: HydroLoader
+data_sampler: HydroSampler
+trainer: Trainer
+
+model_dir: /gpfs/leoglonz/surrogates/dmg_sm/.dev/6-surrogate-offline-sc-mod/results/_9-tcn_dpl_rand_sc_5par/checkpoints/
+
+## Training ------------------------------#
+train:
+  start_time: 1999/10/01
+  end_time: 2008/09/30
+  target: [streamflow]
+  optimizer:
+    name: Adadelta
+  lr: 1.0
+  lr_scheduler:
+    name: none
+    step_size: 10
+    gamma: 0.5
+  loss_function:
+    name: RmseCombLoss  # RmseCombLoss, NseBatchLoss, KgeBatchLoss
+
+  batch_size: 100
+  epochs: 100
+  start_epoch: 0
+  save_epoch: 1
+
+
+## Evaluation -------------------------------#
+test:
+  # start_time: 1989/10/01
+  # end_time: 1999/09/30
+  start_time: 1999/10/01
+  end_time: 2008/09/30
+  batch_size: 531
+  test_epoch: 50
+
+
+## Inference -------------------------------#
+sim:
+  start_time: 1989/10/01
+  end_time: 1999/09/30
+  batch_size: 25
+
+
+## Differentiable Model -----------------------------#
+model:
+  rho: 365
+  warm_up: 365
+  use_log_norm: [prcp]
+
+  phy:
+    name: [Hbv]  # Hbv, Hbv_1_1p, Prms, SacsmaSnow
+    nmul: 1
+    warm_up_states: True  # If False, tracking gradient from spin-up.
+    dy_drop: 0.0
+    dynamic_params:
+      Hbv: []
+      # Hbv: [parBETA, parBETAET]  # parBETA, parK0, parUZL, parBETAET
+
+    routing: True
+    nearzero: 1e-5
+
+    forcings: [
+      prcp,
+      tmean,
+      pet,
+    ]
+    attributes: []
+
+  nn:
+    name: CudnnLstmModel # LstmModel
+    dropout: 0.5
+    hidden_size: 256
+
+    forcings: [
+      prcp,
+      tmean,
+      pet,
+    ]
+    attributes: [
+      p_mean,
+      pet_mean,
+      p_seasonality,
+      frac_snow,
+      aridity,
+      high_prec_freq,
+      high_prec_dur,
+      low_prec_freq,
+      low_prec_dur,
+      elev_mean,
+      slope_mean,
+      area_gages2,
+      frac_forest,
+      lai_max,
+      lai_diff,
+      gvf_max,
+      gvf_diff,
+      dom_land_cover_frac,
+      dom_land_cover,
+      root_depth_50,
+      soil_depth_pelletier,
+      soil_depth_statsgo,
+      soil_porosity,
+      soil_conductivity,
+      max_water_content,
+      sand_frac,
+      silt_frac,
+      clay_frac,
+      geol_1st_class,
+      glim_1st_class_frac,
+      geol_2nd_class,
+      glim_2nd_class_frac,
+      carbonate_rocks_frac,
+      geol_porosity,
+      geol_permeability,
+    ]

@@ -12,7 +12,11 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field
+from dmg.core.utils.pydantic_compat import (
+    universal_model_validator,
+    universal_field_validator,
+)
 
 log = logging.getLogger(__name__)
 
@@ -132,7 +136,7 @@ class TrainConfig(BaseModel):
     start_epoch: Optional[int] = 0
     save_epoch: Optional[int] = 1
 
-    @model_validator(mode='after')
+    @universal_model_validator
     def validate_training_times(self) -> 'TrainConfig':
         """Validates the training start and end times."""
         start_time = datetime.strptime(self.start_time, '%Y/%m/%d')
@@ -145,7 +149,7 @@ class TrainConfig(BaseModel):
                 self.lr_scheduler = None
         return self
 
-    @field_validator('target')
+    @universal_field_validator('target')
     @classmethod
     def validate_targets(cls, v: list[str]) -> list[str]:
         """Validates the training target."""
@@ -165,7 +169,7 @@ class TestConfig(BaseModel):
     batch_size: int
     test_epoch: int
 
-    @model_validator(mode='after')
+    @universal_model_validator
     def validate_testing_times(self) -> 'TestConfig':
         """Validates the testing start and end times."""
         start_time = datetime.strptime(self.start_time, '%Y/%m/%d')
@@ -184,7 +188,7 @@ class SimConfig(BaseModel):
     end_time: str
     batch_size: int
 
-    @model_validator(mode='after')
+    @universal_model_validator
     def validate_testing_times(self) -> 'SimConfig':
         """Validates the testing start and end times."""
         start_time = datetime.strptime(self.start_time, '%Y/%m/%d')
@@ -212,7 +216,7 @@ class PhyModelConfig(BaseModel):
     dy_drop: Optional[float] = None
     routing: Optional[bool] = None
 
-    @model_validator(mode='after')
+    @universal_model_validator
     def validate_dynamic_params(self) -> 'PhyModelConfig':
         """Validates that keys in dynamic_params are present in the model 'name' list."""
         dynamic_params = self.dynamic_params
@@ -276,7 +280,7 @@ class ObservationConfig(BaseModel):
     subset_path: Optional[str] = None
     area_name: Optional[str] = None
 
-    @model_validator(mode='after')
+    @universal_model_validator
     def validate_data_path(self) -> 'ObservationConfig':
         """Validates data paths exists."""
         check_path('observations.data_path', self.data_path)
@@ -286,7 +290,7 @@ class ObservationConfig(BaseModel):
             check_path('observations.subset_path', self.subset_path)
         return self
 
-    @model_validator(mode='after')
+    @universal_model_validator
     def validate_dataset_times(self):
         """Validates the dataset start and end times."""
         if self.start_time == 'not_defined' and self.end_time == 'not_defined':
@@ -340,13 +344,13 @@ class Config(BaseModel):
     observations: ObservationConfig
     tune: Optional[dict] = None
 
-    @model_validator(mode='after')
+    @universal_model_validator
     def check_paths(self) -> 'Config':
         """Validate paths in the configuration."""
         check_path('trained_model', self.trained_model)
         return self
 
-    @model_validator(mode='after')
+    @universal_model_validator
     def populate_fields(self) -> 'Config':
         """
         Validates device configuration and populates other config fields.
