@@ -25,13 +25,17 @@ def universal_model_validator(func):
 
     from functools import wraps
 
+    # We MUST use (cls, values) here to satisfy Pydantic v1's internal check
     @v1_root_validator(pre=False)
     @wraps(func)
     def wrapper(cls, values):
+        # Create the 'MockSelf' object so the user's logic can still use 'self'
         class MockSelf:
             def __init__(self, d):
                 self.__dict__.update(d)
 
+        # Call the user's function passing our fake self
+        # This allows 'def validate_dates(self):' to work
         func(MockSelf(values))
         return values
 
