@@ -6,8 +6,7 @@ import numpy as np
 import pandas as pd
 import torch
 from numpy.typing import NDArray
-from pydantic import BaseModel
-from dmg.core.utils.pydantic_compat import universal_model_validator
+from pydantic import BaseModel, root_validator
 
 log = logging.getLogger(__name__)
 
@@ -56,8 +55,8 @@ class Dates(BaseModel):
             rho=rho,
         )
 
-    @universal_model_validator
-    def validate_dates(self) -> Any:
+    @root_validator(pre=False)
+    def validate_dates(cls, values) -> Any:
         """Validate the dates configuration.
 
         Parameters
@@ -70,9 +69,9 @@ class Dates(BaseModel):
         Any
             The validated dates configuration
         """
-        rho = self.rho
+        rho = cls.rho
         if isinstance(rho, int):
-            if rho > len(self.daily_time_range):
+            if rho > len(cls.daily_time_range):
                 log.exception(
                     ValueError(
                         "Rho needs to be smaller than the routed period between start and end times",
@@ -81,7 +80,7 @@ class Dates(BaseModel):
                 raise ValueError(
                     "Rho needs to be smaller than the routed period between start and end times",
                 )
-        return self
+        return cls
 
     def model_post_init(self, __context: Any) -> None:
         """Initialize the Dates class.
