@@ -1,67 +1,23 @@
 """
-Hopefully temporary compatibility layer to enable Pydantic v1/v2 support.
+Hopefully temporary compatibility support for Pydantic v1/v2.
 Necessary for operational environs (NOAA DMOD, T-Route) still on Pydantic v1.
 """
 
-from pydantic import (
-    VERSION,
-    root_validator as v1_root_validator,
-    validator as v1_validator,
-)
-import functools
-
+from pydantic import VERSION
 
 PYDANTIC_V2 = VERSION.startswith("2.")
 
 
-# --- Validator Helpers ---
+def v1_mock_self(cls, values):
+    """Create a mock self object for Pydantic v1 validators."""
 
+    class Mock:
+        pass
 
-def universal_model_validator(func):
-    """Replacement for @model_validator(mode='after')."""
-    if PYDANTIC_V2:
-        from pydantic import model_validator
-
-        return model_validator(mode='after')(func)
-
-    # We use (cls, values) here to satisfy Pydantic v1's internal check
-    @v1_root_validator(pre=False)
-    @functools.wraps(func)
-    def wrapper(cls, values):
-        # Create object so the user's logic can still use 'self'
-        class MockSelf:
-            def __init__(self, d):
-                self.__dict__.update(d)
-                # Fallback: if a field is missing in values, check if it has a default on the class
-                for field_name, field_value in cls.__fields__.items():
-                    if field_name not in self.__dict__:
-                        self.__dict__[field_name] = field_value.default
-
-        # Execute the user's function (e.g., validate_dates)
-        # We pass MockSelf(values) as the 'self' argument
-        func(MockSelf(values))
-        return values
-
-    return wrapper
-
-
-def universal_field_validator(*fields):
-    """Replacement for @field_validator('field1', 'field2')."""
-    if PYDANTIC_V2:
-        from pydantic import field_validator
-
-        return field_validator(*fields)
-
-    # V1 @validator uses 'pre=False' by default which matches V2 default
-    return v1_validator(*fields)
-
-
-# --- Type Helpers ---
-
-if PYDANTIC_V2:
-    from pydantic import ConfigDict
-else:
-    # For v1, return empty dict because we use 'class Config' anyway.
-    def ConfigDict(**kwargs):
-        """Stand-in for Pydantic v2 ConfigDict to prevent NameErrors in v1."""
-        return kwargs
+    obj = Mock()
+    obj.__dict__.update(values)
+    # Add defaults for missing optional fields
+    for k, v in cls.__fields__.items():
+        if k not in values:
+            setattr(obj, k, v.default)
+    return obj

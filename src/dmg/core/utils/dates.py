@@ -6,9 +6,14 @@ import numpy as np
 import pandas as pd
 import torch
 from numpy.typing import NDArray
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel, ConfigDict
+from dmg.core.utils.pydantic_compat import PYDANTIC_V2, v1_mock_self
+import pydantic
 
 log = logging.getLogger(__name__)
+
+# NOTE: Pydantic v1 support will be dropped as soon as NOAA operational systems
+# migrate to Pydantic v2.
 
 
 class Dates(BaseModel):
@@ -17,18 +22,23 @@ class Dates(BaseModel):
     Adapted from Tadd Bindas.
     """
 
-    # NOTE: Use class Config for Pydantic v1/v2 compatibility.
-    class Config:
-        """Pydantic configuration."""
+    if PYDANTIC_V2:
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+    else:
 
-        arbitrary_types_allowed = True
+        class Config:
+            """Pydantic configuration."""
+
+            arbitrary_types_allowed = True
 
     daily_format: str = "%Y/%m/%d"
     hourly_format: str = "%Y/%m/%d %H:%M:%S"
     origin_start_date: str = "1980/01/01"
+
     start_time: str
     end_time: str
     rho: Optional[int] = None
+
     batch_daily_time_range: Optional[pd.DatetimeIndex] = pd.DatetimeIndex(
         [],
         dtype="datetime64[ns]",
@@ -48,39 +58,37 @@ class Dates(BaseModel):
     )
     numerical_time_range: Optional[NDArray[np.float32]] = np.empty(0)
 
+    if PYDANTIC_V2:
+
+        @pydantic.model_validator(mode="after")
+        def validate_dates(self):
+            """Pydantic v2 date validation."""
+            self._check_rho()
+            return self
+    else:
+
+        @pydantic.root_validator(pre=False)
+        @classmethod
+        def validate_dates(cls, values):
+            """Pydantic v1 date validation."""
+            # Simple container to use 'self.rho' instead of values['rho']
+            Dates._check_rho(v1_mock_self(cls, values))
+            return values
+
+    def _check_rho(self) -> None:
+        # This logic stays clean and only exists in ONE place
+        if isinstance(self.rho, int) and hasattr(self, 'daily_time_range'):
+            if self.rho > len(self.daily_time_range):
+                raise ValueError(
+                    "Rho must be smaller than the routed period between start and end times"
+                )
+
     def __init__(self, time_range, rho):
         super().__init__(
             start_time=time_range['start_time'],
             end_time=time_range['end_time'],
             rho=rho,
         )
-
-    @root_validator(pre=False)
-    def validate_dates(cls, values) -> Any:
-        """Validate the dates configuration.
-
-        Parameters
-        ----------
-        dates : Any
-            The dates configuration.
-
-        Returns
-        -------
-        Any
-            The validated dates configuration
-        """
-        rho = cls.rho
-        if isinstance(rho, int):
-            if rho > len(cls.daily_time_range):
-                log.exception(
-                    ValueError(
-                        "Rho needs to be smaller than the routed period between start and end times",
-                    ),
-                )
-                raise ValueError(
-                    "Rho needs to be smaller than the routed period between start and end times",
-                )
-        return cls
 
     def model_post_init(self, __context: Any) -> None:
         """Initialize the Dates class.
