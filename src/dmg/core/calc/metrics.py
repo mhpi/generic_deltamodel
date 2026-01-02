@@ -1,14 +1,16 @@
-import csv
 import json
 import logging
 import os
 from typing import Any, Optional
 
 import numpy as np
+import pydantic
 import scipy.stats as stats
 from numpy.typing import NDArray
 from pydantic import BaseModel
-from dmg.core.utils.pydantic_compat import universal_model_validator
+import csv
+
+from dmg.core.utils.pydantic_compat import PYDANTIC_V2, v1_mock_self
 
 log = logging.getLogger()
 
@@ -20,9 +22,11 @@ class Metrics(BaseModel):
     Metrics are calculated at each grid point and are listed below.
 
     Adapted from Tadd Bindas, Yalan Song, Farshid Rahmani.
+
+    NOTE: Pydantic v1 support will be dropped as soon as NOAA operational
+    systems migrate to Pydantic v2.
     """
 
-    # NOTE: Use class Config for Pydantic v1/v2 compatibility.
     class Config:
         """Pydantic configuration."""
 
@@ -62,6 +66,30 @@ class Metrics(BaseModel):
 
     d_max: NDArray[np.float32] = np.ndarray([])
     d_max_rel: NDArray[np.float32] = np.ndarray([])
+
+    if PYDANTIC_V2:
+
+        @pydantic.model_validator(mode="after")
+        def validate_pred(self):
+            """Pydantic v2."""
+            self._validate_pred()
+            return self
+    else:
+
+        @pydantic.root_validator(pre=False)
+        @classmethod
+        def validate_pred(cls, values):
+            """Pydantic v1."""
+            Metrics._validate_pred(v1_mock_self(cls, values))
+            return values
+
+    def _validate_pred(self) -> None:
+        """Checks that there are no NaN predictions."""
+        pred = self.pred
+        if np.isnan(pred).sum() > 0:
+            msg = "Pred contains NaN, check your gradient chain"
+            log.exception(msg)
+            raise ValueError(msg)
 
     def __init__(
         self,
@@ -195,16 +223,6 @@ class Metrics(BaseModel):
                     self.nse[i] = self.r2[i] = self._nse_r2(pred, target, _target_mean)
 
         return super().model_post_init(__context)
-
-    @universal_model_validator
-    def validate_pred(self):
-        """Checks that there are no NaN predictions."""
-        pred = self.pred
-        if np.isnan(pred).sum() > 0:
-            msg = "Pred contains NaN, check your gradient chain"
-            log.exception(msg)
-            raise ValueError(msg)
-        return self
 
     def calc_stats(self, *args, **kwargs) -> dict[str, dict[str, float]]:
         """Calculate aggregate statistics of metrics."""

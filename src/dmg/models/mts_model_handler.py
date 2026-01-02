@@ -7,13 +7,12 @@ import numpy as np
 import pandas as pd
 import torch
 import xarray as xr
+from hydrodl2.models.hbv.hbv_2_mts import Hbv_2_mts
 
 from dmg.core.calc import Metrics
 from dmg.core.utils import save_model
 from dmg.models.delta_models.mts_dpl_model import MtsDplModel as DplModel
 from dmg.models.neural_networks import LstmMlp2Model, LstmMlpModel, StackLstmMlpModel
-
-from hydrodl2.models.hbv.hbv_2_mts import Hbv_2_mts
 
 log = logging.getLogger(__name__)
 

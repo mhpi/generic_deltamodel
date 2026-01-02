@@ -4,32 +4,29 @@ from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
+import pydantic
 import torch
 from numpy.typing import NDArray
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
+
 from dmg.core.utils.pydantic_compat import PYDANTIC_V2, v1_mock_self
-import pydantic
 
 log = logging.getLogger(__name__)
-
-# NOTE: Pydantic v1 support will be dropped as soon as NOAA operational systems
-# migrate to Pydantic v2.
 
 
 class Dates(BaseModel):
     """Class to handle time-related operations and configurations.
 
     Adapted from Tadd Bindas.
+
+    NOTE: Pydantic v1 support will be dropped as soon as NOAA operational
+    systems migrate to Pydantic v2.
     """
 
-    if PYDANTIC_V2:
-        model_config = ConfigDict(arbitrary_types_allowed=True)
-    else:
+    class Config:
+        """Pydantic configuration."""
 
-        class Config:
-            """Pydantic configuration."""
-
-            arbitrary_types_allowed = True
+        arbitrary_types_allowed = True
 
     daily_format: str = "%Y/%m/%d"
     hourly_format: str = "%Y/%m/%d %H:%M:%S"
@@ -62,26 +59,26 @@ class Dates(BaseModel):
 
         @pydantic.model_validator(mode="after")
         def validate_dates(self):
-            """Pydantic v2 date validation."""
-            self._check_rho()
+            """Pydantic v2."""
+            self._validate_dates()
             return self
     else:
 
         @pydantic.root_validator(pre=False)
         @classmethod
         def validate_dates(cls, values):
-            """Pydantic v1 date validation."""
+            """Pydantic v1."""
             # Simple container to use 'self.rho' instead of values['rho']
-            Dates._check_rho(v1_mock_self(cls, values))
+            Dates._validate_dates(v1_mock_self(cls, values))
             return values
 
-    def _check_rho(self) -> None:
-        # This logic stays clean and only exists in ONE place
+    def _validate_dates(self) -> None:
+        """Check size of rho."""
         if isinstance(self.rho, int) and hasattr(self, 'daily_time_range'):
             if self.rho > len(self.daily_time_range):
-                raise ValueError(
-                    "Rho must be smaller than the routed period between start and end times"
-                )
+                msg = "Rho must be smaller than the routed period between start and end times"
+                log.exception(msg)
+                raise ValueError(msg)
 
     def __init__(self, time_range, rho):
         super().__init__(
