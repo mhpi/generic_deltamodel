@@ -156,10 +156,10 @@ class TrainConfig(BaseModel):
             return self
 
         @pydantic.field_validator('target')
-        def validate_targets(self):
+        @classmethod
+        def validate_targets(cls, v):
             """Pydantic v2."""
-            self._validate_targets()
-            return self
+            return cls._validate_targets_logic(v)
 
     else:
 
@@ -167,7 +167,6 @@ class TrainConfig(BaseModel):
         @classmethod
         def validate_training_times(cls, values):
             """Pydantic v1."""
-            # Simple container to use 'self.rho' instead of values['rho']
             TrainConfig._validate_training_times(v1_mock_self(cls, values))
             return values
 
@@ -175,9 +174,7 @@ class TrainConfig(BaseModel):
         @classmethod
         def validate_targets(cls, values):
             """Pydantic v1."""
-            # Simple container to use 'self.rho' instead of values['rho']
-            TrainConfig._validate_targets(v1_mock_self(cls, values))
-            return values
+            return cls._validate_targets_logic(values)
 
     def _validate_training_times(self) -> 'TrainConfig':
         """Validates the training start and end times."""

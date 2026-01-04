@@ -9,7 +9,7 @@ import torch
 from numpy.typing import NDArray
 from pydantic import BaseModel
 
-from dmg.core.utils.pydantic_compat import PYDANTIC_V2, v1_mock_self
+from dmg.core.utils.pydantic_compat import PYDANTIC_V2
 
 log = logging.getLogger(__name__)
 
@@ -63,20 +63,21 @@ class Dates(BaseModel):
             self._validate_dates()
             return self
     else:
-
-        @pydantic.root_validator(pre=False)
-        @classmethod
-        def validate_dates(cls, values):
-            """Pydantic v1."""
-            # Simple container to use 'self.rho' instead of values['rho']
-            Dates._validate_dates(v1_mock_self(cls, values))
-            return values
+        # Disable for now bc pydantic v1 will validate before __init__ and break code.
+        pass
+        # @pydantic.root_validator(pre=False)
+        # @classmethod
+        # def validate_dates(cls, values):
+        #     """Pydantic v1."""
+        #     # Simple container to use 'self.rho' instead of values['rho']
+        #     Dates._validate_dates(v1_mock_self(cls, values))
+        #     return values
 
     def _validate_dates(self) -> None:
         """Check size of rho."""
         if isinstance(self.rho, int) and hasattr(self, 'daily_time_range'):
             if self.rho > len(self.daily_time_range):
-                msg = "Rho must be smaller than the routed period between start and end times"
+                msg = f"Rho must be smaller than the routed period between start and end times: {self.rho} > {len(self.daily_time_range)}"
                 log.exception(msg)
                 raise ValueError(msg)
 
