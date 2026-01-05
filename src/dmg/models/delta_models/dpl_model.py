@@ -48,9 +48,7 @@ class DplModel(torch.nn.Module):
         super().__init__()
         self.name = 'Differentiable Parameter Learning Model'
         self.config = config
-        self.device = device or torch.device(
-            'cuda' if torch.cuda.is_available() else 'cpu'
-        )
+        self.device = torch.device(device)
 
         if nn_model and phy_model:
             self.phy_model = phy_model.to(self.device)
