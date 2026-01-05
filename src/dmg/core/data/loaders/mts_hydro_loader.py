@@ -10,10 +10,11 @@ import numpy as np
 import pandas as pd
 import torch
 import xarray as xr
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from dmg.core.data.loaders.base import BaseLoader
 from dmg.core.utils import PathWeightedAgg, reachability_matrix
+from dmg.core.utils.pydantic_compat import PYDANTIC_V2
 
 log = logging.getLogger(__name__)
 
@@ -181,11 +182,14 @@ class DistributedDataSchema(BaseModel):
     # scaled_static_input: Optional[TensorType["n_units", "s"]] = None
     # scaled_rout_static_input: Optional[TensorType["n_gages", "n_units", "rs"]] = None
 
-    # NOTE: Use class Config for Pydantic v1/v2 compatibility.
-    class Config:
-        """Pydantic configuration."""
+    if PYDANTIC_V2:
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+    else:
 
-        arbitrary_types_allowed = True
+        class Config:
+            """Pydantic configuration."""
+
+            arbitrary_types_allowed = True
 
 
 class DistributedDataReader:

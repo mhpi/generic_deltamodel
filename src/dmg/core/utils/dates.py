@@ -23,10 +23,14 @@ class Dates(BaseModel):
     systems migrate to Pydantic v2.
     """
 
-    class Config:
-        """Pydantic configuration."""
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+    else:
 
-        arbitrary_types_allowed = True
+        class Config:
+            """Pydantic configuration."""
+
+            arbitrary_types_allowed = True
 
     daily_format: str = "%Y/%m/%d"
     hourly_format: str = "%Y/%m/%d %H:%M:%S"

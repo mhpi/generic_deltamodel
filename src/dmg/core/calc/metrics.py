@@ -1,3 +1,4 @@
+import csv
 import json
 import logging
 import os
@@ -8,7 +9,6 @@ import pydantic
 import scipy.stats as stats
 from numpy.typing import NDArray
 from pydantic import BaseModel
-import csv
 
 from dmg.core.utils.pydantic_compat import PYDANTIC_V2, v1_mock_self
 
@@ -27,10 +27,14 @@ class Metrics(BaseModel):
     systems migrate to Pydantic v2.
     """
 
-    class Config:
-        """Pydantic configuration."""
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+    else:
 
-        arbitrary_types_allowed = True
+        class Config:
+            """Pydantic configuration."""
+
+            arbitrary_types_allowed = True
 
     pred: NDArray[np.float32]
     target: NDArray[np.float32]

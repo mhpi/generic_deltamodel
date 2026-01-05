@@ -91,10 +91,14 @@ class FlowRegimeEnum(str, Enum):
 class OptimizerConfig(BaseModel):
     """Configuration for optimizer."""
 
-    class Config:
-        """Pydantic configuration."""
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
 
-        extra = 'allow'
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     name: Optional[OptimizerNameEnum] = Field(default=OptimizerNameEnum.adadelta)
 
@@ -102,10 +106,14 @@ class OptimizerConfig(BaseModel):
 class LRSchedulerConfig(BaseModel):
     """Configuration for learning rate scheduler parameters."""
 
-    class Config:
-        """Pydantic configuration."""
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
 
-        extra = 'allow'
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     name: Optional[LRSchedulerNameEnum] = None
     step_size: Optional[int] = None
@@ -115,10 +123,14 @@ class LRSchedulerConfig(BaseModel):
 class LossFunctionConfig(BaseModel):
     """Configuration for the loss function used in training."""
 
-    class Config:
-        """Pydantic configuration."""
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
 
-        extra = 'allow'
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     name: str
 
@@ -127,10 +139,14 @@ class LossFunctionConfig(BaseModel):
 class TrainConfig(BaseModel):
     """Configuration for training."""
 
-    class Config:
-        """Pydantic configuration."""
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
 
-        extra = 'allow'
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     start_time: str
     end_time: str
@@ -198,10 +214,14 @@ class TrainConfig(BaseModel):
 class TestConfig(BaseModel):
     """Configuration for testing."""
 
-    class Config:
-        """Pydantic configuration."""
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
 
-        extra = 'allow'
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     name: Optional[TestNameEnum] = Field(default=TestNameEnum.temporal)
     start_time: str
@@ -236,10 +256,14 @@ class TestConfig(BaseModel):
 class SimConfig(BaseModel):
     """Configuration for simulation."""
 
-    class Config:
-        """Pydantic configuration."""
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
 
-        extra = 'allow'
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     start_time: str
     end_time: str
@@ -273,10 +297,14 @@ class SimConfig(BaseModel):
 class PhyModelConfig(BaseModel):
     """Configuration class for the physics-based model."""
 
-    class Config:
-        """Pydantic configuration."""
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
 
-        extra = 'allow'
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     name: list[str]
     dynamic_params: dict[str, list[str]]
@@ -318,10 +346,14 @@ class PhyModelConfig(BaseModel):
 class NeuralNetworkModelConfig(BaseModel):
     """Configuration for the neural network model."""
 
-    class Config:
-        """Pydantic configuration."""
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
 
-        extra = 'allow'
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     name: str
     forcings: list[str] = Field(default_factory=list)
@@ -335,10 +367,14 @@ class NeuralNetworkModelConfig(BaseModel):
 class ModelConfig(BaseModel):
     """Configuration for the differentiable model."""
 
-    class Config:
-        """Pydantic configuration."""
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
 
-        extra = 'allow'
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     rho: int
     nn: Optional[NeuralNetworkModelConfig] = Field(
@@ -356,10 +392,14 @@ class ModelConfig(BaseModel):
 class ObservationConfig(BaseModel):
     """Configuration for observations/datasets."""
 
-    class Config:
-        """Pydantic configuration."""
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
 
-        extra = 'allow'
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     name: str
     data_path: str
@@ -414,10 +454,14 @@ class ObservationConfig(BaseModel):
 class Config(BaseModel):
     """Root configuration model for the entire application."""
 
-    class Config:
-        """Pydantic configuration."""
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
 
-        extra = 'allow'
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     name: Optional[str] = None
     mode: Optional[ModeEnum] = Field(default=ModeEnum.train_test)
