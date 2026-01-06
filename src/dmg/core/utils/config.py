@@ -12,7 +12,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+import pydantic
+from pydantic import BaseModel, Field
+
+from dmg.core.utils.pydantic_compat import PYDANTIC_V2, v1_mock_self
 
 log = logging.getLogger(__name__)
 
@@ -88,7 +91,14 @@ class FlowRegimeEnum(str, Enum):
 class OptimizerConfig(BaseModel):
     """Configuration for optimizer."""
 
-    model_config = {'extra': 'allow'}
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
+
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     name: Optional[OptimizerNameEnum] = Field(default=OptimizerNameEnum.adadelta)
 
@@ -96,7 +106,14 @@ class OptimizerConfig(BaseModel):
 class LRSchedulerConfig(BaseModel):
     """Configuration for learning rate scheduler parameters."""
 
-    model_config = {'extra': 'allow'}
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
+
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     name: Optional[LRSchedulerNameEnum] = None
     step_size: Optional[int] = None
@@ -106,7 +123,14 @@ class LRSchedulerConfig(BaseModel):
 class LossFunctionConfig(BaseModel):
     """Configuration for the loss function used in training."""
 
-    model_config = {'extra': 'allow'}
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
+
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     name: str
 
@@ -115,7 +139,14 @@ class LossFunctionConfig(BaseModel):
 class TrainConfig(BaseModel):
     """Configuration for training."""
 
-    model_config = {'extra': 'allow'}
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
+
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     start_time: str
     end_time: str
@@ -132,8 +163,36 @@ class TrainConfig(BaseModel):
     start_epoch: Optional[int] = 0
     save_epoch: Optional[int] = 1
 
-    @model_validator(mode='after')
-    def validate_training_times(self) -> 'TrainConfig':
+    if PYDANTIC_V2:
+
+        @pydantic.model_validator(mode="after")
+        def validate_training_times(self):
+            """Pydantic v2."""
+            self._validate_training_times()
+            return self
+
+        @pydantic.field_validator('target')
+        @classmethod
+        def validate_targets(cls, v):
+            """Pydantic v2."""
+            return cls._validate_targets(cls, v)
+
+    else:
+
+        @pydantic.root_validator(pre=False)
+        @classmethod
+        def validate_training_times(cls, values):
+            """Pydantic v1."""
+            TrainConfig._validate_training_times(v1_mock_self(cls, values))
+            return values
+
+        @pydantic.validator('target')
+        @classmethod
+        def validate_targets(cls, values):
+            """Pydantic v1."""
+            return cls._validate_targets(cls, values)
+
+    def _validate_training_times(self) -> 'TrainConfig':
         """Validates the training start and end times."""
         start_time = datetime.strptime(self.start_time, '%Y/%m/%d')
         end_time = datetime.strptime(self.end_time, '%Y/%m/%d')
@@ -145,9 +204,7 @@ class TrainConfig(BaseModel):
                 self.lr_scheduler = None
         return self
 
-    @field_validator('target')
-    @classmethod
-    def validate_targets(cls, v: list[str]) -> list[str]:
+    def _validate_targets(cls, v: list[str]) -> list[str]:
         """Validates the training target."""
         if not v:
             raise ValueError("Training target list cannot be empty.")
@@ -157,7 +214,14 @@ class TrainConfig(BaseModel):
 class TestConfig(BaseModel):
     """Configuration for testing."""
 
-    model_config = {'extra': 'allow'}
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
+
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     name: Optional[TestNameEnum] = Field(default=TestNameEnum.temporal)
     start_time: str
@@ -165,40 +229,82 @@ class TestConfig(BaseModel):
     batch_size: int
     test_epoch: int
 
-    @model_validator(mode='after')
-    def validate_testing_times(self) -> 'TestConfig':
+    if PYDANTIC_V2:
+
+        @pydantic.model_validator(mode="after")
+        def validate_testing_times(self):
+            """Pydantic v2."""
+            self._validate_testing_times()
+            return self
+    else:
+
+        @pydantic.root_validator(pre=False)
+        @classmethod
+        def validate_testing_times(cls, values):
+            """Pydantic v1."""
+            TestConfig._validate_testing_times(v1_mock_self(cls, values))
+            return values
+
+    def _validate_testing_times(self):
         """Validates the testing start and end times."""
         start_time = datetime.strptime(self.start_time, '%Y/%m/%d')
         end_time = datetime.strptime(self.end_time, '%Y/%m/%d')
         if start_time >= end_time:
             raise ValueError("Testing `start_time` must be earlier than `end_time`.")
-        return self
 
 
 class SimConfig(BaseModel):
     """Configuration for simulation."""
 
-    model_config = {'extra': 'allow'}
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
+
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     start_time: str
     end_time: str
     batch_size: int
 
-    @model_validator(mode='after')
-    def validate_testing_times(self) -> 'SimConfig':
-        """Validates the testing start and end times."""
+    if PYDANTIC_V2:
+
+        @pydantic.model_validator(mode="after")
+        def validate_sim_times(self):
+            """Pydantic v2."""
+            self._validate_sim_times()
+            return self
+    else:
+
+        @pydantic.root_validator(pre=False)
+        @classmethod
+        def validate_sim_times(cls, values):
+            """Pydantic v1."""
+            SimConfig._validate_sim_times(v1_mock_self(cls, values))
+            return values
+
+    def _validate_sim_times(self):
+        """Validates the simulation start and end times."""
         start_time = datetime.strptime(self.start_time, '%Y/%m/%d')
         end_time = datetime.strptime(self.end_time, '%Y/%m/%d')
         if start_time >= end_time:
-            raise ValueError("Testing `start_time` must be earlier than `end_time`.")
-        return self
+            raise ValueError("Simulation `start_time` must be earlier than `end_time`.")
 
 
 ## ------ Model Configurations ------- ##
 class PhyModelConfig(BaseModel):
     """Configuration class for the physics-based model."""
 
-    model_config = {'extra': 'allow'}
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
+
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     name: list[str]
     dynamic_params: dict[str, list[str]]
@@ -212,25 +318,42 @@ class PhyModelConfig(BaseModel):
     dy_drop: Optional[float] = None
     routing: Optional[bool] = None
 
-    @model_validator(mode='after')
-    def validate_dynamic_params(self) -> 'PhyModelConfig':
-        """Validates that keys in dynamic_params are present in the model 'name' list."""
-        dynamic_params = self.dynamic_params
-        model_names = self.name
-        if not dynamic_params:
+    if PYDANTIC_V2:
+
+        @pydantic.model_validator(mode="after")
+        def validate_dynamic_params(self):
+            """Pydantic v2."""
+            self._validate_dyn()
             return self
-        for key in dynamic_params.keys():
-            if key not in model_names:
-                raise ValueError(
-                    f"Dynamic parameter key '{key}' is not a valid model name. Must be one of {model_names}."
-                )
-        return self
+    else:
+
+        @pydantic.root_validator(pre=False)
+        @classmethod
+        def validate_dynamic_params(cls, values):
+            """Pydantic v1."""
+            PhyModelConfig._validate_dyn(v1_mock_self(cls, values))
+            return values
+
+    def _validate_dyn(self):
+        """Validates that keys in dynamic_params are present in the model 'name' list."""
+        if not self.dynamic_params:
+            return
+        for key in self.dynamic_params.keys():
+            if key not in self.name:
+                raise ValueError(f"Dynamic parameter key '{key}' not in {self.name}.")
 
 
 class NeuralNetworkModelConfig(BaseModel):
     """Configuration for the neural network model."""
 
-    model_config = {'extra': 'allow'}
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
+
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     name: str
     forcings: list[str] = Field(default_factory=list)
@@ -244,7 +367,14 @@ class NeuralNetworkModelConfig(BaseModel):
 class ModelConfig(BaseModel):
     """Configuration for the differentiable model."""
 
-    model_config = {'extra': 'allow'}
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
+
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     rho: int
     nn: Optional[NeuralNetworkModelConfig] = Field(
@@ -262,7 +392,14 @@ class ModelConfig(BaseModel):
 class ObservationConfig(BaseModel):
     """Configuration for observations/datasets."""
 
-    model_config = {'extra': 'allow'}
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
+
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     name: str
     data_path: str
@@ -276,38 +413,55 @@ class ObservationConfig(BaseModel):
     subset_path: Optional[str] = None
     area_name: Optional[str] = None
 
-    @model_validator(mode='after')
-    def validate_data_path(self) -> 'ObservationConfig':
+    if PYDANTIC_V2:
+
+        @pydantic.model_validator(mode="after")
+        def validate_obs(self):
+            """Pydantic v2."""
+            self._validate_paths()
+            self._validate_times()
+            return self
+    else:
+
+        @pydantic.root_validator(pre=False)
+        @classmethod
+        def validate_obs(cls, values):
+            """Pydantic v1."""
+            mock = v1_mock_self(cls, values)
+            ObservationConfig._validate_paths(mock)
+            ObservationConfig._validate_times(mock)
+            return values
+
+    def _validate_paths(self) -> None:
         """Validates data paths exists."""
         check_path('observations.data_path', self.data_path)
         if self.gage_info:
             check_path('observations.gage_info', self.gage_info)
         if self.subset_path:
             check_path('observations.subset_path', self.subset_path)
-        return self
 
-    @model_validator(mode='after')
-    def validate_dataset_times(self):
-        """Validates the dataset start and end times."""
-        if self.start_time == 'not_defined' and self.end_time == 'not_defined':
-            return self
-        elif self.start_time == 'not_defined' or self.end_time == 'not_defined':
-            raise ValueError(
-                "Both train_path and test_path must be defined if either is specified."
-            )
-        else:
-            start_time = datetime.strptime(self.start_time, '%Y/%m/%d')
-            end_time = datetime.strptime(self.end_time, '%Y/%m/%d')
-            if start_time >= end_time:
-                raise ValueError("Dataset start time must be earlier than end time.")
-            return self
+    def _validate_times(self) -> None:
+        """Validates dataset start and end times."""
+        if self.start_time == 'not_defined' or self.end_time == 'not_defined':
+            return
+        start = datetime.strptime(self.start_time, '%Y/%m/%d')
+        end = datetime.strptime(self.end_time, '%Y/%m/%d')
+        if start >= end:
+            raise ValueError("Dataset start time must be earlier than end time.")
 
 
 ## ------ Root Configuration ------- ##
 class Config(BaseModel):
     """Root configuration model for the entire application."""
 
-    model_config = {'extra': 'allow'}
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(extra='allow')
+    else:
+
+        class Config:
+            """Pydantic configuration."""
+
+            extra = 'allow'
 
     name: Optional[str] = None
     mode: Optional[ModeEnum] = Field(default=ModeEnum.train_test)
@@ -340,14 +494,33 @@ class Config(BaseModel):
     observations: ObservationConfig
     tune: Optional[dict] = None
 
-    @model_validator(mode='after')
-    def check_paths(self) -> 'Config':
-        """Validate paths in the configuration."""
-        check_path('trained_model', self.trained_model)
-        return self
+    if PYDANTIC_V2:
 
-    @model_validator(mode='after')
-    def populate_fields(self) -> 'Config':
+        @pydantic.model_validator(mode="after")
+        def validate_root(self):
+            """Pydantic v2."""
+            self._check_paths()
+            self._populate_fields()
+            return self
+    else:
+
+        @pydantic.root_validator(pre=False)
+        @classmethod
+        def validate_root(cls, values):
+            """Pydantic v1."""
+            mock = v1_mock_self(cls, values)
+            Config._check_paths(mock)
+            # Note: Populating fields in V1 root_validator requires updating 'values' dict
+            Config._populate_fields(mock)
+            values.update(mock.__dict__)
+            return values
+
+    def _check_paths(self):
+        """Validate paths in the configuration."""
+        if self.trained_model:
+            check_path('trained_model', self.trained_model)
+
+    def _populate_fields(self):
         """
         Validates device configuration and populates other config fields.
         that are not explicitly provided (reduce config clutter for redundant

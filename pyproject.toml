@@ -6,7 +6,7 @@ requires = ["hatchling", "hatch-vcs"]
 
 [project]
 name = "dmg"
-description = "Generic Differentiable Modeling Framework on PyTorch"
+description = "PyTorch Differentiable Modeling Framework"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
@@ -29,13 +29,14 @@ dependencies = [
     "numpy",
     "omegaconf",
     "pandas",
-    "pydantic>=2.0.0",
-    "ray[tune]",
+    "pydantic",
+    "pykan",
     "scikit-learn",
     "scipy",
     "torch",
     "tqdm",
     "uv",
+    "xarray",
     "zarr",
 ]
 classifiers = [
@@ -57,6 +58,10 @@ hydrodl2 = [
 logging = [
     "tensorboard",
     "wandb",
+]
+tune = [
+    "optuna",
+    "ray[tune]",
 ]
 
 [project.urls]

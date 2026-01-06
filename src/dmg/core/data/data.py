@@ -354,7 +354,7 @@ def timestep_resample(
         raise ValueError(f"Data type not supported: {type(data)}")
 
     data.set_index('time', inplace=True)
-    data_resample = data.resample(resolution).agg(method)
+    data_resample = data.resample(resolution.lower()).agg(method)
 
     data_resample['time'] = data_resample.index
 

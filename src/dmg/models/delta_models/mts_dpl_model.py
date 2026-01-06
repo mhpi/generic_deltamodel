@@ -1,12 +1,12 @@
 from typing import Any, Optional
 
-import torch.nn
+import torch
 
 from dmg.core.utils.factory import import_phy_model, load_nn_model
 
 
-class DplModel(torch.nn.Module):
-    """Differentiable parameter learning (dPL) model.
+class MtsDplModel(torch.nn.Module):
+    """Differentiable parameter learning (dPL) model for MTS.
 
     Learn parameters for a physics model using a neural network (NN).
 
@@ -38,7 +38,6 @@ class DplModel(torch.nn.Module):
 
     def __init__(
         self,
-        *,
         phy_model_name: Optional[str] = None,
         phy_model: Optional[torch.nn.Module] = None,
         nn_model: Optional[torch.nn.Module] = None,
@@ -46,7 +45,7 @@ class DplModel(torch.nn.Module):
         device: Optional[torch.device] = 'cpu',
     ) -> None:
         super().__init__()
-        self.name = 'Differentiable Parameter Learning Model'
+        self.name = 'dPL Model'
         self.config = config
         self.device = torch.device(device)
 
@@ -59,13 +58,18 @@ class DplModel(torch.nn.Module):
             self.nn_model = self._init_nn_model()
         else:
             raise ValueError(
-                "A (1) initialized neural network and physics model or (2)"
+                "A (1) neural network and physics model or (2)"
                 / " configuration dictionary is required."
             )
 
         self.initialized = True
 
+        # # Compile models
+        # self.nn_model = torch.compile(self.nn_model, mode="reduce-overhead", fullgraph=False)
+        # self.phy_model = torch.compile(self.phy_model, mode="reduce-overhead", fullgraph=False)
+
     def _init_phy_model(self, phy_model_name) -> torch.nn.Module:
+        # TODO: add Hbv_2h and Hbv_2_mts to hydrodl2, add Hbv_2_mts support to import_phy_model and load_component
         """Initialize a physics model.
 
         Parameters
@@ -92,6 +96,7 @@ class DplModel(torch.nn.Module):
         return model(self.config['phy'], device=self.device)
 
     def _init_nn_model(self) -> torch.nn.Module:
+        # TODO: add LstmMlp2Model and StackLstmMlpModel to load_nn_model
         """Initialize a neural network model.
 
         Returns
@@ -100,26 +105,47 @@ class DplModel(torch.nn.Module):
             The neural network.
         """
         return load_nn_model(
-            self.config,
             self.phy_model,
+            self.config,
             device=self.device,
         )
 
-    def forward(self, data_dict: dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(
+        self, data_dict: dict[str, torch.Tensor], batched: bool = False
+    ) -> torch.Tensor:
         """Forward pass.
 
         Parameters
         ----------
         data_dict
-            The input data dictionary.
-
-        Returns
-        -------
-        torch.Tensor
-            The output predictions.
+            Input tensors (xc_nn_norm_low_freq, etc.)
+        batch
+            If True, use sequential forward pass (for stepwise prediction).
+            If False, use batched forward pass (for warmup).
         """
         # Neural network
-        if type(self.nn_model).__name__ == 'LstmMlpModel':
+        ##################### New: Multi-timescale #################
+        if type(self.nn_model).__name__ == 'StackLstmMlpModel' or (
+            hasattr(self.nn_model, '_orig_mod')
+            and type(self.nn_model._orig_mod).__name__ == 'StackLstmMlpModel'
+        ):
+            hif_input = (
+                data_dict['xc_nn_norm_high_freq'],
+                data_dict['c_nn_norm'],
+                data_dict['rc_nn_norm'],
+            )
+            if batched:
+                # Call full forward (updates caches)
+                lof_input = (data_dict['xc_nn_norm_low_freq'], data_dict['c_nn_norm'])
+                params_lf, params_hf = self.nn_model(lof_input, hif_input, batch=True)
+
+            else:
+                # Call step forward (uses caches)
+                params_lf, params_hf = self.nn_model(None, hif_input, batch=False)
+            parameters = (params_lf, params_hf)
+
+        ############################################################
+        elif type(self.nn_model).__name__ == 'LstmMlpModel':
             parameters = self.nn_model(data_dict['xc_nn_norm'], data_dict['c_nn_norm'])
         else:
             parameters = self.nn_model(data_dict['xc_nn_norm'])

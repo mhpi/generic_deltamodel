@@ -5,5 +5,5 @@ from .trainer import Trainer
 __all__ = [
     'BaseTrainer',
     'Trainer',
-    'MSTrainer',
+    'MsTrainer',
 ]

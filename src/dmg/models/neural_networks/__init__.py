@@ -1,8 +1,10 @@
 from .ann import AnnCloseModel, AnnModel
 from .cudnn_lstm import CudnnLstmModel
 from .lstm import LstmModel
-from .lstm_mlp import LstmMlpModel
+
+# from .lstm_mlp import LstmMlpModel
 from .mlp import MlpModel
+from .stack_lstm_mlp import LstmMlp2Model, LstmMlpModel, StackLstmMlpModel
 
 __all__ = [
     'CudnnLstmModel',
@@ -11,4 +13,6 @@ __all__ = [
     'AnnCloseModel',
     'MlpModel',
     'LstmMlpModel',
+    'LstmMlp2Model',
+    'StackLstmMlpModel',
 ]

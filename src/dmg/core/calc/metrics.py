@@ -5,9 +5,12 @@ import os
 from typing import Any, Optional
 
 import numpy as np
+import pydantic
 import scipy.stats as stats
 from numpy.typing import NDArray
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel
+
+from dmg.core.utils.pydantic_compat import PYDANTIC_V2, v1_mock_self
 
 log = logging.getLogger()
 
@@ -19,9 +22,20 @@ class Metrics(BaseModel):
     Metrics are calculated at each grid point and are listed below.
 
     Adapted from Tadd Bindas, Yalan Song, Farshid Rahmani.
+
+    NOTE: Pydantic v1 support will be dropped as soon as NOAA operational
+    systems migrate to Pydantic v2.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    if PYDANTIC_V2:
+        model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+    else:
+
+        class Config:
+            """Pydantic configuration."""
+
+            arbitrary_types_allowed = True
+
     pred: NDArray[np.float32]
     target: NDArray[np.float32]
     bias: NDArray[np.float32] = np.ndarray([])
@@ -56,6 +70,30 @@ class Metrics(BaseModel):
 
     d_max: NDArray[np.float32] = np.ndarray([])
     d_max_rel: NDArray[np.float32] = np.ndarray([])
+
+    if PYDANTIC_V2:
+
+        @pydantic.model_validator(mode="after")
+        def validate_pred(self):
+            """Pydantic v2."""
+            self._validate_pred()
+            return self
+    else:
+
+        @pydantic.root_validator(pre=False)
+        @classmethod
+        def validate_pred(cls, values):
+            """Pydantic v1."""
+            Metrics._validate_pred(v1_mock_self(cls, values))
+            return values
+
+    def _validate_pred(self) -> None:
+        """Checks that there are no NaN predictions."""
+        pred = self.pred
+        if np.isnan(pred).sum() > 0:
+            msg = "Pred contains NaN, check your gradient chain"
+            log.exception(msg)
+            raise ValueError(msg)
 
     def __init__(
         self,
@@ -189,32 +227,6 @@ class Metrics(BaseModel):
                     self.nse[i] = self.r2[i] = self._nse_r2(pred, target, _target_mean)
 
         return super().model_post_init(__context)
-
-    @model_validator(mode='after')
-    def validate_pred(self):
-        """Checks that there are no NaN predictions.
-
-        Parameters
-        ----------
-        metrics : Any
-            Metrics object.
-
-        Raises
-        ------
-        ValueError
-            If there are NaN predictions.
-
-        Returns
-        -------
-        Any
-            Metrics object.
-        """
-        pred = self.pred
-        if np.isnan(pred).sum() > 0:
-            msg = "Pred contains NaN, check your gradient chain"
-            log.exception(msg)
-            raise ValueError(msg)
-        return self
 
     def calc_stats(self, *args, **kwargs) -> dict[str, dict[str, float]]:
         """Calculate aggregate statistics of metrics."""

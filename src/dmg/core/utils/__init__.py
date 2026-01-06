@@ -7,6 +7,7 @@ from .factory import (
     load_criterion,
     load_nn_model,
 )
+from .topo_operator import PathWeightedAgg, reachability_matrix
 from .utils import (
     format_resample_interval,
     initialize_config,
@@ -28,4 +29,6 @@ __all__ = [
     'save_model',
     'set_randomseed',
     'format_resample_interval',
+    'reachability_matrix',
+    'PathWeightedAgg',
 ]

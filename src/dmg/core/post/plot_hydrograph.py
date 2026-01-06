@@ -5,10 +5,10 @@ import numpy as np
 import pandas as pd
 import torch
 from numpy.typing import NDArray
+from sklearn.metrics import r2_score
 
 from dmg.core.data.data import timestep_resample
 from dmg.core.utils.utils import format_resample_interval
-from sklearn.metrics import r2_score
 
 
 def plot_hydrograph(
