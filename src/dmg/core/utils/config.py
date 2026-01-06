@@ -175,7 +175,7 @@ class TrainConfig(BaseModel):
         @classmethod
         def validate_targets(cls, v):
             """Pydantic v2."""
-            return cls._validate_targets_logic(v)
+            return cls._validate_targets(cls, v)
 
     else:
 
@@ -190,7 +190,7 @@ class TrainConfig(BaseModel):
         @classmethod
         def validate_targets(cls, values):
             """Pydantic v1."""
-            return cls._validate_targets_logic(values)
+            return cls._validate_targets(cls, values)
 
     def _validate_training_times(self) -> 'TrainConfig':
         """Validates the training start and end times."""

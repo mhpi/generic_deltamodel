@@ -1,7 +1,7 @@
 from . import calc, data, post, tune, utils
+from .data.data import timestep_resample
 from .utils.dates import Dates
 from .utils.utils import format_resample_interval
-from .data.data import timestep_resample
 
 __all__ = [
     'calc',
