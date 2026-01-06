@@ -36,6 +36,7 @@ dependencies = [
     "torch",
     "tqdm",
     "uv",
+    "xarray",
     "zarr",
 ]
 classifiers = [
