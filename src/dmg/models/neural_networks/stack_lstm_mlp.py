@@ -127,7 +127,8 @@ class LstmMlpModel(torch.nn.Module):
         self.name = 'LstmMlpModel'
 
         self.lstm_inv = torch.nn.LSTM(
-            input_size=nx1, hidden_size=hiddeninv1, dropout=dr1
+            input_size=nx1,
+            hidden_size=hiddeninv1,  # , dropout=dr1
         )
         self.linear_out = torch.nn.Linear(hiddeninv1, ny1)
 
@@ -145,7 +146,7 @@ class LstmMlpModel(torch.nn.Module):
             torch.nn.Sigmoid(),
         )
 
-        # chunk prediction for distributed modeling
+        # Chunk prediction for distributed modeling
         self.sub_batch_size = sub_batch_size
         self.sub_batch_mode = False
 
@@ -170,20 +171,28 @@ class LstmMlpModel(torch.nn.Module):
         """
         if self.sub_batch_mode:  # output cpu tensor to save gpu memory
             device = next(self.parameters()).device
+
             total_size = z2.size(0)
+
             lstm_out_list = []
             ann_out_list = []
+
             for start in range(0, total_size, self.sub_batch_size):
                 end = min(start + self.sub_batch_size, total_size)
+
                 batch_z1 = z1[:, start:end, :].to(device)
                 batch_z2 = z2[start:end, :].to(device)
+
                 lstm_out_sub, (_, _) = self.lstm_inv(batch_z1)
                 lstm_out_sub = torch.sigmoid(self.linear_out(lstm_out_sub))
                 lstm_out_list.append(lstm_out_sub.detach().cpu())
+
                 ann_out_sub = self.ann(batch_z2)
                 ann_out_list.append(ann_out_sub.detach().cpu())
+
             lstm_out = torch.cat(lstm_out_list, dim=1)
             ann_out = torch.cat(ann_out_list, dim=0)
+
         else:
             lstm_out, (_, _) = self.lstm_inv(z1)  # dim: timesteps, units, params
             lstm_out = torch.sigmoid(self.linear_out(lstm_out))
@@ -253,7 +262,8 @@ class LstmMlp2Model(torch.nn.Module):
         self.hn, self.cn = None, None
 
         self.lstm_inv = torch.nn.LSTM(
-            input_size=nx1, hidden_size=hiddeninv1, dropout=dr1
+            input_size=nx1,
+            hidden_size=hiddeninv1,  # , dropout=dr1
         )
         self.linear_out = torch.nn.Linear(hiddeninv1, ny1)
 
@@ -288,6 +298,11 @@ class LstmMlp2Model(torch.nn.Module):
         self.sub_batch_size = sub_batch_size
         self.sub_batch_mode = False
 
+    def reset_states(self):
+        """Clear internal LSTM states."""
+        self.hn = None
+        self.cn = None
+
     def forward(
         self,
         z1: torch.Tensor,
@@ -295,6 +310,7 @@ class LstmMlp2Model(torch.nn.Module):
         z3: torch.Tensor,
         h0: Optional[torch.Tensor] = None,
         c0: Optional[torch.Tensor] = None,
+        reset_state: bool = True,
     ) -> list[torch.Tensor]:
         """Forward pass.
 
@@ -313,49 +329,74 @@ class LstmMlp2Model(torch.nn.Module):
             The LSTM and MLP output tensors.
             [lstm_out, ann_out1, ann_out2]
         """
+        # --- State Handling ---
+        if h0 is not None and c0 is not None:
+            # Use provided initial states
+            hx_global = (h0, c0)
+        elif (self.cache_states) and (self.hn is not None) and (not reset_state):
+            # Use internal cache if no explicit state provided
+            hx_global = (self.hn, self.cn)
+        else:
+            # Reinitialize states
+            hx_global = None
+
         if self.sub_batch_mode:  # output cpu tensor to save gpu memory
             device = next(self.parameters()).device
+
             total_size_static_1 = z2.size(0)
             total_size_static_2 = z3.size(0)
+
             lstm_out_list = []
             ann_out1_list = []
             ann_out2_list = []
+
+            # Lists to collect the new states from each chunk
+            hn_list = []
+            cn_list = []
+
             for start in range(0, total_size_static_1, self.sub_batch_size):
                 end = min(start + self.sub_batch_size, total_size_static_1)
+
                 batch_z1 = z1[:, start:end, :].to(device)
-                batch_h0 = h0[:, start:end, :].to(device) if h0 is not None else None
-                batch_c0 = c0[:, start:end, :].to(device) if c0 is not None else None
                 batch_z2 = z2[start:end, :].to(device)
 
+                batch_hx = None
+                if hx_global is not None:
+                    h_sub = hx_global[0][:, start:end, :].to(device)
+                    c_sub = hx_global[1][:, start:end, :].to(device)
+                    batch_hx = (h_sub, c_sub)
+
                 # Note: Sub-batch logic for state is tricky, assuming stateless or provided h0
-                hx = (batch_h0, batch_c0) if (batch_h0 is not None) else None
-                lstm_out_sub, (_, _) = self.lstm_inv(batch_z1, hx)
+                lstm_out_sub, (hn_sub, cn_sub) = self.lstm_inv(batch_z1, batch_hx)
+
+                # Collect new states
+                hn_list.append(hn_sub.detach().cpu())
+                cn_list.append(cn_sub.detach().cpu())
 
                 lstm_out_sub = torch.sigmoid(self.linear_out(lstm_out_sub))
                 lstm_out_list.append(lstm_out_sub.detach().cpu())
+
                 ann_out1_sub = self.ann1(batch_z2)
                 ann_out1_list.append(ann_out1_sub.detach().cpu())
+
             for start in range(0, total_size_static_2, self.sub_batch_size):
                 end = min(start + self.sub_batch_size, total_size_static_2)
                 batch_z3 = z3[start:end, :].to(device)
                 ann_out2_sub = self.ann2(batch_z3)
                 ann_out2_list.append(ann_out2_sub.detach().cpu())
+
             lstm_out = torch.cat(lstm_out_list, dim=1)
             ann_out1 = torch.cat(ann_out1_list, dim=0)
             ann_out2 = torch.cat(ann_out2_list, dim=0)
+
+            if self.cache_states:
+                self.hn = torch.cat(hn_list, dim=1)
+                self.cn = torch.cat(cn_list, dim=1)
+
         else:
-            # --- State Handling ---
-            hx = None
-            if h0 is not None and c0 is not None:
-                hx = (h0, c0)
-            elif self.cache_states and self.hn is not None:
-                # Use internal cache if no explicit state provided
-                hx = (self.hn, self.cn)
+            lstm_out, (hn_new, cn_new) = self.lstm_inv(z1, hx_global)
 
-            # Run LSTM
-            lstm_out, (hn_new, cn_new) = self.lstm_inv(z1, hx)
-
-            # Update Cache
+            # Update cache
             if self.cache_states:
                 self.hn = hn_new.detach()
                 self.cn = cn_new.detach()
@@ -391,37 +432,30 @@ class StackLstmMlpModel(torch.nn.Module):
         self,
         input1: tuple[torch.Tensor, torch.Tensor],
         input2: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+        batch: bool = True,
     ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
-        """Forward pass (batched).
-        Runs LF Model -> Caches LF Params -> Runs HF Model.
+        """Forward pass (batched/sequential).
+
+        Run LF Model -> Cache LF Params -> Run HF Model.
+
+        Batched: Run models with fresh states on batch of data
+        Sequential: Run models with cached states step by step.
         """
         # 1. low frequency
-        if input1[0] is not None:
+        if batch and (input1 is not None):
             out1 = self.lstm_mlp(*input1)  # [lstm_out, ann_out]
 
             # Cache low frequency parameters for future steps
             self.lof_params_cache = [p[-1:].detach() for p in out1]
+            reset_states = True
         else:
-            out1 = None
-            self.lof_params_cache = None
+            # Pull from cache
+            out1 = self.lof_params_cache
+            reset_states = False
 
         # 2. high frequency
-        out2 = self.lstm_mlp2(*input2)  # [lstm_out, ann_out1, ann_out2]
-
-        return out1, out2
-
-    def forward_sequential(
-        self,
-        input2: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
-    ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
-        """Sequential forward pass.
-        Only runs high-freq model using cached state. Reuses cached low-freq
-        model params.
-        """
-        # low frequency
-        out1 = self.lof_params_cache
-
-        # high frequency (using internal cache)
-        out2 = self.lstm_mlp2(*input2)
+        out2 = self.lstm_mlp2(
+            *input2, reset_state=reset_states
+        )  # [lstm_out, ann_out1, ann_out2]
 
         return out1, out2

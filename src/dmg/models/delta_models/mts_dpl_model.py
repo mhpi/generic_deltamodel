@@ -137,11 +137,11 @@ class MtsDplModel(torch.nn.Module):
             if batched:
                 # Call full forward (updates caches)
                 lof_input = (data_dict['xc_nn_norm_low_freq'], data_dict['c_nn_norm'])
-                params_lf, params_hf = self.nn_model(lof_input, hif_input)
+                params_lf, params_hf = self.nn_model(lof_input, hif_input, batch=True)
 
             else:
                 # Call step forward (uses caches)
-                params_lf, params_hf = self.nn_model.forward_sequential(hif_input)
+                params_lf, params_hf = self.nn_model(None, hif_input, batch=False)
             parameters = (params_lf, params_hf)
 
         ############################################################
