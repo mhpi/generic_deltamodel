@@ -3,6 +3,7 @@ import matplotlib.cm as cm
 import numpy as np
 import pandas as pd
 
+
 def plot_ensemble_forecast(
     gage_id,
     start_date,
@@ -13,16 +14,11 @@ def plot_ensemble_forecast(
     save_path=None,
 ):
     """
-    Plot 2 months history + 15-day forecast:
+    Plot 2 months history + 15-day forecast.
       - Observed (black)
       - Simulation (red) for history
-      - 5 ensembles in distinct colors for forecast
+      - 5 ensembles in distinct colors for forecast.
     """
-    print("history_len:", history_len)
-    print("forecast_len:", forecast_len)
-    print("dates len:", len(dates))
-    print("obs len:", len(obs))
-
     forecast_len = ens_preds.shape[1]
     start_date = pd.to_datetime(start_date)
     dates = pd.date_range(
@@ -59,12 +55,16 @@ def plot_ensemble_forecast(
             padded_ensembles[i],
             lw=1.5,
             color=colors[i % len(colors)],
-            label=f"Ensemble {i+1}",
+            label=f"Ensemble {i + 1}",
         )
 
     # Shading for history vs forecast
-    plt.axvspan(dates[0], dates[history_len - 1], color="gray", alpha=0.1, label="History")
-    plt.axvspan(dates[history_len], dates[-1], color="orange", alpha=0.1, label="Forecast")
+    plt.axvspan(
+        dates[0], dates[history_len - 1], color="gray", alpha=0.1, label="History"
+    )
+    plt.axvspan(
+        dates[history_len], dates[-1], color="orange", alpha=0.1, label="Forecast"
+    )
 
     plt.title(f"GEFS Forecast — Gage {gage_id}")
     plt.xlabel("Date")
