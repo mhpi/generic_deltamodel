@@ -131,8 +131,8 @@ lint.ignore = [
     "D205",
     # First line of docstring should be in imperative mood
     "D401",
-    # Import block is un-sorted or un-formatted; Conflicts with isort
-    "I001",
+    # # Import block is un-sorted or un-formatted; Conflicts with isort
+    # "I001",
     # Blank line contains whitespace
     "W293",
     # Disable checks on | operator notation in type hints
@@ -153,3 +153,7 @@ convention = "numpy"
 [tool.ruff.format]
 quote-style = "preserve"
 docstring-code-format = true
+
+[tool.ruff.lint.isort]
+known-first-party = ["dmg"]
+combine-as-imports = true
