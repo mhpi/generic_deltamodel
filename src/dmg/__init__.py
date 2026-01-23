@@ -1,3 +1,4 @@
+# src/dmg/__init__.py
 from dmg._version import __version__
 from dmg.core import calc, data, post, utils
 from dmg.core.data import loaders, samplers

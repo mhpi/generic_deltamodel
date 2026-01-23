@@ -1,3 +1,4 @@
+# dmg/tests/__init__.py
 import importlib
 import pkgutil
 from pathlib import Path
