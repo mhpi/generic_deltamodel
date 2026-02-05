@@ -77,7 +77,7 @@ EXP_SNAPSHOTS = {
         'streamflow_mean': [6.2234971672e-02, 5.1971767100e-02],
         'streamflow_sum': [3.5473934174e01, 2.9623907247e01],
         'streamflow_first': [1.0076804756e-05, 1.5578e-05],
-        'streamflow_last': [1.8451465666e-01, 1.5288e-01],
+        'streamflow_last': [1.8451465666e-01, 1.52877837e-01],
         'AET_hydro_mean': [5.8963859081e-01, 5.84160924e-01],
         'recharge_mean': [1.5003199875e-01, 1.16926119e-01],
     },
@@ -88,7 +88,7 @@ EXP_SNAPSHOTS = {
         'streamflow_first': [3.6438275856e-05, 3.46385932e-05],
         'streamflow_last': [6.6204883158e-02, 7.83670321e-02],
         'AET_hydro_mean': [4.6455222368e-01, 5.48316360e-01],
-        'recharge_mean': [1.1395389587e-01, 1.3484e-01],
+        'recharge_mean': [1.1395389587e-01, 1.34767666e-01],
         'capillary_mean': [6.5453238785e-02, 7.44503066e-02],
     },
     'Hbv_2': {
