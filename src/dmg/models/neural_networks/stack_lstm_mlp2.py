@@ -129,7 +129,9 @@ class LstmMlpModel(torch.nn.Module):
         self.name = 'LstmMlpModel'
 
         self.lstm_inv = torch.nn.LSTM(
-            input_size=nx1, hidden_size=hiddeninv1, dropout=dr1
+            input_size=nx1,
+            hidden_size=hiddeninv1,
+            dropout=dr1,
         )
         self.linear_out = torch.nn.Linear(hiddeninv1, ny1)
         self.hiddeninv1 = hiddeninv1
@@ -196,7 +198,7 @@ class LstmMlpModel(torch.nn.Module):
             ann_out = torch.cat(ann_out_list, dim=0)
         else:
             lstm_out, (h_out, c_out) = self.lstm_inv(
-                z1
+                z1,
             )  # dim: timesteps, units, params
             lstm_out = torch.sigmoid(self.linear_out(lstm_out))
             ann_out = self.ann(z2)
@@ -265,7 +267,9 @@ class LstmMlp2Model(torch.nn.Module):
         self.cn, self._cn_cache = None, None  # cell state
 
         self.lstm_inv = torch.nn.LSTM(
-            input_size=nx1, hidden_size=hiddeninv1, dropout=dr1
+            input_size=nx1,
+            hidden_size=hiddeninv1,
+            dropout=dr1,
         )
         self.linear_out = torch.nn.Linear(hiddeninv1, ny1)
         self.hiddeninv1 = hiddeninv1
@@ -434,7 +438,7 @@ class StackLstmMlpModel(torch.nn.Module):
         """
         if self.lof_params_cache is None:
             raise RuntimeError(
-                "Must run full `forward` (warmup) before `forward_step`."
+                "Must run full `forward` (warmup) before `forward_step`.",
             )
 
         # No h0/c0 provided -> model uses its internal self.hn/cn

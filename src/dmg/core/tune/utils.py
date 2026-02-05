@@ -19,7 +19,7 @@ def run_tuning(config: dict[str, Any]):
     """
     if not HAS_RAY:
         raise ImportError(
-            "Ray Tune is required for tuning. To install: `uv pip install dmg[tune]`"
+            "Ray Tune is required for tuning. To install: `uv pip install dmg[tune]`",
         )
 
     search_space = {

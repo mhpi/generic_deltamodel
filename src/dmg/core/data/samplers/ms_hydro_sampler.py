@@ -46,7 +46,7 @@ class MsHydroSampler(BaseSampler):
         """Select a subset of input tensor."""
         if self.config['mode'] == 'train':
             raise NotImplementedError(
-                "Method not implemented. Multiscale training with sampler will be enabled at a later date."
+                "Method not implemented. Multiscale training with sampler will be enabled at a later date.",
             )
 
     def get_training_sample(
@@ -57,7 +57,7 @@ class MsHydroSampler(BaseSampler):
     ) -> dict[str, torch.Tensor]:
         """Generate a training batch."""
         raise NotImplementedError(
-            "Method not implemented. Multiscale training with sampler will be enabled at a later date."
+            "Method not implemented. Multiscale training with sampler will be enabled at a later date.",
         )
 
     def get_validation_sample(
@@ -93,6 +93,6 @@ class MsHydroSampler(BaseSampler):
                 )
             else:
                 raise ValueError(
-                    f"Incorrect input dimensions. {key} array must have 1, 2 or 3 dimensions."
+                    f"Incorrect input dimensions. {key} array must have 1, 2 or 3 dimensions.",
                 )
         return dataset_sample

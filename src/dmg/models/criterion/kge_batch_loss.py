@@ -79,7 +79,7 @@ class KgeBatchLoss(BaseCriterion):
         # Compute correlation coefficient (r)
         numerator = torch.sum((p_sub - mean_p) * (t_sub - mean_t))
         denominator = torch.sqrt(
-            torch.sum((p_sub - mean_p) ** 2) * torch.sum((t_sub - mean_t) ** 2)
+            torch.sum((p_sub - mean_p) ** 2) * torch.sum((t_sub - mean_t) ** 2),
         )
         r = numerator / (denominator + self.eps)
 

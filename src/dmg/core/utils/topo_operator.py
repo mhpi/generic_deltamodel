@@ -61,7 +61,7 @@ class PathWeightedAgg:
         # Structure checks
         if any(G.out_degree(n) > 1 for n in G.nodes()):
             raise ValueError(
-                "Graph must have out-degree ≤ 1 per node (unique downstream)."
+                "Graph must have out-degree ≤ 1 per node (unique downstream).",
             )
         if not nx.is_directed_acyclic_graph(G):
             raise ValueError("Graph must be a DAG (no cycles).")
@@ -260,7 +260,7 @@ def outlet_accum_attribute(
         if isinstance(x, np.ndarray):
             if x.shape[0] != N:
                 raise ValueError(
-                    "If array, it must be length N and already in topo order."
+                    "If array, it must be length N and already in topo order.",
                 )
             return x.astype(float).copy()
         # dict-like
@@ -292,7 +292,9 @@ def outlet_accum_attribute(
     # 5) R_out = (I - D)^{-1} E  (N x No)  -> reachability columns
     try:
         R_out = spsolve_triangular(
-            I_minus_D, E, lower=False
+            I_minus_D,
+            E,
+            lower=False,
         )  # fast when triangular solver available
     except RuntimeError:
         lu = splu(I_minus_D.tocsc())

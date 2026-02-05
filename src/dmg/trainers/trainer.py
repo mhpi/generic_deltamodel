@@ -142,7 +142,7 @@ class Trainer(BaseTrainer):
         if cls is None:
             raise ValueError(
                 f"Optimizer '{name}' not recognized. "
-                f"Available options are: {list(optimizer_dict.keys())}"
+                f"Available options are: {list(optimizer_dict.keys())}",
             )
 
         # Initialize
@@ -175,7 +175,7 @@ class Trainer(BaseTrainer):
         if cls is None:
             raise ValueError(
                 f"Scheduler '{name}' not recognized. "
-                f"Available options are: {list(scheduler_dict.keys())}"
+                f"Available options are: {list(scheduler_dict.keys())}",
             )
 
         # Initialize
@@ -199,7 +199,7 @@ class Trainer(BaseTrainer):
             if ('train_state' in file) and (str(self.start_epoch - 1) in file):
                 log.info(
                     "Loading trainer states --> Resuming Training from"
-                    / f" epoch {self.start_epoch}"
+                    / f" epoch {self.start_epoch}",
                 )
 
                 checkpoint = torch.load(os.path.join(path, file))
@@ -217,7 +217,7 @@ class Trainer(BaseTrainer):
             elif 'train_state' in file:
                 raise FileNotFoundError(
                     f"Available checkpoint file {file} does"
-                    / f" not match start epoch {self.start_epoch - 1}."
+                    / f" not match start epoch {self.start_epoch - 1}.",
                 )
 
         # If no checkpoint file is found for named epoch...
@@ -234,7 +234,7 @@ class Trainer(BaseTrainer):
         )
 
         log.info(
-            f"Training model: Beginning {self.start_epoch} of {self.epochs} epochs"
+            f"Training model: Beginning {self.start_epoch} of {self.epochs} epochs",
         )
 
         # Training loop
@@ -349,7 +349,9 @@ class Trainer(BaseTrainer):
         # Model forward
         log.info(f"Validating Model: Forwarding {len(batch_start)} batches")
         batch_predictions = self._forward_loop(
-            self.eval_dataset, batch_start, batch_end
+            self.eval_dataset,
+            batch_start,
+            batch_end,
         )
 
         # Save predictions and calculate metrics
@@ -522,7 +524,7 @@ class Trainer(BaseTrainer):
 
         if self.config['device'] != 'cpu':
             mem_aloc = int(
-                torch.cuda.memory_reserved(device=self.config['device']) * 0.000001
+                torch.cuda.memory_reserved(device=self.config['device']) * 0.000001,
             )
 
         log.info(
@@ -532,10 +534,11 @@ class Trainer(BaseTrainer):
 
         if self.write_out:
             with open(
-                os.path.join(self.config['output_dir'], 'train_log.txt'), 'a'
+                os.path.join(self.config['output_dir'], 'train_log.txt'),
+                'a',
             ) as f:
                 f.write(
-                    f"Epoch {epoch}: {loss_str}, Time: {elapsed:.2f} s, {mem_aloc} Mb reserved vram\n"
+                    f"Epoch {epoch}: {loss_str}, Time: {elapsed:.2f} s, {mem_aloc} Mb reserved vram\n",
                 )
 
         # For experiment loggers: create a single dictionary of metrics to log

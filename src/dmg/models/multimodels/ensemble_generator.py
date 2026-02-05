@@ -38,7 +38,7 @@ class EnsembleGenerator(torch.nn.Module):
         self.config = config
         self.model_list = model_list
         self.device = device or torch.device(
-            'cuda' if torch.cuda.is_available() else 'cpu'
+            'cuda' if torch.cuda.is_available() else 'cpu',
         )
 
         if nn_model:
@@ -47,7 +47,7 @@ class EnsembleGenerator(torch.nn.Module):
             self.nn_model = self._init_nn_model()
         else:
             raise ValueError(
-                "A (1) neural network or (2) configuration dictionary is required."
+                "A (1) neural network or (2) configuration dictionary is required.",
             )
 
         self.weights = {}
@@ -132,19 +132,22 @@ class EnsembleGenerator(torch.nn.Module):
 
             # Convert weights to a tensor for easier manipulation
             weights_tensor = torch.stack(
-                list(self.weights.values()), dim=0
+                list(self.weights.values()),
+                dim=0,
             )  # Shape: [num_models, num_timesteps, num_basins]
 
             # Step 1: Find the index of the model with the highest weight
             best_model_idx = weights_tensor.argmax(
-                dim=0
+                dim=0,
             )  # Shape: [num_timesteps, num_basins]
 
             # Step 2: Create a mask to select the model with the highest weight
             # Create a one-hot mask
             mask = torch.zeros_like(weights_tensor, dtype=torch.bool)
             mask.scatter_(
-                0, best_model_idx.unsqueeze(0), True
+                0,
+                best_model_idx.unsqueeze(0),
+                True,
             )  # Shape: [num_models, num_timesteps, num_basins]
 
             # Step 3: Use the mask to select predictions
@@ -168,7 +171,9 @@ class EnsembleGenerator(torch.nn.Module):
                     continue
 
                 final_predictions = torch.gather(
-                    predictions_tensor, 0, best_model_idx.unsqueeze(0)
+                    predictions_tensor,
+                    0,
+                    best_model_idx.unsqueeze(0),
                 ).squeeze(0)
 
                 self.ensemble_predictions[key] = final_predictions

@@ -183,7 +183,7 @@ class ModelHandler(torch.nn.Module):
                             path,
                             weights_only=False,
                             map_location=self.device,
-                        )
+                        ),
                     )
                     self.ensemble_generator.to(self.device)
                 else:
@@ -328,7 +328,7 @@ class ModelHandler(torch.nn.Module):
         for name, output in self.output_dict.items():
             if self.target_names[0] not in output.keys():
                 raise ValueError(
-                    f"Target variable '{self.target_names[0]}' not in model outputs."
+                    f"Target variable '{self.target_names[0]}' not in model outputs.",
                 )
             output = output[self.target_names[0]]
 
@@ -405,7 +405,7 @@ class ModelHandler(torch.nn.Module):
             if self.config['multimodel']['use_rb_loss']:
                 tqdm.tqdm.write(
                     f"Ensemble loss: {ensemble_loss.item()}, "
-                    f"Range bound loss: {rb_loss.item()}"
+                    f"Range bound loss: {rb_loss.item()}",
                 )
             else:
                 tqdm.tqdm.write(f"-- Ensemble loss: {ensemble_loss.item()}")
@@ -464,7 +464,7 @@ class ModelHandler(torch.nn.Module):
         if path:
             if path and nn_states and phy_states:
                 raise ValueError(
-                    "Provide either `path` or `nn_states` and `phy_states`, not both."
+                    "Provide either `path` or `nn_states` and `phy_states`, not both.",
                 )
             if not os.path.exists(path):
                 raise FileNotFoundError(f"State path {path} not found.")
@@ -476,7 +476,7 @@ class ModelHandler(torch.nn.Module):
                 log.info(
                     f"Loaded states from file | "
                     f"epoch: {state_dict.get('epoch', 'N/A')} | "
-                    f"Resume from timestep: {state_dict.get('last_timestep', 'N/A')}"
+                    f"Resume from timestep: {state_dict.get('last_timestep', 'N/A')}",
                 )
         elif nn_states:
             if not isinstance(nn_states, tuple):
@@ -486,7 +486,7 @@ class ModelHandler(torch.nn.Module):
                 raise ValueError("`phy_states` must be a tuple of tensors.")
         else:
             raise ValueError(
-                "Either `path` or `nn_states` and `phy_states` must be provided."
+                "Either `path` or `nn_states` and `phy_states` must be provided.",
             )
 
         if len(self.model_dict) == 1:

@@ -80,7 +80,7 @@ def plot_cdf(
                 )
             else:
                 print(
-                    f"Warning: Metric '{metric_name}' not found or invalid in model {i + 1}."
+                    f"Warning: Metric '{metric_name}' not found or invalid in model {i + 1}.",
                 )
 
     # Add labels, legend, and grid

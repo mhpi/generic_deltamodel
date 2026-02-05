@@ -42,7 +42,7 @@ def geoplot_single_metric(
 
     if metric_name not in gdf.columns:
         raise ValueError(
-            f"The GeoDataFrame does not contain the column '{metric_name}'."
+            f"The GeoDataFrame does not contain the column '{metric_name}'.",
         )
 
     # Extract latitude and longitude bounds for the map
@@ -51,7 +51,9 @@ def geoplot_single_metric(
 
     # Create the figure with Cartopy
     fig, ax = plt.subplots(
-        figsize=(12, 8), dpi=dpi, subplot_kw={'projection': ccrs.Mercator()}
+        figsize=(12, 8),
+        dpi=dpi,
+        subplot_kw={'projection': ccrs.Mercator()},
     )
     ax.set_extent([min_lon, max_lon, min_lat, max_lat], crs=ccrs.PlateCarree())
 
@@ -71,7 +73,9 @@ def geoplot_single_metric(
 
     if draw_rivers:
         ax.add_feature(
-            cfeature.RIVERS.with_scale('50m'), linewidth=0.3, edgecolor='blue'
+            cfeature.RIVERS.with_scale('50m'),
+            linewidth=0.3,
+            edgecolor='blue',
         )
 
     # Plot the metric data

@@ -215,7 +215,9 @@ def select_subset(
         x_tensor = torch.zeros([rho + warm_up, batch_size, nx], requires_grad=has_grad)
         for k in range(batch_size):
             temp = x[
-                np.arange(i_t[k] - warm_up, i_t[k] + rho), i_grid[k] : i_grid[k] + 1, :
+                np.arange(i_t[k] - warm_up, i_t[k] + rho),
+                i_grid[k] : i_grid[k] + 1,
+                :,
             ]
             x_tensor[:, k : k + 1, :] = torch.from_numpy(temp)
     else:
@@ -230,7 +232,9 @@ def select_subset(
     if c is not None:
         nc = c.shape[-1]
         temp = np.repeat(
-            np.reshape(c[i_grid, :], [batch_size, 1, nc]), rho + warm_up, axis=1
+            np.reshape(c[i_grid, :], [batch_size, 1, nc]),
+            rho + warm_up,
+            axis=1,
         )
         c_tensor = torch.from_numpy(temp).float()
 
@@ -296,7 +300,7 @@ def load_json(file_path: str) -> dict:
         raise FileNotFoundError(f"Error: File '{file_path}' not found.") from e
     except json.JSONDecodeError as e:
         raise json.JSONDecodeError(
-            f"Error: Failed to decode JSON from file '{file_path}'."
+            f"Error: Failed to decode JSON from file '{file_path}'.",
         ) from e
 
 
@@ -403,7 +407,7 @@ def split_dataset_by_basin(
             huc_regions = test_config.get('huc_regions', [])
             if holdout_index >= len(huc_regions):
                 raise ValueError(
-                    f"Invalid holdout index {holdout_index} for {len(huc_regions)} HUC regions"
+                    f"Invalid holdout index {holdout_index} for {len(huc_regions)} HUC regions",
                 )
 
             holdout_hucs = huc_regions[holdout_index]
@@ -420,7 +424,7 @@ def split_dataset_by_basin(
             pub_ids = test_config.get('PUB_ids', [])
             if holdout_index >= len(pub_ids):
                 raise ValueError(
-                    f"Invalid holdout index {holdout_index} for {len(pub_ids)} PUB IDs"
+                    f"Invalid holdout index {holdout_index} for {len(pub_ids)} PUB IDs",
                 )
 
             holdout_pub = pub_ids[holdout_index]
@@ -469,7 +473,7 @@ def split_dataset_by_basin(
             raise ValueError("No training basins found for current holdout!")
 
         log.info(
-            f"Spatial split: {len(train_indices)} training basins, {len(test_indices)} test basins"
+            f"Spatial split: {len(train_indices)} training basins, {len(test_indices)} test basins",
         )
 
         # Perform the actual dataset splitting

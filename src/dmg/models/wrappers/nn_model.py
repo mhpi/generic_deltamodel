@@ -35,7 +35,7 @@ class NnModel(torch.nn.Module):
         self.target_names = target_names
         self.config = config
         self.device = device or torch.device(
-            'cuda' if torch.cuda.is_available() else 'cpu'
+            'cuda' if torch.cuda.is_available() else 'cpu',
         )
 
         if model:
@@ -45,13 +45,13 @@ class NnModel(torch.nn.Module):
         else:
             raise ValueError(
                 "A (1) initialized neural network or (2)"
-                / " configuration dictionary is required."
+                / " configuration dictionary is required.",
             )
 
         if len(self.target_names) != config['nn']['out_size']:
             raise ValueError(
                 f"Number of target names ({len(self.target_names)}) does not"
-                f" match model output size ({config['nn']['out_size']})."
+                f" match model output size ({config['nn']['out_size']}).",
             )
 
         self.initialized = True

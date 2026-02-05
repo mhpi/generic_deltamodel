@@ -24,22 +24,22 @@ def print_dataset_info(dataset):
     print("-" * 60)
     # Rows
     print(
-        f"{'x_phy':<15}{str(tuple(dataset['x_phy'].size())):<20} # [time, basin, forcing_features]"
+        f"{'x_phy':<15}{str(tuple(dataset['x_phy'].size())):<20} # [time, basin, forcing_features]",
     )
     print(
-        f"{'c_phy':<15}{str(tuple(dataset['c_phy'].size())):<20} # [basin, attr_features] (no physical attributes here)"
+        f"{'c_phy':<15}{str(tuple(dataset['c_phy'].size())):<20} # [basin, attr_features] (no physical attributes here)",
     )
     print(
-        f"{'x_nn':<15}{str(tuple(dataset['x_nn'].size())):<20} # [time, basin, nn_forcing_features]"
+        f"{'x_nn':<15}{str(tuple(dataset['x_nn'].size())):<20} # [time, basin, nn_forcing_features]",
     )
     print(
-        f"{'c_nn':<15}{str(tuple(dataset['c_nn'].size())):<20} # [basin, nn_attr_features]"
+        f"{'c_nn':<15}{str(tuple(dataset['c_nn'].size())):<20} # [basin, nn_attr_features]",
     )
     print(
-        f"{'xc_nn_norm':<15}{str(tuple(dataset['xc_nn_norm'].size())):<20} # [time, basin, combined_features]"
+        f"{'xc_nn_norm':<15}{str(tuple(dataset['xc_nn_norm'].size())):<20} # [time, basin, combined_features]",
     )
     print(
-        f"{'target':<15}{str(tuple(dataset['target'].size())):<20} # [time, basin, 1] observed streamflow"
+        f"{'target':<15}{str(tuple(dataset['target'].size())):<20} # [time, basin, 1] observed streamflow",
     )
     print("\nSample of target tensor (first 5 timesteps, first basin):")
     print(f"{dataset['target'][:5, 0, 0]}")
@@ -68,7 +68,7 @@ def get_parameters_from_model(dpl_model, data, n_par, mu, device="cpu"):
             rts = out[-1, :, n_par * mu : n_par * mu + 2].to(device)
         else:
             raise RuntimeError(
-                f"Unexpected feature size {F}, expected {n_par}, {n_par * mu}, or {n_par * mu + 2}"
+                f"Unexpected feature size {F}, expected {n_par}, {n_par * mu}, or {n_par * mu + 2}",
             )
 
         # sanity check
@@ -91,7 +91,14 @@ def obtain_gage_name(GAGE_NAME_PATH, gage_id):
 
 
 def plot_ensemble_hydrograph(
-    gage_path, gage_id, start_date, obs, sim, ens_preds, history_len, save_path=None
+    gage_path,
+    gage_id,
+    start_date,
+    obs,
+    sim,
+    ens_preds,
+    history_len,
+    save_path=None,
 ):
     """Plot ensemble hydrograph with observations and simulation.
 
@@ -174,11 +181,15 @@ def safe_minmax(tensor):
     if tensor.numel() == 0:
         return np.nan, np.nan
     safe_min = torch.where(
-        torch.isnan(tensor), torch.tensor(float("inf"), device=tensor.device), tensor
+        torch.isnan(tensor),
+        torch.tensor(float("inf"), device=tensor.device),
+        tensor,
     )
     min_val = float(torch.min(safe_min))
     safe_max = torch.where(
-        torch.isnan(tensor), torch.tensor(float("-inf"), device=tensor.device), tensor
+        torch.isnan(tensor),
+        torch.tensor(float("-inf"), device=tensor.device),
+        tensor,
     )
     max_val = float(torch.max(safe_max))
     return min_val, max_val
@@ -218,7 +229,8 @@ def selectbasins(rand, seed, basin_pool, n_basins, basin: int = 2046000):
 def startid_endid(start_date, forecast, config):
     """Get start and end indices for simulation based on start_date."""
     timesteps = Dates(
-        config["simulation"], config["delta_model"]["rho"]
+        config["simulation"],
+        config["delta_model"]["rho"],
     ).batch_daily_time_range  # 730
     sidx = np.where(timesteps == start_date)[0][0]  # 715
     eidx = sidx + forecast  # 730

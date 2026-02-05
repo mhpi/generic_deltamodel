@@ -44,7 +44,7 @@ def set_system_spec(config: dict) -> tuple[str, str]:
             torch.cuda.set_device(device)
         else:
             raise ValueError(
-                f"Selected CUDA device {config['gpu_id']} is not available."
+                f"Selected CUDA device {config['gpu_id']} is not available.",
             )
     else:
         raise ValueError(f"Invalid device: {config['device']}")
@@ -101,7 +101,8 @@ def initialize_config(
     if type(config) is DictConfig:
         try:
             config = OmegaConf.to_container(
-                config, resolve=True
+                config,
+                resolve=True,
             )  # Remove for dot-access configs.
             config = Config(**config).model_dump(mode='json')
         except ValidationError as e:
@@ -119,7 +120,7 @@ def initialize_config(
             log.critical(
                 f"❌ Configuration validation failed with {len(e.errors())} "
                 f"error(s):\n{error_message}\n Check configuration file and "
-                f"try again.\n"
+                f"try again.\n",
             )
 
             sys.exit(1)  # Exit cleanly
@@ -154,7 +155,8 @@ def initialize_config(
     # Create output directories and add path to config.
     if make_dirs:
         os.makedirs(
-            os.path.dirname(config['model_dir']), exist_ok=True
+            os.path.dirname(config['model_dir']),
+            exist_ok=True,
         )  # NOTE: necessary for ngen
         os.makedirs(config['plot_dir'], exist_ok=True)
         os.makedirs(config['sim_dir'], exist_ok=True)
@@ -314,7 +316,9 @@ def save_outputs(config, predictions, y_obs=None) -> None:
 
 
 def save_run_summary(
-    config: DictConfig, run_dir: str, filename: str = "run_summary.txt"
+    config: DictConfig,
+    run_dir: str,
+    filename: str = "run_summary.txt",
 ):
     """
     Save a concise summary of critical configuration info to a text file.
@@ -344,7 +348,7 @@ def save_run_summary(
     # Training
     summary_lines.append("=== Training ===")
     summary_lines.append(
-        f"Train period  : {config['train']['start_time']} → {config['train']['end_time']}"
+        f"Train period  : {config['train']['start_time']} → {config['train']['end_time']}",
     )
     summary_lines.append(f"Epochs        : {config['train']['epochs']}")
     summary_lines.append(f"Batch size    : {config['train']['batch_size']}")
@@ -357,7 +361,7 @@ def save_run_summary(
     # Evaluation
     summary_lines.append("=== Evaluation ===")
     summary_lines.append(
-        f"Test period   : {config['test']['start_time']} → {config['test']['end_time']}"
+        f"Test period   : {config['test']['start_time']} → {config['test']['end_time']}",
     )
     summary_lines.append(f"Batch size    : {config['test']['batch_size']}")
     summary_lines.append(f"Test epoch    : {config['test']['test_epoch']}")
@@ -367,19 +371,19 @@ def save_run_summary(
     summary_lines.append("=== Model ===")
     summary_lines.append(f"NN model      : {config['model']['nn']['name']}")
     summary_lines.append(
-        f"Hidden size   : {config['model'].get('nn', {}).get('hidden_size', '')}"
+        f"Hidden size   : {config['model'].get('nn', {}).get('hidden_size', '')}",
     )
     summary_lines.append(
-        f"Dropout       : {config['model'].get('nn', {}).get('dropout', '')}"
+        f"Dropout       : {config['model'].get('nn', {}).get('dropout', '')}",
     )
     summary_lines.append("")
 
     if config['model']['phy']:
         summary_lines.append(
-            f"Phy model     : {config['model'].get('phy', {}).get('name', '')}"
+            f"Phy model     : {config['model'].get('phy', {}).get('name', '')}",
         )
         summary_lines.append(
-            f"Dynamic params: {config['model'].get('phy', {}).get('dynamic_params', '')}"
+            f"Dynamic params: {config['model'].get('phy', {}).get('dynamic_params', '')}",
         )
         summary_lines.append("")
 
@@ -389,7 +393,7 @@ def save_run_summary(
         summary_lines.append(f"Type          : {config['multimodel_type']}")
         summary_lines.append(f"Model         : {config['multimodel']['model']}")
         summary_lines.append(
-            f"Scaling fn    : {config['multimodel']['scaling_function']}"
+            f"Scaling fn    : {config['multimodel']['scaling_function']}",
         )
         summary_lines.append(f"Loss function : {config['multimodel']['loss_function']}")
         summary_lines.append("")
@@ -452,7 +456,7 @@ def print_config(config: dict[str, Any]) -> None:
         for i, mod in enumerate(config['model']['phy']['name']):
             print(f"  {f'Model {i + 1}:':<20}{mod:<20}")
             print(
-                f"  {'Dynamic Params: ':<20}{str(config['model']['phy']['dynamic_params'][mod]):<20}"
+                f"  {'Dynamic Params: ':<20}{str(config['model']['phy']['dynamic_params'][mod]):<20}",
             )
 
     print()
@@ -461,49 +465,49 @@ def print_config(config: dict[str, Any]) -> None:
     print(f"  {'Data Source:':<20}{config['observations']['name']:<20}")
     if 'train' in config['mode']:
         print(
-            f"  {'Train Range :':<20}{config['train']['start_time']:<20}{config['train']['end_time']:<20}"
+            f"  {'Train Range :':<20}{config['train']['start_time']:<20}{config['train']['end_time']:<20}",
         )
     if 'test' in config['mode']:
         print(
-            f"  {'Test Range :':<20}{config['test']['start_time']:<20}{config['test']['end_time']:<20}"
+            f"  {'Test Range :':<20}{config['test']['start_time']:<20}{config['test']['end_time']:<20}",
         )
     if 'simulation' in config['mode']:
         print(
-            f"  {'Simulation Range :':<20}{config['sim']['start_time']:<20}{config['sim']['end_time']:<20}"
+            f"  {'Simulation Range :':<20}{config['sim']['start_time']:<20}{config['sim']['end_time']:<20}",
         )
     if config['train']['start_epoch'] > 0 and 'train' in config['mode']:
         print(
-            f"  {'Resume training from epoch:':<20}{config['train']['start_epoch']:<20}"
+            f"  {'Resume training from epoch:':<20}{config['train']['start_epoch']:<20}",
         )
     print()
 
     print("\033[1m" + "Experiment Parameters" + "\033[0m")
     print(
-        f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}"
+        f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}",
     )
 
     print(
-        f"  {'Start Epoch:':<20}{config['train']['start_epoch']:<20}{'Save Epoch:':<20}{config['train']['save_epoch']:<20}"
+        f"  {'Start Epoch:':<20}{config['train']['start_epoch']:<20}{'Save Epoch:':<20}{config['train']['save_epoch']:<20}",
     )
     print(f"  {'Loss Fn:':<20}{config['train']['loss_function']['name']:<20}")
     print(
-        f"  {'Optimizer:':<20}{config['train']['optimizer']['name']:<20}{'LR Scheduler:':<20}{config['train'].get('lr_scheduler') or 'None':<20}"
+        f"  {'Optimizer:':<20}{config['train']['optimizer']['name']:<20}{'LR Scheduler:':<20}{config['train'].get('lr_scheduler') or 'None':<20}",
     )
     print()
 
     if config['multimodel_type'] is not None:
         print("\033[1m" + "Multimodel Parameters" + "\033[0m")
         print(
-            f"  {'Mosaic:':<20}{config['multimodel']['mosaic']:<20}{'Dropout:':<20}{config['multimodel']['dropout']:<20}"
+            f"  {'Mosaic:':<20}{config['multimodel']['mosaic']:<20}{'Dropout:':<20}{config['multimodel']['dropout']:<20}",
         )
         print(
-            f"  {'Learning Rate:':<20}{config['multimodel']['learning_rate']:<20}{'Hidden Size:':<20}{config['multimodel']['hidden_size']:<20}"
+            f"  {'Learning Rate:':<20}{config['multimodel']['learning_rate']:<20}{'Hidden Size:':<20}{config['multimodel']['hidden_size']:<20}",
         )
         print(
-            f"  {'Scaling Fn:':<20}{config['multimodel']['scaling_function']:<20}{'Loss Fn:':<20}{config['multimodel']['loss_function']:<20}"
+            f"  {'Scaling Fn:':<20}{config['multimodel']['scaling_function']:<20}{'Loss Fn:':<20}{config['multimodel']['loss_function']:<20}",
         )
         print(
-            f"  {'Range-bound Loss:':<20}{config['multimodel']['use_rb_loss']:<20}{'Loss Factor:':<20}{config['multimodel']['loss_factor']:<20}"
+            f"  {'Range-bound Loss:':<20}{config['multimodel']['use_rb_loss']:<20}{'Loss Factor:':<20}{config['multimodel']['loss_factor']:<20}",
         )
         print()
 

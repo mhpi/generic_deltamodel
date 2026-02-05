@@ -89,7 +89,10 @@ class HydroSampler(BaseSampler):
         """Generate a training batch."""
         batch_size = self.config['train']['batch_size']
         i_sample, i_t = random_index(
-            ngrid_train, nt, (batch_size, self.rho), warm_up=self.warm_up
+            ngrid_train,
+            nt,
+            (batch_size, self.rho),
+            warm_up=self.warm_up,
         )
 
         return {
@@ -97,7 +100,10 @@ class HydroSampler(BaseSampler):
             'c_phy': dataset['c_phy'][i_sample],
             'c_nn': dataset['c_nn'][i_sample],
             'xc_nn_norm': self.select_subset(
-                dataset['xc_nn_norm'], i_sample, i_t, has_grad=False
+                dataset['xc_nn_norm'],
+                i_sample,
+                i_t,
+                has_grad=False,
             ),
             'target': self.select_subset(dataset['target'], i_sample, i_t),
             'batch_sample': i_sample,
@@ -112,7 +118,8 @@ class HydroSampler(BaseSampler):
         """Generate batch for model forwarding only."""
         return {
             key: (value[:, i_s:i_e, :] if value.ndim == 3 else value[i_s:i_e, :]).to(
-                dtype=torch.float32, device=self.device
+                dtype=torch.float32,
+                device=self.device,
             )
             for key, value in dataset.items()
         }

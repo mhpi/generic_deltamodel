@@ -223,7 +223,7 @@ class HydroLoader(BaseLoader):
                 time = self.config['all_time']
             else:
                 raise ValueError(
-                    "Scope must be 'train', 'test', 'simulation', or 'all'."
+                    "Scope must be 'train', 'test', 'simulation', or 'all'.",
                 )
         except KeyError as e:
             raise ValueError(f"Key {e} for data path not in dataset config.") from e
@@ -332,7 +332,8 @@ class HydroLoader(BaseLoader):
                 basin_area = c_nn[:, self.nn_attributes.index(area_name)]
 
                 area = np.expand_dims(basin_area, axis=0).repeat(
-                    target_temp.shape[0], 0
+                    target_temp.shape[0],
+                    0,
                 )
 
                 if to_norm:
@@ -521,7 +522,7 @@ class HydroLoader(BaseLoader):
         except KeyError:
             log.warning(
                 "No 'area_name' in observation config. Basin"
-                "area norm will not be applied."
+                "area norm will not be applied.",
             )
             basin_area = None
         return basin_area
@@ -602,7 +603,7 @@ class HydroLoader(BaseLoader):
                 # Guard against negatives
                 if np.any(data[..., k] < 0):
                     raise ValueError(
-                        f"Variable '{var}' contains negative values before log transform."
+                        f"Variable '{var}' contains negative values before log transform.",
                     )
                 transformed = np.log10(np.sqrt(data[..., k]) + 0.1)
             else:

@@ -43,7 +43,7 @@ def print_metrics(
                 mean = metrics[name]["mean"]
                 std = metrics[name]["std"]
                 print(
-                    f"{name.capitalize()}: {mean:.{precision}f} ± {std:.{precision}f}"
+                    f"{name.capitalize()}: {mean:.{precision}f} ± {std:.{precision}f}",
                 )
             else:
                 print(f"{name.capitalize()}: Metric data incomplete")

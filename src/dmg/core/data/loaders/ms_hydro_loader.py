@@ -155,7 +155,7 @@ class MsHydroLoader(BaseLoader):
                 time = self.config['all_time']
             else:
                 raise ValueError(
-                    "Scope must be 'train', 'test', 'simulation', or 'all'."
+                    "Scope must be 'train', 'test', 'simulation', or 'all'.",
                 )
         except KeyError as e:
             raise ValueError(f"Key {e} for data path not in dataset config.") from e
@@ -215,14 +215,14 @@ class MsHydroLoader(BaseLoader):
             ac_array = root_zone['attrs'][ac_name][:]
         except ValueError as e:
             raise ValueError(
-                "Upstream area is not provided. This is needed for high-resolution streamflow model."
+                "Upstream area is not provided. This is needed for high-resolution streamflow model.",
             ) from e
         try:
             elevation_name = self.config['observations']['elevation_name']
             elev_array = root_zone['attrs'][elevation_name][:]
         except ValueError as e:
             raise ValueError(
-                "Elevation is not provided. This is needed for high-resolution streamflow model."
+                "Elevation is not provided. This is needed for high-resolution streamflow model.",
             ) from e
 
         return [
@@ -250,7 +250,7 @@ class MsHydroLoader(BaseLoader):
             # NOTE: will be supported with release of multiscale training code.
             raise ValueError(
                 "Normalization statistics not found. Confirm "
-                "`normalization_statistics.json` is in your model directory: ."
+                "`normalization_statistics.json` is in your model directory: .",
             )
 
     def normalize(

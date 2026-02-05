@@ -37,7 +37,8 @@ def run_spatial_testing(config: DictConfig, model) -> None:
 
         # Setup directories - just testing folder within each holdout
         holdout_dir = os.path.join(
-            base_output_dir, f'spatial_holdout_{holdout_idx}_{extent}'
+            base_output_dir,
+            f'spatial_holdout_{holdout_idx}_{extent}',
         )
         testing_dir = os.path.join(holdout_dir, 'testing')
 
@@ -105,14 +106,20 @@ def run_spatial_testing(config: DictConfig, model) -> None:
     if all_predictions and all_targets:
         log.info("Aggregating results from all holdouts...")
         _aggregate_spatial_results(
-            all_predictions, all_targets, agg_results_dir, config
+            all_predictions,
+            all_targets,
+            agg_results_dir,
+            config,
         )
     else:
         log.warning("No predictions collected from spatial testing")
 
 
 def _save_holdout_metadata(
-    holdout_dir: str, holdout_idx: int, config: DictConfig, extent: str
+    holdout_dir: str,
+    holdout_idx: int,
+    config: DictConfig,
+    extent: str,
 ) -> None:
     """Save metadata about the holdout experiment."""
     metadata_path = os.path.join(holdout_dir, 'holdout_info.txt')
