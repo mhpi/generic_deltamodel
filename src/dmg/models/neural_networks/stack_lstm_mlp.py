@@ -455,7 +455,8 @@ class StackLstmMlpModel(torch.nn.Module):
 
         # 2. high frequency
         out2 = self.lstm_mlp2(
-            *input2, reset_state=reset_states
+            *input2,
+            reset_state=reset_states,
         )  # [lstm_out, ann_out1, ann_out2]
 
         return out1, out2

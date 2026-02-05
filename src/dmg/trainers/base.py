@@ -38,7 +38,7 @@ class BaseTrainer(ABC):
             The initialized optimizer.
         """
         raise NotImplementedError(
-            "Derived classes must implement `init_optimizer` method."
+            "Derived classes must implement `init_optimizer` method.",
         )
 
     @abstractmethod
@@ -72,7 +72,7 @@ class BaseTrainer(ABC):
             Target variable observation data.
         """
         raise NotImplementedError(
-            "Derived classes must implement the `calc_metrics` method."
+            "Derived classes must implement the `calc_metrics` method.",
         )
 
     def save_model(self, epoch: int) -> None:

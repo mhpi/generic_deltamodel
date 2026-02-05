@@ -97,7 +97,7 @@ def take_data_sample(
 
         else:
             raise ValueError(
-                f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions."
+                f"Incorrect input dimensions. {key} array must have 2 or 3 dimensions.",
             )
 
     # Adjust the 'target' tensor based on the configuration

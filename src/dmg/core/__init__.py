@@ -1,3 +1,4 @@
+# src/dmg/core/__init__.py
 from . import calc, data, post, tune, utils
 from .data.data import timestep_resample
 from .utils.dates import Dates

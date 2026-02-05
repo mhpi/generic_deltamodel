@@ -1,3 +1,4 @@
+# src/dmg/core/data/__init__.py
 from . import loaders, samplers
 from .data import create_training_grid, load_json, txt_to_array
 

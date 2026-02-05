@@ -40,7 +40,7 @@ class BaseLoader(Dataset, ABC):
                 test_range = self.config['test_t_range']
             except KeyError as e:
                 raise KeyError(
-                    "Missing train or test time range in configuration."
+                    "Missing train or test time range in configuration.",
                 ) from e
 
             self.train_dataset = self._preprocess_data(train_range)

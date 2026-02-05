@@ -10,7 +10,7 @@ class WandbLogger(BaseLogger):
             import wandb
         except ImportError as e:
             raise ImportError(
-                "Weights & Biases not installed. Try `uv pip install wandb`."
+                "Weights & Biases not installed. Try `uv pip install wandb`.",
             ) from e
 
         self.wandb = wandb

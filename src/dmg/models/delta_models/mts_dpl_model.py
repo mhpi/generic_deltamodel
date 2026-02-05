@@ -59,7 +59,7 @@ class MtsDplModel(torch.nn.Module):
         else:
             raise ValueError(
                 "A (1) neural network and physics model or (2)"
-                / " configuration dictionary is required."
+                / " configuration dictionary is required.",
             )
 
         self.initialized = True
@@ -89,7 +89,7 @@ class MtsDplModel(torch.nn.Module):
         else:
             raise ValueError(
                 "A (1) physics model name or (2) model spec in"
-                / " a configuration dictionary is required."
+                / " a configuration dictionary is required.",
             )
 
         model = import_phy_model(model_name)
@@ -111,7 +111,9 @@ class MtsDplModel(torch.nn.Module):
         )
 
     def forward(
-        self, data_dict: dict[str, torch.Tensor], batched: bool = False
+        self,
+        data_dict: dict[str, torch.Tensor],
+        batched: bool = False,
     ) -> torch.Tensor:
         """Forward pass.
 

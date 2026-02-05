@@ -10,7 +10,7 @@ class TensorBoardLogger(BaseLogger):
             from torch.utils.tensorboard import SummaryWriter
         except ImportError as e:
             raise ImportError(
-                "TensorBoard not installed. Please run `uv pip install tensorboard`."
+                "TensorBoard not installed. Please run `uv pip install tensorboard`.",
             ) from e
 
         self.writer = SummaryWriter(log_dir=log_dir)

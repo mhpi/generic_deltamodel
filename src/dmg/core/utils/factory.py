@@ -87,16 +87,26 @@ def load_component(
             return class_obj
 
     raise ImportError(
-        f"Class '{class_name}' not found in module '{os.path.relpath(source)}' or does not subclass '{base_class.__name__}'."
+        f"Class '{class_name}' not found in module '{os.path.relpath(source)}' or does not subclass '{base_class.__name__}'.",
     )
 
 
 def import_phy_model(model: str, ver_name: str = None) -> type:
     """Loads a physical model, either from HydroDL2 (hydrology) or locally."""
     try:
-        from hydrodl2 import load_model as load_from_hydrodl
+        import hydrodl2
 
-        return load_from_hydrodl(model, ver_name)
+        all_models = [
+            m for names in hydrodl2.available_models().values() for m in names
+        ]
+        if model.lower() in all_models:
+            return hydrodl2.load_model(model, ver_name)
+        else:
+            return load_component(
+                model,
+                phy_model_dir,
+                torch.nn.Module,
+            )
     except ImportError:
         log.warning("Package 'HydroDL2' not loaded. Continuing without it.")
         return load_component(
@@ -209,6 +219,8 @@ def load_nn_model(
     """
     if not device:
         device = config.get('device', 'cpu')
+    if isinstance(device, torch.device):
+        device = str(device)
 
     # Number of inputs 'x' and outputs 'y' for the nn.
     if ensemble_list:
@@ -231,7 +243,7 @@ def load_nn_model(
         else:
             raise ValueError(
                 "Output size 'out_size' must be specified in the config or"
-                " physics model must be provided."
+                " physics model must be provided.",
             )
 
         if name not in ['LstmMlpModel']:
@@ -272,7 +284,7 @@ def load_nn_model(
         else:
             raise ValueError(
                 "Output sizes 'out_size1' and 'out_size2' must be"
-                " specified in the config or physics model must be provided."
+                " specified in the config or physics model must be provided.",
             )
 
         model = cls(

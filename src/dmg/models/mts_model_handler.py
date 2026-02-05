@@ -207,7 +207,9 @@ class MtsModelHandler(torch.nn.Module):
         return output[self.target_name]  # (n_t, n_gauges, 1)
 
     def calc_loss(
-        self, predictions: torch.Tensor, batch: dict[str, torch.Tensor]
+        self,
+        predictions: torch.Tensor,
+        batch: dict[str, torch.Tensor],
     ) -> torch.Tensor:
         """Calculate the loss between predictions and targets."""
         return self.loss_func(
@@ -217,7 +219,9 @@ class MtsModelHandler(torch.nn.Module):
         )
 
     def calc_valid_metrics(
-        self, pred_dict: dict[int, torch.Tensor], obs_dict: dict[int, torch.Tensor]
+        self,
+        pred_dict: dict[int, torch.Tensor],
+        obs_dict: dict[int, torch.Tensor],
     ) -> pd.DataFrame:
         """
         :param pred_dict: gage_idx: predictions (n_batches, window_size, 1).
@@ -290,14 +294,19 @@ class MtsModelHandler(torch.nn.Module):
             )
 
         data = np.concatenate(
-            [value[:, :, 0] for value in pred_dict.values()], axis=0
+            [value[:, :, 0] for value in pred_dict.values()],
+            axis=0,
         )  # (n_gauges, n_t)
         data = data[np.array(list(pred_dict.keys())).argsort()]  # sort by gage idx
         data = {self.target_name: data}
         units = {self.target_name: 'mm/hour'}
         times = pd.to_datetime(times, unit='s').astype(str).values
         save_nc_file(
-            data=data, units=units, gauges=gage_ids, times=times, filename=filename
+            data=data,
+            units=units,
+            gauges=gage_ids,
+            times=times,
+            filename=filename,
         )
         return
 

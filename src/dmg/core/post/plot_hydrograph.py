@@ -61,7 +61,7 @@ def plot_hydrograph(
             'time': timesteps,
             'pred': predictions,
             'obs': obs,
-        }
+        },
     )
     data = timestep_resample(data, resolution=resample, method='mean')
 
@@ -189,7 +189,7 @@ def plot_hydrograph_grid(
                 'time': timesteps,
                 'pred': predictions[:, i],
                 'obs': obs[:, i],
-            }
+            },
         )
         data = timestep_resample(data, resolution=resample, method='mean')
 
@@ -197,7 +197,11 @@ def plot_hydrograph_grid(
 
         # Plot Prediction
         ax.plot(
-            data['time'], data['pred'], label=line_labels[0], color=colors[0], zorder=3
+            data['time'],
+            data['pred'],
+            label=line_labels[0],
+            color=colors[0],
+            zorder=3,
         )
 
         # Plot Observation (if available)
@@ -213,7 +217,11 @@ def plot_hydrograph_grid(
             # Fill area under observation curve
             if fill_obs:
                 ax.fill_between(
-                    data['time'], data['obs'], color=colors[1], alpha=0.3, zorder=1
+                    data['time'],
+                    data['obs'],
+                    color=colors[1],
+                    alpha=0.3,
+                    zorder=1,
                 )
 
             # Add R2 score only if obs are available

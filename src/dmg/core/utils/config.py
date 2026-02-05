@@ -378,7 +378,7 @@ class ModelConfig(BaseModel):
 
     rho: int
     nn: Optional[NeuralNetworkModelConfig] = Field(
-        default_factory=NeuralNetworkModelConfig
+        default_factory=NeuralNetworkModelConfig,
     )
 
     ## Optional defaults for mhpi models ##

@@ -129,7 +129,7 @@ class MtsHydroLoader(BaseLoader):
                     self.dataset = dataset_generator
         else:
             raise ValueError(
-                "mode should be one of ['train', 'valid', 'test', 'simulation']"
+                "mode should be one of ['train', 'valid', 'test', 'simulation']",
             )
 
     def get_dataset(self):
@@ -300,7 +300,9 @@ class DistributedDataReader:
         # runoff gauges
         xr_runoff = xr.open_dataset(path_runoff)
         runoff_times = pd.date_range(
-            start=runoff_start_time, periods=xr_runoff['time'].shape[0], freq='h'
+            start=runoff_start_time,
+            periods=xr_runoff['time'].shape[0],
+            freq='h',
         )
         runoff_time_indexes = np.where(runoff_times.year.isin(years))[0]
         gauge_runoff = xr_runoff['gauge'].data
@@ -335,7 +337,7 @@ class DistributedDataReader:
         # filter gauges and basins
         df_topo = df_topo[
             df_topo['gauge'].isin(
-                gauge_info.loc[gauge_info['DRAIN_SQKM'] < area_thres, 'gauge_id']
+                gauge_info.loc[gauge_info['DRAIN_SQKM'] < area_thres, 'gauge_id'],
             )
         ].reset_index(drop=True)
         df_topo = df_topo[df_topo['gauge'].isin(gauge_runoff)].reset_index(drop=True)
@@ -351,16 +353,20 @@ class DistributedDataReader:
             {
                 'gauge': gage_topo['gage_hf'].keys(),
                 'unit': gage_topo['gage_hf'].values(),
-            }
+            },
         )
         missing_gauges = df_map.loc[
-            df_map['unit'].isin(set(df_map['unit']) - set(df_topo['unit'])), 'gauge'
+            df_map['unit'].isin(set(df_map['unit']) - set(df_topo['unit'])),
+            'gauge',
         ]
         df_topo = df_topo[~df_topo['gauge'].isin(missing_gauges)].reset_index(drop=True)
         df_topo = df_topo.sort_values(by=['gauge', 'unit']).reset_index(drop=True)
         df_topo['is_upstream'] = 1
         df_topo = df_topo.pivot_table(
-            index='gauge', columns='unit', values='is_upstream', fill_value=0
+            index='gauge',
+            columns='unit',
+            values='is_upstream',
+            fill_value=0,
         )
         selected_gauges = df_topo.index.values
         selected_basins = df_topo.columns.values
@@ -397,15 +403,16 @@ class DistributedDataReader:
         runoff_thres: list[float],
     ) -> DistributedDataSchema:
         def get_element_indexes(
-            element_array: np.ndarray, elements: Union[np.ndarray, list]
+            element_array: np.ndarray,
+            elements: Union[np.ndarray, list],
         ) -> np.ndarray:
             df = pd.DataFrame(
-                {'element': element_array, 'local_ind': np.arange(len(element_array))}
+                {'element': element_array, 'local_ind': np.arange(len(element_array))},
             )
             df = df.merge(
                 pd.DataFrame(
-                    {'element': elements, 'global_ind': np.arange(len(elements))}
-                )
+                    {'element': elements, 'global_ind': np.arange(len(elements))},
+                ),
             )
             return df.sort_values(by='global_ind')['local_ind'].values
 
@@ -438,18 +445,21 @@ class DistributedDataReader:
         )
         basin_attrs = basin_attrs[attrs_duplicated_indexes]
         attrs_indexes = np.array(
-            [xr_attrs['attr'].data.tolist().index(key) for key in attribute_order]
+            [xr_attrs['attr'].data.tolist().index(key) for key in attribute_order],
         )
         attr_names = xr_attrs['attr'].data[attrs_indexes]
         attrs = xr_attrs['__xarray_dataarray_variable__'].data[attrs_indexes, :][
-            :, attrs_duplicated_indexes
+            :,
+            attrs_duplicated_indexes,
         ]
         xr_attrs.close()
 
         # read runoff data
         xr_runoff = xr.open_dataset(path_runoff)
         runoff_times = pd.date_range(
-            start=runoff_start_time, periods=xr_runoff['time'].shape[0], freq='h'
+            start=runoff_start_time,
+            periods=xr_runoff['time'].shape[0],
+            freq='h',
         )
         runoff_time_indexes = np.where(runoff_times.year.isin(years))[0]
         gauge_runoff = xr_runoff['gauge'].data
@@ -476,7 +486,9 @@ class DistributedDataReader:
             runoff = runoff[:, :min_len]
         times = (
             pd.date_range(
-                start=f'{years[0]}-01-01', periods=runoff.shape[1], freq='h'
+                start=f'{years[0]}-01-01',
+                periods=runoff.shape[1],
+                freq='h',
             ).astype(int)
             // 10**9
         )
@@ -500,7 +512,7 @@ class DistributedDataReader:
         P_c = P[forcing_basin_indexes, :].clip(min=0.0)  # safeguard against data errors
         Temp_c = Temp[forcing_basin_indexes, :]
         PET_c = PET[forcing_basin_indexes, :].clip(
-            min=0.0
+            min=0.0,
         )  # safeguard against data errors
         data_map = {'P': P_c, 'Temp': Temp_c, 'PET': PET_c}
         dyn_input = np.zeros(P_c.shape + (3,), dtype=np.float32)
@@ -515,7 +527,8 @@ class DistributedDataReader:
         static_input = attrs[:, attrs_basin_indexes].T
         elev_all = static_input[:, attribute_order.index('meanelevation')]
         divide_basin_indexes = get_element_indexes(
-            divides['divide_id'], 'cat-' + pd.Series(selected_basins).astype(str)
+            divides['divide_id'],
+            'cat-' + pd.Series(selected_basins).astype(str),
         )
         areas = divides.loc[divide_basin_indexes]['areasqkm'].values
         ac_all = divides.loc[divide_basin_indexes]['tot_drainage_areasqkm'].values
@@ -604,13 +617,17 @@ class DistributedDataReader:
         for i in chunk_starts:
             years = list(range(i, min(i + self.chunk_year_size, end_year + 1)))
             warmup_dates = pd.date_range(
-                end=f'{years[0]}-01-01', periods=self.warmup_days + 1, freq='d'
+                end=f'{years[0]}-01-01',
+                periods=self.warmup_days + 1,
+                freq='d',
             )[:-1]
             warm_years = warmup_dates.year.unique().tolist()
             years = warm_years + years
             data = self.read_distributed_hourly_data(years)
             pre_read_dates = pd.date_range(
-                start=f'{warm_years[0]}-01-01', end=f'{warm_years[-1]}-12-31', freq='d'
+                start=f'{warm_years[0]}-01-01',
+                end=f'{warm_years[-1]}-12-31',
+                freq='d',
             )
             start_time_index = (len(pre_read_dates) - len(warmup_dates)) * 24
             data.target = data.target[:, start_time_index:]
@@ -623,7 +640,9 @@ class DistributedDataReader:
         if self.train_start_year is None or self.train_end_year is None:
             raise ValueError("train years are not specified.")
         yield from self.yield_chunk_set(
-            self.train_start_year, self.train_end_year, shuffle=True
+            self.train_start_year,
+            self.train_end_year,
+            shuffle=True,
         )
 
     def yield_valid_set(self):
@@ -631,7 +650,9 @@ class DistributedDataReader:
         if self.valid_start_year is None or self.valid_end_year is None:
             raise ValueError("validation years are not specified.")
         yield from self.yield_chunk_set(
-            self.valid_start_year, self.valid_end_year, shuffle=False
+            self.valid_start_year,
+            self.valid_end_year,
+            shuffle=False,
         )
 
     def yield_test_set(self):
@@ -639,7 +660,9 @@ class DistributedDataReader:
         if self.test_start_year is None or self.test_end_year is None:
             raise ValueError("test years are not specified.")
         yield from self.yield_chunk_set(
-            self.test_start_year, self.test_end_year, shuffle=False
+            self.test_start_year,
+            self.test_end_year,
+            shuffle=False,
         )
 
 
@@ -647,7 +670,9 @@ class DistributedDataPreprocessor:
     """MTS preprocessor."""
 
     def __init__(
-        self, norm_dyn_indexes: list[int] = None, use_norm_target: bool = False
+        self,
+        norm_dyn_indexes: list[int] = None,
+        use_norm_target: bool = False,
     ):
         self.mean = {}
         self.std = {}
@@ -684,7 +709,7 @@ class DistributedDataPreprocessor:
         else:
             normed_x = deepcopy(x)
             normed_x[:, :, norm_dyn_indexes] = torch.log(
-                normed_x[:, :, norm_dyn_indexes] + eps
+                normed_x[:, :, norm_dyn_indexes] + eps,
             )
             return normed_x
 
@@ -702,7 +727,7 @@ class DistributedDataPreprocessor:
         else:
             denormed_x = deepcopy(x)
             denormed_x[:, :, norm_dyn_indexes] = torch.exp(
-                denormed_x[:, :, norm_dyn_indexes]
+                denormed_x[:, :, norm_dyn_indexes],
             )
             return denormed_x
 
@@ -770,11 +795,13 @@ class DistributedDataPreprocessor:
         )
 
     def inverse_transform(
-        self, tensor_data: torch.Tensor, varname: str
+        self,
+        tensor_data: torch.Tensor,
+        varname: str,
     ) -> torch.Tensor:
         """Transform."""
         descaled_data = tensor_data * self.std[varname].expand_as(
-            tensor_data
+            tensor_data,
         ) + self.mean[varname].expand_as(tensor_data)
         if varname == 'dyn_input':
             descaled_data = self._norm_input_inverse_transform(descaled_data)
@@ -786,10 +813,12 @@ class DistributedDataPreprocessor:
         """Fill nans."""
         dyn_input = self._fillna_with_ref(data.dyn_input, self.mean['dyn_input'])
         static_input = self._fillna_with_ref(
-            data.static_input, self.mean['static_input']
+            data.static_input,
+            self.mean['static_input'],
         )
         rout_static_input = self._fillna_with_ref(
-            data.rout_static_input, self.mean['rout_static_input']
+            data.rout_static_input,
+            self.mean['rout_static_input'],
         )
         return DistributedDataSchema(
             dyn_input=dyn_input,
@@ -859,7 +888,7 @@ class DistributedDataPreprocessor:
                             * stat['count']
                         )
                         for stat in stats
-                    ]
+                    ],
                 )
                 / total_count
             )

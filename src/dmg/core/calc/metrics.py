@@ -264,7 +264,7 @@ class Metrics(BaseModel):
                 writer.writerow(['Metric', 'Median', 'Mean', 'Std'])
                 for metric, values in stats.items():
                     writer.writerow(
-                        [metric, values['median'], values['mean'], values['std']]
+                        [metric, values['median'], values['mean'], values['std']],
                     )
         else:
             raise ValueError("Provide either a .json or .csv file path.")

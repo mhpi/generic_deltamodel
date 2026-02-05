@@ -1,11 +1,12 @@
 """Test data loaders in dmg/core/data/loaders/."""
 
 import pickle
-import sys
-from pathlib import Path
 
-sys.path.append(str(Path(__file__).parent.parent))
 from dmg.core.data.loaders.hydro_loader import HydroLoader
+
+# ---------------------------------------------------------------------------
+#  Tests
+# ---------------------------------------------------------------------------
 
 
 def test_hydro_loader_init(config, mock_dataset, tmp_path):
