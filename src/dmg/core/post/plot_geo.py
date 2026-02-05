@@ -46,8 +46,8 @@ def geoplot_single_metric(
         )
 
     # Extract latitude and longitude bounds for the map
-    min_lat, max_lat = (gdf['lat'].min() - 5, gdf['lat'].max())
-    min_lon, max_lon = (gdf['lon'].min() - 5, gdf['lon'].max() + 5)
+    min_lat, max_lat = gdf['lat'].min() - 5, gdf['lat'].max()
+    min_lon, max_lon = gdf['lon'].min() - 5, gdf['lon'].max() + 5
 
     # Create the figure with Cartopy
     fig, ax = plt.subplots(
