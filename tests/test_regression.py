@@ -10,16 +10,14 @@ Coverage:
 - Physics model parameter bounds regression
 - Full training + evaluation pipeline regression
 
-NOTE: Expected values were generated with seed=111111, n_basins=10, and the
-mock dataset from conftest.py (including realistic forcing scales).
-If conftest.py mock data generation changes, these values must be updated.
+NOTE: Expected values were generated with seed=111111 and the
+mock dataset from conftest.py. If conftest.py mock data generation changes,
+these values must be updated.
 
-NOTE: LSTM on CPU is non-deterministic across hardware. Despite
-`torch.use_deterministic_algorithms(True)`, identical code produces different
-LSTM outputs on different CPUs (e.g. local machine vs. GitHub Actions runner).
-Each numeric expected value is therefore a **list** of known-good values — one
-per known environment. If a test fails on a new environment, add the reported
-value to the appropriate list.
+NOTE: LSTM on CPU is non-deterministic across hardware (e.g. local machine vs.
+GitHub Actions runner). Each numeric expected value is therefore a list of known
+good values — one per known environment. If a test fails on a new environment,
+add the reported value in the error to the appropriate list.
 """
 
 import json
@@ -40,17 +38,12 @@ os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
 torch.use_deterministic_algorithms(True)
 
 
-# ---------------------------------------------------------------------------
-#  Multi-environment assertion helper.
-# ---------------------------------------------------------------------------
-
-
-def _assert_close_to_any(actual, expected_values, stat_name, model_name, rtol=1e-3):
-    """Assert *actual* matches any value in *expected_values* within tolerance.
+def _assert_close_to_any(actual, expected_values, stat_name, model_name, rtol=1e-5):
+    """Assert actual matches any value in expected_values within tolerance.
 
     LSTM CPU non-determinism means different hardware produces different (but
-    individually reproducible) outputs.  Each entry in *expected_values* is a
-    known-good value from one environment.
+    individually reproducible) outputs.  Each entry in expected_values is a
+    known value from one environment.
     """
     for exp in expected_values:
         if torch.isclose(actual, torch.tensor(exp), rtol=rtol, atol=1e-8):
@@ -64,7 +57,7 @@ def _assert_close_to_any(actual, expected_values, stat_name, model_name, rtol=1e
 
 
 # ---------------------------------------------------------------------------
-#  Expected learnable parameter counts (deterministic, hardware-independent).
+#  Expected learnable parameter counts.
 # ---------------------------------------------------------------------------
 
 EXP_PARAM_COUNTS = {
@@ -75,13 +68,7 @@ EXP_PARAM_COUNTS = {
 
 
 # ---------------------------------------------------------------------------
-#  Expected regression snapshot statistics (seed=111111, n_basins=10).
-#
-#  Each stat maps to a **list** of known-good values from different
-#  environments. The first value is from the local dev machine; the second
-#  (where present) is from the GitHub Actions runner.
-#
-#  `n_timesteps` is deterministic (not LSTM-dependent) — kept as an int.
+#  Expected regression snapshot statistics (seed=111111).
 # ---------------------------------------------------------------------------
 
 EXP_SNAPSHOTS = {
@@ -116,7 +103,7 @@ EXP_SNAPSHOTS = {
 
 
 # ---------------------------------------------------------------------------
-#  Expected parameter bounds for each model (deterministic, not LSTM-dep).
+#  Expected parameter bounds for each model.
 # ---------------------------------------------------------------------------
 
 EXP_PARAMETER_BOUNDS = {
@@ -181,21 +168,18 @@ EXP_ROUTING_BOUNDS = {
 #  Expected training pipeline regression values.
 # ---------------------------------------------------------------------------
 
-# NOTE: LSTM on CPU is non-deterministic, so we accept any known value.
 EXP_FINAL_LOSS_VALUES = [
-    32.135179460048676,  # GHA runner loss (older)
     24.07529079914093,  # Local machine loss
     26.94981688261032,  # GHA runner loss (current)
 ]
 EXP_NSE_VALUES = [
     -33.58369255065918,  # Local machine NSE
     -33.43178367614746,  # GHA runner NSE
-    -2.989192485809326,  # GHA runner NSE (older)
 ]
 
 
 # ---------------------------------------------------------------------------
-#  Test classes
+#  Tests
 # ---------------------------------------------------------------------------
 
 

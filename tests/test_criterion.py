@@ -14,6 +14,11 @@ PATH = Path(__file__).parent.parent / 'src' / 'dmg' / 'models' / 'criterion'
 PKG_PATH = 'dmg.models.criterion'
 
 
+# ---------------------------------------------------------------------------
+#  Fixtures
+# ---------------------------------------------------------------------------
+
+
 @pytest.fixture(params=get_available_classes(PATH, PKG_PATH, BaseCriterion))
 def loss_class(request):
     """Fixture to provide each loss function class dynamically."""
@@ -40,6 +45,11 @@ def target_data():
 def sample_id_data():
     """Fixture for sample ID tensor data."""
     return np.array([0, 1, 2, 3])
+
+
+# ---------------------------------------------------------------------------
+#  Tests
+# ---------------------------------------------------------------------------
 
 
 def _init_loss(loss_class, config, target_data):

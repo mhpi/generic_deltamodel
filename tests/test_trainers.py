@@ -12,6 +12,10 @@ PKG_PATH = 'dmg.trainers'
 
 trainers = get_available_classes(PATH, PKG_PATH, BaseTrainer)
 
+# ---------------------------------------------------------------------------
+#  Tests
+# ---------------------------------------------------------------------------
+
 
 def test_init(config):
     """Test initialization of trainer classes."""

@@ -4,6 +4,10 @@ import pickle
 
 from dmg.core.data.loaders.hydro_loader import HydroLoader
 
+# ---------------------------------------------------------------------------
+#  Tests
+# ---------------------------------------------------------------------------
+
 
 def test_hydro_loader_init(config, mock_dataset, tmp_path):
     """Test the initialization of the HydroLoader."""

@@ -38,7 +38,7 @@ def build_config(config_dict):
 
 
 # ---------------------------------------------------------------------------
-#  Shared config sections (train, test, sim, observations, output dirs).
+#  Shared config sections.
 # ---------------------------------------------------------------------------
 
 _SHARED_CONFIG = {
@@ -260,7 +260,7 @@ def build_mock_dataset(config, n_basins=10):
 
 
 # ---------------------------------------------------------------------------
-#  Named fixtures for individual model configs (backward compatible).
+#  Named fixtures for individual model configs.
 # ---------------------------------------------------------------------------
 
 
