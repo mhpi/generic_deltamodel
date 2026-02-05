@@ -81,7 +81,7 @@ def main(config: DictConfig) -> None:
                 exit()
             except ImportError:
                 log.error(
-                    "Ray Tune is required for tuning. To install: uv pip install 'dmg[raytune]'"
+                    "Ray Tune is required for tuning. To install: uv pip install 'dmg[raytune]'",
                 )
                 return
 
@@ -122,7 +122,7 @@ def main(config: DictConfig) -> None:
         total_time = time.perf_counter() - start_time
         log.info(
             f"| {config['mode']} completed | "
-            f"Time Elapsed: {(total_time / 60):.6f} minutes"
+            f"Time Elapsed: {(total_time / 60):.3f} minutes",
         )
 
 

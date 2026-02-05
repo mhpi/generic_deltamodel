@@ -100,7 +100,7 @@ lint.select = [
     "BLE",  # flake8-blind-except
     "UP",  # pyupgrade
     "RUF100",  # Report unused noqa directives
-    # "COM812",  # Missing trailing comma
+    "COM812",  # Missing trailing comma
 ]
 exclude = [
     ".git",
