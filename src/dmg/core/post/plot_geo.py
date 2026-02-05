@@ -1,5 +1,12 @@
-import cartopy.crs as ccrs
-import cartopy.feature as cfeature
+try:
+    import cartopy.crs as ccrs
+    import cartopy.feature as cfeature
+except ImportError:
+    ccrs = None
+    cfeature = None
+
+from typing import Optional
+
 import geopandas as gpd
 import matplotlib.pyplot as plt
 
@@ -7,14 +14,14 @@ import matplotlib.pyplot as plt
 def geoplot_single_metric(
     gdf: gpd.GeoDataFrame,
     metric_name: str,
-    title: str = None,
-    map_color: bool = False,
-    draw_rivers: bool = False,
-    dynamic_colorbar: bool = False,
-    dpi: int = 100,
-    marker_size: int = 50,
+    title: Optional[str] = None,
+    map_color: Optional[bool] = False,
+    draw_rivers: Optional[bool] = False,
+    dynamic_colorbar: Optional[bool] = False,
+    dpi: Optional[int] = 100,
+    marker_size: Optional[int] = 50,
 ):
-    """Geographically map a single model performance metric using Basemap.
+    """Make a geographical map of a single performance metric using Basemap.
 
     Parameters
     ----------
@@ -24,7 +31,7 @@ def geoplot_single_metric(
         The name of the metric column to plot.
     title
         The title of the plot.
-    in_color
+    map_color
         Whether to use color for the map.
     draw_rivers
         Whether to draw rivers on the map.
@@ -36,6 +43,12 @@ def geoplot_single_metric(
     marker_size
         The size of the markers.
     """
+    if ccrs is None:
+        raise ImportError(
+            "cartopy is required for geo plotting. "
+            "Install with: uv pip install dmg[geo]"
+        )
+
     # Ensure the required columns are present in the GeoDataFrame
     if 'lat' not in gdf.columns or 'lon' not in gdf.columns:
         raise ValueError("The GeoDataFrame must include 'lat' and 'lon' columns.")
