@@ -91,16 +91,16 @@ EXP_SNAPSHOTS = {
         'streamflow_sum': [3.5473934174e01, 2.9623907247e01],
         'streamflow_first': [1.0076804756e-05, 1.5578e-05],
         'streamflow_last': [1.8451465666e-01, 1.5288e-01],
-        'AET_hydro_mean': [5.8963859081e-01],
-        'recharge_mean': [1.5003199875e-01],
+        'AET_hydro_mean': [5.8963859081e-01, 5.84160924e-01],
+        'recharge_mean': [1.5003199875e-01, 1.16926119e-01],
     },
     'Hbv_1_1p': {
         'n_timesteps': 57,
-        'streamflow_mean': [2.1709175780e-02],
-        'streamflow_sum': [1.2374230385e01],
-        'streamflow_first': [3.6438275856e-05],
+        'streamflow_mean': [2.1709175780e-02, 2.65194718e-02],
+        'streamflow_sum': [1.2374230385e01, 1.51160989e01],
+        'streamflow_first': [3.6438275856e-05, 3.46385932e-05],
         'streamflow_last': [6.6204883158e-02],
-        'AET_hydro_mean': [4.6455222368e-01],
+        'AET_hydro_mean': [4.6455222368e-01, 5.48316360e-01],
         'recharge_mean': [1.1395389587e-01, 1.3484e-01],
         'capillary_mean': [6.5453238785e-02, 7.44503066e-02],
     },
@@ -108,7 +108,7 @@ EXP_SNAPSHOTS = {
         'n_timesteps': 59,
         'streamflow_mean': [0.0],
         'streamflow_sum': [0.0],
-        'AET_hydro_mean': [5.4986560345e-01],
+        'AET_hydro_mean': [5.4986560345e-01, 4.86893982e-01],
         'recharge_mean': [1.4136713743e-01, 9.89129990e-02],
         'capillary_mean': [8.9376135293e-06, 7.90938429e-06],
     },
@@ -189,6 +189,7 @@ EXP_FINAL_LOSS_VALUES = [
 ]
 EXP_NSE_VALUES = [
     -33.58369255065918,  # Local machine NSE
+    -33.43178367614746,  # GHA runner NSE
     -2.989192485809326,  # GHA runner NSE (older)
 ]
 
