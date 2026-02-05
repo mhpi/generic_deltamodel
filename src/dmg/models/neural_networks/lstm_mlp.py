@@ -66,7 +66,7 @@ class LstmMlpModel(torch.nn.Module):
         self.hn, self._hn_cache = None, None  # hidden state
         self.cn, self._cn_cache = None, None  # cell state
 
-        if device == 'cpu':
+        if torch.device(device).type == 'cpu':
             # CPU-compatible PyTorch LSTM.
             self.lstminv = LstmModel(
                 nx=nx1,

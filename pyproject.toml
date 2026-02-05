@@ -21,7 +21,6 @@ maintainers = [
 requires-python = ">=3.9.0"
 dynamic = ["version"]
 dependencies = [
-    "cartopy",
     "geopandas",
     "hydra-core",
     "ipykernel",

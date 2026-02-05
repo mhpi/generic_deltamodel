@@ -1,18 +1,13 @@
 """
 Tests for multi-timescale (MTS) differentiable models.
 
-Tests cover:
+Coverage:
 - MtsDplModel initialization and forward pass
 - Multi-scale data handling
 - Low-frequency and high-frequency parameter paths
 - MtsModelHandler functionality
 - Gradient flow in multi-timescale models
 """
-
-import sys
-from pathlib import Path
-
-sys.path.append(str(Path(__file__).parent.parent))
 
 import numpy as np
 import pytest
@@ -22,6 +17,13 @@ from omegaconf import OmegaConf
 from dmg.core.utils import initialize_config, set_randomseed
 from dmg.models.delta_models.mts_dpl_model import MtsDplModel
 from dmg.models.mts_model_handler import MtsModelHandler
+
+_MTS_SKIP_REASON = "Requires hydrodl2 with Hbv_2_mts model"
+
+
+# ---------------------------------------------------------------------------
+#  Model config and mock dataset.
+# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -60,6 +62,11 @@ def mts_config():
             'end_time': '2000/02/10',
             'batch_size': 5,
             'test_epoch': 2,
+        },
+        'sim': {
+            'start_time': '2000/02/01',
+            'end_time': '2000/02/10',
+            'batch_size': 5,
         },
         'model': {
             'rho': 10,
@@ -158,13 +165,17 @@ def mts_mock_dataset(mts_config):
     }
 
 
+# ---------------------------------------------------------------------------
+#   Test classes
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skip(reason=_MTS_SKIP_REASON)
 class TestMtsDplModel:
     """Test MtsDplModel (multi-timescale differentiable model)."""
 
     def test_mts_dpl_model_initialization(self, mts_config):
         """Test MtsDplModel initializes correctly."""
-        pytest.skip("Requires hydrodl2 with Hbv_2_mts model")
-
         model = MtsDplModel(config=mts_config['model'], device='cpu')
 
         assert model.initialized
@@ -173,8 +184,6 @@ class TestMtsDplModel:
 
     def test_mts_dpl_model_forward_pass(self, mts_config, mts_mock_dataset):
         """Test forward pass with multi-timescale data."""
-        pytest.skip("Requires hydrodl2 with Hbv_2_mts model")
-
         set_randomseed(mts_config['seed'])
 
         model = MtsDplModel(config=mts_config['model'], device='cpu')
@@ -187,8 +196,6 @@ class TestMtsDplModel:
 
     def test_mts_separate_parameter_paths(self, mts_config, mts_mock_dataset):
         """Test that low/high-frequency parameters are generated separately."""
-        pytest.skip("Requires hydrodl2 with Hbv_2_mts model")
-
         set_randomseed(mts_config['seed'])
 
         model = MtsDplModel(config=mts_config['model'], device='cpu')
@@ -209,13 +216,12 @@ class TestMtsDplModel:
             assert not torch.isnan(params_hf).any()
 
 
+@pytest.mark.skip(reason=_MTS_SKIP_REASON)
 class TestMtsModelHandler:
     """Test MtsModelHandler functionality."""
 
     def test_mts_model_handler_initialization(self, mts_config):
         """Test MtsModelHandler initializes correctly."""
-        pytest.skip("Requires hydrodl2 with Hbv_2_mts model")
-
         handler = MtsModelHandler(mts_config)
 
         assert handler.model_type == 'dm'
@@ -223,8 +229,6 @@ class TestMtsModelHandler:
 
     def test_mts_model_handler_forward(self, mts_config, mts_mock_dataset):
         """Test MtsModelHandler forward pass."""
-        pytest.skip("Requires hydrodl2 with Hbv_2_mts model")
-
         set_randomseed(mts_config['seed'])
 
         handler = MtsModelHandler(mts_config)
@@ -242,13 +246,12 @@ class TestMtsModelHandler:
         assert isinstance(output_eval, dict)
 
 
+@pytest.mark.skip(reason=_MTS_SKIP_REASON)
 class TestMtsGradientFlow:
     """Test gradient flow in multi-timescale models."""
 
     def test_mts_gradient_flow(self, mts_config, mts_mock_dataset):
         """Verify gradients flow through both LF and HF paths."""
-        pytest.skip("Requires hydrodl2 with Hbv_2_mts model")
-
         set_randomseed(mts_config['seed'])
 
         handler = MtsModelHandler(mts_config)
@@ -270,8 +273,6 @@ class TestMtsGradientFlow:
 
     def test_mts_parameter_update(self, mts_config, mts_mock_dataset):
         """Verify MTS model parameters update during training."""
-        pytest.skip("Requires hydrodl2 with Hbv_2_mts model")
-
         set_randomseed(mts_config['seed'])
 
         handler = MtsModelHandler(mts_config)
@@ -334,10 +335,9 @@ class TestMtsDataHandling:
         )
 
 
+@pytest.mark.skip(reason=_MTS_SKIP_REASON)
 def test_mts_end_to_end_training_step(mts_config, mts_mock_dataset):
     """Test complete training step with MTS model."""
-    pytest.skip("Requires hydrodl2 with Hbv_2_mts model")
-
     from dmg.models.criterion.rmse_loss import RmseLoss
 
     set_randomseed(mts_config['seed'])

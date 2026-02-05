@@ -1,12 +1,6 @@
-"""
-Test loss functions in dmg/models/criterion/.
-- LL 03/10/25
-"""
+"""Test loss functions in dmg/models/criterion/."""
 
-import sys
 from pathlib import Path
-
-sys.path.append(str(Path(__file__).parent.parent))
 
 import numpy as np
 import pytest
@@ -48,21 +42,22 @@ def sample_id_data():
     return np.array([0, 1, 2, 3])
 
 
+def _init_loss(loss_class, config, target_data):
+    """Try to initialize a loss function, falling back to explicit device arg."""
+    try:
+        return loss_class(config=config, y_obs=target_data)
+    except (RuntimeError, TypeError, KeyError):
+        return loss_class(config=config, device='cpu', y_obs=target_data)
+
+
 def test_init(loss_class, config, target_data):
     """Test initialization of loss function classes."""
-    try:
-        loss_fn = loss_class(config=config, y_obs=target_data)
-        assert hasattr(loss_fn, 'name')
-        assert hasattr(loss_fn, 'config')
-        assert hasattr(loss_fn, 'device')
-        assert loss_fn.device == 'cpu'
-    except (AssertionError, RuntimeError, TypeError, KeyError):
-        # Some loss functions might require y_obs, so we pass it in.
-        # We also catch KeyError for loss functions that require 'y_obs' in kwargs
-        try:
-            loss_fn = loss_class(config=config, device='cpu', y_obs=target_data)
-        except (AssertionError, RuntimeError, TypeError, KeyError) as e2:
-            pytest.fail(f"Initialization failed for {loss_class.__name__}: {e2}")
+    loss_fn = _init_loss(loss_class, config, target_data)
+
+    assert hasattr(loss_fn, 'name')
+    assert hasattr(loss_fn, 'config')
+    assert hasattr(loss_fn, 'device')
+    assert loss_fn.device == 'cpu'
 
 
 def test_forward(
@@ -73,20 +68,10 @@ def test_forward(
     sample_id_data,
 ):
     """Test forward method with valid input."""
-    try:
-        loss_fn = loss_class(config=config, y_obs=target_data)
+    loss_fn = _init_loss(loss_class, config, target_data)
 
-        # Forward pass
-        loss = loss_fn(prediction_data, target_data, sample_ids=sample_id_data)
+    loss = loss_fn(prediction_data, target_data, sample_ids=sample_id_data)
 
-        # Check if loss is a scalar tensor
-        assert isinstance(loss, torch.Tensor)
-        assert loss.dim() == 0  # Scalar tensor
-        assert not torch.isnan(loss)  # Loss should not be NaN
-    except (AssertionError, RuntimeError, TypeError, KeyError):
-        try:
-            loss_fn = loss_class(config=config, device='cpu', y_obs=target_data)
-            loss = loss_fn(prediction_data, target_data, sample_ids=sample_id_data)
-            assert isinstance(loss, torch.Tensor)
-        except (AssertionError, RuntimeError, TypeError, KeyError) as e2:
-            pytest.fail(f"Forward pass failed for {loss_class.__name__}: {e2}")
+    assert isinstance(loss, torch.Tensor)
+    assert loss.dim() == 0  # Scalar tensor
+    assert not torch.isnan(loss)  # Loss should not be NaN
