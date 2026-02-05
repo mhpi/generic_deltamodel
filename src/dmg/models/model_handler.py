@@ -62,7 +62,7 @@ class ModelHandler(torch.nn.Module):
         self._init_models()
 
         if 'train' not in config['mode']:
-            if config['load_state_path']:
+            if config.get('load_state_path'):
                 self.load_states(config['load_state_path'])
 
         self.epoch = None
@@ -203,6 +203,31 @@ class ModelHandler(torch.nn.Module):
 
                 if self.verbose:
                     log.info(f"Loaded model: {name}, Ep {epoch}")
+
+    def train(self, mode: bool = True) -> 'ModelHandler':
+        """Set all models to training mode (or eval mode if mode=False).
+
+        Overrides torch.nn.Module.train to propagate to models stored
+        in model_dict (a plain dict, not a ModuleDict).
+        Since nn.Module.eval() delegates to train(False), this
+        override covers both .train() and .eval() calls.
+
+        Parameters
+        ----------
+        mode
+            Whether to set training mode (True) or eval mode (False).
+
+        Returns
+        -------
+        ModelHandler
+            Self.
+        """
+        super().train(mode)
+        for model in self.model_dict.values():
+            model.train(mode)
+        if getattr(self, 'ensemble_generator', None) is not None:
+            self.ensemble_generator.train(mode)
+        return self
 
     def get_parameters(self) -> list[torch.Tensor]:
         """Return all model parameters.
