@@ -99,7 +99,7 @@ EXP_SNAPSHOTS = {
         'streamflow_mean': [2.1709175780e-02, 2.65194718e-02],
         'streamflow_sum': [1.2374230385e01, 1.51160989e01],
         'streamflow_first': [3.6438275856e-05, 3.46385932e-05],
-        'streamflow_last': [6.6204883158e-02],
+        'streamflow_last': [6.6204883158e-02, 7.83670321e-02],
         'AET_hydro_mean': [4.6455222368e-01, 5.48316360e-01],
         'recharge_mean': [1.1395389587e-01, 1.3484e-01],
         'capillary_mean': [6.5453238785e-02, 7.44503066e-02],
