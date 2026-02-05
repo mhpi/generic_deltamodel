@@ -21,7 +21,6 @@ maintainers = [
 requires-python = ">=3.9.0"
 dynamic = ["version"]
 dependencies = [
-    "cartopy",
     "geopandas",
     "hydra-core",
     "ipykernel",
@@ -51,6 +50,9 @@ dev = [
     "pre-commit",
     "pytest",
     "ruff",
+]
+geo = [
+    "cartopy",
 ]
 hydrodl2 = [
     "hydrodl2 @ git+https://github.com/mhpi/hydrodl2.git@master"

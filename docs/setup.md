@@ -102,11 +102,9 @@ To run 𝛿MG as a framework or package, it must be installed as a package. This
 
   ```bash
   pip install ./generic_deltamodel[hydrodl2]
-  ```
 
-  or
+  # or
 
-  ```bash
   uv pip install ./generic_deltamodel[hydrodl2]
   ```
 
@@ -117,15 +115,25 @@ To run 𝛿MG as a framework or package, it must be installed as a package. This
   ```bash
   git clone git@github.com:mhpi/hydrodl2.git
   pip install -e ./hydrodl2
-  ```
 
-  or
+  # or
 
-  ```bash
   uv pip install -e ./hydrodl2
   ```
 
   Note, developer mode will ensure hydrodl2 won't need to be reinstalled whenever you make changes.
+
+- Geo Plotting
+
+  - For geographical plotting features (e.g., mapping model metrics spatially) available in `./examples/`, install dependencies with
+
+  ```bash
+  pip install ./generic_deltamodel[geo]
+
+  # or
+
+  uv pip install ./generic_deltamodel[geo]
+  ```
 
 - Development
 
@@ -133,11 +141,9 @@ To run 𝛿MG as a framework or package, it must be installed as a package. This
 
   ```bash
   pip install ./generic_deltamodel[dev]
-  ```
 
-  or
+  # or
 
-  ```bash
   uv pip install ./generic_deltamodel[dev]
   ```
 
