@@ -124,6 +124,11 @@ class MtsDplModel(torch.nn.Module):
         batch
             If True, use sequential forward pass (for stepwise prediction).
             If False, use batched forward pass (for warmup).
+
+        Returns
+        -------
+        torch.Tensor
+            The output predictions.
         """
         # Neural network
         ##################### New: Multi-timescale #################

@@ -105,13 +105,20 @@ class DplModel(torch.nn.Module):
             device=self.device,
         )
 
-    def forward(self, data_dict: dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(
+        self,
+        data_dict: dict[str, torch.Tensor],
+        batched: bool = False,
+    ) -> torch.Tensor:
         """Forward pass.
 
         Parameters
         ----------
         data_dict
             The input data dictionary.
+        batch
+            If True, use sequential forward pass (for stepwise prediction).
+            If False, use batched forward pass (for warmup).
 
         Returns
         -------
