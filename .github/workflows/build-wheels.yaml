@@ -27,8 +27,8 @@ jobs:
 
       - name: Verify wheel
         run: |
-          pip install dist/*.whl
-          python -c 'import dmg; print(dmg.__version__)'
+          pip install --find-links dist dmg
+          python -c "import dmg; print(dmg.__version__)"
 
       - uses: actions/upload-artifact@v6.0.0
         with:
