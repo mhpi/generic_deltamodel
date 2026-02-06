@@ -1,6 +1,96 @@
+# Configuration in *𝛿MG*
+
+Every model built in 𝛿MG is designed to run on a pair of configuration files to isolate experiment, model, and data settings. These are handled by [Hydra config manager](https://hydra.cc/docs/intro/).
+
+</br>
+
+## Configuration Files
+
+1. **(Master) Model/experiment**: `./conf/<config_name>.yaml`
+
+    - This will govern model training/testing/prediction settings, in addition to differentiable model, neural network, and physical model-specific settings.
+
+    - A minimal required implementation is given in `/config.yaml`; *all settings here are required by the framework*.
+
+2. **Data**: `./conf/observations/<dataset_name>.yaml`
+
+    - This contains settings specific to a dataset (multiple may be present for different datasets) you wish to use for your model, and includes directory paths, temporal ranges, and constituent variables.
+
+    - A basic example is given in `/observations/none.yaml`.
+
+    - These configs use a *name* attribute to link to the main config (Hydra effectively links this data config to the main as a subdictionary). The header of the main config contains this linkage:
+
+      ```yaml
+        defaults:
+          - _self_
+          - hydra: settings
+          - observations: <observations_name>
+        ```
+
+    - There are **no** requirements for this except that the config have the *name* attribute. All settings here are intended to be minimally exposed within your data loader, so it's up to you what you want to include.
+
+</br>
+
+## Adding Configurations
+
+If you wish to use additional configuration files to store distinguished settings not related to the above:
+
+- Create a new directory for the config type like `./conf/<config_type>/` and place your configs within.
+
+- Add to the header of your main config
+
+  ```yaml
+  defaults:
+    - _self_
+    - hydra: settings
+    - observations: <observations_name>
+    - <config_type>: <config_file_name>  # <-- Add here
+  ```
+
+  where *config_file_name* reflects the `name` attribute of the config file.
+
+</br>
+
+## Initializing Configuration Files in *𝛿MG*
+
+Configuration file management is handled by the Hydra config manager (see above). Essentially, at the start of a model experiment, Hydra will load configs into a single Python dictionary object of all settings that can be accessed throughout the framework.
+
+You can see this demonstrated in the main 𝛿MG run file, `./src/dmg/__main__.py`, at the start of the main function we call the decorator
+
+```python
+@hydra.main(
+    version_base='1.3',
+    config_path='conf/',
+    config_name='config',
+)
+def main(config):
+    config = initialize_config(config)
+    ...
+```
+
+where *config* is the name of the main `config.yaml` file. Hydra builds and passes config as an Omegaconf DictConfig object *config* (see main definition) that we then parse into a Python dictionary with *initialize_config*.
+
+This processing can be done without the decorator, but this is generally the most straightforward way to do it and *needs to be included* in any other scripts used to run your models.
+
+</br>
+
+## Accessing Settings in the Config Dictionary
+
+After your configuration files are initialized as a dictionary:
+
+- Any settings in the main config can be accessed like `config['mode']` or `config['train']['start_time']` for subsettings in the config.yaml (headers like *train* and *delta_model* create subdictionaries).
+
+- Settings in your observations data config or other type (see [adding-configurations](#adding-configurations)) can be accessed as subdictionaries like `config['observations'][<setting_name>]` or `config['config_type'][<setting_name>]`.
+
+</br>
+
+---
+
+</br>
+
 # Configuration Glossary
 
-This document is intended to define all configuration options used in (1) model and (2) observation configuration files in 𝛿MG.
+This section defines all configuration options used in (1) model and (2) observation configuration files in 𝛿MG.
 
 Universal options will be **bold-faced** to distinguish from options used specifically for MHPI hydrology models like δHBV (see [examples](../example/hydrology/)).
 
@@ -58,15 +148,15 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 **gpu_id**: [0] If `device = cuda`, the index of the GPU in your system to run models on. Index 0 will always be available.
 
-**data_loader**: Class name of the data loader to use. E.g., *HydroLoader* located in `./generic_deltamodel/src/dmg/core/data/loaders/hydro_loader.py`. Note class name must be Camel-case w/o spaces corresponding to the file name.
+**data_loader**: Class name of the data loader to use. E.g., *HydroLoader* located in `./src/dmg/core/data/loaders/hydro_loader.py`. Note class name must be Camel-case w/o spaces corresponding to the file name.
 
-**data_sampler**: Class name of the data sampler used in training/inference. E.g., *HydroSampler* located in `./generic_deltamodel/src/dmg/core/data/samplers/hydro_sampler.py`. Follows same convention as data_loader.
+**data_sampler**: Class name of the data sampler used in training/inference. E.g., *HydroSampler* located in `./src/dmg/core/data/samplers/hydro_sampler.py`. Follows same convention as data_loader.
 
-**trainer**: Class name of the trainer used in training/inference. E.g., *Trainer* located in `./generic_deltamodel/src/dmg/trainers/trainer.py`. Follows same convention as data_loader.
+**trainer**: Class name of the trainer used in training/inference. E.g., *Trainer* located in `./src/dmg/trainers/trainer.py`. Follows same convention as data_loader.
 
 *model_dir*: Path to a directory containing trained model weights, may also include subdirectory of model outputs. Note this path must end with a forward slash ('/').
 
-*load_state_dir*: Path to a PyTorch save file (`.pt`) containing cached model states for a neural network or differentiabl model (e.g., hidden and cell states for an LSTM, buckets for a physical model). If this path is provided, the Model Handler will attempt to load these states into the current model.
+*load_state_dir*: Path to a PyTorch save file (`.pt`) containing cached model states for a neural network or differentiable model (e.g., hidden and cell states for an LSTM, buckets for a physical model). If this path is provided, the Model Handler will attempt to load these states into the current model.
 
 </br>
 
@@ -87,7 +177,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
   - **name**: [StepLR, ExponentialLR, CosineAnnealingLR] Name of [PyTorch learning rate scheduler](https://docs.pytorch.org/docs/stable/optim.html) for the optimizer.
 
 - **loss_function**:
-  - **name**: [KgeBatchLoss, KgeNormBatchLoss, MseLoss, NseBatchLoss, NseSqrtBatchLoss, RmseCombLoss, RmseLoss] Name of loss function for training. See `./generic_deltamodel/src/dmg/models/criterion/` for all available loss functions. You can add custom criterion, but they must follow Class-File convention as illustrated for `data_loader`, etc.
+  - **name**: [KgeBatchLoss, KgeNormBatchLoss, MseLoss, NseBatchLoss, NseSqrtBatchLoss, RmseCombLoss, RmseLoss] Name of loss function for training. See `./src/dmg/models/criterion/` for all available loss functions. You can add custom criterion, but they must follow Class-File convention as illustrated for `data_loader`, etc.
 
 - **batch_size**: Training batch size. Must be less than total number of samples.
 
@@ -200,7 +290,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 ### 1.7 Multimodel (Optional)
 
-*multimodel*: Settings for NN in NN-weighted multimodel ensembles (see [Section 1.3](#12-general) multimodel type.). NN learns to weight a collection of models.
+*multimodel*: Settings for NN in NN-weighted multimodel ensembles (see [Section 1.2](#12-general) multimodel type). NN learns to weight a collection of models.
 
 - *model*: [CudnnLstmModel, LstmModel, AnnModel, AnnCloseModel, MlpModel] Class name of the NN to use.
   - `CudnnLstmModel`: Custom LSTM built with PyTorch CUDA backend. LSTM of HydroDL. Only supports GPU.
@@ -219,7 +309,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 - *scaling_function*: [sigmoid, softmax] Method to use for scaling learned weights.
 
-- *loss_function*: [KgeBatchLoss, KgeNormBatchLoss, MseLoss, NseBatchLoss, NseSqrtBatchLoss, RmseCombLoss, RmseLoss] Loss function for training. See `./generic_deltamodel/src/dmg/models/criterion/` for all available loss functions. You can add custom criterion, but they must follow Class-File convention as illustrated for `data_loader`, etc.
+- *loss_function*: [KgeBatchLoss, KgeNormBatchLoss, MseLoss, NseBatchLoss, NseSqrtBatchLoss, RmseCombLoss, RmseLoss] Loss function for training. See `./src/dmg/models/criterion/` for all available loss functions. You can add custom criterion, but they must follow Class-File convention as illustrated for `data_loader`, etc.
 
 - *use_rb_loss*: [bool] If True, include range-bound loss regularization. Penalize learned weights when their sum exceeds specific bounds.
 
@@ -263,7 +353,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 *start_time*: Start date of available date range in data in format YYYY/MM/DD.
 
-*start_time*: End date of available date range in data in format YYYY/MM/DD.
+*end_time*: End date of available date range in data in format YYYY/MM/DD.
 
 *all_forcings*: List of names of all time-dynamic variables available in the dataset.
 

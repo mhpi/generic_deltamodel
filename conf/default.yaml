@@ -1,7 +1,7 @@
 # Default Master Configuration
 #
 # this is a template and will not run unless modified.
-# See ./docs/configuration_glossary.md for definitions and options.
+# See ./docs/configuration.md for definitions and options.
 
 defaults:
   - _self_

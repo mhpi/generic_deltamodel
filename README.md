@@ -1,102 +1,84 @@
-# 𝛿MG: PyTorch Differentiable Modeling Framework
+<p align="center">
+  <img src="./docs/images/dmg.drawio.svg" alt="𝛿MG logo" width="300">
+</p>
 
-[![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12%20%7C%203.13-blue?labelColor=333333)](https://www.python.org/downloads/)
-[![PyTorch Version](https://img.shields.io/badge/dynamic/json?label=PyTorch&query=info.version&url=https%3A%2F%2Fpypi.org%2Fpypi%2Ftorch%2Fjson&logo=pytorch&color=EE4C2C&logoColor=F900FF&labelColor=333333)](https://pypi.org/project/torch/)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&labelColor=333333)](https://github.com/astral-sh/ruff)
+<h1 align="center">PyTorch Differentiable Modeling Framework</h1>
 
-[![Build](https://img.shields.io/github/actions/workflow/status/mhpi/generic_deltamodel/pytest.yaml?branch=master&logo=github&label=tests&labelColor=333333)](https://github.com/mhpi/generic_deltamodel/actions/workflows/pytest.yaml)
-[![DOI](https://img.shields.io/badge/DOI-10.5281/zenodo.14868671-blue?labelColor=333333&lab)](https://doi.org/10.5281/zenodo.14868671)
+<p align="center">
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.9--3.13-blue?labelColor=333333" alt="Python"></a>
+  <a href="https://pypi.org/project/torch/"><img src="https://img.shields.io/badge/dynamic/json?label=PyTorch&query=info.version&url=https%3A%2F%2Fpypi.org%2Fpypi%2Ftorch%2Fjson&logo=pytorch&color=EE4C2C&logoColor=F900FF&labelColor=333333" alt="PyTorch"></a>
+  <a href="https://pypi.org/project/dmg/"><img src="https://img.shields.io/pypi/v/dmg?logo=pypi&logoColor=white&labelColor=333333" alt="PyPI"></a>
+  </br>
+  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&labelColor=333333" alt="Ruff"></a>
+  <a href="https://github.com/mhpi/generic_deltamodel/actions/workflows/pytest.yaml"><img src="https://img.shields.io/github/actions/workflow/status/mhpi/generic_deltamodel/pytest.yaml?branch=master&logo=github&label=tests&labelColor=333333" alt="Build"></a>
+  <a href="https://doi.org/10.5281/zenodo.14868671"><img src="https://img.shields.io/badge/DOI-10.5281/zenodo.14868671-blue?labelColor=333333&lab" alt="DOI"></a>
+  <a href="#citation"><img src="https://img.shields.io/badge/license-Non--Commercial_(PSU)-yellow?labelColor=333333" alt="License"></a>
+</p>
 
 ---
 
-A generic framework for building [differentiable models](https://www.nature.com/articles/s43017-023-00450-9). 𝛿MG enables seamless coupling of neural networks with differentiable process-based equations, leveraging PyTorch's auto-differentiation for efficient, large-scale optimization on GPU. The spiritual successor to [HydroDL](https://github.com/zhonghu17/HydroDL), 𝛿MG generalizes differentiable modeling for cross-domain application while also imposing basic standardizations for research-to-operations pipelines.
-
-### Key Features
-
-- 🤝 **Hybrid Modeling**: Combine neural networks with process-based equations for enhanced interpretability and generalizability. Instead of manual model parameter calibration, for instance, use neural networks to directly learn robust and interpretable parameters ([Tsai et al., 2021](https://doi.org/10.1038/s41467-021-26107-z)).
-- 🔁 **PyTorch Integration**: Scale with PyTorch for efficient training and compatibility with modern ML tools and numerical solvers.
-- 🧩 **Modular Plugin Architecture**: Swap in domain-specific components and configurations with ease.
-- ⚡ **Benchmarking**: All in one place. 𝛿MG + hydroDL2 will enable rapid deployment and replication of key published MHPI results.
-- 🌊 **NextGen-ready**: Designed for [CSDMS BMI](https://csdms.colorado.edu/wiki/BMI) compliance to support differentiable hydrological models in [NOAA-OWP](https://water.noaa.gov/about/owp)'s [NextGen National Water Modeling Framework](https://github.com/NOAA-OWP/ngen). See the NextGen-ready [𝛿HBV2.0](https://github.com/mhpi/dHBV2.0) with 𝛿MG-supported BMI for an example.
-
 </br>
 
-𝛿MG is designed to scale with modern deep learning tools (e.g., foundation models) while maintaining physical interpretability. Our peer-reviewed and published [benchmarks](https://mhpi.github.io/benchmarks/#10-year-training-comparison) show that well-tuned differentiable models can match deep networks in performance—while better extrapolating to extreme or data-scarce conditions and predicting physically meaningful variables.
+A generic framework for building [differentiable models](https://www.nature.com/articles/s43017-023-00450-9) that seamlessly couple neural networks with process-based equations, leveraging PyTorch's auto-differentiation for efficient, GPU-accelerated optimization. This is the spiritual successor to [HydroDL](https://github.com/zhonghu17/HydroDL).
 
-Differentiable modeling introduces more modeling choices than traditional deep learning due to its physical constraints. This includes learning parameters, missing process representations, corrections, or other enhancements for physical models.
-
-**Note**: While differentiable models are powerful and have many desirable characteristics, they come with a larger decision space than purely data-driven neural networks since physical processes are involved, and can thus feel "trickier" to work with. Hence, *we recommend* beginning with our example [notebooks](./example/hydrology/) and then systematically making changes, one at a time. Pay attention to multifaceted outputs, diverse causal analyses, and predictions of untrained variables permitted by differentiable models, rather than purely trying to outperform other models' metrics.
-
-</br>
-
-This work is mantained by [MHPI](http://water.engr.psu.edu/shen/) and advised by [Dr. Chaopeng Shen](https://water.engr.psu.edu/shen/). If you find it useful, please cite (dedicated citations are coming):
-
-    Shen, C., et al. (2023). Differentiable modelling to unify machine learning and physical models for geosciences. Nature Reviews Earth & Environment, 4(8), 552–567. <https://doi.org/10.1038/s43017-023-00450-9>.
+- 🤝 **Hybrid Modeling** — Combine NNs with process-based equations; learn physical model parameters directly from data.
+- 🔁 **PyTorch Integration** — Efficient training, modern ML tooling, and numerical solver compatibility.
+- 🧩 **Modular Architecture** — Swap in domain-specific components (models, loss functions, data loaders) with ease.
+- ⚡ **Benchmarking** — Rapid deployment and replication of published [MHPI results](https://mhpi.github.io/benchmarks/#10-year-training-comparison).
+- 🌊 **Operations-ready** — [CSDMS BMI](https://csdms.colorado.edu/wiki/BMI) compliant for [NOAA-OWP](https://water.noaa.gov/about/owp)'s [NextGen Framework](https://github.com/NOAA-OWP/ngen) and AWI's [NGIAB](https://github.com/CIROH-UA/NGIAB-CloudInfra).
 
 </br>
 
 ## Installation
 
-To install 𝛿MG, clone the repo and install in developer mode with [Astral UV](https://docs.astral.sh/uv/):
+```bash
+uv pip install dmg
+```
 
-    ```bash
-    git clone git@github.com:mhpi/generic_deltamodel.git
-    uv pip install -e ./generic_deltamodel
-    ```
+Optional extras:
 
-Pip and Conda are also supported, though UV is recommended. See [setup](./docs/setup.md) for further details.
+```bash
+uv pip install "dmg[hydrodl2]"    # MHPI hydrologic models (δHBV, etc.)
+uv pip install "dmg[logging]"     # TensorBoard and W&B
+uv pip install "dmg[tune]"        # Hyperparameter tuning (Optuna/Ray)
+```
+
+For development installs, see [setup](./docs/setup.md).
 
 </br>
 
 ## Quick Start
 
-See [how to run](./docs/how_to_run.md).
+Use an LSTM to learn parameters for the [HBV](https://en.wikipedia.org/wiki/HBV_hydrology_model) hydrologic model:
 
-**Example -- Differentiable Parameter Learning**: Use an LSTM to learn parameters for the [HBV](https://en.wikipedia.org/wiki/HBV_hydrology_model) hydrological model.
+```python
+from hydrodl2.models.hbv.hbv import Hbv
+from dmg.core.data.loaders import HydroLoader
+from dmg.core.utils import load_nn_model
+from dmg.models.delta_models import DplModel
+from example import load_config, take_data_sample
 
-    ```python
-    from hydrodl2.models.hbv.hbv import Hbv
+config = load_config('../example/conf/config_dhbv.yaml')
 
-    from dmg.core.data.loaders import HydroLoader
-    from dmg.core.utils import load_nn_model, print_config, set_randomseed
-    from dmg.models.delta_models import DplModel
-    from example import load_config, take_data_sample
+# Build differentiable model: NN learns parameters for physics model.
+phy_model = Hbv(config['model']['phy'])
+nn = load_nn_model(config['model'], phy_model)
+dpl_model = DplModel(phy_model=phy_model, nn_model=nn)
 
-    CONFIG_PATH = '../example/conf/config_dhbv.yaml'
+# Load data and forward.
+dataset = HydroLoader(config).dataset
+sample = take_data_sample(config, dataset, days=730, basins=100)
+output = dpl_model(sample)
+```
 
+Internally, `DplModel` composes the NN and physics model — the NN generates parameters, the physics model produces predictions:
 
-    # Model configuration
-    config = load_config(CONFIG_PATH)
+```python
+parameters = self.nn_model(dataset_sample['xc_nn_norm'])
+predictions = self.phy_model(dataset_sample, parameters)
+```
 
-    # Initialize physical model and NN.
-    phy_model = Hbv(config['model']['phy'])
-    nn = load_nn_model(config['model'], phy_model)
-
-    # Create differentiable model dHBV: a torch.nn.Module that describes how
-    # the NN is linked to the physical model HBV.
-    dpl_model = DplModel(phy_model=phy_model, nn_model=nn)
-
-    # Load dataset of NN and HBV inputs.
-    dataset = HydroLoader(config).dataset
-    dataset_sample = take_data_sample(config, dataset, days=730, basins=100)
-
-    output = dpl_model(dataset_sample)
-    ```
-
-This exposes a key characteristic of the differentiable model `DplModel`: composition of a physical model, `phy_model`, and a neural network, `nn`. Internally, `DplModel` looks like
-
-    ```python
-    # NN forward
-    parameters = self.nn_model(dataset_sample['xc_nn_norm'])
-
-    # Physics model forward
-    predictions = self.phy_model(
-        dataset_sample,
-        parameters,
-    )
-    ```
-
-Check out [examples](https://github.com/mhpi/generic_deltamodel/tree/master/example/hydrology) to see model training/testing/simulation in detail. We recommend starting with the [δHBV 1.0 tutorial](./example/hydrology/example_dhbv_1_0.ipynb), which can also be run in a [Colab Notebook](https://colab.research.google.com/drive/19PRLrI-L7cGeYzkk2tOetULzQK8s_W7v?usp=sharing) to leverage online compute.
+We recommend starting with the [δHBV 1.0 tutorial](./example/hydrology/example_dhbv_1_0.ipynb) ([Colab](https://colab.research.google.com/drive/19PRLrI-L7cGeYzkk2tOetULzQK8s_W7v?usp=sharing)), then exploring the full [example notebooks](https://github.com/mhpi/generic_deltamodel/tree/master/example/hydrology). See [how to run](./docs/how_to_run.md) for CLI usage.
 
 </br>
 
@@ -112,74 +94,85 @@ In the unseen extreme events spatial test, we used water years with a 5-year or 
 
 ![Alt text](./docs/images/extreme_temporal.png)
 
-### 3. National-scale Water Modeling
+### 3. National- and Global-scale Distributed Modeling
 
-A national-scale water modeling study on approximately 180,000 river reaches (with a median length of 7 km) across CONUS using the high-resolution, multiscale, differentiable water model 𝛿HBV 2.0. This model is also operating at global-scales and has been used to generate high-quality, seamless simulations for the entire CONUS. Find more details and results in [Song, Bindas, et al. (2025)](https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2024WR038928).
+A national-scale water modeling study on approximately 180,000 river reaches (with a median length of 7 km) across CONUS using the high-resolution, multiscale, differentiable water model 𝛿HBV 2.0. This model is also operating at global scales ([Ji, Song, et al., 2025](https://www.nature.com/articles/s41467-025-64367-1)) and has been used to generate high-quality, seamless simulations for both [CONUS](https://zenodo.org/records/15784945) and the [globe](https://zenodo.org/records/17552954). Find more details and results in [Song, Bindas, et al. (2025)](https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2024WR038928).
 
 ![Alt text](./docs/images/conus_dataset.jpg)
 
 ### 4. Global-scale Photosynthesis Modeling
 
-Currently in development. Find more details and results in [Aboelyazeed et al. (2024)](https://doi.org/10.22541/au.173101418.87755465/v1).
+Differentiable modeling has also been applied to parameterize global-scale sapflow simulations. This work is currently in development; see [Aboelyazeed et al. (2024)](https://doi.org/10.22541/au.173101418.87755465/v1) for more details.
 
 ![Alt text](./docs/images/ecosystems_global_vcmax.png)
 
 </br>
 
-## Ecosystem Integration
+## Documentation
 
-- **HydroDL 2.0 ([`hydrodl2`](https://github.com/mhpi/hydrodl2))**: Home to MHPI's suite of process-based hydrology models and differentiable model augmentations.
-<!-- - **HydroData ([`hydro_data_dev`](https://github.com/mhpi/hydro_data_dev))**: Data extraction, processing, and management tools optimized for geospatial datasets. (In development) -->
-<!-- - **Config GUI ([`GUI-Config-builder`](https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/config_builder_gui/Config+Builder+GUI.zip))([Source](https://github.com/mhpi/GUI-Config-builder))**: An intuitive, user-friendly tool designed to simplify the creation and editing of configuration files for model setup and development. -->
-- **Differentiable Ecosystem Modeling ([`diffEcosys (dev version only)`](https://github.com/hydroPKDN/diffEcosys/))**: A physics-informed machine learning system for ecosystem modeling, demonstrated using the photosynthesis process representation within the Functionally Assembled Terrestrial Ecosystem Simulator (FATES) model. This model is coupled to NNs that learn parameters from observations of photosynthesis rates.
-- **Other Development**: Many additions are currently in the progress: (i) numerical PDE solvers on PyTorch, torchode, torchdiffeq; (ii) [adjoint](https://doi.org/10.5194/hess-28-3051-2024) sensitivity; (iii) extremely efficient and highly accurate surrogate models for process-based equations; (iv) data assimilation methods; (v) downscaled and bias-corrected climate data; (vi) mysteriously powerful neural networks, and more ...
-
-</br>
-
-## 𝛿MG Architecture
-
-- **Data Loaders**: Bulk data preprocessors customized per dataset.
-- **Data Samplers**: Dataset samplers for minibatching during model training and inference.
-- **Trainers**: Orchestrates high-level model training, testing, and simulation.
-- **ModelHandler**: Manages multimodeling, multi-GPU computation, and other high level operations. Acts as an drop-in model interface for CSDMS BMI or other R2O wrappers.
-- **Delta Models**: Differentiable models; describes how NNs and physical models are coupled (e.g., `DplModel` for parameter learning).
+| | |
+|---|---|
+| [Setup](./docs/setup.md) | Installation options (PyPI, pip, UV, Conda) |
+| [How to Run](./docs/how_to_run.md) | CLI usage and custom model development |
+| [Configuration](./docs/configuration.md) | Config file system and full settings glossary |
+| [API Reference](./docs/api_reference.md) | Public API — models, loss functions, NNs, utilities |
+| [Examples](./example/hydrology/) | Jupyter notebook tutorials |
+| [Changelog](./docs/CHANGELOG.md) | Release history |
 
 </br>
 
-## Repo
+## Architecture
 
-    ```text
-    .
-    ├── src/dmg/
-    │   ├── __main__.py                 # Runs 𝛿MG; models, experiments
-    │   ├── core/
-    │   │   ├── calc/                   # Calculation utilities
-    │   │   ├── data/                   # Data loaders and samplers
-    │   │   ├── logging/                # Utilities for Tensorboard and W&B logging
-    │   │   ├── post/                   # Post-processing utilities; plotting
-    │   │   └── utils/                  # Helper functions
-    │   ├── models/
-    │   │   ├── criterion               # Loss functions
-    │   │   ├── delta_models            # Differentiable model modalities
-    │   │   ├── multimodels             # Multimodeling processors
-    │   │   ├── neural_networks/        # Neural network architectures
-    │   │   ├── phy_models/             # Physical Models
-    │   │   └── model_handler.py        # High-level model manager
-    │   └── trainers/                   # Model training routines
-    ├── conf/
-    │   ├── hydra/                      # Hydra settings
-    │   ├── observations/               # Observation configuration files
-    │   ├── config.py                   # Configuration validator
-    │   └── default.yaml                # Default master configuration file
-    ├── docs/
-    └── example/                        # Tutorials
-    ```
+```text
+src/dmg/
+├── core/
+│   ├── calc/                   # Metrics and calculation utilities
+│   ├── data/                   # Data loaders and samplers
+│   ├── logging/                # TensorBoard and W&B logging
+│   ├── post/                   # Post-processing and plotting
+│   └── utils/                  # Factory functions and helpers
+├── models/
+│   ├── criterion/              # Loss functions (MSE, NSE, KGE, ...)
+│   ├── delta_models/           # Differentiable model types (DplModel, ...)
+│   ├── neural_networks/        # NN architectures (LSTM, ANN, MLP, ...)
+│   ├── phy_models/             # Physical model wrappers
+│   └── model_handler.py        # High-level model manager
+└── trainers/                   # Training orchestration
+```
 
-</br>
+## Ecosystem
+
+- **[`hydrodl2`](https://github.com/mhpi/hydrodl2)** — MHPI's suite of process-based hydrology models (lumped + distributed).
+- **[`diffEcosys`](https://github.com/hydroPKDN/diffEcosys/)** — Physics-informed ML for ecosystem modeling (photosynthesis via FATES).
+- **In development** — Numerical PDE solvers, [adjoint](https://doi.org/10.5194/hess-28-3051-2024) sensitivity, surrogate models, data assimilation, and more.
+
+## Citation
+
+This work is maintained by [MHPI](http://water.engr.psu.edu/shen/) and advised by [Dr. Chaopeng Shen](https://water.engr.psu.edu/shen/). If you find it useful, please cite:
+
+> Shen, C., et al. (2023). Differentiable modelling to unify machine learning and physical models for geosciences. *Nature Reviews Earth & Environment*, 4(8), 552–567. https://doi.org/10.1038/s43017-023-00450-9
+
+<details>
+<summary>BibTeX</summary>
+
+```bibtex
+@article{shen2023differentiable,
+  title={Differentiable modelling to unify machine learning and physical models for geosciences},
+  author={Shen, Chaopeng and others},
+  journal={Nature Reviews Earth \& Environment},
+  volume={4},
+  number={8},
+  pages={552--567},
+  year={2023},
+  publisher={Nature Publishing Group},
+  doi={10.1038/s43017-023-00450-9}
+}
+```
+</details>
 
 ## Contributing
 
-We welcome contributions! Please submit changes via a fork and pull requests. For more details, refer to [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md).
+We welcome contributions! See [CONTRIBUTING.md](./docs/CONTRIBUTING.md) for details.
 
 ---
 

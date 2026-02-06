@@ -1,12 +1,12 @@
 ---
 name: 🛠️ Enhancement/Feature Request
-about: Suggest something an improvement a New Feature to add
+about: Suggest an improvement or new feature
 labels: feature_request
 assignees: leoglonz
 ---
 
 <!--
-Welcome! Thanks considering a way to improve dMG.
+Welcome! Thanks for considering a way to improve dMG.
 
 Before creating a new feature request please search the issues for relevant feature requests.
 -->

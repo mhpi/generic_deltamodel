@@ -10,13 +10,13 @@ For a breakdown of how to *code* with 𝛿MG, we encourage you to check the [hyd
 
 ## 1. Command Line
 
-Thanks to 𝛿MG's framework-package duality, there are two ways to run 𝛿MG from the command line. Assuming your ENV is active (see [setup](./setup.md)), these are
+Thanks to 𝛿MG's framework-package duality, there are two ways to run 𝛿MG from the command line. Assuming your environment is active (see [setup](./setup.md)), these are
 
 1. `python -m dmg`
 
-2. `python ./generic_deltamodel/src/dmg/__main__.py`
+2. `python ./src/dmg/__main__.py` (from the repo root)
 
-Both of these options are equivalent and will default 𝛿MG to using the [`./generic_deltamodel/conf/default.yaml`](../conf/default.yaml) master configuration file. To be clear, this is a template and will run unless modified.
+Both of these options are equivalent and will default 𝛿MG to using the [`./conf/default.yaml`](../conf/default.yaml) master configuration file. To be clear, this is a template and will run unless modified.
 
 To use a different configuration file, we can add an option `--config-name` to either of the above. For example
 
@@ -38,7 +38,7 @@ If you have installed 𝛿MG to use differentiable hydrology models developed by
 
 1. Use the pre-built [example files](../example/hydrology/) to train or forward these models.
 
-2. You can use the master + observation configuration files from [`./generic_deltamodel/example/conf/`](../example/conf/) to train or forward using the command line arguments in [Section 1](#1-command-line). Simply move these files to the [`./generic_deltamodel/conf/`](../conf/) directory, and then run, for example,
+2. You can use the master + observation configuration files from [`./example/conf/`](../example/conf/) to train or forward using the command line arguments in [Section 1](#1-command-line). Simply move these files to the [`./conf/`](../conf/) directory, and then run, for example,
 
 ```bash
 python -m dmg --config-name config_dhbv.yaml
@@ -56,19 +56,19 @@ To use 𝛿MG to build and experiment with your own differentiable model, a few 
 
 3. Design or modify modules. If creating a new module, the class name must follow camel-case and the file name must be all lower-case with underscores to split camel-case. (See 𝛿MG source code for examples.)
     - Data loader: Loads full dataset
-        - `../dmg/core/data/loaders/`
+        - `dmg/core/data/loaders/`
         - Specify in `data_loader` setting in master configuration.
     - Data sampler: Takes samples of full dataset for minibatching during model training and testing.
-        - `../dmg/core/data/samplers/`
+        - `dmg/core/data/samplers/`
         - Specify in `data_sampler` setting in master configuration.
     - Trainer: Handles training and testing experiments, as well as batching data for model forward.
-        - `../dmg/trainers/`
+        - `dmg/trainers/`
         - Specify in `trainer` setting in master configuration.
     - NN: Neural network
-        - `../dmg/models/neural_networks/`
+        - `dmg/models/neural_networks/`
         - Specify as `delta_model: nn_model: model` setting in master configuration.
     - Physical model: Physical model written in a differentiable way with PyTorch. (See [hydrodl2/models](https://github.com/mhpi/hydrodl2/tree/master/src/hydrodl2/models/hbv) for examples in hydrology.)
-        - `../dmg/models/phy_models/`
+        - `dmg/models/phy_models/`
         - Specify as `delta_model: phy_model: model` setting in master configuration.
 
 4. Run 𝛿MG from the command line. For example,
