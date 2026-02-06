@@ -30,7 +30,7 @@ There is a minimal set of standards we would ask you to consider to speed up the
 
      Note: if pytest does not work, try `python -m pytest`.
 
-   - If ruff or pytest report any errors, please try to correct these if possible. Otherwise, do `pre-commit uninstall` to proceed with committing your code and we can help in the next step.
+   - If ruff or pytest report any errors, please try to correct these if possible. Otherwise, git commit with flag `--no-verify` to proceed with committing your code and we can help in the next step.
 
 3. **Make a pull request (PR)**
     - When you are ready, make a PR of your fork to the `generic_deltamodel` repository master branch.

@@ -5,13 +5,14 @@
 <h1 align="center">PyTorch Differentiable Modeling Framework</h1>
 
 <p align="center">
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue?labelColor=333333" alt="Python"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.9--3.13-blue?labelColor=333333" alt="Python"></a>
   <a href="https://pypi.org/project/torch/"><img src="https://img.shields.io/badge/dynamic/json?label=PyTorch&query=info.version&url=https%3A%2F%2Fpypi.org%2Fpypi%2Ftorch%2Fjson&logo=pytorch&color=EE4C2C&logoColor=F900FF&labelColor=333333" alt="PyTorch"></a>
   <a href="https://pypi.org/project/dmg/"><img src="https://img.shields.io/pypi/v/dmg?logo=pypi&logoColor=white&labelColor=333333" alt="PyPI"></a>
   </br>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&labelColor=333333" alt="Ruff"></a>
   <a href="https://github.com/mhpi/generic_deltamodel/actions/workflows/pytest.yaml"><img src="https://img.shields.io/github/actions/workflow/status/mhpi/generic_deltamodel/pytest.yaml?branch=master&logo=github&label=tests&labelColor=333333" alt="Build"></a>
   <a href="https://doi.org/10.5281/zenodo.14868671"><img src="https://img.shields.io/badge/DOI-10.5281/zenodo.14868671-blue?labelColor=333333&lab" alt="DOI"></a>
+  <a href="#citation"><img src="https://img.shields.io/badge/license-Non--Commercial_(PSU)-yellow?labelColor=333333" alt="License"></a>
 </p>
 
 ---
@@ -31,15 +32,15 @@ A generic framework for building [differentiable models](https://www.nature.com/
 ## Installation
 
 ```bash
-pip install dmg
+uv pip install dmg
 ```
 
 Optional extras:
 
 ```bash
-pip install "dmg[hydrodl2]"    # MHPI hydrologic models (δHBV, etc.)
-pip install "dmg[logging]"     # TensorBoard and W&B
-pip install "dmg[tune]"        # Hyperparameter tuning (Optuna/Ray)
+uv pip install "dmg[hydrodl2]"    # MHPI hydrologic models (δHBV, etc.)
+uv pip install "dmg[logging]"     # TensorBoard and W&B
+uv pip install "dmg[tune]"        # Hyperparameter tuning (Optuna/Ray)
 ```
 
 For development installs, see [setup](./docs/setup.md).
@@ -150,6 +151,24 @@ src/dmg/
 This work is maintained by [MHPI](http://water.engr.psu.edu/shen/) and advised by [Dr. Chaopeng Shen](https://water.engr.psu.edu/shen/). If you find it useful, please cite:
 
 > Shen, C., et al. (2023). Differentiable modelling to unify machine learning and physical models for geosciences. *Nature Reviews Earth & Environment*, 4(8), 552–567. https://doi.org/10.1038/s43017-023-00450-9
+
+<details>
+<summary>BibTeX</summary>
+
+```bibtex
+@article{shen2023differentiable,
+  title={Differentiable modelling to unify machine learning and physical models for geosciences},
+  author={Shen, Chaopeng and others},
+  journal={Nature Reviews Earth \& Environment},
+  volume={4},
+  number={8},
+  pages={552--567},
+  year={2023},
+  publisher={Nature Publishing Group},
+  doi={10.1038/s43017-023-00450-9}
+}
+```
+</details>
 
 ## Contributing
 
