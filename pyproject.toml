@@ -20,6 +20,15 @@ maintainers = [
 ]
 requires-python = ">=3.9.0"
 dynamic = ["version"]
+keywords = [
+    "differentiable-modeling",
+    "pytorch",
+    "hydrology",
+    "physics-informed",
+    "deep-learning",
+    "hybrid-modeling",
+    "scientific-computing",
+]
 dependencies = [
     "geopandas",
     "hydra-core",
@@ -34,14 +43,18 @@ dependencies = [
     "scipy",
     "torch",
     "tqdm",
-    "uv",
     "xarray",
     "zarr",
 ]
 classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3",
-    "License :: Free for non-commercial use",
+    "License :: Other/Proprietary License",
     "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Hydrology",
 ]
 
 [project.optional-dependencies]
@@ -69,6 +82,8 @@ tune = [
 [project.urls]
 Homepage = "https://mhpi.github.io/codes/frameworks/"
 Repository = "https://github.com/mhpi/generic_deltamodel"
+Documentation = "https://github.com/mhpi/generic_deltamodel/tree/master/docs"
+Issues = "https://github.com/mhpi/generic_deltamodel/issues"
 
 [tool.hatch]
 version.source = "vcs"
