@@ -4,9 +4,9 @@ This doc gives details on how to *run* 𝛿MG once [setup](./setup.md) steps are
 
 For a breakdown of how to *code* with 𝛿MG, we encourage you to check the [hydrology example](../example/hydrology/).
 
-<br>
+</br>
 
-<br>
+</br>
 
 ## 1. Command Line
 
@@ -26,9 +26,9 @@ python -m dmg --config-name <config_name>
 
 where 'config_name' is the file name of your master configuration less the yaml extension. This option comes from Hydra, which is used for parsing the yaml configuration files in 𝛿MG. See [flags](https://hydra.cc/docs/advanced/hydra-command-line-flags/) for more details and available options.
 
-<br>
+</br>
 
-<br>
+</br>
 
 ## 2. Usage
 
@@ -44,7 +44,7 @@ If you have installed 𝛿MG to use differentiable hydrology models developed by
 python -m dmg --config-name config_dhbv.yaml
 ```
 
-<br>
+</br>
 
 ### 2.2 Custom Model Development
 
@@ -77,7 +77,7 @@ To use 𝛿MG to build and experiment with your own differentiable model, a few 
     python -m dmg --config-name config_dhbv.yaml
     ```
 
-<br>
+</br>
 
 ---
 

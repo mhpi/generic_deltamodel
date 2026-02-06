@@ -14,7 +14,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-13, macos-14]  # macos-13=Intel, macos-14=ARM
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0  # Full history for version tags (hatch-vcs needs this)
 

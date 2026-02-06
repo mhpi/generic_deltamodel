@@ -2,7 +2,7 @@
 
 Every model built in 𝛿MG is designed to run on a pair of configuration files to isolate experiment, model, and data settings. These are handled by [Hydra config manager](https://hydra.cc/docs/intro/).
 
-<br>
+</br>
 
 ## Configuration Files
 
@@ -29,7 +29,7 @@ Every model built in 𝛿MG is designed to run on a pair of configuration files 
 
     - There are **no** requirements for this except that the config have the *name* attribute. All settings here are intended to be minimally exposed within your data loader, so it's up to you what you want to include.
 
-<br>
+</br>
 
 ## Adding Configurations
 
@@ -49,7 +49,7 @@ If you wish to use additional configuration files to store distinguished setting
 
   where *config_file_name* reflects the `name` attribute of the config file.
 
-<br>
+</br>
 
 ## Initializing Configuration Files in *𝛿MG*
 
@@ -72,7 +72,7 @@ where *config* is the name of the main `config.yaml` file. Hydra builds and pass
 
 This processing can be done without the decorator, but this is generally the most straightforward way to do it and *needs to be included* in any other scripts used to run your models.
 
-<br>
+</br>
 
 ## Accessing Settings in the Config Dictionary
 
@@ -82,11 +82,11 @@ After your configuration files are initialized as a dictionary:
 
 - Settings in your observations data config or other type (see [adding-configurations](#adding-configurations)) can be accessed as subdictionaries like `config['observations'][<setting_name>]` or `config['config_type'][<setting_name>]`.
 
-<br>
+</br>
 
 ---
 
-<br>
+</br>
 
 # Configuration Glossary
 
@@ -98,9 +98,9 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 ---
 
-<br>
+</br>
 
-<br>
+</br>
 
 ## 1. Model/Experiment (Master) Configuration
 
@@ -113,7 +113,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 - **observations**: Name of observations configuration file (must match `name` key of said file).
 - <**config_type**>: If you want to add supplemental configuration files, add name of configuration here just as for observations.
 
-<br>
+</br>
 
 ### 1.2 General
 
@@ -158,7 +158,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 *load_state_dir*: Path to a PyTorch save file (`.pt`) containing cached model states for a neural network or differentiable model (e.g., hidden and cell states for an LSTM, buckets for a physical model). If this path is provided, the Model Handler will attempt to load these states into the current model.
 
-<br>
+</br>
 
 ### 1.3 Training
 
@@ -187,7 +187,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 - **save_epoch**: Save module weights after every epoch that is a multiple of this number.
 
-<br>
+</br>
 
 ### 1.4 Evaluation
 
@@ -201,7 +201,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 - **test_epoch**: Epoch to test model from. Model weights must be available for this epoch.
 
-<br>
+</br>
 
 ### 1.5 Inference
 
@@ -213,7 +213,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 - **batch_size**: Simulation batch size. Must be less than total number of samples.
 
-<br>
+</br>
 
 ### 1.6 Differentiable Model
 
@@ -286,7 +286,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
   - **attributes**: List of static NN input variables. Used in data loader.
 
-<br>
+</br>
 
 ### 1.7 Multimodel (Optional)
 
@@ -325,9 +325,9 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 ---
 
-<br>
+</br>
 
-<br>
+</br>
 
 ## 2. Observations Configuration
 
@@ -359,7 +359,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 *all_attributes*: List of names of all static variables available in the dataset.
 
-<br>
+</br>
 
 ---
 

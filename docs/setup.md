@@ -1,6 +1,6 @@
 # *𝛿MG* Setup
 
-<br>
+</br>
 
 ## 1. System Requirements
 
@@ -9,7 +9,7 @@
 - Windows, Linux, or macOS
 - NVIDIA GPU(s) supporting CUDA (>12.0 recommended) for GPU-accelerated training
 
-<br>
+</br>
 
 ## 2. Install from PyPI
 
@@ -29,7 +29,7 @@ pip install "dmg[tune]"        # Hyperparameter tuning (Optuna, Ray Tune)
 pip install "dmg[dev]"         # Development tools (ruff, pytest, pre-commit)
 ```
 
-<br>
+</br>
 
 ## 3. Install from Source (Development)
 
@@ -43,7 +43,7 @@ Open a terminal, navigate to the directory where 𝛿MG will be stored, and clon
 git clone https://github.com/mhpi/generic_deltamodel.git
 ```
 
-<br>
+</br>
 
 ### Create a New Environment and Install
 
@@ -106,7 +106,7 @@ git clone https://github.com/mhpi/generic_deltamodel.git
 
   If CUDA is not available, uninstall PyTorch from the environment and reinstall according to your system [specification](https://pytorch.org/get-started/locally/).
 
-<br>
+</br>
 
 ### Install Optional Dependencies
 
@@ -159,7 +159,7 @@ git clone https://github.com/mhpi/generic_deltamodel.git
   uv pip install "./generic_deltamodel[dev]"
   ```
 
-<br>
+</br>
 
 ---
 

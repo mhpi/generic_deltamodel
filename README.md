@@ -1,12 +1,18 @@
-# 𝛿MG: PyTorch Differentiable Modeling Framework
+<p align="center">
+  <img src="./docs/images/dmg.drawio.svg" alt="𝛿MG logo" width="300">
+</p>
 
-[![Python](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue?labelColor=333333)](https://www.python.org/downloads/)
-[![PyTorch Version](https://img.shields.io/badge/dynamic/json?label=PyTorch&query=info.version&url=https%3A%2F%2Fpypi.org%2Fpypi%2Ftorch%2Fjson&logo=pytorch&color=EE4C2C&logoColor=F900FF&labelColor=333333)](https://pypi.org/project/torch/)
-[![PyPI](https://img.shields.io/pypi/v/dmg?logo=pypi&logoColor=white&labelColor=333333)](https://pypi.org/project/dmg/)
+<h1 align="center">PyTorch Differentiable Modeling Framework</h1>
 
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&labelColor=333333)](https://github.com/astral-sh/ruff)
-[![Build](https://img.shields.io/github/actions/workflow/status/mhpi/generic_deltamodel/pytest.yaml?branch=master&logo=github&label=tests&labelColor=333333)](https://github.com/mhpi/generic_deltamodel/actions/workflows/pytest.yaml)
-[![DOI](https://img.shields.io/badge/DOI-10.5281/zenodo.14868671-blue?labelColor=333333&lab)](https://doi.org/10.5281/zenodo.14868671)
+<p align="center">
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue?labelColor=333333" alt="Python"></a>
+  <a href="https://pypi.org/project/torch/"><img src="https://img.shields.io/badge/dynamic/json?label=PyTorch&query=info.version&url=https%3A%2F%2Fpypi.org%2Fpypi%2Ftorch%2Fjson&logo=pytorch&color=EE4C2C&logoColor=F900FF&labelColor=333333" alt="PyTorch"></a>
+  <a href="https://pypi.org/project/dmg/"><img src="https://img.shields.io/pypi/v/dmg?logo=pypi&logoColor=white&labelColor=333333" alt="PyPI"></a>
+  </br>
+  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&labelColor=333333" alt="Ruff"></a>
+  <a href="https://github.com/mhpi/generic_deltamodel/actions/workflows/pytest.yaml"><img src="https://img.shields.io/github/actions/workflow/status/mhpi/generic_deltamodel/pytest.yaml?branch=master&logo=github&label=tests&labelColor=333333" alt="Build"></a>
+  <a href="https://doi.org/10.5281/zenodo.14868671"><img src="https://img.shields.io/badge/DOI-10.5281/zenodo.14868671-blue?labelColor=333333&lab" alt="DOI"></a>
+</p>
 
 ---
 
@@ -18,7 +24,7 @@ A generic framework for building [differentiable models](https://www.nature.com/
 - 🔁 **PyTorch Integration** — Efficient training, modern ML tooling, and numerical solver compatibility.
 - 🧩 **Modular Architecture** — Swap in domain-specific components (models, loss functions, data loaders) with ease.
 - ⚡ **Benchmarking** — Rapid deployment and replication of published [MHPI results](https://mhpi.github.io/benchmarks/#10-year-training-comparison).
-- 🌊 **NextGen-ready** — [CSDMS BMI](https://csdms.colorado.edu/wiki/BMI) compliant for [NOAA-OWP](https://water.noaa.gov/about/owp)'s [NextGen Framework](https://github.com/NOAA-OWP/ngen) and AWI's [NGIAB](https://github.com/CIROH-UA/NGIAB-CloudInfra).
+- 🌊 **Operations-ready** — [CSDMS BMI](https://csdms.colorado.edu/wiki/BMI) compliant for [NOAA-OWP](https://water.noaa.gov/about/owp)'s [NextGen Framework](https://github.com/NOAA-OWP/ngen) and AWI's [NGIAB](https://github.com/CIROH-UA/NGIAB-CloudInfra).
 
 </br>
 

@@ -29,7 +29,7 @@ model = DplModel(
 output = model(data_dict)  # Returns dict of physics model outputs
 ```
 
-<br>
+</br>
 
 ## Model Handlers
 
@@ -61,7 +61,7 @@ Key methods:
 - `get_parameters()` — Return all model parameters for optimizer.
 - `save_model(epoch)` / `save_states()` / `load_states()` — Serialization.
 
-<br>
+</br>
 
 ## Neural Networks
 
@@ -91,7 +91,7 @@ lstm = LstmModel(
 )
 ```
 
-<br>
+</br>>
 
 ## Loss Functions (Criterion)
 
@@ -115,7 +115,7 @@ loss_fn = MSELoss(config, device='cpu')
 loss = loss_fn(y_pred, y_obs)  # Returns scalar tensor
 ```
 
-<br>
+</br>>>
 
 ## Data Loaders
 
@@ -138,7 +138,7 @@ eval_data = loader.eval_dataset     # dict of tensors
 full_data = loader.dataset          # dict of tensors (inference)
 ```
 
-<br>
+</br>
 
 ## Data Samplers
 
@@ -149,7 +149,7 @@ Samplers draw minibatches from loaded datasets during training. Specify by class
 | `HydroSampler` | `dmg.core.data.samplers` | Hydrological data sampler for minibatch selection. |
 | `MsHydroSampler` | `dmg.core.data.samplers` | Multi-scale hydrological sampler. |
 
-<br>
+</br>
 
 ## Trainers
 
@@ -176,7 +176,7 @@ trainer.evaluate()    # Run evaluation
 trainer.inference()   # Run inference/simulation
 ```
 
-<br>
+</br>
 
 ## Factory Functions
 
@@ -205,7 +205,7 @@ PhyModel = import_phy_model('Hbv')
 phy_model = PhyModel(config['model']['phy'])
 ```
 
-<br>
+</br>
 
 ## General Utilities
 
@@ -217,7 +217,7 @@ phy_model = PhyModel(config['model']['phy'])
 | `save_model(path, model, name, epoch)` | `dmg.core.utils` | Save model state dict to disk. |
 | `save_outputs(config, predictions, y_obs)` | `dmg.core.utils` | Save model predictions to disk. |
 
-<br>
+</br>
 
 ## Metrics
 
