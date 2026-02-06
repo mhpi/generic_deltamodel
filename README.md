@@ -19,7 +19,7 @@
 
 </br>
 
-A generic framework for building [differentiable models](https://www.nature.com/articles/s43017-023-00450-9) that seamlessly couple neural networks with process-based equations, leveraging PyTorch's auto-differentiation for efficient, GPU-accelerated optimization. This is the spiritual successor to [HydroDL](https://github.com/zhonghu17/HydroDL).
+𝛿MG is a generic framework for building [differentiable models](https://www.nature.com/articles/s43017-023-00450-9) that seamlessly couple neural networks with process-based equations, leveraging PyTorch's auto-differentiation for efficient, GPU-accelerated optimization. This is the fast, spiritual successor to [HydroDL](https://github.com/zhonghu17/HydroDL).
 
 - 🤝 **Hybrid Modeling** — Combine NNs with process-based equations; learn physical model parameters directly from data.
 - 🔁 **PyTorch Integration** — Efficient training, modern ML tooling, and numerical solver compatibility.
