@@ -1,5 +1,9 @@
-# This configuration file is specifically for the high-resolution, multiscale, differentiable hydrologic model, dHBV2.0UH, from Song et al. (2025). If you find this code is useful to your work, please cite the paper below:
-# Yalan Song, Tadd Bindas, Chaopeng Shen, et al. "High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning." Water Resources Research (2025). https://doi.org/10.1029/2024WR038928.
+# This config constructs the high-resolution, multiscale, differentiable hydrologic model dHBV2.0UH from Song et al. (2025). If you find this code useful in your work, please cite:
+#
+# Song, Y., Bindas, T., Shen, C., Ji, H., Knoben, W. J. M., Lonzarich, L., et al. (2025). High-resolution national-scale water modeling is enhanced by multiscale differentiable physics-informed machine learning. Water Resources Research, 61, e2024WR038928. https://doi.org/10.1029/2024WR038928.
+
+# This config replicates the CAMELS 2700-basin, 15-year benchmark.
+
 
 defaults:
   - _self_
@@ -29,7 +33,7 @@ model_dir: ./path/to/your/model/  # Pretrained dHBV 2.0 (+ input data) can be do
 
 ## Training ------------------------------#
 train:
-    # NOTE: Multiscale training for dHBV2.0 is not currently enabled in dMG.
+    # NOTE: Multiscale training for dHBV2.0 is not enabled in dMG.
     # Training code will be released at a later time.
   start_time: 1980/10/01
   end_time: 1995/09/30
@@ -70,11 +74,7 @@ model:
   use_log_norm: []
 
   phy:
-    ## Citations ##
-    # dHBV 2.0: Yalan Song, Tadd Bindas, Chaopeng Shen, et al.
-    # "High-resolution national-scale water modeling is enhanced by
-    # multiscale differentiable physics-informed machine learning." Water
-    # Resources Research (2025). https://doi.org/10.1029/2024WR038928.
+    ## See Citation above ##
 
     name: [Hbv_2]
     nmul: 4

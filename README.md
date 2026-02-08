@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.9--3.13-blue?labelColor=333333" alt="Python"></a>
-  <a href="https://pypi.org/project/dmg/"><img src="https://img.shields.io/pypi/v/dmg?logo=pypi&logoColor=white&labelColor=333333&cacheSeconds=60" alt="PyPI"></a>
+  <a href="https://pypi.org/project/dmg/"><img src="https://img.shields.io/pypi/v/dmg?logo=pypi&logoColor=white&labelColor=333333" alt="PyPI"></a>
   <a href="https://pypi.org/project/torch/"><img src="https://img.shields.io/badge/dynamic/json?label=PyTorch&query=info.version&url=https%3A%2F%2Fpypi.org%2Fpypi%2Ftorch%2Fjson&logo=pytorch&color=EE4C2C&logoColor=F900FF&labelColor=333333" alt="PyTorch"></a>
   </br>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&labelColor=333333" alt="Ruff"></a>
@@ -150,24 +150,26 @@ src/dmg/
 
 This work is maintained by [MHPI](http://water.engr.psu.edu/shen/) and advised by [Dr. Chaopeng Shen](https://water.engr.psu.edu/shen/). If you find it useful, please cite:
 
-> Shen, C., et al. (2023). Differentiable modelling to unify machine learning and physical models for geosciences. *Nature Reviews Earth & Environment*, 4(8), 552–567. https://doi.org/10.1038/s43017-023-00450-9
+> Shen, C., Appling, A.P., Gentine, P. et al. Differentiable modelling to unify machine learning and physical models for geosciences. *Nat Rev Earth Environ* **4**, 552–567 (2023). <https://doi.org/10.1038/s43017-023-00450-9>
 
 <details>
 <summary>BibTeX</summary>
 
 ```bibtex
-@article{shen2023differentiable,
-  title={Differentiable modelling to unify machine learning and physical models for geosciences},
-  author={Shen, Chaopeng and others},
-  journal={Nature Reviews Earth \& Environment},
-  volume={4},
-  number={8},
-  pages={552--567},
-  year={2023},
-  publisher={Nature Publishing Group},
-  doi={10.1038/s43017-023-00450-9}
+@article{shen_differentiable_2023,
+    title = {Differentiable modelling to unify machine learning and physical models for geosciences},
+    volume = {4},
+    issn = {2662-138X},
+    url = {https://doi.org/10.1038/s43017-023-00450-9},
+    doi = {10.1038/s43017-023-00450-9},
+    pages = {552--567},
+    number = {8},
+    journaltitle = {Nature Reviews Earth \& Environment},
+    author = {Shen, Chaopeng and Appling, Alison P. and Gentine, Pierre and Bandai, Toshiyuki and Gupta, Hoshin and Tartakovsky, Alexandre and Baity-Jesi, Marco and Fenicia, Fabrizio and Kifer, Daniel and Li, Li and Liu, Xiaofeng and Ren, Wei and Zheng, Yi and Harman, Ciaran J. and Clark, Martyn and Farthing, Matthew and Feng, Dapeng and Kumar, Praveen and Aboelyazeed, Doaa and Rahmani, Farshid and Song, Yalan and Beck, Hylke E. and Bindas, Tadd and Dwivedi, Dipankar and Fang, Kuai and Höge, Marvin and Rackauckas, Chris and Mohanty, Binayak and Roy, Tirthankar and Xu, Chonggang and Lawson, Kathryn},
+    date = {2023-08-01},
 }
 ```
+
 </details>
 
 ## Contributing
