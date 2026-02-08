@@ -1,7 +1,7 @@
 """
 Regression tests for deterministic model outputs and training pipeline.
 
-These tests verify that dmg produces the same numerical results across code
+These tests verify that dmg produces identical numerical results across code
 changes. If any test here fails, it means a change has altered model behavior.
 
 Coverage:
@@ -15,8 +15,8 @@ mock dataset from conftest.py. If conftest.py mock data generation changes,
 these values must be updated.
 
 NOTE: LSTM on CPU is non-deterministic across hardware (e.g. local machine vs.
-GitHub Actions runner). Each numeric expected value is therefore a list of known
-good values — one per known environment. If a test fails on a new environment,
+GitHub Actions runner). Each numeric value is therefore a list of known
+good values — one per environment. If a test fails on a new environment,
 add the reported value in the error to the appropriate list.
 """
 
@@ -56,9 +56,9 @@ def _assert_close_to_any(actual, expected_values, stat_name, model_name, rtol=1e
     )
 
 
-# ---------------------------------------------------------------------------
-#  Expected learnable parameter counts.
-# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------- #
+#  Expected learnable parameter counts
+# ---------------------------------------------------------------------------- #
 
 EXP_PARAM_COUNTS = {
     'Hbv': {'total': 15},
@@ -67,9 +67,9 @@ EXP_PARAM_COUNTS = {
 }
 
 
-# ---------------------------------------------------------------------------
-#  Expected regression snapshot statistics (seed=111111).
-# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------- #
+#  Expected regression statistics
+# ---------------------------------------------------------------------------- #
 
 EXP_SNAPSHOTS = {
     'Hbv': {
@@ -102,9 +102,9 @@ EXP_SNAPSHOTS = {
 }
 
 
-# ---------------------------------------------------------------------------
-#  Expected parameter bounds for each model.
-# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------- #
+#  Expected parameter bounds
+# ---------------------------------------------------------------------------- #
 
 EXP_PARAMETER_BOUNDS = {
     'Hbv': {
@@ -165,22 +165,21 @@ EXP_ROUTING_BOUNDS = {
 
 
 # ---------------------------------------------------------------------------
-#  Expected training pipeline regression values.
+#  Expected training regression values
 # ---------------------------------------------------------------------------
 
 EXP_FINAL_LOSS_VALUES = [
     24.07529079914093,  # Local machine loss
-    26.94981688261032,  # GHA runner loss (current)
+    26.94981688261032,  # GHA runner loss
 ]
 EXP_NSE_VALUES = [
-    -33.58369255065918,  # Local machine NSE
-    -33.43178367614746,  # GHA runner NSE
+    -33.58369255065918,
+    -33.43178367614746,
 ]
 
-
-# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------- #
 #  Tests
-# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------- #
 
 
 class TestOutputSnapshotRegression:
@@ -293,11 +292,6 @@ class TestOutputSnapshotRegression:
         )
 
 
-# ---------------------------------------------------------------------------
-#  Parameter count and bounds regression tests
-# ---------------------------------------------------------------------------
-
-
 class TestParameterRegression:
     """Regression tests for NN parameter counts and physics model bounds."""
 
@@ -394,11 +388,6 @@ class TestParameterRegression:
                 f"Routing bounds changed for {model_name}.{param_name}: "
                 f"expected {expected_range}, got {actual_routing[param_name]}"
             )
-
-
-# ---------------------------------------------------------------------------
-#  Training pipeline regression test
-# ---------------------------------------------------------------------------
 
 
 def test_training_regression(config, mock_dataset, tmp_path):
