@@ -1,8 +1,9 @@
-# This configuration file is specifically for the differentiable hydrologic model dHBV 1.0 from Feng et al. (2022). If you find this code is useful to your work, please cite this paper below:
+# This config constructs the differentiable hydrologic model dHBV 1.0 from Feng et al. (2022). If you find this code useful in your work, please cite:
+#
 # Dapeng Feng, Jiangtao Liu, Kathryn Lawson, et al. "Differentiable, Learnable, Regionalized Process‐Based Models With Multiphysical Outputs can Approach State‐Of‐The‐Art Hydrologic Prediction Accuracy." Water Resources Research (2022). https://doi.org/10.1029/2022WR032404.
 
-# This config replicates the CAMELS 531-basin, 10-year benchmark.
-# To setup for CAMELS 671-basin, 15-year benchmark, set the following...
+# Default settings replicate CAMELS 531-basin, 10-year benchmark.
+# To use CAMELS 671-basin, 15-year benchmark, set the following...
 #   1. observations: camels_671
 #   2. train: start_time: 1980/10/01
 #   3. train: end_time: 1995/09/30
@@ -78,12 +79,7 @@ model:
   use_log_norm: [prcp]
 
   phy:
-    ## Citation ##
-    # dHBV 1.0: Dapeng Feng, Jiangtao Liu, Kathryn Lawson, et al.
-    # "Differentiable, Learnable, Regionalized Process‐Based Models With
-    # Multiphysical Outputs can Approach State‐Of‐The‐Art Hydrologic
-    # Prediction Accuracy." Water Resources Research (2022).
-    # https://doi.org/10.1029/2022WR032404.
+    ## See Citation above ##
 
     name: [Hbv]
     nmul: 16
@@ -103,7 +99,7 @@ model:
     attributes: []
 
   nn:
-    name: CudnnLstmModel
+    name: CudnnLstmModel  # LstmModel for CPU
     dropout: 0.5
     hidden_size: 256
 

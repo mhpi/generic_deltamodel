@@ -1,13 +1,12 @@
 # ML & Differentiable Parameter Learning (dPL) in Hydrology
 
-This directory contains notebooks to train/test/forward 3 published differentiable hydrologic models (@Dr. Chaopeng Shen, MHPI) in order of development:
+This directory contains notebooks to train/test/forward 3 published differentiable hydrologic models in order of development (Dr. Chaopeng Shen, MHPI):
 
 1. HydroDL LSTM -- `example_lstm.ipynb`
 2. δHBV 1.0 -- `example_dhbv.ipynb`
 3. δHBV 1.1p -- `example_dhbv_1_1p.ipynb`
 4. δHBV 1.1p w/ GEFS -- `example_dhbv_1_1p_gefs.ipynb`
 5. δHBV 2.0UH -- `example_dhbv_2.ipynb` (forward simulation only)
-6. δHBV 2.0UH MTS -- `_example_dhbv2_mts.ipynb` (forward simulation; note this script is WIP and currently for development only.)
 
 We encourage you to check δHBV 1.0 first for detailed on differentiable modeling and dMG methods.
 

@@ -19,9 +19,9 @@ from dmg.core.utils import set_randomseed
 from dmg.models.model_handler import ModelHandler
 from tests import _get_nn_params, get_phy_model_name
 
-# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------- #
 #  Tests
-# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------- #
 
 
 class TestParameterGeneration:

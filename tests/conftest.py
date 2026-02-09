@@ -1,6 +1,4 @@
-"""
-Fixtures and utilities for testing differentiable models in dmg.
-"""
+"""Fixtures and utilities for testing differentiable models in dmg."""
 
 import os
 import sys
@@ -37,9 +35,9 @@ def build_config(config_dict):
     return config
 
 
-# ---------------------------------------------------------------------------
-#  Shared config sections.
-# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------- #
+#  Config
+# ---------------------------------------------------------------------------- #
 
 _SHARED_CONFIG = {
     'mode': 'train_test',
@@ -259,9 +257,9 @@ def build_mock_dataset(config, n_basins=10):
     return dataset
 
 
-# ---------------------------------------------------------------------------
-#  Named fixtures for individual model configs.
-# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------- #
+#  Individual model fixtures
+# ---------------------------------------------------------------------------- #
 
 
 @pytest.fixture
@@ -303,9 +301,9 @@ def mock_dataset_hbv_2(config_hbv_2):
     return build_mock_dataset(config_hbv_2)
 
 
-# ---------------------------------------------------------------------------
-#  Parametrized fixtures: run the same test across all three models.
-# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------- #
+#  Parametrized fixtures.
+# ---------------------------------------------------------------------------- #
 
 
 @pytest.fixture(
