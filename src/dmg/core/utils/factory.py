@@ -99,7 +99,7 @@ def import_phy_model(model: str, ver_name: str = None) -> type:
         all_models = [
             m for names in hydrodl2.available_models().values() for m in names
         ]
-        if model.lower() in all_models:
+        if camel_to_snake(model) in all_models:
             return hydrodl2.load_model(model, ver_name)
         else:
             return load_component(
