@@ -373,7 +373,7 @@ def print_config(config: dict[str, Any]) -> None:
         print(
             f"  {'Test Range :':<20}{config['test']['start_time']:<20}{config['test']['end_time']:<20}",
         )
-    if 'simulation' in config['mode']:
+    if config['mode'] == 'sim':
         print(
             f"  {'Simulation Range :':<20}{config['sim']['start_time']:<20}{config['sim']['end_time']:<20}",
         )
@@ -393,7 +393,7 @@ def print_config(config: dict[str, Any]) -> None:
     )
     print(f"  {'Loss Fn:':<20}{config['train']['loss_function']['name']:<20}")
     print(
-        f"  {'Optimizer:':<20}{config['train']['optimizer']['name']:<20}{'LR Scheduler:':<20}{config['train'].get('lr_scheduler') or 'None':<20}",
+        f"  {'Optimizer:':<20}{config['train']['optimizer']['name']:<20}{'LR Scheduler:':<20}{config['train'].get('lr_scheduler', {}).get('name', 'None') or 'None':<20}",
     )
     print()
 
