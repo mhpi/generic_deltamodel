@@ -14,7 +14,7 @@ job:
   name: dmg-v${oc.env:DMG_VERSION}
   chdir: True
 run:
-  dir: ${hydra:runtime.cwd}/output/${name}/run-${now:%Y-%m-%d_%H-%M-%S}
+  dir: ${oc.select:run_dir,${hydra:runtime.cwd}/output/${name}/${exp_dir:${oc.select:exp_name,null}}}
 output_subdir: configs
 sweep:
   dir: multirun
