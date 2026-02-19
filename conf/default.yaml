@@ -9,6 +9,7 @@ defaults:
   - observations: none
 
 name: ${model.nn.name}-${model.phy.name}
+exp_name: null
 
 
 ## General -------------------------------#

@@ -1,8 +1,13 @@
 import logging
 import os
 import time
+from pathlib import Path
 from typing import Any, Optional
 
+import matplotlib
+
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import tqdm
@@ -116,6 +121,21 @@ class Trainer(BaseTrainer):
                 self.load_states()
 
             self._init_loggers()
+            self._init_loss_tracking()
+
+    def _init_loss_tracking(self) -> None:
+        """Initialize loss history lists and CSV log file."""
+        self.train_loss_history: list[float] = []
+        self.loss_component_history: dict[str, list[float]] = {}
+
+        if self.write_out:
+            self.plot_dir = self.config['plot_dir']
+
+            self.csv_log_file = os.path.join(
+                self.config['output_dir'], 'training_log.csv'
+            )
+            with open(self.csv_log_file, 'w') as f:
+                f.write('epoch,batch,loss,time_s,gpu_mem_mb\n')
 
     def init_optimizer(self) -> torch.optim.Optimizer:
         """Initialize a state optimizer.
@@ -248,6 +268,60 @@ class Trainer(BaseTrainer):
 
         self.exp_logger.finalize()
 
+    def _plot_loss_curves(self) -> None:
+        """Generate and save training loss plots (linear and log scale)."""
+        if not self.train_loss_history:
+            return
+
+        epochs = range(1, len(self.train_loss_history) + 1)
+        save_path = Path(self.plot_dir) / 'loss_plot.png'
+
+        multi_model = len(self.loss_component_history) > 1
+
+        for log_scale, suffix in [(False, ''), (True, '_log')]:
+            fig, ax = plt.subplots(figsize=(10, 6))
+
+            ax.plot(
+                epochs,
+                self.train_loss_history,
+                label='Total Loss' if multi_model else None,
+                color='blue',
+                linewidth=1.5,
+            )
+
+            if multi_model:
+                colors = ['orange', 'green', 'red', 'purple', 'brown']
+                for i, (name, losses) in enumerate(self.loss_component_history.items()):
+                    ax.plot(
+                        epochs,
+                        losses,
+                        label=name,
+                        color=colors[i % len(colors)],
+                        linewidth=1.5,
+                        linestyle='--',
+                    )
+
+            title = 'Training Loss'
+            if log_scale:
+                ax.set_yscale('log')
+                title += ' (Log Scale)'
+                ax.grid(True, which='both', ls='--', linewidth=0.5, alpha=0.7)
+            else:
+                ax.grid(True, ls='--', linewidth=0.5, alpha=0.7)
+
+            ax.set_title(title, fontsize=14)
+            ax.set_xlabel('Epoch', fontsize=12)
+            ax.set_ylabel('Loss', fontsize=12)
+            if multi_model:
+                ax.legend(loc='upper right', fontsize=10)
+            fig.tight_layout()
+
+            out = save_path.with_stem(f"{save_path.stem}{suffix}")
+            fig.savefig(out, dpi=150)
+            plt.close(fig)
+
+        log.info(f"Loss plots saved to {self.plot_dir}")
+
     def train_one_epoch(self, epoch, n_samples, n_minibatch, n_timesteps) -> None:
         """Train model for one epoch.
 
@@ -281,6 +355,7 @@ class Trainer(BaseTrainer):
         # Iterate through epoch in minibatches.
         for mb in prog_bar:
             self.current_batch = mb
+            batch_start = time.perf_counter()
 
             dataset_sample = self.sampler.get_training_sample(
                 self.train_dataset,
@@ -296,9 +371,20 @@ class Trainer(BaseTrainer):
             self.optimizer.step()
             self.optimizer.zero_grad()
 
-            self.total_loss += loss.item()
+            batch_loss = loss.item()
+            self.total_loss += batch_loss
 
-            # print(self.total_loss / (mb+1))
+            if self.write_out:
+                batch_elapsed = time.perf_counter() - batch_start
+                mem = 0
+                if self.config['device'] != 'cpu':
+                    mem = int(
+                        torch.cuda.memory_reserved(device=self.config['device']) * 1e-6
+                    )
+                with open(self.csv_log_file, 'a') as f:
+                    f.write(
+                        f"{epoch},{mb},{batch_loss:.6f},{batch_elapsed:.2f},{mem}\n"
+                    )
 
             if self.verbose:
                 tqdm.tqdm.write(f"Epoch {epoch}, batch {mb} | loss: {loss.item()}")
@@ -516,6 +602,7 @@ class Trainer(BaseTrainer):
             Start time of the epoch.
         """
         avg_loss_dict = {key: value / n_minibatch for key, value in loss_dict.items()}
+        avg_total_loss = self.total_loss / n_minibatch
         loss_str = ", ".join(
             f"{key}: {value:.6f}" for key, value in avg_loss_dict.items()
         )
@@ -532,18 +619,16 @@ class Trainer(BaseTrainer):
             f"~ Runtime {elapsed:.2f} s, {mem_aloc} Mb reserved GPU memory",
         )
 
-        if self.write_out:
-            with open(
-                os.path.join(self.config['output_dir'], 'train_log.txt'),
-                'a',
-            ) as f:
-                f.write(
-                    f"Epoch {epoch}: {loss_str}, Time: {elapsed:.2f} s, {mem_aloc} Mb reserved vram\n",
-                )
+        # Track loss history
+        self.train_loss_history.append(avg_total_loss)
+        for model_name, loss_val in avg_loss_dict.items():
+            if model_name not in self.loss_component_history:
+                self.loss_component_history[model_name] = []
+            self.loss_component_history[model_name].append(loss_val)
 
         # For experiment loggers: create a single dictionary of metrics to log
         metrics_to_log = {
-            'Loss/train_total': self.total_loss / n_minibatch,
+            'Loss/train_total': avg_total_loss,
         }
         for model_name, loss_val in avg_loss_dict.items():
             metrics_to_log[f'Loss/{model_name}'] = loss_val
@@ -553,3 +638,7 @@ class Trainer(BaseTrainer):
 
         # Loop through all active loggers and log the metrics
         self.exp_logger.log_metrics(metrics_to_log, step=epoch)
+
+        # Update loss plots
+        if self.write_out:
+            self._plot_loss_curves()
