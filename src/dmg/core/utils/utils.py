@@ -169,9 +169,6 @@ def initialize_config(
     # Raytune
     config['do_tune'] = config.get('do_tune', False)
 
-    if write_out:
-        save_run_summary(config, config['output_dir'])
-
     return config
 
 
@@ -313,101 +310,6 @@ def save_outputs(config, predictions, y_obs=None) -> None:
             item_obs = y_obs[:, :, config['train']['target'].index(var)]
             file_name = var + '_obs.npy'
             np.save(os.path.join(config['sim_dir'], file_name), item_obs)
-
-
-def save_run_summary(
-    config: DictConfig,
-    run_dir: str,
-    filename: str = "run_summary.txt",
-):
-    """
-    Save a concise summary of critical configuration info to a text file.
-
-    Args:
-        config (DictConfig): Hydra/OmegaConf config object.
-        run_dir (str): Path to the run directory.
-        filename (str): Name of the text file to save.
-    """
-    # Ensure directory exists
-    os.makedirs(run_dir, exist_ok=True)
-    summary_path = os.path.join(run_dir, filename)
-
-    # Build critical info summary
-    summary_lines = []
-    summary_lines.append("=== Run Summary ===")
-    try:
-        summary_lines.append(f"dMG Version : {os.environ['DMG_VERSION']}")
-    except KeyError:
-        summary_lines.append("dMG Version : Unknown")
-    summary_lines.append(f"Run directory : {run_dir}")
-    summary_lines.append(f"Mode          : {config['mode']}")
-    summary_lines.append(f"Seed          : {config['seed']}")
-    summary_lines.append(f"Device        : {config['device']} (GPU {config['gpu_id']})")
-    summary_lines.append("")
-
-    # Training
-    summary_lines.append("=== Training ===")
-    summary_lines.append(
-        f"Train period  : {config['train']['start_time']} → {config['train']['end_time']}",
-    )
-    summary_lines.append(f"Epochs        : {config['train']['epochs']}")
-    summary_lines.append(f"Batch size    : {config['train']['batch_size']}")
-    summary_lines.append(f"Optimizer     : {config['train']['optimizer']}")
-    summary_lines.append(f"Learning rate : {config['train']['lr']}")
-    summary_lines.append(f"LR Scheduler  : {config['train']['lr_scheduler']}")
-    summary_lines.append(f"Loss          : {config['train']['loss_function']['name']}")
-    summary_lines.append("")
-
-    # Evaluation
-    summary_lines.append("=== Evaluation ===")
-    summary_lines.append(
-        f"Test period   : {config['test']['start_time']} → {config['test']['end_time']}",
-    )
-    summary_lines.append(f"Batch size    : {config['test']['batch_size']}")
-    summary_lines.append(f"Test epoch    : {config['test']['test_epoch']}")
-    summary_lines.append("")
-
-    # Model
-    summary_lines.append("=== Model ===")
-    summary_lines.append(f"NN model      : {config['model']['nn']['name']}")
-    summary_lines.append(
-        f"Hidden size   : {config['model'].get('nn', {}).get('hidden_size', '')}",
-    )
-    summary_lines.append(
-        f"Dropout       : {config['model'].get('nn', {}).get('dropout', '')}",
-    )
-    summary_lines.append("")
-
-    if config['model']['phy']:
-        summary_lines.append(
-            f"Phy model     : {config['model'].get('phy', {}).get('name', '')}",
-        )
-        summary_lines.append(
-            f"Dynamic params: {config['model'].get('phy', {}).get('dynamic_params', '')}",
-        )
-        summary_lines.append("")
-
-    # Multimodel (if used)
-    if config['multimodel_type']:
-        summary_lines.append("=== Multimodel ===")
-        summary_lines.append(f"Type          : {config['multimodel_type']}")
-        summary_lines.append(f"Model         : {config['multimodel']['model']}")
-        summary_lines.append(
-            f"Scaling fn    : {config['multimodel']['scaling_function']}",
-        )
-        summary_lines.append(f"Loss function : {config['multimodel']['loss_function']}")
-        summary_lines.append("")
-
-    # Observations
-    summary_lines.append("=== Dataset ===")
-    summary_lines.append(f"Observations  : {config['observations']}")
-    summary_lines.append(f"Forcings      : {config.get('forcings', [])}")
-    summary_lines.append(f"Attributes    : {len(config.get('attributes', []))} total")
-    summary_lines.append("")
-
-    # Write file
-    with open(summary_path, "w") as f:
-        f.write("\n".join(summary_lines))
 
 
 def load_model(config, model_name, epoch):

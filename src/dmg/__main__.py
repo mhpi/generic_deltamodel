@@ -1,10 +1,10 @@
 """
 Main entry point for differentiable model experiments.
 
-There are two ways to run dMG in command line...
-1. python -m dmg (Uses default config.yaml)
-2. python src/dmg/__main__.py (Uses default config.yaml)
-Add flag `--config-name <config_name>` to (1) or (2) to use a different config.
+To run dMG from the command line, use
+-> `python -m dmg --config-name <config_name>`
+Specify a config file in the `conf/` directory, or exclude the `--config-name`
+flag to use the default config.
 """
 
 import logging
@@ -17,6 +17,7 @@ from omegaconf import DictConfig
 
 from dmg._version import __version__
 from dmg.core.utils.factory import import_data_loader, import_trainer
+from dmg.core.utils.paths import check_experiment_exists
 from dmg.core.utils.utils import initialize_config, print_config, set_randomseed
 from dmg.models.model_handler import ModelHandler as dModel
 
@@ -69,6 +70,7 @@ def main(config: DictConfig) -> None:
         start_time = time.perf_counter()
 
         ### Initializations ###
+        check_experiment_exists(config.get('exp_name'))
         config = initialize_config(config)
         set_randomseed(config['seed'])
 
