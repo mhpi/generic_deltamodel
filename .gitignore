@@ -179,6 +179,8 @@ tmp/
 # Other Directories
 archive/
 validation/
+#This is under development and should be excluded from public access 
+src/dmg/models/neural_networks/transformer/
 
 # Model optimization config with RayTune
 !tune/
