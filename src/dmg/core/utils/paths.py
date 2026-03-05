@@ -64,7 +64,7 @@ def get_output_root() -> str:
     return os.path.join(get_project_root(), 'output')
 
 
-def _exp_dir_resolver(exp_name: str | None) -> str:
+def _exp_dir_resolver(exp_name: str = None) -> str:
     """Resolve experiment directory based on exp_name.
 
     Returns "experiments/{exp_name}" if exp_name is set,
@@ -101,7 +101,7 @@ def register_resolvers() -> None:
     _resolvers_registered = True
 
 
-def check_experiment_exists(exp_name: str | None) -> None:
+def check_experiment_exists(exp_name: str = None) -> None:
     """Check if a named experiment already exists and would be overwritten.
 
     Skipped for timestamped runs (exp_name is None or 'null').
