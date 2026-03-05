@@ -75,7 +75,7 @@ class MsHydroLoader(BaseLoader):
         """Load dataset into dictionary of nn and physics model input arrays."""
         mode = self.config['mode']
         if mode == 'sim':
-            self.dataset = self._preprocess_data(scope='simulation')
+            self.dataset = self._preprocess_data(scope='sim')
         elif self.test_split:
             self.train_dataset = self._preprocess_data(scope='train')
             self.eval_dataset = self._preprocess_data(scope='test')
@@ -149,13 +149,13 @@ class MsHydroLoader(BaseLoader):
                 time = self.config['train_time']
             elif scope == 'test':
                 time = self.config['test_time']
-            elif scope == 'simulation':
+            elif scope == 'sim':
                 time = self.config['sim_time']
             elif scope == 'all':
                 time = self.config['all_time']
             else:
                 raise ValueError(
-                    "Scope must be 'train', 'test', 'simulation', or 'all'.",
+                    "Scope must be 'train', 'test', 'sim', or 'all'.",
                 )
         except KeyError as e:
             raise ValueError(f"Key {e} for data path not in dataset config.") from e
