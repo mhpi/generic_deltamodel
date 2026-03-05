@@ -94,8 +94,10 @@ class MtsHydroLoader(BaseLoader):
 
     def load_dataset(self, mode: str = None):
         """
-        Load dataset for the specified mode ('train', 'valid', 'test') to self.dataset. 'test' is also used for simulation
-        If number of chunks is 1, load the entire dataset into memory. Otherwise, use a generator to yield data chunk by chunk.
+        Load dataset for the specified mode ('train', 'valid', 'test') to
+        self.dataset. 'test' is also used for simulation. If number of chunks is
+        1, load the entire dataset into memory. Otherwise, use a generator to
+        yield data chunk by chunk.
         """
         if mode == 'train':
             if self.train_dataset is not None:

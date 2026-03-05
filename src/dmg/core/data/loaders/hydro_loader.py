@@ -124,8 +124,8 @@ class HydroLoader(BaseLoader):
         mode = self.config['mode']
         is_spatial_test = self.config.get('test', {}).get('type') == 'spatial'
 
-        if mode == 'simulation':
-            self.dataset = self._preprocess_data(scope='simulation')
+        if mode == 'sim':
+            self.dataset = self._preprocess_data(scope='sim')
         elif is_spatial_test:
             # For spatial testing, load data and split by basin using utility function
             train_dataset = self._preprocess_data(scope='train')
@@ -213,7 +213,7 @@ class HydroLoader(BaseLoader):
                 if not data_path:
                     data_path = self.config['observations']['test_path']
                 time = self.config['test_time']
-            elif scope == 'simulation':
+            elif scope == 'sim':
                 if not data_path:
                     data_path = self.config['observations']['test_path']
                 time = self.config['sim_time']
@@ -223,7 +223,7 @@ class HydroLoader(BaseLoader):
                 time = self.config['all_time']
             else:
                 raise ValueError(
-                    "Scope must be 'train', 'test', 'simulation', or 'all'.",
+                    "Scope must be 'train', 'test', 'sim', or 'all'.",
                 )
         except KeyError as e:
             raise ValueError(f"Key {e} for data path not in dataset config.") from e
