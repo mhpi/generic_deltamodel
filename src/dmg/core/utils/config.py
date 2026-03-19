@@ -87,6 +87,14 @@ class FlowRegimeEnum(str, Enum):
     high = 'high'
 
 
+class StreamflowUnitEnum(str, Enum):
+    """Enumeration for streamflow unit systems."""
+
+    ft3_per_s = 'ft3/s'
+    m3_per_s = 'm3/s'
+    mm_per_day = 'mm/d'
+
+
 ## ------ Training Utilities ------- ##
 class OptimizerConfig(BaseModel):
     """Configuration for optimizer."""
@@ -385,6 +393,7 @@ class ModelConfig(BaseModel):
     warm_up: Optional[int] = None
     use_log_norm: Optional[list[str]] = None
     flow_regime: Optional[FlowRegimeEnum] = None
+    output_unit: Optional[StreamflowUnitEnum] = StreamflowUnitEnum.mm_per_day
     phy: Optional[PhyModelConfig] = None
 
 
@@ -412,6 +421,7 @@ class ObservationConfig(BaseModel):
     gage_info: Optional[str] = None
     subset_path: Optional[str] = None
     area_name: Optional[str] = None
+    target_unit: Optional[StreamflowUnitEnum] = StreamflowUnitEnum.ft3_per_s
 
     if PYDANTIC_V2:
 

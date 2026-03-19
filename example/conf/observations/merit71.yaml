@@ -9,6 +9,7 @@ subbasin_id_name: COMID
 upstream_area_name: uparea
 subbasin_area_name: catchsize
 elevation_name: meanelevation
+target_unit: ft3/s  # Streamflow unit
 
 start_time: 1980/01/01
 end_time: 2020/12/31

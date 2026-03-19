@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import pickle
+from functools import partial
 from typing import Any, Optional, Union
 
 import numpy as np
@@ -95,6 +96,15 @@ class HydroLoader(BaseLoader):
         self.device = config['device']
         self.dtype = config['dtype']
 
+        self.input_unit = config['observations'].get(
+            'target_unit',
+            'ft3/s',
+        )
+        self.output_unit = config['model'].get(
+            'output_unit',
+            'mm/d',
+        )
+
         self.train_dataset = None
         self.eval_dataset = None
         self.dataset = None
@@ -112,7 +122,7 @@ class HydroLoader(BaseLoader):
             self.norm_target = True
         elif self.flow_regime == 'low':
             # Low flow regime: Log-Gamma normalization for runoff and precipitation
-            self.log_norm_vars = ['prcp', 'runoff']
+            self.log_norm_vars = ['prcp', 'runoff', 'streamflow']
             self.norm_target = True
         else:
             self.norm_target = False
@@ -171,9 +181,10 @@ class HydroLoader(BaseLoader):
         self.load_norm_stats(x_nn, c_nn, target)
         xc_nn_norm, y_nn_norm = self.normalize(x_nn, c_nn, target)
 
-        if y_nn_norm is not None:
+        # Only normalize target for training data.
+        if (y_nn_norm is not None) and (scope == 'train'):
             target = y_nn_norm
-            del y_nn_norm
+        del y_nn_norm
 
         # Build data dict of Torch tensors
         dataset = {
@@ -184,6 +195,14 @@ class HydroLoader(BaseLoader):
             'xc_nn_norm': self.to_tensor(xc_nn_norm),
             'target': self.to_tensor(target),
         }
+
+        # Attach function to convert model predictions back to mm/day.
+        if self.norm_target and scope != 'train':
+            dataset['denorm_fn'] = partial(
+                self.denormalize_prediction,
+                c_nn,
+            )
+
         return dataset
 
     def read_data(self, scope: Optional[str]) -> tuple[NDArray[np.float32]]:
@@ -294,18 +313,77 @@ class HydroLoader(BaseLoader):
             c_nn = c_nn[subset_idx, :]
             target = target[:, subset_idx, :]
 
-        # Convert flow to mm/day if necessary
-        target = self.flow_conversion(c_nn, target)
+        # Convert flow to mm/day (and dimensionless for training).
+        target = self.flow_conversion(c_nn, target, scope=scope)
 
         return x_phy, c_phy, x_nn, c_nn, target
+
+    def _to_mm_per_day(
+        self,
+        data: NDArray[np.float32],
+        area: NDArray[np.float32],
+    ) -> NDArray[np.float32]:
+        """Convert streamflow data to mm/day from the configured input unit.
+
+        Parameters
+        ----------
+        data
+            Streamflow data in input units.
+        area
+            Basin area array (km²), broadcast to match data shape.
+
+        Returns
+        -------
+        NDArray[np.float32]
+            Streamflow in mm/day.
+        """
+        if self.input_unit == 'ft3/s':
+            return data * 0.0283168 * 3600 * 24 * 1e3 / (area * 1e6)
+        elif self.input_unit == 'm3/s':
+            return data * 3600 * 24 * 1e3 / (area * 1e6)
+        elif self.input_unit == 'mm/d':
+            return data
+        else:
+            raise ValueError(f"Unsupported input unit: '{self.input_unit}'.")
+
+    def _from_mm_per_day(
+        self,
+        data: NDArray[np.float32],
+        area: NDArray[np.float32],
+    ) -> NDArray[np.float32]:
+        """Convert streamflow data from mm/day to the configured output unit.
+
+        Parameters
+        ----------
+        data
+            Streamflow data in mm/day.
+        area
+            Basin area array (km²), broadcast to match data shape.
+
+        Returns
+        -------
+        NDArray[np.float32]
+            Streamflow in the configured output unit.
+        """
+        if self.output_unit == 'mm/d':
+            return data
+        elif self.output_unit == 'm3/s':
+            return data * (area * 1e6) / (3600 * 24 * 1e3)
+        elif self.output_unit == 'ft3/s':
+            return data * (area * 1e6) / (0.0283168 * 3600 * 24 * 1e3)
+        else:
+            raise ValueError(f"Unsupported output unit: '{self.output_unit}'.")
 
     def flow_conversion(
         self,
         c_nn: NDArray[np.float32],
         target: NDArray[np.float32],
-        to_norm: bool = True,
+        scope: Optional[str] = 'train',
     ) -> NDArray[np.float32]:
-        """Convert between hydraulic flow and flux (from ft3/s <--> mm/day).
+        """Convert flow to mm/day from the configured input unit.
+
+        For training with pure-ML models (no physics), also divides by
+        prcp_mean to make the target dimensionless.
 
         Parameters
         ----------
@@ -313,21 +391,14 @@ class HydroLoader(BaseLoader):
             Neural network static data.
         target
             Target variable data.
+        scope
+            Data scope. Only 'train' applies the prcp_mean dimensionless
+            scaling for pure-ML models; eval scopes stay in mm/day.
         """
-        if self.config['model']['phy'] is None:
-            # Make target dimensionless (e.g., for ML models).
-            prcp_mean_name = self.config['observations']['prcp_mean_name']
-            prcp_mean = c_nn[:, self.nn_attributes.index(prcp_mean_name)]
-            if to_norm:
-                p_factor = 1 / prcp_mean
-            else:
-                p_factor = prcp_mean
-        else:
-            p_factor = 1
-
         for name in ['flow_sim', 'streamflow', 'runoff']:
             if name in self.target:
-                target_temp = target[:, :, self.target.index(name)]
+                i = self.target.index(name)
+                target_temp = target[:, :, i]
                 area_name = self.config['observations']['area_name']
                 basin_area = c_nn[:, self.nn_attributes.index(area_name)]
 
@@ -336,14 +407,15 @@ class HydroLoader(BaseLoader):
                     0,
                 )
 
-                if to_norm:
-                    target[:, :, self.target.index(name)] = (
-                        target_temp * 0.0283168 * 3600 * 24 * 1e3 / (area * 1e6)
-                    ) * p_factor
-                else:
-                    target[:, :, self.target.index(name)] = (
-                        target_temp * (area * 1e6) / (0.0283168 * 3600 * 24 * 1e3)
-                    ) * p_factor
+                # Input unit -> mm/day
+                target[:, :, i] = self._to_mm_per_day(target_temp, area)
+
+                # Make dimensionless for ML training only.
+                if (scope == 'train') and (self.config['model']['phy'] is None):
+                    prcp_mean_name = self.config['observations']['prcp_mean_name']
+                    prcp_mean = c_nn[:, self.nn_attributes.index(prcp_mean_name)]
+                    target[:, :, i] = target[:, :, i] / prcp_mean
+
         return target
 
     def load_norm_stats(
@@ -648,5 +720,45 @@ class HydroLoader(BaseLoader):
                 data[..., k] = (np.power(10.0, denormed) - 0.1) ** 2
             else:
                 data[..., k] = denormed
+
+        return data
+
+    def denormalize_prediction(
+        self,
+        c_nn: NDArray[np.float32],
+        data: NDArray[np.float32],
+    ) -> NDArray[np.float32]:
+        """Convert model predictions back to physical units.
+
+        Undoes Gaussian/log-Gaussian normalization, then undoes the
+        prcp_mean dimensionless scaling for pure-ML models. Finally,
+        converts from mm/day to the configured output unit.
+
+        Parameters
+        ----------
+        c_nn
+            Neural network static data.
+        data
+            Model predictions in normalized space.
+
+        Returns
+        -------
+        NDArray[np.float32]
+            Model predictions in the configured output unit.
+        """
+        data = self.from_norm(data, vars=self.target)
+        prcp_mean_name = self.config['observations']['prcp_mean_name']
+        prcp_mean = c_nn[:, self.nn_attributes.index(prcp_mean_name)]
+        data[:, :, 0] = data[:, :, 0] * prcp_mean
+
+        # Convert from mm/day to configured output unit.
+        if self.output_unit != 'mm/d':
+            area_name = self.config['observations']['area_name']
+            basin_area = c_nn[:, self.nn_attributes.index(area_name)]
+            area = np.expand_dims(basin_area, axis=0).repeat(
+                data.shape[0],
+                0,
+            )
+            data[:, :, 0] = self._from_mm_per_day(data[:, :, 0], area)
 
         return data

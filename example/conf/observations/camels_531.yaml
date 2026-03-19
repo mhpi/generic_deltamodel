@@ -9,6 +9,7 @@ subset_path: ./your/path/to/531sub_id.txt
 
 area_name: area_gages2
 prcp_mean_name: p_mean
+target_unit: ft3/s  # Streamflow unit
 
 start_time: 1980/10/01
 end_time: 2014/09/30

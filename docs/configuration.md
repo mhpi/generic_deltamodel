@@ -225,6 +225,13 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 - *use_log_norm*: Apply log normalization to any input variables listed here.
 
+- *flow_regime*: [none, low, high] Flow regime for target normalization. Affects how streamflow/runoff targets are normalized during training.
+  - `none`: No target normalization. Targets are converted to mm/day but not statistically normalized.
+  - `high`: Gaussian normalization on all variables. Use with NSE-based loss functions.
+  - `low`: Log-Gaussian normalization on precipitation, runoff, and streamflow. Use with RMSE loss functions.
+
+- *output_unit*: [mm/d, m3/s, ft3/s] Unit for model output predictions. Default: `mm/d`. Controls what unit saved predictions and evaluation metrics are expressed in. Internally, all models work in mm/day; this setting applies a conversion at the end of the prediction pipeline. Requires `area_name` to be set in the observations config for volumetric units (`m3/s`, `ft3/s`).
+
 - **phy**: Physical model settings.
   - **name**: [Hbv, Hbv_adj, Hbv_1_1p, Hbv_2_0, custom_model] name of physical model to use. Can be more than one if a list is passed.
     - `Hbv`: δHBV 1.0
@@ -350,6 +357,8 @@ The settings are broken down as they appear in the YAML configuration files, wit
 *elevation_name*: Name of elevation variable in the dataset.
 
 *area_name*: Name of the area variable in the dataset to use for input normalization.
+
+*target_unit*: [ft3/s, m3/s, mm/d] Unit of streamflow/runoff observations in the input data. Default: `ft3/s` (CAMELS convention). The data loader converts observations from this unit to mm/day internally for training. Set this to match the unit system of your dataset — e.g., `m3/s` for SI datasets or `mm/d` if your data is already in millimeters per day.
 
 *start_time*: Start date of available date range in data in format YYYY/MM/DD.
 

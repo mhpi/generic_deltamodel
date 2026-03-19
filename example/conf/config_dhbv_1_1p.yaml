@@ -1,6 +1,7 @@
 # This config constructs dHBV 1.1p from Song et al. (2025). If you find this code useful in your work, please cite:
 #
-# Yalan Song, Kamlesh Sawadekar, Jonathan M Frame, et al. Physics-informed, Differentiable Hydrologic Models for Capturing Unseen Extreme Events. ESS Open Archive. March 14, 2025. <https://doi.org/10.22541/essoar.172304428.82707157/v2> **[Accepted]**
+# Yalan Song, Kamlesh Sawadekar, Jonathan M Frame, et al. Physics-informed, Differentiable Hydrologic  Models for Capturing Unseen Extreme Events. Water Resources Research. February 11, 2026. <https://doi.org/10.1029/2025WR040414>
+
 
 # This config replicates the CAMELS 531-basin, 10-year benchmark.
 # To setup for CAMELS 671-basin, 15-year benchmark, set the following...
@@ -74,6 +75,7 @@ model:
   rho: 365
   warm_up: 365
   use_log_norm: []
+  output_unit: mm/d  # options: mm/d, m3/s, ft3/s
 
   phy:
     ## See Citation above ##
