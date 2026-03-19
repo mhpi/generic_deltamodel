@@ -138,6 +138,30 @@ eval_data = loader.eval_dataset     # dict of tensors
 full_data = loader.dataset          # dict of tensors (inference)
 ```
 
+**Unit Handling and Denormalization**
+
+Streamflow observations are converted from the configured input unit (`target_unit` in the observations config, default `ft3/s`) to mm/day internally. For pure-ML models, targets are further made dimensionless during training by dividing by mean precipitation.
+
+Non-training datasets (eval, sim) include a `denorm_fn` key that converts normalized model predictions back to physical units:
+
+```python
+# After a manual forward pass with an ML model:
+output = model(loader.eval_dataset, eval=True)
+pred = output['CudnnLstmModel']['runoff'].cpu().detach().numpy()
+
+# Denormalize to physical units (default mm/day, or as set by model.output_unit)
+denorm_fn = loader.eval_dataset.get('denorm_fn')
+if denorm_fn is not None:
+    pred = denorm_fn(pred)
+```
+
+When using `Trainer.evaluate()` or `Trainer.inference()`, denormalization is applied automatically to both saved outputs and evaluation metrics.
+
+Key methods:
+- `flow_conversion(c_nn, target, scope)` — Convert observations from input unit to mm/day.
+- `denormalize_prediction(c_nn, data)` — Reverse normalization and convert to the configured output unit.
+- `from_norm(data, vars)` / `to_norm(data, vars)` — Low-level statistical (de)normalization.
+
 </br>
 
 ## Data Samplers

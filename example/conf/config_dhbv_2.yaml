@@ -69,6 +69,7 @@ model:
   rho: 365
   warm_up: 0
   use_log_norm: []
+  output_unit: mm/d  # options: mm/d, m3/s, ft3/s
 
   phy:
     ## See Citation above ##

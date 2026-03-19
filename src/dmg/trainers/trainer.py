@@ -419,6 +419,47 @@ class Trainer(BaseTrainer):
             #     # Report to Ray Tune
             #     tune.report(loss=self.total_loss, checkpoint=chkpt)
 
+    def _apply_denorm(
+        self,
+        predictions: dict[str, np.ndarray],
+        dataset: dict,
+    ) -> dict[str, np.ndarray]:
+        """Apply denormalization to the target key in batched predictions.
+
+        Converts ML model predictions from normalized space to physical
+        units (mm/day or the configured output unit). Physics model
+        predictions are already in physical units and pass through unchanged.
+
+        Parameters
+        ----------
+        predictions
+            Batched predictions dict (key -> numpy array).
+        dataset
+            Dataset dict, may contain a 'denorm_fn' key.
+
+        Returns
+        -------
+        dict[str, np.ndarray]
+            Predictions with the target key denormalized.
+        """
+        denorm_fn = dataset.get('denorm_fn')
+        if denorm_fn is None:
+            return predictions
+
+        target_name = self.config['train']['target'][0]
+        if target_name not in predictions:
+            return predictions
+
+        pred = predictions[target_name]
+        needs_squeeze = pred.ndim == 2
+        if needs_squeeze:
+            pred = np.expand_dims(pred, 2)
+        pred = denorm_fn(pred)
+        if needs_squeeze:
+            pred = pred.squeeze(2)
+        predictions[target_name] = pred
+        return predictions
+
     def evaluate(self) -> None:
         """Run model evaluation and return both metrics and model outputs."""
         self.is_in_train = False
@@ -440,14 +481,17 @@ class Trainer(BaseTrainer):
             batch_end,
         )
 
-        # Save predictions and calculate metrics
+        # Batch, denormalize, save, and compute metrics
         log.info("Saving model outputs + Calculating metrics")
-        save_outputs(self.config, batch_predictions, observations)
         self.model.save_states()
         self.predictions = self._batch_data(batch_predictions)
+        self.predictions = self._apply_denorm(self.predictions, self.eval_dataset)
+
+        save_outputs(self.config, batch_predictions, observations)
+        self._save_denormed_target(self.predictions)
 
         # Calculate metrics
-        self.calc_metrics(batch_predictions, observations)
+        self.calc_metrics(self.predictions, observations)
 
     def inference(self) -> None:
         """Run batch model inference and save model outputs."""
@@ -465,13 +509,32 @@ class Trainer(BaseTrainer):
         log.info(f"Inference: Forwarding {len(batch_start)} batches")
         batch_predictions = self._forward_loop(self.dataset, batch_start, batch_end)
 
-        # Save predictions
+        # Batch, denormalize, and save
         log.info("Saving model outputs")
-        save_outputs(self.config, batch_predictions)
         self.model.save_states()
         self.predictions = self._batch_data(batch_predictions)
+        self.predictions = self._apply_denorm(self.predictions, self.dataset)
+
+        save_outputs(self.config, batch_predictions)
+        self._save_denormed_target(self.predictions)
 
         return self.predictions
+
+    def _save_denormed_target(
+        self,
+        predictions: dict[str, np.ndarray],
+    ) -> None:
+        """Overwrite the saved target prediction file with denormalized values.
+
+        Only writes if denormalization was applied (i.e., the prediction
+        values differ from what save_outputs wrote).
+        """
+        target_name = self.config['train']['target'][0]
+        if target_name in predictions:
+            np.save(
+                os.path.join(self.config['sim_dir'], f'{target_name}.npy'),
+                predictions[target_name],
+            )
 
     def _batch_data(
         self,
@@ -553,28 +616,30 @@ class Trainer(BaseTrainer):
 
     def calc_metrics(
         self,
-        batch_predictions: list[dict[str, torch.Tensor]],
+        predictions: dict[str, np.ndarray],
         observations: torch.Tensor,
     ) -> None:
         """Calculate and save model performance metrics.
 
         Parameters
         ----------
-        batch_predictions
-            List of dictionaries containing model predictions.
+        predictions
+            Batched (and denormalized) predictions dict.
         observations
             Target variable observation data.
         """
         target_name = self.config['train']['target'][0]
         warm_up = self.config['model'].get('warm_up', 0)
-        predictions = self._batch_data(batch_predictions, target_name)
+        pred = predictions[target_name]
+        if pred.ndim == 2:
+            pred = np.expand_dims(pred, 2)
         target = np.expand_dims(observations[:, :, 0].cpu().numpy(), 2)
 
         target = target[warm_up:, :]
 
         # Compute metrics
         metrics = Metrics(
-            np.swapaxes(predictions.squeeze(), 1, 0),
+            np.swapaxes(pred.squeeze(), 1, 0),
             np.swapaxes(target.squeeze(), 1, 0),
         )
 

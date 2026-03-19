@@ -75,6 +75,7 @@ model:
   rho: 365
   warm_up: 365
   flow_regime: 'high'  # low-flow (log norm on runoff and prcp), high-flow (gaussian norm)
+  output_unit: mm/d  # options: mm/d, m3/s, ft3/s
 
   nn:
     ## See Citation above ##
