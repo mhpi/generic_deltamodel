@@ -2,9 +2,9 @@
 # Download: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/camels/camels_data.zip
 
 name: camels_671
-data_path: ./your/path/to/camels_dataset
+data_path: ./predownloaded/camels_dataset ##zhennan changed
 
-gage_info: ./your/path/to/gage_id.npy
+gage_info: ./predownloaded/gage_id.npy ##zhennan changed
 
 area_name: area_gages2
 

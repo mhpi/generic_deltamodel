@@ -2,13 +2,11 @@
 # Download: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/camels/camels_data.zip
 
 name: camels_531
-data_path: ./your/path/to/camels_dataset
-
-gage_info: ./your/path/to/gage_id.npy
-subset_path: ./your/path/to/531sub_id.txt
+data_path: ./predownloaded/camels_dataset ##zhennan changed
+gage_info: ./predownloaded/gage_id.npy ##zhennan changed
+subset_path: ./predownloaded/Sub531ID.txt ##zhennan changed
 
 area_name: area_gages2
-
 start_time: 1980/10/01
 end_time: 2014/09/30
 

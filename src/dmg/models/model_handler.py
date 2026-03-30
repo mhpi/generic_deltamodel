@@ -92,7 +92,9 @@ class ModelHandler(torch.nn.Module):
         # Epoch to load
         if self.config['mode'] == 'train':
             load_epoch = self.config['train']['start_epoch']
-        elif self.config['mode'] in ['test', 'simulation']:
+        elif self.config['mode'] == 'simulation': # zhennan revised 
+            load_epoch = self.config['train']['start_epoch']
+        elif self.config['mode'] == 'test': # elif self.config['mode'] in ['test', 'simulation']: # zhennan revised 
             load_epoch = self.config['test']['test_epoch']
         else:
             load_epoch = self.config.get('load_epoch', 0)
@@ -140,9 +142,14 @@ class ModelHandler(torch.nn.Module):
                 if f"d{name}_Ep" not in path:
                     path = os.path.join(path, f"d{name}_Ep{epoch}.pt")
                 if not os.path.exists(path):
-                    raise FileNotFoundError(
-                        f"{path} not found for model {name}.",
-                    )
+                    # raise FileNotFoundError(
+                    #     ,
+                    # )
+                    ## zhennan revised
+                    print(f"{path} not found for model {name}.")
+                # else:
+                #     print(f"{path} is found for model {name}.") # zhennan added
+                # print("bfajnfdankdf")
                 if name == 'wNN':
                     self.ensemble_generator.load_state_dict(
                         torch.load(

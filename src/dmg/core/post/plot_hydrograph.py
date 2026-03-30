@@ -69,8 +69,7 @@ def plot_hydrograph(
     plt.plot(
         data['time'],
         list(data['pred']),
-        label='Prediction',
-        marker='o',
+        label='Prediction', 
         color='r',
     )
 
@@ -78,9 +77,8 @@ def plot_hydrograph(
         plt.plot(
             data['time'],
             list(data['obs']),
-            label='Observation',
-            marker='o',
-            color='b',
+            label='Observation', 
+            color='black',
         )
 
     plt.title(title)

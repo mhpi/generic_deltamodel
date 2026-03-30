@@ -12,7 +12,7 @@
 defaults:
     - _self_
     - hydra: settings
-    - observations: camels_531 # camels_531, camels_671 
+    - observations: camels_531 # camels_531,  camels_531
 
 
 ## General -------------------------------#
@@ -29,10 +29,12 @@ save_path: ./output
     # NOTE: The output path is relative to the current working directory. 
     #       If you want to save the output in a different directory, please specify the absolute path.
     #       * If a valid trained_model path is specified, save_path will be set to trained_model.
-trained_model: ./path/to/your/model/  # Pretrained dHBV 1.1p can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_1_1p_trained.zip
+trained_model: /beegfs/scratch/zhennanshi/DM/generic_deltamodel/example/hydrology/output/camels_531/train1999-2008/no_multi/CudnnLstmModel_E100_R365_B100_H256_n16_noLn_noWU_111111/Hbv_1_1p/NseBatchLoss/3dyn/parBETA_parK0_parBETAET/
+#./zhennan_trained_model/
+# trained_model: /beegfs/scratch/zhennanshi/DM/generic_deltamodel/extra_files_zhennan/pretrained_model/ # Pretrained dHBV 1.1p can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_1_1p_trained.zip
 
 
-## Training ------------------------------#
+## Training ------------------------------# use 100 epochs change from 50 epochs 03/06/2026
 train:
     start_time: 1999/10/01
     end_time: 2008/09/30
@@ -44,7 +46,7 @@ train:
     save_epoch: 5
 
 
-## Evaluation -------------------------------#
+## Evaluation -------------------------------###changed from 100
 test:
     start_time: 1989/10/01
     end_time: 1999/09/30
@@ -52,10 +54,10 @@ test:
     test_epoch: 100
 
 
-## Inference -------------------------------#
+## Inference -------------------------------# change from  start_time: 2012/10/01 end_time: 2014/09/30
 simulation:
-    start_time: 2012/10/01
-    end_time: 2014/09/30
+    start_time: 2009/10/01
+    end_time: 2012/09/30
     batch_size: 25
 
 

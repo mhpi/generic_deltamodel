@@ -3,7 +3,7 @@ from .factory import (import_data_loader, import_data_sampler,
                       import_phy_model, import_trainer, load_criterion,
                       load_nn_model)
 from .path import PathBuilder
-from .utils import (format_resample_interval, initialize_config, print_config,
+from .utils import (format_resample_interval, initialize_config, print_config, print_dataset_info,
                     save_model, set_randomseed)
 
 __all__ = [
@@ -17,6 +17,7 @@ __all__ = [
     'PathBuilder',
     'Dates',
     'print_config',
+    'print_dataset_info',
     'save_model',
     'set_randomseed',
     'format_resample_interval',

@@ -13,6 +13,7 @@ def geoplot_single_metric(
     dynamic_colorbar: bool = False,
     dpi: int = 100,
     marker_size: int = 50,
+    save_path = None,
 ):
     """Geographically map a single model performance metric using Basemap.
     
@@ -89,4 +90,6 @@ def geoplot_single_metric(
     # Add labels and title
     plt.title(title or f"Spatial Map of {metric_name.upper()}", fontsize=14)
     plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=300)
     plt.show()

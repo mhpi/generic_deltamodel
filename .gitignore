@@ -181,3 +181,6 @@ validation/
 
 # Model optimization config with RayTune
 !tune/
+example/hydrology/predownloaded/
+example/hydrology/figs/
+example/hydrology/oldnotebooks/

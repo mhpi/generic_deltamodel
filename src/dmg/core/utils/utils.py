@@ -40,8 +40,8 @@ def set_system_spec(config: dict) -> tuple[str, str]:
             raise ValueError("MPS is not available on this system.")
     elif config['device'] == 'cuda':
         # Set the first device as the active device.
-        if torch.cuda.is_available() and config['gpu_id'] < torch.cuda.device_count():
-            device = torch.device(f'cuda:{config['gpu_id']}')
+        if torch.cuda.is_available() and config['gpu_id'] < torch.cuda.device_count(): 
+            device = torch.device(f"cuda:{config['gpu_id']}") ## zhennan changed it for correct syntax
             torch.cuda.set_device(device)
         else:
             raise ValueError(f"Selected CUDA device {config['gpu_id']} is not available.")
@@ -366,7 +366,21 @@ def print_config(config: dict[str, Any]) -> None:
     print(f"  {'Use Device:':<20}{str(config['device']):<20}")
     print()
 
-
+def print_dataset_info(dataset):
+    print("\n\033[1mDataset Inputs\033[0m") 
+    # Header row
+    print(f"{'Dataset key':<15}{'Shape':<20}{'Description'}")
+    print("-" * 60) 
+    # Rows
+    print(f"{'x_phy':<15}{str(tuple(dataset['x_phy'].size())):<20} # [time, basin, forcing_features]")
+    print(f"{'c_phy':<15}{str(tuple(dataset['c_phy'].size())):<20} # [basin, attr_features] (no physical attributes here)")
+    print(f"{'x_nn':<15}{str(tuple(dataset['x_nn'].size())):<20} # [time, basin, nn_forcing_features]")
+    print(f"{'c_nn':<15}{str(tuple(dataset['c_nn'].size())):<20} # [basin, nn_attr_features]")
+    print(f"{'xc_nn_norm':<15}{str(tuple(dataset['xc_nn_norm'].size())):<20} # [time, basin, combined_features]")
+    print(f"{'target':<15}{str(tuple(dataset['target'].size())):<20} # [time, basin, 1] observed streamflow") 
+    print("\nSample of target tensor (first 5 timesteps, first basin):")
+    print(f"{dataset['target'][:5, 0, 0]}")
+    
 def find_shared_keys(*dicts: dict[str, Any]) -> list[str]:
     """Find keys shared between multiple dictionaries.
 
