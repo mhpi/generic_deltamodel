@@ -83,7 +83,7 @@ scp -r zhennanshi@wendian.mines.edu:/beegfs/scratch/zhennanshi/DM/ ~/Downloads/
         ###if not clean, repeat 4.2 and 4.3
     4.5 Sync with upstream (the master generic_deltamodel you see on github)
         git remote add upstream git@github.com:mhpi/generic_deltamodel.git ###if you see error: remote upstream already exists. that is fine!
-        git fetch upstream
-        git checkout main
+        git fetch upstream ###nothing will show up
+        git checkout main ###if you see Already on 'main', Your branch is up to date with 'origin/main. This is very good!
         git merge upstream/master
         git push origin main
