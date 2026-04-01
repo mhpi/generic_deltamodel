@@ -7,174 +7,6 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from src.dmg.core.utils import Dates 
  
-def plot_forecast_stacked(
-    GAGE_NAME_PATH,
-    gage_id,
-    start_date,
-    obs,                 # length = history_len + HORIZON
-    sim,                 # length = history_len + 1
-    ens_preds,           # shape = [n_ens, HORIZON]
-    history_len,
-    Q_all_np,             
-    sidx,                # input index of forecast start in the dataset timeline
-    FORECAST,
-    WARMUPTIME,
-    det_pred=None,       # length = HORIZON
-    save_path=None,
-):
-    """
-    Two stacked plots:
-      TOP: Observed + history sim + ensembles + envelope + optional restart deterministic forecast line
-      BOTTOM: Continuous single-run output curve + NSE/KGE on overlap with obs
-    """
-    gage_name = obtain_gage_name(GAGE_NAME_PATH, gage_id)
-
-    ens_preds = np.asarray(ens_preds)
-    if ens_preds.ndim != 2:
-        raise ValueError(f"ens_preds must be [n_ens, HORIZON], got {ens_preds.shape}")
-
-    HORIZON = ens_preds.shape[1]
-    if HORIZON != FORECAST:
-        print(f"WARNING: HORIZON={HORIZON} != FORECAST={FORECAST}")
-
-    start_date = pd.to_datetime(start_date)
-
-    # ---------- Top plot dates ----------
-    dates_obs_top = pd.date_range(
-    start=start_date - pd.Timedelta(days=history_len),
-        periods=history_len + HORIZON,
-    )
-    dates_sim_top = pd.date_range(
-        start=start_date - pd.Timedelta(days=history_len),
-        periods=history_len,
-    )
-
-    # Pad ensembles to full timeline
-    padded_ensembles = np.full((ens_preds.shape[0], history_len + HORIZON), np.nan)
-    padded_ensembles[:, history_len:] = ens_preds
-
-    ens_min = np.full(history_len + HORIZON, np.nan)
-    ens_max = np.full(history_len + HORIZON, np.nan)
-    if not np.all(np.isnan(ens_preds)):
-        ens_min[history_len:] = np.nanmin(ens_preds, axis=0)
-        ens_max[history_len:] = np.nanmax(ens_preds, axis=0)
-
-    # ---------- Continuous run dates ----------
-    dataset_day0 = start_date - pd.Timedelta(days=sidx)
-    dates_cont = pd.date_range(
-        start=dataset_day0 + pd.Timedelta(days=WARMUPTIME),
-        periods=len(Q_all_np),
-    )
-
-    # ---------- Figure ----------
-    fig, (ax1, ax2) = plt.subplots(
-        2, 1, figsize=(12, 9),
-        sharex=True, sharey=True,
-        gridspec_kw={"height_ratios": [2, 1]}
-    )
-
-    # ===================== TOP =====================
-    ax1.plot(dates_obs_top, obs, "k-", lw=2, marker="*", label="Observed")
-    ax1.plot(dates_sim_top, sim, "r-", lw=1.5, marker="o", label="Simulation (history)")
-
-    ax1.fill_between(dates_obs_top, ens_min, ens_max, color="blue", alpha=0.1, label="Ensembles")
-    for i in range(ens_preds.shape[0]):
-        ax1.plot(dates_obs_top, padded_ensembles[i], lw=1.0, color="darkblue")
-
-    if det_pred is not None:
-        det_pred = np.asarray(det_pred).reshape(-1)
-        if det_pred.shape[0] != HORIZON:
-            raise ValueError(f"det_pred length {det_pred.shape[0]} != HORIZON {HORIZON}")
-        padded_det = np.full(history_len + HORIZON, np.nan)
-        padded_det[history_len:] = det_pred
-        ax1.plot(
-            dates_obs_top,
-            padded_det,
-            lw=2.5,
-            color="red",
-            label="HBV restart (deterministic)"
-        )
-
-    ax1.axvspan(dates_obs_top[0], dates_obs_top[history_len], color="gray", alpha=0.1, label="Pre-GEFS")
-    ax1.axvspan(dates_obs_top[history_len], dates_obs_top[-1], color="orange", alpha=0.1, label="Forecast")
-
-    ax1.set_title(f"Forecast — Gage {gage_id} ({gage_name})")
-    ax1.set_ylabel("Streamflow (mm/day)")
-    ax1.grid(True, linestyle="--", linewidth=0.7, alpha=0.7)
-    h1, l1 = ax1.get_legend_handles_labels()
-    ax1.legend(h1, l1, loc="upper center", ncol=max(1, int(np.ceil(len(l1) / 4))))
-
-    # ---------- Same x-limits for both ----------
-    pad_days = 3
-    x0, x1 = dates_obs_top[0], dates_obs_top[-1]
-    ax1.set_xlim(x0 - pd.Timedelta(days=pad_days), x1 + pd.Timedelta(days=pad_days))
-
-    # ===================== BOTTOM =====================
-    mask = (dates_cont >= x0) & (dates_cont <= x1)
-
-    cont_dates_win = dates_cont[mask]
-    cont_vals_win = np.asarray(Q_all_np)[mask]
-
-    ax2.plot(
-        cont_dates_win,
-        cont_vals_win,
-        "-o",
-        color="green",
-        lw=1.5,
-        markersize=6,
-        label="HBV continuous output"
-    )
-
-    # ---------- Align observed data with continuous run ----------
-    obs_series = pd.Series(np.asarray(obs), index=dates_obs_top)
-    cont_series = pd.Series(cont_vals_win, index=cont_dates_win)
-
-    common_dates = obs_series.index.intersection(cont_series.index)
-    obs_aligned = obs_series.loc[common_dates].values
-    cont_aligned = cont_series.loc[common_dates].values
-
-    # remove NaNs before metric calculation
-    valid = np.isfinite(obs_aligned) & np.isfinite(cont_aligned)
-
-    nse_val, kge_val = np.nan, np.nan
-    if valid.sum() > 1:
-        obs_valid = obs_aligned[valid]
-        cont_valid = cont_aligned[valid]
-
-        # optional: also plot observed values on bottom panel
-        ax2.plot(
-            common_dates[valid],
-            obs_valid,
-            "k-*",
-            lw=1.5,
-            markersize=6,
-            label="Observed"
-        )
-
-        nse_val = nse(cont_valid, obs_valid)
-        kge_val = kge(cont_valid, obs_valid)
-
-        # add text box on plot
-        ax2.text(
-            0.02, 0.98,
-            f"NSE = {nse_val:.3f}\nKGE = {kge_val:.3f}",
-            transform=ax2.transAxes,
-            va="top",
-            ha="left",
-            bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
-        )
-
-    ax2.set_xlabel("Date")
-    ax2.set_ylabel("Streamflow (mm/day)")
-    ax2.grid(True, linestyle="--", linewidth=0.7, alpha=0.7)
-    ax2.legend(loc="upper left")
-
-    plt.tight_layout()
-    if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches="tight")
-    plt.show()
- 
- 
 def nse(sim, obs):
     return 1 - np.sum((sim - obs)**2) / np.sum((obs - obs.mean())**2)
 
@@ -487,7 +319,6 @@ def build_xc_nn_norm_forecast(data_loader, basin_idx, fc_block, device, verbose)
     return xc_nn_norm_fc
 
  
-
 def run_segment(
     model,
     dataset,
@@ -522,12 +353,8 @@ def run_segment(
         If provided, load saved states before forward.
 
     Returns
-    -------
-    nn_out : torch.Tensor
-    fluxes : dict
-    phy_model : object
-    data_dict : dict
-        The sliced inputs used for this segment.
+    ------- 
+    fluxes : dict 
     """
     if name is None:
         name = list(model.model_dict.keys())[0]
@@ -544,7 +371,7 @@ def run_segment(
     phy_model.cache_states = cache_states
     phy_model.warm_up_states = warm_up_states
 
-    model.eval()
+    # model.eval()
 
     if state_path is not None:
         model.load_states(path=state_path)
@@ -895,50 +722,6 @@ def print_selected_basin_metrics_from_json(metrics, selected_basins, basin_pool)
     else:
         print("\nNo valid basins found.")
         
-
-def print_and_average_selected_basin_metrics(
-    model,
-    dataset,
-    selected_basins,
-    basin_pool,
-    device,
-    nmul,
-    staind,
-    tdRep,
-    routing,
-    dydrop,
-):
-    sumnse, sumkge = 0.0, 0.0
-    count = 0
-
-    for GAGE_ID in selected_basins:
-        print(f"For basin {GAGE_ID} ===")
-        basin_idx = basin_pool.index(GAGE_ID)
-
-        nse_val, kge_val = evaluate_one_basin(
-            model, dataset, basin_idx, device, nmul, staind, tdRep, routing, dydrop
-        )
-        print(f"NSE={nse_val}, KGE={kge_val}")
-
-        if (
-            nse_val is None or kge_val is None
-            or np.isnan(nse_val)
-            or np.isnan(kge_val)
-        ):
-            print(f"Skip basin {GAGE_ID} because metric is None or NaN")
-            continue
-        sumnse += float(nse_val)
-        sumkge += float(kge_val)
-        count += 1
-
-    if count > 0:
-        avg_nse = sumnse / count
-        avg_kge = sumkge / count
-        print(f"\nAverage over {count} valid basins: NSE={avg_nse}, KGE={avg_kge}")
-        return avg_nse, avg_kge
-    else:
-        print("\nNo valid basins found.")
-        return None, None
 
 def cleannans(metrics, METRIC):
 

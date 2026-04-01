@@ -272,7 +272,8 @@ def save_outputs(config, predictions, y_obs=None) -> None:
             c_tensor = torch.cat([d[key] for d in predictions], dim=dim)
             file_name = key + ".npy"
 
-            np.save(os.path.join(config['sim_dir'], file_name), c_tensor.numpy())
+            # zhennan changed np.save(os.path.join(config['sim_dir'], file_name), c_tensor.numpy())
+            np.save(os.path.join(config['output_dir'], file_name), c_tensor.numpy())
 
     elif type(predictions) is dict:
         # Handle multiple models
@@ -299,7 +300,8 @@ def save_outputs(config, predictions, y_obs=None) -> None:
                 ).numpy()
 
             file_name = key + '.npy'
-            np.save(os.path.join(config['sim_dir'], file_name), out_dict)
+            # np.save(os.path.join(config['sim_dir'], file_name), out_dict)
+            np.save(os.path.join(config['output_dir'], file_name), out_dict) # zhennan changed the path directory
 
     else:
         raise ValueError("Invalid output format.")

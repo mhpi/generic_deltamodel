@@ -31,16 +31,11 @@ data_loader: HydroLoader
 data_sampler: HydroSampler
 trainer: Trainer
 
- 
-# save_path: ./output
-#     # NOTE: The output path is relative to the current working directory. 
-#     #       If you want to save the output in a different directory, please specify the absolute path.
-#     #       * If a valid trained_model path is specified, save_path will be set to trained_model.
-# trained_model: /beegfs/scratch/zhennanshi/DM/generic_deltamodel/example/hydrology/output/camels_531/train1999-2008/no_multi/CudnnLstmModel_E100_R365_B100_H256_n16_noLn_noWU_111111/Hbv_1_1p/NseBatchLoss/3dyn/parBETA_parK0_parBETAET/
-# #./zhennan_trained_model/
-# # trained_model: /beegfs/scratch/zhennanshi/DM/generic_deltamodel/extra_files_zhennan/pretrained_model/ # Pretrained dHBV 1.1p can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/dHBV_1_1p_trained.zip
-model_dir: ./output/camels_531/train1999-2008/no_multi/CudnnLstmModel_E100_R365_B100_H256_n16_noLn_noWU_111111/Hbv_1_1p/NseBatchLoss/3dyn/parBETA_parK0_parBETAET/  # Pretrained dHBV 1.1p can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/3-dhbv_1_1p.zip
-output_dir: ./output
+model_dir: ./output/camels_531/train1999-2008/no_multi/CudnnLstmModel_E100_R365_B100_H256_n16_noLn_noWU_111111/Hbv_1_1p/NseBatchLoss/3dyn/parBETA_parK0_parBETAET/
+output_dir: ./output/camels_531/test_results/
+sim_dir: ./output/camels_531/sim_results/
+plot_dir: ./output/camels_531/plots/
+# camels_531/train1999-2008/no_multi/CudnnLstmModel_E100_R365_B100_H256_n16_noLn_noWU_111111/Hbv_1_1p/NseBatchLoss/3dyn/parBETA_parK0_parBETAET/
 
 ## Training ------------------------------# use 100 epochs change from 50 epochs 03/06/2026
 train:
