@@ -26,6 +26,7 @@ class RmseLoss(BaseCriterion):
 
         - beta: Stability term to prevent division by zero. Default is 1e-6.
     """
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -47,7 +48,7 @@ class RmseLoss(BaseCriterion):
         **kwargs: Any,
     ) -> torch.Tensor:
         """Compute loss.
-        
+
         Parameters
         ----------
         y_pred

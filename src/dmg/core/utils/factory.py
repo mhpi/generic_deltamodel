@@ -16,7 +16,7 @@ import numpy as np
 
 log = logging.getLogger(__name__)
 
-#------------------------------------------#
+# ------------------------------------------#
 # If directory structure changes, update these module paths.
 # NOTE: potentially move these to a framework config for easier access.
 loader_dir = 'core/data/loaders'
@@ -25,7 +25,7 @@ trainer_dir = 'trainers'
 loss_func_dir = 'models/criterion'
 phy_model_dir = 'models/phy_models'
 nn_model_dir = 'models/neural_networks'
-#------------------------------------------#
+# ------------------------------------------#
 
 
 def get_dir(dir_name: str) -> Path:
@@ -86,14 +86,27 @@ def load_component(
         if isinstance(class_obj, type) and issubclass(class_obj, base_class):
             return class_obj
 
-    raise ImportError(f"Class '{class_name}' not found in module '{os.path.relpath(source)}' or does not subclass '{base_class.__name__}'.")
+    raise ImportError(
+        f"Class '{class_name}' not found in module '{os.path.relpath(source)}' or does not subclass '{base_class.__name__}'.",
+    )
 
 
 def import_phy_model(model: str, ver_name: str = None) -> type:
     """Loads a physical model, either from HydroDL2 (hydrology) or locally."""
     try:
-        from hydrodl2 import load_model as load_from_hydrodl
-        return load_from_hydrodl(model, ver_name)
+        import hydrodl2
+
+        all_models = [
+            m for names in hydrodl2.available_models().values() for m in names
+        ]
+        if camel_to_snake(model) in all_models:
+            return hydrodl2.load_model(model, ver_name)
+        else:
+            return load_component(
+                model,
+                phy_model_dir,
+                torch.nn.Module,
+            )
     except ImportError:
         log.warning("Package 'HydroDL2' not loaded. Continuing without it.")
         return load_component(
@@ -106,6 +119,7 @@ def import_phy_model(model: str, ver_name: str = None) -> type:
 def import_data_loader(name: str) -> type:
     """Loads a data loader dynamically."""
     from dmg.core.data.loaders.base import BaseLoader
+
     return load_component(
         name,
         loader_dir,
@@ -116,6 +130,7 @@ def import_data_loader(name: str) -> type:
 def import_data_sampler(name: str) -> type:
     """Loads a data sampler dynamically."""
     from dmg.core.data.samplers.base import BaseSampler
+
     return load_component(
         name,
         sampler_dir,
@@ -126,6 +141,7 @@ def import_data_sampler(name: str) -> type:
 def import_trainer(name: str) -> type:
     """Loads a trainer dynamically."""
     from dmg.trainers.base import BaseTrainer
+
     return load_component(
         name,
         trainer_dir,
@@ -159,7 +175,7 @@ def load_criterion(
         The initialized loss function object.
     """
     if not name:
-        name = config['model']
+        name = config['name']
 
     # Load the loss function dynamically using the factory.
     cls = load_component(
@@ -176,8 +192,8 @@ def load_criterion(
 
 
 def load_nn_model(
-    phy_model: torch.nn.Module,
     config: dict[str, dict[str, Any]],
+    phy_model: Optional[torch.nn.Module] = None,
     ensemble_list: Optional[list] = None,
     device: Optional[str] = None,
 ) -> torch.nn.Module:
@@ -186,13 +202,13 @@ def load_nn_model(
 
     Parameters
     ----------
-    phy_model
-        The physics model.
     config
-        The configuration dictionary.
+        Configuration settings for the model.
+    phy_model
+        Physics model to format NN output.
     ensemble_list
         List of models to ensemble. Default is None. This will result in a
-        weighting nn being initialized.
+        weighting NN being initialized.
     device
         The device to run the model on. Default is None.
 
@@ -203,6 +219,8 @@ def load_nn_model(
     """
     if not device:
         device = config.get('device', 'cpu')
+    if isinstance(device, torch.device):
+        device = str(device)
 
     # Number of inputs 'x' and outputs 'y' for the nn.
     if ensemble_list:
@@ -214,16 +232,23 @@ def load_nn_model(
         dr = config['dropout']
         name = config['model']
     else:
-        n_forcings = len(config['nn_model']['forcings'])
-        n_attributes = len(config['nn_model']['attributes'])
-        n_phy_params = phy_model.learnable_param_count
-        ny = n_phy_params
+        n_forcings = len(config['nn']['forcings'])
+        n_attributes = len(config['nn']['attributes'])
+        name = config['nn']['name']
 
-        name = config['nn_model']['model']
+        if phy_model:
+            ny = phy_model.learnable_param_count
+        elif 'out_size' in config['nn']:
+            ny = config['nn']['out_size']
+        else:
+            raise ValueError(
+                "Output size 'out_size' must be specified in the config or"
+                " physics model must be provided.",
+            )
 
         if name not in ['LstmMlpModel']:
-            hidden_size = config['nn_model']['hidden_size']
-            dr = config['nn_model']['dropout']
+            hidden_size = config['nn']['hidden_size']
+            dr = config['nn']['dropout']
 
     nx = n_forcings + n_attributes
 
@@ -241,6 +266,7 @@ def load_nn_model(
             ny=ny,
             hidden_size=hidden_size,
             dr=dr,
+            cache_states=config['nn']['cache_states'],
         )
     elif name in ['MLP']:
         model = cls(
@@ -249,15 +275,28 @@ def load_nn_model(
             ny=ny,
         )
     elif name in ['LstmMlpModel']:
+        if phy_model:
+            ny1 = phy_model.learnable_param_count1
+            ny2 = phy_model.learnable_param_count2
+        elif ('out_size1' in config['nn']) and ('out_size2' in config['nn']):
+            ny1 = config['nn']['out_size1']
+            ny2 = config['nn']['out_size2']
+        else:
+            raise ValueError(
+                "Output sizes 'out_size1' and 'out_size2' must be"
+                " specified in the config or physics model must be provided.",
+            )
+
         model = cls(
             nx1=nx,
-            ny1=phy_model.learnable_param_count1,
-            hiddeninv1=config['nn_model']['lstm_hidden_size'],
+            ny1=ny1,
+            hiddeninv1=config['nn']['lstm_hidden_size'],
             nx2=n_attributes,
-            ny2=phy_model.learnable_param_count2,
-            hiddeninv2=config['nn_model']['mlp_hidden_size'],
-            dr1=config['nn_model']['lstm_dropout'],
-            dr2=config['nn_model']['mlp_dropout'],
+            ny2=ny2,
+            hiddeninv2=config['nn']['mlp_hidden_size'],
+            dr1=config['nn']['lstm_dropout'],
+            dr2=config['nn']['mlp_dropout'],
+            cache_states=config['nn']['cache_states'],
             device=device,
         )
     else:

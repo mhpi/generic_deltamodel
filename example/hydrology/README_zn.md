@@ -34,11 +34,15 @@ git stash pop
 4. Go to where the toml file is at in hydrodl2, then run:
 python -m pip install -e .
 
+5. you can check in dmg to see which hydrodl2 it is using:
+import hydrodl2
+print(hydrodl2.__file__)
+
 ## For GEFS Data
 
 1. Make sure it is at /u/st/dr/awwood/aw-ciroh-proj/projects/dl_da/daymet-gefs-camels-gII/, eg. /u/st/dr/awwood/aw-ciroh-proj/projects/dl_da/daymet-gefs-camels-gII/ens01 for ensemble 1
 
-2. 
+2. To be updated...
 
 
 
@@ -87,3 +91,6 @@ scp -r zhennanshi@wendian.mines.edu:/beegfs/scratch/zhennanshi/DM/ ~/Downloads/
         git checkout main ###if you see Already on 'main', Your branch is up to date with 'origin/main. This is very good!
         git merge upstream/master
         git push origin main
+    4.6 If you sync with upstream, most likely that you will need to run "python -m pip install -e ." at where the toml file is.
+        
+        

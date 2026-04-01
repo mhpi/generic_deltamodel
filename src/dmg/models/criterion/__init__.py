@@ -1,3 +1,4 @@
+# src/dmg/models/criterion/__init__.py
 from .base import BaseCriterion
 from .kge_batch_loss import KgeBatchLoss
 from .kge_norm_batch_loss import KgeNormBatchLoss

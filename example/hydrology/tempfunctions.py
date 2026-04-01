@@ -5,83 +5,8 @@ import torch
 import os 
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from src.dmg.core.utils import Dates
-from hydrodl2.models.hbv import HBV1_1p as h1pp
-
-def plot_ensemble_forecast(
-    gage_id,
-    start_date,
-    obs,
-    sim,
-    ens_preds,
-    history_len=60,
-    save_path=None,
-):
-    """
-    Plot 2 months history + 15-day forecast:
-      - Observed (black)
-      - Simulation (red) for history
-      - 5 ensembles in distinct colors for forecast
-    """
-    print("history_len:", history_len)
-    print("forecast_len:", forecast_len)
-    print("dates len:", len(dates))
-    print("obs len:", len(obs))
-
-    forecast_len = ens_preds.shape[1]
-    start_date = pd.to_datetime(start_date)
-    dates = pd.date_range(
-        start=start_date - pd.Timedelta(days=history_len),
-        periods=history_len + forecast_len,
-    )
-
-    # Squeeze arrays
-    obs = np.squeeze(obs)
-    sim = np.squeeze(sim)
-
-    # Build full series for sim (only history is valid)
-    sim_full = np.full(history_len + forecast_len, np.nan)
-    sim_full[:history_len] = sim[-history_len:]  # last 60 days
-
-    # Pad ensembles for plotting (only forecast period valid)
-    padded_ensembles = np.full((ens_preds.shape[0], history_len + forecast_len), np.nan)
-    padded_ensembles[:, history_len:] = ens_preds
-
-    # Plot
-    plt.figure(figsize=(12, 6))
-
-    # Observed
-    plt.plot(dates, obs, "k-", lw=2, label="Observed")
-
-    # Simulation (history only)
-    plt.plot(dates, sim_full, "r-", lw=1.5, label="Simulation (history)")
-
-    # Ensembles in distinct colors
-    colors = cm.tab10.colors  # 10 distinct colors
-    for i in range(ens_preds.shape[0]):
-        plt.plot(
-            dates,
-            padded_ensembles[i],
-            lw=1.5,
-            color=colors[i % len(colors)],
-            label=f"Ensemble {i+1}",
-        )
-
-    # Shading for history vs forecast
-    plt.axvspan(dates[0], dates[history_len - 1], color="gray", alpha=0.1, label="History")
-    plt.axvspan(dates[history_len], dates[-1], color="orange", alpha=0.1, label="Forecast")
-
-    plt.title(f"GEFS Forecast — Gage {gage_id}")
-    plt.xlabel("Date")
-    plt.ylabel("Streamflow (mm/day)")
-    plt.legend(loc="upper left", ncol=2)
-    plt.grid(True)
-    plt.tight_layout()
-
-    if save_path:
-        plt.savefig(save_path, dpi=300)
-    plt.show()
-
+from src.dmg.core.utils import Dates 
+ 
 def plot_forecast_stacked(
     GAGE_NAME_PATH,
     gage_id,
@@ -90,10 +15,10 @@ def plot_forecast_stacked(
     sim,                 # length = history_len + 1
     ens_preds,           # shape = [n_ens, HORIZON]
     history_len,
-    Q_all_np,            # continuous output from long run (length = T_total - BUFFTIME)
+    Q_all_np,             
     sidx,                # input index of forecast start in the dataset timeline
     FORECAST,
-    BUFFTIME,
+    WARMUPTIME,
     det_pred=None,       # length = HORIZON
     save_path=None,
 ):
@@ -137,7 +62,7 @@ def plot_forecast_stacked(
     # ---------- Continuous run dates ----------
     dataset_day0 = start_date - pd.Timedelta(days=sidx)
     dates_cont = pd.date_range(
-        start=dataset_day0 + pd.Timedelta(days=BUFFTIME),
+        start=dataset_day0 + pd.Timedelta(days=WARMUPTIME),
         periods=len(Q_all_np),
     )
 
@@ -249,23 +174,7 @@ def plot_forecast_stacked(
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.show()
  
-
- # To call this function
-    # plot_forecast_stacked(
-    #     GAGE_NAME_PATH=GAGE_NAME_PATH,
-    #     gage_id=GAGE_ID,
-    #     start_date=ENSEMBLE_START_DATE,
-    #     obs=obs_full_window,
-    #     sim=sim_pre_GEFS,
-    #     ens_preds=ens_preds,
-    #     history_len=history_len,
-    #     Q_all_np=Q_all_np,          # continuous curve
-    #     sidx=sidx,
-    #     FORECAST=FORECAST,
-    #     BUFFTIME=BUFFTIME,
-    #     det_pred=Qf_det,            # restart deterministic
-    #     save_path=save_path,
-    # )
+ 
 def nse(sim, obs):
     return 1 - np.sum((sim - obs)**2) / np.sum((obs - obs.mean())**2)
 
@@ -407,35 +316,6 @@ def post_processing(sim_pre_GEFS, ens_preds): # post processing
     return np.array(ens_preds_corrected)
 
 
-def get_parameters_from_model(dpl_model, data, n_par, mu, device="cpu"):
-    nn_model = dpl_model.nn_model
-    # print("nn model is", dpl_model.nn_model)
-    # print("xc_nn_norm shape before NN:", data["xc_nn_norm"].shape)
-    xc_nn = data["xc_nn_norm"].to(device) # make sure it is on GPU
-
-    with torch.no_grad():
-        out = nn_model(xc_nn)   # only time-series input
-        if isinstance(out, (tuple, list)):
-            out = out[0]
- 
-        T, B, F = out.shape # zhennan comments: T: time dimension, B: # of basins, F: number of output features
-        # print(f"Output shape from NN: T={T}, B={B}, F={F}") # 715, 1, 226
-        
-        if F == n_par * mu + 2: # F = 14*16 + 2 -> 226
-            flat = out[:, :, : n_par * mu]
-            pars = flat.view(T, B, n_par, mu).to(device)
-            rts  = out[-1, :, n_par * mu : n_par * mu + 2].to(device)  
-        else:
-            raise RuntimeError(
-                f"Unexpected feature size {F}, expected {n_par}, {n_par*mu}, or {n_par*mu+2}"
-            )
-            
-        # sanity check
-        # print(f"pars shape: {pars.shape}") # [715, 1, 14, 16]
-        # print(f"rts shape: {rts.shape}") # [1, 2]
-                 
-    return pars, rts # pars: [T, B, n_par, mu], and rts: [B, 2]
-
 def obtain_gage_name(GAGE_NAME_PATH, gage_id): 
     gage_names = pd.read_csv(
     GAGE_NAME_PATH,
@@ -450,29 +330,7 @@ def obtain_gage_name(GAGE_NAME_PATH, gage_id):
         gage_name = match.values[0]
     return gage_name
 
-def to_time_first(x_torch, device):
-    return x_torch.permute(1, 0, 2).float().to(device)  # [T,B,F]
-
-def safe_minmax(tensor):
-    """Return min and max ignoring NaNs."""
-    if tensor.numel() == 0:
-        return np.nan, np.nan
-    safe_min = torch.where(torch.isnan(tensor),
-                           torch.tensor(float("inf"), device=tensor.device),
-                           tensor)
-    min_val = float(torch.min(safe_min))
-    safe_max = torch.where(torch.isnan(tensor),
-                           torch.tensor(float("-inf"), device=tensor.device),
-                           tensor)
-    max_val = float(torch.max(safe_max))
-    return min_val, max_val
-
-def checknans(warm_states): 
-    for name, st in zip(["sp","mw","sm","suz","slz"], warm_states):
-        smin, smax = safe_minmax(st)
-        print(name, "nan#", torch.isnan(st).sum().item(),
-              "min", smin, "max", smax)
-        
+  
 def GEFSdataErrorCheck(idx_list, fc_block, horizon, start_date, showblock=False):
     if not idx_list: raise ValueError(f"Starting GEFS date {start_date.date()} not exist!")
     if len(fc_block) < horizon: raise ValueError("Extracted GEFS forcing not enough!")
@@ -480,17 +338,38 @@ def GEFSdataErrorCheck(idx_list, fc_block, horizon, start_date, showblock=False)
         print("\n========= GEFS Forecast Block (NO ERROR) =========")
         print(fc_block.to_string(index=False))
          
-
-def run_warm_forecasts(
-    hbv, pars_last, rtwts_hist, warm_states,
-    gage_id, start_date, horizon, varF,
-    N_ENSEMBLES, GEFS_DIR, timesteps, WIDNOW, CORRECTION, staind, tdRep, nmul, routing, dydrop, device
+def run_warm_forecasts_restart(
+    model,
+    state_path,
+    gage_id,
+    basin_idx,
+    start_date,
+    horizon,
+    N_ENSEMBLES,
+    GEFS_DIR,
+    data_loader,
+    timesteps,
+    WINDOW,
+    CORRECTION,
+    device,
+    verbose,
 ):
     ens_preds = []
-      # will store per-basin correction once
 
-    for ens_id in range(N_ENSEMBLES):
-        # ----- Load GEFS forecast for this ensemble -----
+    name = list(model.model_dict.keys())[0]
+    nn_model = model.model_dict[name].nn_model
+    phy_model = model.model_dict[name].phy_model
+
+    # restart behavior
+    phy_model.cache_states = True
+    phy_model.warm_up = 0
+    phy_model.warm_up_states = True
+
+    for ens_id in range(N_ENSEMBLES): 
+        # 1. Reset to saved stop-point states 
+        model.load_states(path=state_path)
+ 
+        # 2. Read GEFS forcings 
         f_path = os.path.join(GEFS_DIR, f"ens0{ens_id+1}", f"{gage_id:08d}.txt")
         if not os.path.exists(f_path):
             raise ValueError(f"Missing GEFS file: {f_path}")
@@ -502,75 +381,201 @@ def run_warm_forecasts(
         })
         df["date"] = pd.to_datetime(df[["year", "month", "day"]])
 
-        # ----- Extract forecast block -----
         idx_list = df.index[df["date"] == start_date].to_list()
         if not idx_list:
             raise ValueError(f"Start date {start_date} not found in {f_path}")
-        fc_block = df.iloc[idx_list[0] : idx_list[0] + horizon]
+
+        fc_block = df.iloc[idx_list[0]: idx_list[0] + horizon].copy()
         GEFSdataErrorCheck(idx_list, fc_block, horizon, start_date)
-
-        # ----- Compute bias correction once (for the first ensemble) -----
-        if not CORRECTION:
+ 
+        # 3. Bias correction 
+        if CORRECTION:
             bias_corrections = compute_bias_correction_from_dataset(
-                dataset["x_phy"], df, timesteps, basin_idx, window=WINDOW, method=CORRECTION  # or "scalar"
+                data_loader.dataset["x_phy"],
+                df,
+                timesteps,
+                basin_idx,
+                window=WINDOW,
+                method=CORRECTION,
             )
-            print(f"Bias correction computed for basin {gage_id}") 
-            # ----- Apply bias correction -----
             fc_block = pre_processing(fc_block, bias_corrections, method=CORRECTION)
+ 
+        # 4. Build HBV forcing tensor 
+        raw_np = fc_block[["prcp", "tmean", "pet"]].to_numpy().astype(np.float32)
+        x_phy_fc = torch.tensor(raw_np[:, np.newaxis, :], dtype=torch.float32, device=device)
+        x_phy_fc[torch.isnan(x_phy_fc)] = 0.0
 
-        # ----- Convert forcings to tensor -----
-        raw_np = fc_block[varF].to_numpy().astype(np.float32)
-        forc_raw = torch.tensor(raw_np[np.newaxis, :, :], dtype=torch.float32, device=device)
-        forc_raw[torch.isnan(forc_raw)] = 0.0
+        # ----------------------------------------
+        # 5. Build NN input tensor
+        # ----------------------------------------
+        xc_nn_norm_fc = build_xc_nn_norm_forecast(
+            data_loader=data_loader,
+            basin_idx=basin_idx,
+            fc_block=fc_block,
+            device=device,
+            verbose = verbose,
+        )
 
-        # ----- Run HBV forecast with warm states -----
+        # ----------------------------------------
+        # 6. Run LSTM -> HBV
+        # ----------------------------------------
         with torch.no_grad():
-            Qs_fc = hbv(
-                x=to_time_first(forc_raw, device),
-                parameters=pars_last,
-                staind=staind, tdlst=tdRep,
-                mu=nmul,
-                muwts=None, rtwts=rtwts_hist,
-                bufftime=0,
-                outstate=False, instate=True,
-                init_states=warm_states,
-                routOpt=routing, dydrop=dydrop,
+            raw_nn_out = nn_model(xc_nn_norm_fc)
+            fluxes = phy_model(
+                x_dict={"x_phy": x_phy_fc},
+                parameters=raw_nn_out
             )
 
-        # ----- Sanity check and store -----
-        ens_fc = Qs_fc[:, 0, 0].detach().cpu().numpy()
-        if np.isnan(ens_fc).all():
-            raise ValueError(f"ens_fc are all NaNs for basin {gage_id}, ensemble {ens_id}!")
+        q_fc = fluxes["streamflow"][:, 0, 0].detach().cpu().numpy()
+        ens_preds.append(q_fc)
 
-        ens_preds.append(ens_fc)
+    return np.array(ens_preds)
 
-    return np.array(ens_preds)  # shape: (N_ENSEMBLES, horizon)
+def build_xc_nn_norm_forecast(data_loader, basin_idx, fc_block, device, verbose):
+    import numpy as np
+    import torch
 
-def selectbasins(RANDOM, SEED):
+    if verbose:
+        print("===== BUILD XC_NN_NORM FORECAST =====")
+
+    # 1. Raw forecast forcings
+    x_nn_fc = fc_block[data_loader.nn_forcings].to_numpy().astype(np.float32)   # [T, 3]
+    if verbose:
+        print("raw GEFS forcings shape:", x_nn_fc.shape)
+
+    x_nn_fc = x_nn_fc[:, np.newaxis, :]                                          # [T, 1, 3]
+    if verbose:
+        print("after add basin dim:", x_nn_fc.shape)
+
+    # 2. Static attributes
+    c_nn_fc = data_loader.dataset["c_nn"][basin_idx:basin_idx+1].detach().cpu().numpy().astype(np.float32)  # [1, 35]
+    if verbose:
+        print("static attributes shape:", c_nn_fc.shape)
+
+    # 3. Normalize forcings
+    x_nn_norm = data_loader.to_norm(x_nn_fc, data_loader.nn_forcings)
+    if verbose:
+        print("normalized forcings shape:", x_nn_norm.shape)
+
+    # 4. Normalize static attrs
+    c_nn_norm = data_loader.to_norm(c_nn_fc, data_loader.nn_attributes)
+    if verbose:
+        print("normalized static attrs shape:", c_nn_norm.shape)
+
+    # 5. Repeat static attrs over time
+    c_nn_norm = np.repeat(
+        np.expand_dims(c_nn_norm, 0),
+        x_nn_norm.shape[0],
+        axis=0
+    )  # [T, 1, 35]
+    if verbose:
+        print("repeated static attrs shape:", c_nn_norm.shape)
+
+    # 6. Concatenate
+    xc_nn_norm_fc = np.concatenate((x_nn_norm, c_nn_norm), axis=2)  # [T, 1, 38]
+    if verbose:
+        print("final xc_nn_norm_fc shape:", xc_nn_norm_fc.shape)
+
+    # 7. Convert to tensor
+    xc_nn_norm_fc = torch.tensor(xc_nn_norm_fc, dtype=torch.float32, device=device)
+    if verbose:
+        print("final tensor shape:", xc_nn_norm_fc.shape)
+
+    if verbose:
+        print("=====================================")
+
+    return xc_nn_norm_fc
+
+ 
+
+def run_segment(
+    model,
+    dataset,
+    basin_idx,
+    device,
+    name=None,
+    start_idx=None,
+    end_idx=None,
+    warm_up=0,
+    cache_states=False,
+    warm_up_states=True,
+    state_path=None,
+):
+    """
+    Slice one basin/time segment from dataset and run NN + physical model.
+
+    Parameters
+    ----------
+    model : ModelHandler
+    dataset : dict
+        Must contain 'xc_nn_norm' and 'x_phy'
+    basin_idx : int
+    device : torch.device
+    name : str or None
+        Model name. If None, uses the first key in model.model_dict.
+    start_idx, end_idx : int or None
+        Time slice for the segment.
+    warm_up : int
+    cache_states : bool
+    warm_up_states : bool
+    state_path : str or None
+        If provided, load saved states before forward.
+
+    Returns
+    -------
+    nn_out : torch.Tensor
+    fluxes : dict
+    phy_model : object
+    data_dict : dict
+        The sliced inputs used for this segment.
+    """
+    if name is None:
+        name = list(model.model_dict.keys())[0]
+
+    nn_model = model.model_dict[name].nn_model
+    phy_model = model.model_dict[name].phy_model
+
+    data_dict = {
+        "xc_nn_norm": dataset["xc_nn_norm"][start_idx:end_idx, basin_idx:basin_idx + 1, :].clone(),
+        "x_phy": dataset["x_phy"][start_idx:end_idx, basin_idx:basin_idx + 1, :].clone(),
+    }
+
+    phy_model.warm_up = warm_up
+    phy_model.cache_states = cache_states
+    phy_model.warm_up_states = warm_up_states
+
+    model.eval()
+
+    if state_path is not None:
+        model.load_states(path=state_path)
+
+    with torch.no_grad():
+        xc = data_dict["xc_nn_norm"].to(device)
+        x_phy = data_dict["x_phy"].to(device)
+
+        nn_out = nn_model(xc)
+        fluxes = phy_model(
+            x_dict={"x_phy": x_phy},
+            parameters=nn_out,
+        )
+    # return nn_out, fluxes, phy_model, data_dict
+    return fluxes['streamflow'][:, 0, 0].detach().cpu().numpy()
+
+
+def selectbasins():
     with open("./predownloaded/Best_two_in_region.json", "r") as f:
         basin_groups = json.load(f)
+    basin_pool = [b for group in basin_groups.values() for b in group] 
+    return basin_pool
 
-    # flatten list
-    basin_pool = [b for group in basin_groups.values() for b in group]
-    
-    #print(basin_pool)
-    if RANDOM:
-        random.seed(SEED)
-        selected_basins = random.sample(basin_pool, N_BASINS)
-        # print("Randomly selected basins:", selected_basins)
-    else:
-        selected_basins = basin_pool
-        # print("Selected basins from JSON:", selected_basins)
 
-    return selected_basins
-
-def startid_endid(config, ENSEMBLE_START_DATE, FORECAST):
-    timesteps = Dates(config["simulation"], config["delta_model"]["rho"]).batch_daily_time_range # 730
-    print("check on config", config["simulation"])
+def startid_endid(config, warm, ENSEMBLE_START_DATE, FORECAST):
+    timesteps = Dates(config['sim'], config['model']['rho']).batch_daily_time_range # 730
+    # print("check on config", config["sim"])
     sidx = np.where(timesteps == ENSEMBLE_START_DATE)[0][0] # 715
     eidx = sidx + FORECAST # 730 
-    history_len = len(timesteps) - config['delta_model']['phy_model']['warm_up'] - FORECAST
-    print("sidx, eidx, timesteps, history_len are", sidx, eidx, timesteps, history_len)
+    history_len = len(timesteps) - warm - FORECAST
+    # print("sidx, eidx, timesteps, history_len are", sidx, eidx, timesteps, history_len)
     return sidx, eidx, timesteps, history_len 
 
 def plot_forecast_separate(
@@ -584,7 +589,7 @@ def plot_forecast_separate(
     Q_all_np,            # continuous output from long run
     sidx,                # input index of forecast start in the dataset timeline
     FORECAST,
-    BUFFTIME,
+    WARMUPTIME,
     det_pred=None,       # length = HORIZON
     save_dir=None,
     file_prefix=None,
@@ -629,7 +634,7 @@ def plot_forecast_separate(
     # ---------- Continuous run dates ----------
     dataset_day0 = start_date - pd.Timedelta(days=sidx)
     dates_cont = pd.date_range(
-        start=dataset_day0 + pd.Timedelta(days=BUFFTIME),
+        start=dataset_day0 + pd.Timedelta(days=WARMUPTIME),
         periods=len(Q_all_np),
     )
 
@@ -645,9 +650,9 @@ def plot_forecast_separate(
     ax1.plot(dates_obs_top, obs, "k-", lw=2, label="Observed")
     ax1.plot(dates_sim_top, sim, "r-", lw=1.5, label="Simulation (history)")
 
-    ax1.fill_between(dates_obs_top, ens_min, ens_max, color="blue", alpha=0.1, label="Ensembles")
+    ax1.fill_between(dates_obs_top, ens_min, ens_max, color="green", alpha=0.1, label="Ensembles")
     for i in range(ens_preds.shape[0]):
-        ax1.plot(dates_obs_top, padded_ensembles[i], lw=1.0, color="darkblue")
+        ax1.plot(dates_obs_top, padded_ensembles[i], lw=1.5, color="darkgreen")
 
     if det_pred is not None:
         det_pred = np.asarray(det_pred).reshape(-1)
@@ -658,19 +663,77 @@ def plot_forecast_separate(
         ax1.plot(
             dates_obs_top,
             padded_det,
-            lw=2.5,
-            color="red",
-            label="HBV restart (deterministic)"
+            lw=1.5,
+            color="purple",
+            label="HBV Restart"
         )
+    # ---------- Metrics for top figure ----------
+    obs = np.asarray(obs).reshape(-1)
+    sim = np.asarray(sim).reshape(-1)
+    ens_preds = np.asarray(ens_preds)
 
-    ax1.axvspan(dates_obs_top[0], dates_obs_top[history_len], color="gray", alpha=0.1, label="Pre-GEFS")
-    ax1.axvspan(dates_obs_top[history_len], dates_obs_top[-1], color="orange", alpha=0.1, label="Forecast")
+    # Split observed into history and forecast parts
+    obs_hist = obs[:history_len]
+    obs_fcst = obs[history_len:history_len + HORIZON]
 
+    # --- Pre-forecast metrics: sim vs observed history ---
+    pre_nse, pre_kge = np.nan, np.nan
+    valid_pre = np.isfinite(sim) & np.isfinite(obs_hist)
+
+    if valid_pre.sum() > 1:
+        pre_nse = nse(sim[valid_pre], obs_hist[valid_pre])
+        pre_kge = kge(sim[valid_pre], obs_hist[valid_pre])
+
+    # --- Forecast ensemble metrics: each ensemble member vs observed forecast ---
+    ens_nse_list = []
+    ens_kge_list = []
+
+    for i in range(ens_preds.shape[0]):
+        pred_i = ens_preds[i]
+        valid_i = np.isfinite(pred_i) & np.isfinite(obs_fcst)
+
+        if valid_i.sum() > 1:
+            ens_nse_i = nse(pred_i[valid_i], obs_fcst[valid_i])
+            ens_kge_i = kge(pred_i[valid_i], obs_fcst[valid_i])
+        else:
+            ens_nse_i = np.nan
+            ens_kge_i = np.nan
+
+        ens_nse_list.append(ens_nse_i)
+        ens_kge_list.append(ens_kge_i)
+
+    ens_nse_arr = np.asarray(ens_nse_list)
+    ens_kge_arr = np.asarray(ens_kge_list)
+    metric_text = "GEFS Ensembles\n"
+    for i in range(len(ens_nse_arr)):
+        metric_text += f"E{i+1}: NSE={ens_nse_arr[i]:.3f}, KGE={ens_kge_arr[i]:.3f}\n"
+            
+    ax1.axvspan(dates_obs_top[0], dates_obs_top[history_len], color="gray", alpha=0.2, label="Pre-Forecast")
+    ax1.axvspan(dates_obs_top[history_len], dates_obs_top[-1], color="orange", alpha=0.2, label="Forecast")
+    
+    metric_text = (
+        f"Pre-Forecast\n"
+        f"NSE={pre_nse:.3f}, KGE={pre_kge:.3f}\n\n"
+        f"GEFS Ensembles\n"
+    )
+    for i in range(len(ens_nse_arr)):
+        metric_text += f"E{i+1}: NSE={ens_nse_arr[i]:.3f}, KGE={ens_kge_arr[i]:.3f}\n"
+        
+    ax1.text(
+        0.98, 0.98,
+        metric_text,
+        transform=ax1.transAxes,
+        va="top",
+        ha="right",
+        bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
+    )
+    
+    
     ax1.set_xlim(x0 - pd.Timedelta(days=pad_days), x1 + pd.Timedelta(days=pad_days))
-    ax1.set_title(f"Forecast — Gage {gage_id} ({gage_name})")
+    ax1.set_title(f"GEFS Forecast — Gage {gage_id} ({gage_name})")
     ax1.set_xlabel("Date")
     ax1.set_ylabel("Streamflow (mm/day)")
-    ax1.grid(True, linestyle="--", linewidth=0.7, alpha=0.7)
+    ax1.grid(True, linestyle="--", linewidth=1.5, alpha=0.7)
 
     h1, l1 = ax1.get_legend_handles_labels()
     ax1.legend(h1, l1, loc="upper center", ncol=max(1, int(np.ceil(len(l1) / 4))))
@@ -684,17 +747,7 @@ def plot_forecast_separate(
     mask = (dates_cont >= x0) & (dates_cont <= x1)
     cont_dates_win = dates_cont[mask]
     cont_vals_win = np.asarray(Q_all_np)[mask]
-
-    ax2.plot(
-        cont_dates_win,
-        cont_vals_win,
-        "-",
-        color="green",
-        lw=1.5,
-        markersize=6,
-        label="HBV continuous output"
-    )
-
+ 
     # ---------- Align observed data with continuous run ----------
     obs_series = pd.Series(np.asarray(obs), index=dates_obs_top)
     cont_series = pd.Series(cont_vals_win, index=cont_dates_win)
@@ -721,9 +774,18 @@ def plot_forecast_separate(
 
         nse_val = nse(cont_valid, obs_valid)
         kge_val = kge(cont_valid, obs_valid)
-
+    
+    ax2.plot(
+        cont_dates_win,
+        cont_vals_win,
+        "-",
+        color="red",
+        lw=1.5,
+        markersize=6,
+        label="Continuous Simulation"
+    )
     ax2.text(
-        0.98, 0.98,
+        0.98, 0.98, # position of these nse kge values
         f"NSE = {nse_val:.3f}\nKGE = {kge_val:.3f}",
         transform=ax2.transAxes,
         va="top",
@@ -735,8 +797,8 @@ def plot_forecast_separate(
     ax2.set_title(f"Continuous Run — Gage {gage_id} ({gage_name})")
     ax2.set_xlabel("Date")
     ax2.set_ylabel("Streamflow (mm/day)")
-    ax2.grid(True, linestyle="--", linewidth=0.7, alpha=0.7)
-    ax2.legend(loc="upper left")
+    ax2.grid(True, linestyle="--", linewidth=1.5, alpha=0.7)
+    ax2.legend(loc="upper center")
     fig2.tight_layout()
 
     # ---------- Save ----------
@@ -750,97 +812,16 @@ def plot_forecast_separate(
 
         fig1.savefig(top_path, dpi=300, bbox_inches="tight")
         fig2.savefig(bottom_path, dpi=300, bbox_inches="tight")
-
-        print(f"Saved top figure to: {top_path}")
+ 
         print(f"Saved bottom figure to: {bottom_path}")
 
     plt.show()
+    print(f"Saved plot for basin {gage_id} → {save_dir}")
     plt.close(fig1)
     plt.close(fig2)
     
-
-def plot_ensemble_forecast(GAGE_NAME_PATH, gage_id, start_date, obs, sim, ens_preds, history_len, save_path=None):
-    """
-    Plot 2 months history + 15-day forecast:
-      - Observed (black)
-      - Simulation (red) for history
-      - Ensembles (all black, single label "Ensembles")
-      - Grey shaded envelope for ensembles
-    """ 
-    print("the length is here", len(sim), len(obs))
-    ## Get the gage name first
-    gage_name = obtain_gage_name(GAGE_NAME_PATH, gage_id)
-    
-    HORIZON = ens_preds.shape[1]
-    start_date = pd.to_datetime(start_date)
-    dates_obs = pd.date_range(
-        start=start_date - pd.Timedelta(days=history_len),
-        periods=history_len + HORIZON,
-    )
-    dates_sim = pd.date_range(
-        start=start_date - pd.Timedelta(days=history_len),
-        periods=history_len + 1,
-    ) 
  
-    # Pad ensembles for plotting (only forecast period valid)
-    padded_ensembles = np.full((ens_preds.shape[0], history_len + HORIZON), np.nan)
-    padded_ensembles[:, history_len:] = ens_preds
-
-    # ======== Ensemble Envelope (Gray Shaded Area) ========
-    ens_min = np.nanmin(padded_ensembles, axis=0)
-    ens_max = np.nanmax(padded_ensembles, axis=0)
-
-    # Plot 
-    plt.figure(figsize=(12, 6))
-
-    # Observed
-    plt.plot(dates_obs, obs, "k-", lw=2, label="Observed")
-
-    # Simulation (history only)
-    plt.plot(dates_sim, sim, "r-", lw=2, label="Simulation")
-
-    # Gray shading for ensemble envelope
-    plt.fill_between(
-        dates_obs,
-        ens_min,
-        ens_max,
-        color="blue",
-        alpha=0.1,
-        label="Ensembles"   # SINGLE legend entry
-    )
-
-    # All ensemble curves (black, no labels)
-    for i in range(ens_preds.shape[0]):
-        plt.plot(
-            dates_obs,
-            padded_ensembles[i],
-            lw=1.0,
-            color="darkblue"
-        )
-
-    # Shading for history vs forecast
-    plt.axvspan(dates_obs[0], dates_obs[history_len], color="gray", alpha=0.1, label="Pre-GEFS Simulation")
-    plt.axvspan(dates_obs[history_len], dates_obs[-1], color="orange", alpha=0.1, label="GEFS Forecast")
-
-    plt.title(f"GEFS Forecast — Gage {gage_id} ({gage_name})")
-    plt.xlabel("Date")
-    plt.ylabel("Streamflow (mm/day)")
-    plt.grid(True, linestyle="--", linewidth=0.7, alpha=0.7)
-
-    # Legend (automatically includes only unique labels)
-    handles, labels = plt.gca().get_legend_handles_labels()
-    plt.legend(handles, labels, loc="upper center", ncol=int(np.ceil(len(labels)/4)))
-
-    plt.tight_layout()
-
-    if save_path:
-        plt.savefig(save_path, dpi=300)
-    plt.show()
-    
-
-# ====================================================
-# Evaluate ONE basin (HBV1_1p manual forward)
-# ====================================================
+ 
 def evaluate_one_basin(model, dataset, basin_idx, device, nmul, staind, tdRep, routing, dydrop):
     #  
     x_phy = torch.nan_to_num(
@@ -894,12 +875,12 @@ def print_selected_basin_metrics_from_json(metrics, selected_basins, basin_pool)
     count = 0
 
     for GAGE_ID in selected_basins:
-        # print(f"For basin {GAGE_ID} ===")
+        print(f"For basin {GAGE_ID} ===")
         basin_idx = basin_pool.index(GAGE_ID)
 
         nse_val = metrics['nse'][basin_idx]
         kge_val = metrics['kge'][basin_idx]
-        # print(f"NSE={nse_val}, KGE={kge_val}")
+        print(f"NSE={nse_val}, KGE={kge_val}")
 
         if nse_val is None or kge_val is None:
             print(f"Skip basin {GAGE_ID} because metric is None")
@@ -972,26 +953,4 @@ def cleannans(metrics, METRIC):
     return metrics_clean
 
 
-
-# # If you want to plot a figure based on dmg hydrodl HBV1.1 of the last gage id you selected previously
-# obs_full_window = (
-#         dataset["target"][sidx - history_len : eidx, basin_idx, 0]
-#         .detach().cpu().numpy()
-#     )
-# sim_pre_GEFS = (
-#         output['Hbv_1_1p']['streamflow'][sidx - history_len - BUFFTIME : sidx - BUFFTIME + 1, basin_idx]
-#         .detach().cpu().numpy()
-#     )
-
-# save_path = f"figs/GEFS_{GAGE_ID}_dmgHBV.png"
-# plot_ensemble_forecast(
-#     GAGE_NAME_PATH=GAGE_NAME_PATH,
-#     gage_id=GAGE_ID,
-#     start_date=ENSEMBLE_START_DATE,
-#     obs=obs_full_window,
-#     sim=sim_pre_GEFS,
-#     ens_preds=ens_preds,
-#     history_len=history_len,
-#     save_path=save_path,
-# )
-# print(f"Saved plot for basin {GAGE_ID} → {save_path}")
+ 

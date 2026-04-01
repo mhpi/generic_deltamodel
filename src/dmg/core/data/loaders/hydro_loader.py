@@ -1,14 +1,19 @@
+"""
+Data loader for HydroDL LSTMs and differentiable models.
+- Leo Lonzarich, Yalan Song 2024.
+"""
+
 import json
 import logging
 import os
 import pickle
-from typing import Any, Optional
+from functools import partial
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
 import torch
 from numpy.typing import NDArray
-from sklearn.exceptions import DataDimensionalityWarning
 
 from dmg.core.data.data import intersect, split_dataset_by_basin
 from dmg.core.data.loaders.base import BaseLoader
@@ -18,7 +23,7 @@ log = logging.getLogger(__name__)
 
 class HydroLoader(BaseLoader):
     """Data loader for hydrological data from CAMELS dataset.
-    
+
     All data is loaded as PyTorch tensors. According to config settings,
     generates...
     - `dataset` for model inference,
@@ -28,7 +33,7 @@ class HydroLoader(BaseLoader):
     The CAMELS dataset is a large-sample watershed-scale hydrometeorological
     dataset for the contiguous USA and includes both meteorological forcings
     and basin attributes.
-    
+
     CAMELS:
     - https://ral.ucar.edu/solutions/products/camels
 
@@ -51,6 +56,7 @@ class HydroLoader(BaseLoader):
     NOTE: to support new datasets of similar form to CAMELS, add the dataset
     key name to `self.supported_data`.
     """
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -63,19 +69,41 @@ class HydroLoader(BaseLoader):
         self.test_split = test_split
         self.overwrite = overwrite
         self.holdout_index = holdout_index
-        self.supported_data = ['camels_671', 'camels_531', 'prism_671', 'prism_531']
+        self.supported_data = [
+            'camels_671',
+            'camels_531',
+            'prism_671',
+            'prism_531',
+            'camels_671_lstm',
+            'camels_531_lstm',
+        ]
         self.data_name = config['observations']['name']
-        self.nn_attributes = config['delta_model']['nn_model'].get('attributes', [])
-        self.nn_forcings = config['delta_model']['nn_model'].get('forcings', [])
-        self.phy_attributes = config['delta_model']['phy_model'].get('attributes', [])
-        self.phy_forcings = config['delta_model']['phy_model'].get('forcings', [])
+        self.nn_attributes = config['model']['nn'].get('attributes', [])
+        self.nn_forcings = config['model']['nn'].get('forcings', [])
         self.forcing_names = self.config['observations']['all_forcings']
         self.attribute_names = self.config['observations']['all_attributes']
 
+        if config['model']['phy']:
+            self.phy_attributes = config['model']['phy'].get('attributes', [])
+            self.phy_forcings = config['model']['phy'].get('forcings', [])
+        else:
+            self.phy_attributes = []
+            self.phy_forcings = []
+
         self.target = config['train']['target']
-        self.log_norm_vars = config['delta_model']['phy_model']['use_log_norm']
+        self.log_norm_vars = config['model'].get('use_log_norm', [])
+        self.flow_regime = config['model'].get('flow_regime', None)
         self.device = config['device']
         self.dtype = config['dtype']
+
+        self.input_unit = config['observations'].get(
+            'target_unit',
+            'ft3/s',
+        )
+        self.output_unit = config['model'].get(
+            'output_unit',
+            'mm/d',
+        )
 
         self.train_dataset = None
         self.eval_dataset = None
@@ -85,25 +113,43 @@ class HydroLoader(BaseLoader):
         if self.data_name not in self.supported_data:
             raise ValueError(f"Data source '{self.data_name}' not supported.")
 
+        if self.log_norm_vars is None:
+            self.log_norm_vars = []
+
+        if self.flow_regime == 'high':
+            # High flow regime: Gaussian normalization for all variables
+            self.log_norm_vars = []
+            self.norm_target = True
+        elif self.flow_regime == 'low':
+            # Low flow regime: Log-Gamma normalization for runoff and precipitation
+            self.log_norm_vars = ['prcp', 'runoff', 'streamflow']
+            self.norm_target = True
+        else:
+            self.norm_target = False
+
         self.load_dataset()
 
     def load_dataset(self) -> None:
         """Load data into dictionary of nn and physics model input tensors."""
         mode = self.config['mode']
-        is_spatial_test = (self.config.get('test', {}).get('type') == 'spatial')
-        
-        if mode == 'simulation':
-            self.dataset = self._preprocess_data(scope='simulation')
+        is_spatial_test = self.config.get('test', {}).get('type') == 'spatial'
+
+        if mode == 'sim':
+            self.dataset = self._preprocess_data(scope='sim')
         elif is_spatial_test:
             # For spatial testing, load data and split by basin using utility function
             train_dataset = self._preprocess_data(scope='train')
             test_dataset = self._preprocess_data(scope='test')
-            
+
             self.train_dataset, _ = split_dataset_by_basin(
-                train_dataset, self.config, self.holdout_index,
+                train_dataset,
+                self.config,
+                self.holdout_index,
             )
             _, self.eval_dataset = split_dataset_by_basin(
-                test_dataset, self.config, self.holdout_index,
+                test_dataset,
+                self.config,
+                self.holdout_index,
             )
         elif self.test_split:
             self.train_dataset = self._preprocess_data(scope='train')
@@ -118,12 +164,12 @@ class HydroLoader(BaseLoader):
         scope: Optional[str],
     ) -> dict[str, torch.Tensor]:
         """Read data, preprocess, and return as tensors for models.
-        
+
         Parameters
         ----------
         scope
             Scope of data to read, affects what timespan of data is loaded.
-            
+
         Returns
         -------
         dict[str, torch.Tensor]
@@ -133,7 +179,12 @@ class HydroLoader(BaseLoader):
 
         # Normalize nn input data
         self.load_norm_stats(x_nn, c_nn, target)
-        xc_nn_norm = self.normalize(x_nn, c_nn)
+        xc_nn_norm, y_nn_norm = self.normalize(x_nn, c_nn, target)
+
+        # Only normalize target for training data.
+        if (y_nn_norm is not None) and (scope == 'train'):
+            target = y_nn_norm
+        del y_nn_norm
 
         # Build data dict of Torch tensors
         dataset = {
@@ -144,11 +195,19 @@ class HydroLoader(BaseLoader):
             'xc_nn_norm': self.to_tensor(xc_nn_norm),
             'target': self.to_tensor(target),
         }
+
+        # Attach function to convert model predictions back to mm/day.
+        if self.norm_target and scope != 'train':
+            dataset['denorm_fn'] = partial(
+                self.denormalize_prediction,
+                c_nn,
+            )
+
         return dataset
 
     def read_data(self, scope: Optional[str]) -> tuple[NDArray[np.float32]]:
         """Read data from the data file.
-        
+
         Parameters
         ----------
         scope
@@ -162,7 +221,7 @@ class HydroLoader(BaseLoader):
         try:
             if self.config['observations']['data_path']:
                 data_path = self.config['observations']['data_path']
-            
+
             if scope == 'train':
                 if not data_path:
                     # NOTE: still including 'train_path' etc. for backwards
@@ -173,7 +232,7 @@ class HydroLoader(BaseLoader):
                 if not data_path:
                     data_path = self.config['observations']['test_path']
                 time = self.config['test_time']
-            elif scope == 'simulation':
+            elif scope == 'sim':
                 if not data_path:
                     data_path = self.config['observations']['test_path']
                 time = self.config['sim_time']
@@ -182,7 +241,9 @@ class HydroLoader(BaseLoader):
                     data_path = self.config['observations']['test_path']
                 time = self.config['all_time']
             else:
-                raise ValueError("Scope must be 'train', 'test', 'simulation', or 'all'.")
+                raise ValueError(
+                    "Scope must be 'train', 'test', 'sim', or 'all'.",
+                )
         except KeyError as e:
             raise ValueError(f"Key {e} for data path not in dataset config.") from e
 
@@ -199,7 +260,7 @@ class HydroLoader(BaseLoader):
         with open(data_path, 'rb') as f:
             forcings, target, attributes = pickle.load(f)
 
-        forcings = np.transpose(forcings[:, idx_start:idx_end], (1,0,2))
+        forcings = np.transpose(forcings[:, idx_start:idx_end], (1, 0, 2))
 
         # Forcing subset for phy model
         phy_forc_idx = []
@@ -207,7 +268,7 @@ class HydroLoader(BaseLoader):
             if forc not in self.forcing_names:
                 raise ValueError(f"Forcing {forc} not listed in available forcings.")
             phy_forc_idx.append(self.forcing_names.index(forc))
-        
+
         # Attribute subset for phy model
         phy_attr_idx = []
         for attr in self.phy_attributes:
@@ -229,14 +290,14 @@ class HydroLoader(BaseLoader):
                 raise ValueError(f"Attribute {attr} not in the list of all attributes.")
             nn_attr_idx.append(self.attribute_names.index(attr))
 
-        x_phy = forcings[:,:, phy_forc_idx]
+        x_phy = forcings[:, :, phy_forc_idx]
         c_phy = attributes[:, phy_attr_idx]
-        x_nn = forcings[:,:, nn_forc_idx]
+        x_nn = forcings[:, :, nn_forc_idx]
         c_nn = attributes[:, nn_attr_idx]
-        target = np.transpose(target[:, idx_start:idx_end], (1,0,2))
+        target = np.transpose(target[:, idx_start:idx_end], (1, 0, 2))
 
         # Subset basins if necessary
-        if 'subset_path' in self.config['observations']:
+        if self.config['observations']['subset_path'] is not None:
             subset_path = self.config['observations']['subset_path']
             gage_id_path = self.config['observations']['gage_info']
 
@@ -252,35 +313,109 @@ class HydroLoader(BaseLoader):
             c_nn = c_nn[subset_idx, :]
             target = target[:, subset_idx, :]
 
-        # Convert flow to mm/day if necessary
-        target = self._flow_conversion(c_nn, target)
+        # Convert flow to mm/day (and dimensionless for training).
+        target = self.flow_conversion(c_nn, target, scope=scope)
 
         return x_phy, c_phy, x_nn, c_nn, target
 
-    def _flow_conversion(
+    def _to_mm_per_day(
+        self,
+        data: NDArray[np.float32],
+        area: NDArray[np.float32],
+    ) -> NDArray[np.float32]:
+        """Convert streamflow data to mm/day from the configured input unit.
+
+        Parameters
+        ----------
+        data
+            Streamflow data in input units.
+        area
+            Basin area array (km²), broadcast to match data shape.
+
+        Returns
+        -------
+        NDArray[np.float32]
+            Streamflow in mm/day.
+        """
+        if self.input_unit == 'ft3/s':
+            return data * 0.0283168 * 3600 * 24 * 1e3 / (area * 1e6)
+        elif self.input_unit == 'm3/s':
+            return data * 3600 * 24 * 1e3 / (area * 1e6)
+        elif self.input_unit == 'mm/d':
+            return data
+        else:
+            raise ValueError(f"Unsupported input unit: '{self.input_unit}'.")
+
+    def _from_mm_per_day(
+        self,
+        data: NDArray[np.float32],
+        area: NDArray[np.float32],
+    ) -> NDArray[np.float32]:
+        """Convert streamflow data from mm/day to the configured output unit.
+
+        Parameters
+        ----------
+        data
+            Streamflow data in mm/day.
+        area
+            Basin area array (km²), broadcast to match data shape.
+
+        Returns
+        -------
+        NDArray[np.float32]
+            Streamflow in the configured output unit.
+        """
+        if self.output_unit == 'mm/d':
+            return data
+        elif self.output_unit == 'm3/s':
+            return data * (area * 1e6) / (3600 * 24 * 1e3)
+        elif self.output_unit == 'ft3/s':
+            return data * (area * 1e6) / (0.0283168 * 3600 * 24 * 1e3)
+        else:
+            raise ValueError(f"Unsupported output unit: '{self.output_unit}'.")
+
+    def flow_conversion(
         self,
         c_nn: NDArray[np.float32],
         target: NDArray[np.float32],
+        scope: Optional[str] = 'train',
     ) -> NDArray[np.float32]:
-        """Convert hydraulic flow from ft3/s to mm/day.
-        
+        """Convert flow to mm/day from the configured input unit.
+
+        For training with pure-ML models (no physics), also divides by
+        prcp_mean to make the target dimensionless.
+
         Parameters
         ----------
         c_nn
             Neural network static data.
         target
             Target variable data.
+        scope
+            Data scope. Only 'train' applies the prcp_mean dimensionless
+            scaling for pure-ML models; eval scopes stay in mm/day.
         """
-        for name in ['flow_sim', 'streamflow', 'sf']:
+        for name in ['flow_sim', 'streamflow', 'runoff']:
             if name in self.target:
-                target_temp = target[:, :, self.target.index(name)]
+                i = self.target.index(name)
+                target_temp = target[:, :, i]
                 area_name = self.config['observations']['area_name']
                 basin_area = c_nn[:, self.nn_attributes.index(area_name)]
 
-                area = np.expand_dims(basin_area, axis=0).repeat(target_temp.shape[0], 0)
-                target[:, :, self.target.index(name)] = (
-                    (10 ** 3) * target_temp * 0.0283168 * 3600 * 24 / (area * (10 ** 6))
+                area = np.expand_dims(basin_area, axis=0).repeat(
+                    target_temp.shape[0],
+                    0,
                 )
+
+                # Input unit -> mm/day
+                target[:, :, i] = self._to_mm_per_day(target_temp, area)
+
+                # Make dimensionless for ML training only.
+                if (scope == 'train') and (self.config['model']['phy'] is None):
+                    prcp_mean_name = self.config['observations']['prcp_mean_name']
+                    prcp_mean = c_nn[:, self.nn_attributes.index(prcp_mean_name)]
+                    target[:, :, i] = target[:, :, i] / prcp_mean
+
         return target
 
     def load_norm_stats(
@@ -291,7 +426,7 @@ class HydroLoader(BaseLoader):
     ) -> None:
         """Load or calculate normalization statistics if necessary."""
         self.out_path = os.path.join(
-            self.config['model_path'],
+            self.config['model_dir'],
             'normalization_statistics.json',
         )
 
@@ -303,7 +438,6 @@ class HydroLoader(BaseLoader):
             # Init normalization stats if file doesn't exist or overwrite is True.
             self.norm_stats = self._init_norm_stats(x_nn, c_nn, target)
 
-
     def _init_norm_stats(
         self,
         x_nn: NDArray[np.float32],
@@ -311,7 +445,7 @@ class HydroLoader(BaseLoader):
         target: NDArray[np.float32],
     ) -> dict[str, list[float]]:
         """Compile and save calculations of data normalization statistics.
-        
+
         Parameters
         ----------
         x_nn
@@ -320,7 +454,7 @@ class HydroLoader(BaseLoader):
             Neural network static data.
         target
             Target variable data.
-        
+
         Returns
         -------
         dict[str, list[float]]
@@ -344,14 +478,16 @@ class HydroLoader(BaseLoader):
 
         # Target variable stats
         for i, name in enumerate(self.target):
-            if name in ['flow_sim', 'streamflow', 'sf']:
+            if (name in ['flow_sim', 'streamflow', 'runoff']) and (
+                not self.norm_target
+            ):
                 stat_dict[name] = self._calc_norm_stats(
-                    np.swapaxes(target[:, :, i:i+1], 1, 0).copy(),
+                    np.swapaxes(target[:, :, i : i + 1], 1, 0).copy(),
                     basin_area,
                 )
             else:
                 stat_dict[name] = self._calc_norm_stats(
-                    np.swapaxes(target[:, :, i:i+1], 1, 0),
+                    np.swapaxes(target[:, :, i : i + 1], 1, 0).copy(),
                 )
 
         with open(self.out_path, 'w') as f:
@@ -374,7 +510,7 @@ class HydroLoader(BaseLoader):
             Input data array.
         basin_area
             Basin area array for normalization.
-        
+
         Returns
         -------
         list[float]
@@ -391,7 +527,7 @@ class HydroLoader(BaseLoader):
             if (nd == 3) and (x.shape[2] == 1):
                 x = x[:, :, 0]  # Unsqueeze the original 3D matrix
             temparea = np.tile(basin_area, (1, x.shape[1]))
-            flow = (x * 0.0283168 * 3600 * 24) / (temparea * (10 ** 6)) * 10 ** 3
+            flow = (x * 0.0283168 * 3600 * 24) / (temparea * (10**6)) * 10**3
             x = flow  # Replace x with flow for further calculations
 
         # Flatten and exclude NaNs and invalid values
@@ -418,12 +554,12 @@ class HydroLoader(BaseLoader):
 
     def _calc_gamma_stats(self, x: NDArray[np.float32]) -> list[float]:
         """Calculate gamma statistics for streamflow and precipitation data.
-        
+
         Parameters
         ----------
         x
             Input data array.
-        
+
         Returns
         -------
         list[float]
@@ -433,7 +569,7 @@ class HydroLoader(BaseLoader):
         b = a[(~np.isnan(a))]
         b = np.log10(np.sqrt(b) + 0.1)
 
-        p10, p90 = np.percentile(b, [10,90]).astype(float)
+        p10, p90 = np.percentile(b, [10, 90]).astype(float)
         mean = np.mean(b).astype(float)
         std = np.std(b).astype(float)
 
@@ -441,12 +577,12 @@ class HydroLoader(BaseLoader):
 
     def _get_basin_area(self, c_nn: NDArray[np.float32]) -> NDArray[np.float32]:
         """Get basin area from attributes.
-        
+
         Parameters
         ----------
         c_nn
             Neural network static data.
-        
+
         Returns
         -------
         NDArray[np.float32]
@@ -456,8 +592,10 @@ class HydroLoader(BaseLoader):
             area_name = self.config['observations']['area_name']
             basin_area = c_nn[:, self.nn_attributes.index(area_name)][:, np.newaxis]
         except KeyError:
-            log.warning("No 'area_name' in observation config. Basin" \
-                        "area norm will not be applied.")
+            log.warning(
+                "No 'area_name' in observation config. Basin"
+                "area norm will not be applied.",
+            )
             basin_area = None
         return basin_area
 
@@ -465,29 +603,29 @@ class HydroLoader(BaseLoader):
         self,
         x_nn: NDArray[np.float32],
         c_nn: NDArray[np.float32],
+        target: NDArray[np.float32],
     ) -> NDArray[np.float32]:
         """Normalize data for neural network.
-        
+
         Parameters
         ----------
         x_nn
             Neural network dynamic data.
         c_nn
             Neural network static data.
-        
+
         Returns
         -------
         NDArray[np.float32]
             Normalized x_nn and c_nn concatenated together.
         """
-        x_nn_norm = self._to_norm(
-            np.swapaxes(x_nn, 1, 0).copy(),
-            self.nn_forcings,
-        )
-        c_nn_norm = self._to_norm(
-            c_nn,
-            self.nn_attributes,
-        )
+        x_nn_norm = self.to_norm(x_nn, self.nn_forcings)
+        c_nn_norm = self.to_norm(c_nn, self.nn_attributes)
+
+        if not self.norm_target:
+            y_nn_norm = None
+        else:
+            y_nn_norm = self.to_norm(target, self.target)
 
         # Remove nans
         x_nn_norm[x_nn_norm != x_nn_norm] = 0
@@ -502,85 +640,125 @@ class HydroLoader(BaseLoader):
         xc_nn_norm = np.concatenate((x_nn_norm, c_nn_norm), axis=2)
         del x_nn_norm, c_nn_norm, x_nn
 
-        return xc_nn_norm
+        return xc_nn_norm, y_nn_norm
 
-    def _to_norm(
+    def to_norm(
         self,
         data: NDArray[np.float32],
         vars: list[str],
     ) -> NDArray[np.float32]:
-        """Standard data normalization.
-        
+        """Normalize data with Gaussian or log-Gaussian norm.
+
         Parameters
         ----------
         data
             Data to normalize.
         vars
             List of variable names in data to normalize.
-        
+
         Returns
         -------
         NDArray[np.float32]
             Normalized data.
         """
-        data_norm = np.zeros(data.shape)
+        if isinstance(vars, str):
+            vars = [vars]
+
+        data = np.asarray(data, dtype=np.float32)
+        data_norm = np.zeros_like(data, dtype=np.float32)
 
         for k, var in enumerate(vars):
             stat = self.norm_stats[var]
+            mean, std = stat[2], stat[3]
 
-            if len(data.shape) == 3:
-                if var in self.log_norm_vars:
-                    data[:, :, k] = np.log10(np.sqrt(data[:, :, k]) + 0.1)
-                data_norm[:, :, k] = (data[:, :, k] - stat[2]) / stat[3]
-            elif len(data.shape) == 2:
-                if var in self.log_norm_vars:
-                    data[:, k] = np.log10(np.sqrt(data[:, k]) + 0.1)
-                data_norm[:, k] = (data[:, k] - stat[2]) / stat[3]
+            if var in self.log_norm_vars:
+                # Guard against negatives
+                if np.any(data[..., k] < 0):
+                    raise ValueError(
+                        f"Variable '{var}' contains negative values before log transform.",
+                    )
+                transformed = np.log10(np.sqrt(data[..., k]) + 0.1)
             else:
-                raise DataDimensionalityWarning("Data dimension must be 2 or 3.")
+                transformed = data[..., k]
 
-        # NOTE: Should be external, except altering order of first two dims
-        # augments normalization...
-        if len(data_norm.shape) < 3:
-            return data_norm
-        else:
-            return np.swapaxes(data_norm, 1, 0)
+            data_norm[..., k] = (transformed - mean) / std
+        return data_norm
 
-    def _from_norm(
+    def from_norm(
         self,
         data_scaled: NDArray[np.float32],
-        vars: list[str],
+        vars: Union[list[str], str],
     ) -> NDArray[np.float32]:
-        """De-normalize data.
-        
+        """De-normalize data with a Gaussian or log-Gaussian norm.
+
         Parameters
         ----------
-        data
+        data_scaled
             Data to de-normalize.
         vars
             List of variable names in data to de-normalize.
-        
+
         Returns
         -------
         NDArray[np.float32]
             De-normalized data.
         """
-        data = np.zeros(data_scaled.shape)
+        if isinstance(vars, str):
+            vars = [vars]
+
+        data_scaled = np.asarray(data_scaled, dtype=np.float32)
+        data = np.zeros_like(data_scaled, dtype=np.float32)
 
         for k, var in enumerate(vars):
             stat = self.norm_stats[var]
-            if len(data_scaled.shape) == 3:
-                data[:, :, k] = data_scaled[:, :, k] * stat[3] + stat[2]
-                if var in self.log_norm_vars:
-                    data[:, :, k] = (np.power(10, data[:, :, k]) - 0.1) ** 2
-            elif len(data_scaled.shape) == 2:
-                data[:, k] = data_scaled[:, k] * stat[3] + stat[2]
-                if var in self.log_norm_vars:
-                    data[:, k] = (np.power(10, data[:, k]) - 0.1) ** 2
-            else:
-                raise DataDimensionalityWarning("Data dimension must be 2 or 3.")
+            mean, std = stat[2], stat[3]
 
-        if len(data.shape) < 3:
-            return data
-        else:
-            return np.swapaxes(data, 1, 0)
+            denormed = data_scaled[..., k] * std + mean
+
+            if var in self.log_norm_vars:
+                # Invert the log-sqrt transform
+                data[..., k] = (np.power(10.0, denormed) - 0.1) ** 2
+            else:
+                data[..., k] = denormed
+
+        return data
+
+    def denormalize_prediction(
+        self,
+        c_nn: NDArray[np.float32],
+        data: NDArray[np.float32],
+    ) -> NDArray[np.float32]:
+        """Convert model predictions back to physical units.
+
+        Undoes Gaussian/log-Gaussian normalization, then undoes the
+        prcp_mean dimensionless scaling for pure-ML models. Finally,
+        converts from mm/day to the configured output unit.
+
+        Parameters
+        ----------
+        c_nn
+            Neural network static data.
+        data
+            Model predictions in normalized space.
+
+        Returns
+        -------
+        NDArray[np.float32]
+            Model predictions in the configured output unit.
+        """
+        data = self.from_norm(data, vars=self.target)
+        prcp_mean_name = self.config['observations']['prcp_mean_name']
+        prcp_mean = c_nn[:, self.nn_attributes.index(prcp_mean_name)]
+        data[:, :, 0] = data[:, :, 0] * prcp_mean
+
+        # Convert from mm/day to configured output unit.
+        if self.output_unit != 'mm/d':
+            area_name = self.config['observations']['area_name']
+            basin_area = c_nn[:, self.nn_attributes.index(area_name)]
+            area = np.expand_dims(basin_area, axis=0).repeat(
+                data.shape[0],
+                0,
+            )
+            data[:, :, 0] = self._from_mm_per_day(data[:, :, 0], area)
+
+        return data

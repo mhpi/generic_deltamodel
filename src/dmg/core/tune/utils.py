@@ -4,12 +4,12 @@ from ray import tune  # also requires manual install: pyarrow, optuna
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.optuna import OptunaSearch
 
-from dmg.core.tune.tune import RayTrainable
+from dmg.core.tune.tune import HAS_RAY, RayTrainable
 
 
 def run_tuning(config: dict[str, Any]):
     """Generic implementation of RayTune for model/hyperparameter.
-    
+
     See details here: https://docs.ray.io/en/latest/tune/index.html
 
     Parameters
@@ -17,6 +17,11 @@ def run_tuning(config: dict[str, Any]):
     config
         Configuration dictionary.
     """
+    if not HAS_RAY:
+        raise ImportError(
+            "Ray Tune is required for tuning. To install: `uv pip install dmg[tune]`",
+        )
+
     search_space = {
         "trainer.lr": tune.loguniform(1e-5, 1e-2),
         "trainer.batch_size": tune.choice([16, 32, 64]),
@@ -25,10 +30,10 @@ def run_tuning(config: dict[str, Any]):
     tuner = tune.Tuner(
         RayTrainable,
         param_space=search_space,
-        tune_config= tune.TuneConfig(
+        tune_config=tune.TuneConfig(
             metric=config['tune']['metric'],
             mode=config['tune']['mode'],
-            scheduler= ASHAScheduler(),
+            scheduler=ASHAScheduler(),
             search_alg=OptunaSearch(),
             num_samples=config['tune']['num_samples'],
         ),

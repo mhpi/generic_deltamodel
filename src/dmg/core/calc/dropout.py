@@ -10,6 +10,7 @@ def createMask(x, dr):
 
 class DropMask(torch.autograd.function.InplaceFunction):
     """Dropout mask for CudnnLstm weights."""
+
     @classmethod
     def forward(cls, ctx, input, mask, train=False, inplace=False):
         """Forward method."""

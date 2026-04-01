@@ -2,6 +2,7 @@ import math
 from typing import Optional
 
 import torch
+import torch._VF as _VF
 import torch.nn.functional as F
 from torch.nn import Parameter
 
@@ -10,7 +11,7 @@ from dmg.core.calc.dropout import DropMask, createMask
 
 class Lstm(torch.nn.Module):
     """LSTM using torch LSTM (GPU + CPU support).
-    
+
     This replaces the HydroDL `CudnnLstm`, which uses CPU-incompatible
     torch cudnn_rnn backends.
 
@@ -25,9 +26,9 @@ class Lstm(torch.nn.Module):
 
     NOTE: Not validated for training.
     """
+
     def __init__(
         self,
-        *,
         nx: int,
         hidden_size: int,
         dr: Optional[float] = 0.5,
@@ -38,34 +39,20 @@ class Lstm(torch.nn.Module):
         self.hidden_size = hidden_size
         self.dr = dr
 
-        # Initialize new torch LSTM; disable dropout (it's handled manually).
-        self.lstm = torch.nn.LSTM(
-            input_size=self.nx,
-            hidden_size=self.hidden_size,
-            num_layers=1,
-            batch_first=False,
-            bias=True,
-            dropout=0,
-            bidirectional=False,
-        )
-        # Remove default parameters. These are manually assigned in forward().
-        delattr(self.lstm, 'weight_ih_l0')
-        delattr(self.lstm, 'weight_hh_l0')
-        delattr(self.lstm, 'bias_ih_l0')
-        delattr(self.lstm, 'bias_hh_l0')
-
-        # Name parameters to match CudannLstm.
+        # Name parameters to match CudnnLstm.
         self.w_ih = Parameter(torch.Tensor(hidden_size * 4, nx))
         self.w_hh = Parameter(torch.Tensor(hidden_size * 4, hidden_size))
         self.b_ih = Parameter(torch.Tensor(hidden_size * 4))
         self.b_hh = Parameter(torch.Tensor(hidden_size * 4))
         self._all_weights = [['w_ih', 'w_hh', 'b_ih', 'b_hh']]
 
-        self.reset_mask()
-        self.reset_parameters()
+        if torch.cuda.is_available():
+            self.cuda()  # Ensures weight initialization matches CudnnLstm.
+
+        self._init_mask()
+        self._init_parameters()
 
     def __setstate__(self, d: dict) -> None:
-        """Set state of LSTM."""
         super().__setstate__(d)
         self.__dict__.setdefault('_data_ptrs', [])
         if 'all_weights' in d:
@@ -74,18 +61,16 @@ class Lstm(torch.nn.Module):
             return
         self._all_weights = [['w_ih', 'w_hh', 'b_ih', 'b_hh']]
 
-    def reset_mask(self):
-        """Reset dropout mask."""
-        with torch.no_grad():
-            self.mask_w_ih = createMask(self.w_ih, self.dr)
-            self.mask_w_hh = createMask(self.w_hh, self.dr)
+    def _init_mask(self):
+        """Initialize dropout mask."""
+        self.mask_w_ih = createMask(self.w_ih, self.dr)
+        self.mask_w_hh = createMask(self.w_hh, self.dr)
 
-    def reset_parameters(self):
+    def _init_parameters(self):
         """Initialize parameters."""
         stdv = 1.0 / math.sqrt(self.hidden_size)
-        for param in self.parameters():
-            if param.requires_grad:
-                param.data.uniform_(-stdv, stdv)
+        for weight in self.parameters():
+            weight.data.uniform_(-stdv, stdv)
 
     def forward(
         self,
@@ -96,7 +81,7 @@ class Lstm(torch.nn.Module):
         dr_false: bool = False,
     ) -> tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         """Forward pass.
-        
+
         Parameters
         ----------
         input
@@ -110,7 +95,7 @@ class Lstm(torch.nn.Module):
         dr_false
             Flag for applying dropout.
         """
-        # Ensure do_drop is False, unless do_drop_mc is True.
+        # Determine if dropout should be applied
         if dr_false and (not do_drop_mc):
             do_drop = False
         elif self.dr > 0 and (do_drop_mc is True or self.training is True):
@@ -121,38 +106,47 @@ class Lstm(torch.nn.Module):
         batch_size = input.size(1)
 
         if hx is None:
-            hx = input.new_zeros(
+            hx = torch.zeros(
                 1,
                 batch_size,
                 self.hidden_size,
+                device=input.device,
+                dtype=input.dtype,
                 requires_grad=False,
             )
         if cx is None:
-            cx = input.new_zeros(
+            cx = torch.zeros(
                 1,
                 batch_size,
                 self.hidden_size,
+                device=input.device,
+                dtype=input.dtype,
                 requires_grad=False,
             )
 
+        # Apply dropout mask if needed
         if do_drop is True:
-            self.reset_mask()
-            weight = [
+            self._init_mask()
+            weight_list = [
                 DropMask.apply(self.w_ih, self.mask_w_ih, True),
                 DropMask.apply(self.w_hh, self.mask_w_hh, True),
                 self.b_ih,
                 self.b_hh,
             ]
         else:
-            weight = [self.w_ih, self.w_hh, self.b_ih, self.b_hh]
+            weight_list = [self.w_ih, self.w_hh, self.b_ih, self.b_hh]
 
-        # Manually assign parameters to torch LSTM.
-        self.lstm.weight_ih_l0 = torch.nn.Parameter(weight[0])
-        self.lstm.weight_hh_l0 = torch.nn.Parameter(weight[1])
-        self.lstm.bias_ih_l0 = torch.nn.Parameter(weight[2])
-        self.lstm.bias_hh_l0 = torch.nn.Parameter(weight[3])
-        output, (hy, cy) = self.lstm(input, (hx, cx))
-
+        output, hy, cy = _VF.lstm(
+            input=input,
+            hx=(hx, cx),
+            params=weight_list,
+            has_biases=True,
+            num_layers=1,
+            dropout=0.0,
+            train=self.training,
+            bidirectional=False,
+            batch_first=False,
+        )
         return output, (hy, cy)
 
     @property
@@ -166,7 +160,7 @@ class Lstm(torch.nn.Module):
 
 class LstmModel(torch.nn.Module):
     """LSTM model using torch LSTM (GPU + CPU support).
-        
+
     This replaces `CudnnLstmModel`, which uses torch cudnn_rnn backends with no
     CPU support.
 
@@ -180,9 +174,15 @@ class LstmModel(torch.nn.Module):
         Number of hidden units.
     dr
         Dropout rate.
+    dpl
+        Flag for applying sigmoid activation to output. This is necessary if the
+        model is used for differentiable parameter learning.
+    cache_states
+        Whether to cache hidden and cell states.
 
     NOTE: Not validated for training.
     """
+
     def __init__(
         self,
         *,
@@ -190,20 +190,43 @@ class LstmModel(torch.nn.Module):
         ny: int,
         hidden_size: int,
         dr: Optional[float] = 0.5,
+        dpl: Optional[bool] = False,
+        cache_states: Optional[bool] = False,
     ) -> None:
         super().__init__()
         self.name = 'LstmModel'
         self.nx = nx
         self.ny = ny
         self.hidden_size = hidden_size
-        self.ct = 0
-        self.n_layers = 1
+        self.dpl = dpl
+        self.dr = dr
+        self.cache_states = cache_states
+
+        self.hn, self._hn_cache = None, None  # hidden state
+        self.cn, self._cn_cache = None, None  # cell state
 
         self.linear_in = torch.nn.Linear(nx, hidden_size)
         self.lstm = Lstm(nx=hidden_size, hidden_size=hidden_size, dr=dr)
         self.linear_out = torch.nn.Linear(hidden_size, ny)
 
-        # self.activation_sigmoid = torch.nn.Sigmoid()
+    def get_states(self) -> tuple[torch.Tensor, torch.Tensor]:
+        """Get hidden and cell states."""
+        return self._hn_cache, self._cn_cache
+
+    def load_states(
+        self,
+        states: tuple[torch.Tensor, torch.Tensor],
+    ) -> None:
+        """Load hidden and cell states."""
+        for state in states:
+            if state and not isinstance(state, torch.Tensor):
+                raise ValueError("Each element in `states` must be a tensor.")
+        if not (isinstance(states, tuple) and len(states) == 2):
+            raise ValueError("`states` must be a tuple of 2 tensors.")
+
+        device = next(self.parameters()).device
+        self.hn = states[0].detach().to(device)
+        self.cn = states[1].detach().to(device)
 
     def forward(
         self,
@@ -213,19 +236,37 @@ class LstmModel(torch.nn.Module):
     ) -> torch.Tensor:
         """Forward pass.
 
+        NOTE (caching): Hidden states are always cached so that they can be
+        accessed by `get_states`, but they are only available to the LSTM if
+        `cache_states` is set to True.
+
         Parameters
         ----------
         x
             The input tensor.
         do_drop_mc
-            Flag for applying dropout.
+            Flag for applying mc dropout.
         dr_false
             Flag for applying dropout.
         """
         x0 = F.relu(self.linear_in(x))
         lstm_out, (hn, cn) = self.lstm(
             x0,
+            self.hn,
+            self.cn,
             do_drop_mc=do_drop_mc,
             dr_false=dr_false,
         )
-        return self.linear_out(lstm_out)
+
+        self._hn_cache = hn.detach().cpu()
+        self._cn_cache = cn.detach().cpu()
+
+        if self.cache_states:
+            self.hn = self._hn_cache.to(x.device)
+            self.cn = self._cn_cache.to(x.device)
+
+        out = self.linear_out(lstm_out)
+        if self.dpl:
+            return torch.sigmoid(out)
+        else:
+            return out

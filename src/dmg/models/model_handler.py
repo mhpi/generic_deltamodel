@@ -9,8 +9,9 @@ from dmg.core.utils import save_model
 from dmg.models.criterion.range_bound_loss import RangeBoundLoss
 from dmg.models.delta_models.dpl_model import DplModel
 from dmg.models.multimodels.ensemble_generator import EnsembleGenerator
+from dmg.models.wrappers.nn_model import NnModel
 
-log = logging.getLogger(__name__)
+log = logging.getLogger('model_handler')
 
 
 class ModelHandler(torch.nn.Module):
@@ -34,6 +35,7 @@ class ModelHandler(torch.nn.Module):
     verbose
         Whether to print verbose output.
     """
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -43,7 +45,8 @@ class ModelHandler(torch.nn.Module):
         super().__init__()
         self.config = config
         self.name = 'Differentiable Model Handler'
-        self.model_path = config['model_path']
+        self.model_type = None
+        self.model_path = config['model_dir']
         self.verbose = verbose
 
         if device is None:
@@ -53,12 +56,18 @@ class ModelHandler(torch.nn.Module):
 
         self.multimodel_type = config['multimodel_type']
         self.model_dict = {}
+        # TODO: add proper support for multiple targets...
+        self.target_names = config['train']['target']
         self.models = self.list_models()
         self._init_models()
 
+        if 'train' not in config['mode']:
+            if config.get('load_state_path'):
+                self.load_states(config['load_state_path'])
+
+        self.epoch = None
         self.loss_func = None
         self.loss_dict = dict.fromkeys(self.models, 0)
-        self.target_name = config['train']['target'][0]
 
         if self.multimodel_type in ['nn_parallel']:
             self.is_ensemble = True
@@ -69,17 +78,30 @@ class ModelHandler(torch.nn.Module):
 
     def list_models(self) -> list[str]:
         """List of models specified in the configuration.
-        
+
+        TODO: Support physics-only forward.
+
         Returns
         -------
         list[str]
             List of model names.
         """
-        models = self.config['delta_model']['phy_model']['model']
+        if self.config['model']['phy']:
+            models = self.config['model']['phy']['name']
+            self.model_type = 'dm'
+        elif self.config['model']['nn']:
+            models = self.config['model']['nn']['name']
+            self.model_type = 'nn'
+        else:
+            raise ValueError("No models specified in configuration.")
 
         if self.multimodel_type in ['nn_parallel']:
             # Add ensemble weighting NN to the list.
             models.append('wNN')
+
+        if not isinstance(models, list):
+            models = [models]
+
         return models
 
     def _init_models(self) -> None:
@@ -92,9 +114,13 @@ class ModelHandler(torch.nn.Module):
         # Epoch to load
         if self.config['mode'] == 'train':
             load_epoch = self.config['train']['start_epoch']
-        elif self.config['mode'] == 'simulation': # zhennan revised 
-            load_epoch = self.config['train']['start_epoch']
-        elif self.config['mode'] == 'test': # elif self.config['mode'] in ['test', 'simulation']: # zhennan revised 
+# <<<<<<< HEAD
+#         elif self.config['mode'] == 'simulation': # zhennan revised 
+#             load_epoch = self.config['train']['start_epoch']
+#         elif self.config['mode'] == 'test': # elif self.config['mode'] in ['test', 'simulation']: # zhennan revised 
+# # =======
+        elif self.config['mode'] in ['test', 'sim']:
+# >>>>>>> upstream/master
             load_epoch = self.config['test']['test_epoch']
         else:
             load_epoch = self.config.get('load_epoch', 0)
@@ -107,7 +133,7 @@ class ModelHandler(torch.nn.Module):
 
     def load_model(self, epoch: int = 0) -> None:
         """Load a specific model from a checkpoint.
-        
+
         Parameters
         ----------
         epoch
@@ -119,7 +145,15 @@ class ModelHandler(torch.nn.Module):
                 # Ensemble weighting NN
                 self.ensemble_generator = EnsembleGenerator(
                     config=self.config['multimodel'],
-                    model_list = self.models[:-1],
+                    model_list=self.models[:-1],
+                    device=self.device,
+                )
+
+            elif self.model_type == 'nn':
+                # Standalone neural network model
+                self.model_dict[name] = NnModel(
+                    target_names=self.target_names,
+                    config=self.config['model'],
                     device=self.device,
                 )
             else:
@@ -127,20 +161,24 @@ class ModelHandler(torch.nn.Module):
                 # TODO: make dynamic import for other modalities.
                 self.model_dict[name] = DplModel(
                     phy_model_name=name,
-                    config=self.config['delta_model'],
+                    config=self.config['model'],
                     device=self.device,
                 )
 
             if epoch == 0:
+                self.epoch = 0
+
                 # Leave model uninitialized for training.
                 if self.verbose:
                     log.info(f"Created new model: {name}")
                 continue
             else:
+                self.epoch = epoch
+
                 # Initialize model from checkpoint state dict.
                 path = self.model_path
-                if f"d{name}_Ep" not in path:
-                    path = os.path.join(path, f"d{name}_Ep{epoch}.pt")
+                if f"{name.lower()}_ep" not in path:
+                    path = os.path.join(path, f"{name.lower()}_ep{epoch}.pt")
                 if not os.path.exists(path):
                     # raise FileNotFoundError(
                     #     ,
@@ -156,7 +194,8 @@ class ModelHandler(torch.nn.Module):
                             path,
                             weights_only=False,
                             map_location=self.device,
-                        )                    )
+                        ),
+                    )
                     self.ensemble_generator.to(self.device)
                 else:
                     self.model_dict[name].load_state_dict(
@@ -165,19 +204,46 @@ class ModelHandler(torch.nn.Module):
                             weights_only=True,
                             map_location=self.device,
                         ),
+                        strict=False,
                     )
                     self.model_dict[name].to(self.device)
 
                     # Overwrite internal config if there is discontinuity:
-                    if self.model_dict[name].config:
-                        self.model_dict[name].config = self.config
+                    if (self.model_type == 'dm') and self.model_dict[name].config:
+                        self.model_dict[name].config = self.config['model']
 
                 if self.verbose:
                     log.info(f"Loaded model: {name}, Ep {epoch}")
+            
+            
+    def train(self, mode: bool = True) -> 'ModelHandler':
+        """Set all models to training mode (or eval mode if mode=False).
+
+        Overrides torch.nn.Module.train to propagate to models stored
+        in model_dict (a plain dict, not a ModuleDict).
+        Since nn.Module.eval() delegates to train(False), this
+        override covers both .train() and .eval() calls.
+
+        Parameters
+        ----------
+        mode
+            Whether to set training mode (True) or eval mode (False).
+
+        Returns
+        -------
+        ModelHandler
+            Self.
+        """
+        super().train(mode)
+        for model in self.model_dict.values():
+            model.train(mode)
+        if getattr(self, 'ensemble_generator', None) is not None:
+            self.ensemble_generator.train(mode)
+        return self
 
     def get_parameters(self) -> list[torch.Tensor]:
         """Return all model parameters.
-        
+
         Returns
         -------
         list[torch.Tensor]
@@ -199,9 +265,9 @@ class ModelHandler(torch.nn.Module):
         eval: bool = False,
     ) -> dict[str, torch.Tensor]:
         """
-        Sequentially forward for one or more differentiable models with an
-        optional weighting NN for multimodel ensembles trained in parallel or
-        series (differentiable model parameterization NNs frozen).
+        Sequentially forward one or more models with an optional weighting NN
+        for multimodel ensembles trained in parallel or series (model
+        parameterization NNs frozen).
 
         Parameters
         ----------
@@ -210,10 +276,10 @@ class ModelHandler(torch.nn.Module):
         eval
             Whether to run the model in evaluation mode with gradients
             disabled.
-        
+
         Returns
         -------
-        Dict[str, torch.Tensor]
+        dict[str, torch.Tensor]
             Dictionary of model outputs. Each key corresponds to a model name.
         """
         self.output_dict = {}
@@ -274,7 +340,7 @@ class ModelHandler(torch.nn.Module):
         loss_func: Optional[torch.nn.Module] = None,
     ) -> torch.Tensor:
         """Calculate combined loss across all models.
-            
+
         Parameters
         ----------
         dataset_dict
@@ -297,13 +363,16 @@ class ModelHandler(torch.nn.Module):
 
         # Loss calculation for each model
         for name, output in self.output_dict.items():
-            if self.target_name not in output.keys():
-                raise ValueError(f"Target variable '{self.target_name}' not in model outputs.")
-            output = output[self.target_name]
+            if self.target_names[0] not in output.keys():
+                raise ValueError(
+                    f"Target variable '{self.target_names[0]}' not in model outputs.",
+                )
+            output = output[self.target_names[0]]
 
+            output, target = self._trim(output, dataset_dict['target'])
             loss = loss_func(
                 output.squeeze(),
-                dataset_dict['target'].squeeze(),
+                target.squeeze(),
                 sample_ids=dataset_dict['batch_sample'],
             )
             loss_combined += loss
@@ -333,7 +402,7 @@ class ModelHandler(torch.nn.Module):
             Dictionary containing input data.
         loss_func
             Loss function to use.
-        
+
         Returns
         -------
         torch.Tensor
@@ -360,7 +429,7 @@ class ModelHandler(torch.nn.Module):
         else:
             rb_loss = 0.0
 
-        output = self.ensemble_output_dict[self.target_name]
+        output = self.ensemble_output_dict[self.target_names[0]]
 
         # Ensemble predictions loss
         ensemble_loss = self.loss_func_wnn(
@@ -371,8 +440,10 @@ class ModelHandler(torch.nn.Module):
 
         if self.verbose:
             if self.config['multimodel']['use_rb_loss']:
-                tqdm.tqdm.write(f"Ensemble loss: {ensemble_loss.item()}, " \
-                                f"Range bound loss: {rb_loss.item()}")
+                tqdm.tqdm.write(
+                    f"Ensemble loss: {ensemble_loss.item()}, "
+                    f"Range bound loss: {rb_loss.item()}",
+                )
             else:
                 tqdm.tqdm.write(f"-- Ensemble loss: {ensemble_loss.item()}")
 
@@ -383,16 +454,265 @@ class ModelHandler(torch.nn.Module):
 
     def save_model(self, epoch: int) -> None:
         """Save model state dicts.
-        
+
         Parameters
         ----------
         epoch
             Epoch number to save model at.
         """
         for name, model in self.model_dict.items():
-            save_model(self.config, model, name, epoch)
+            save_model(self.config['model_dir'], model, name, epoch)
         if self.is_ensemble:
-            save_model(self.config, self.ensemble_generator, 'wNN', epoch)
+            save_model(self.config['model_dir'], self.ensemble_generator, 'wNN', epoch)
 
         if self.verbose:
-            log.info(f"All states successfully saved for Ep {epoch}")
+            log.info(f"All states saved for ep:{epoch}")
+
+    def get_states(self) -> None:
+        """
+        Helper function to expose physical and hidden (non-trainable) nn model
+        states (e.g., for sequential simulations).
+        """
+        if len(self.model_dict) == 1:
+            name = list(self.model_dict.keys())[0]
+            nn_states = self.model_dict[name].nn_model.get_states()
+            
+            try:
+                phy_states = self.model_dict[name].phy_model.get_states()
+            except AttributeError:
+                phy_states = None
+            if self.verbose:
+                print("nn states", nn_states)
+                print("phy states", phy_states)
+            return nn_states, phy_states
+        else:
+            raise NotImplementedError(
+                "Operations on hidden states for multimodel ensembles is not yet supported.",
+            )
+
+#     def load_states(
+#         self,
+#         *,
+#         path: Optional[str] = None,
+#         nn_states: Optional[tuple[torch.Tensor, ...]] = None,
+#         phy_states: Optional[tuple[torch.Tensor, ...]] = None,
+#     ) -> None:
+#         """
+#         Helper function to load physical and hidden (non-trainable) nn model
+#         states (e.g., for sequential simulations).
+#         """
+#         if path:
+#             if path and nn_states and phy_states:
+#                 raise ValueError(
+#                     "Provide either `path` or `nn_states` and `phy_states`, not both.",
+#                 )
+#             if not os.path.exists(path):
+#                 raise FileNotFoundError(f"State path {path} not found.")
+
+#             state_dict = torch.load(path, map_location=self.device)
+#             nn_states = state_dict.get('nn_states', None)
+#             phy_states = state_dict.get('phy_states', None)
+#             if self.verbose:
+#                 log.info(
+#                     f"Loaded states from file | "
+#                     f"epoch: {state_dict.get('epoch', 'N/A')} | "
+#                     f"Resume from timestep: {state_dict.get('last_timestep', 'N/A')}",
+#                 )
+#         elif nn_states:
+#             if not isinstance(nn_states, tuple):
+#                 raise ValueError("`nn_states` must be a tuple of tensors.")
+#         elif phy_states:
+#             if not isinstance(phy_states, tuple):
+#                 raise ValueError("`phy_states` must be a tuple of tensors.")
+#         else:
+#             raise ValueError(
+#                 "Either `path` or `nn_states` and `phy_states` must be provided.",
+#             )
+
+#         if len(self.model_dict) == 1:
+#             name = list(self.model_dict.keys())[0]
+#             self.model_dict[name].nn_model.load_states(nn_states)
+
+#             if phy_states is not None:
+#                 try:
+#                     self.model_dict[name].phy_model.load_states(phy_states)
+#                 except AttributeError:
+#                     pass
+#         else:
+#             raise NotImplementedError(
+#                 "Operations on hidden states for multimodel ensembles is not yet supported.",
+#             )
+    #zhennan revised from above version
+    def load_states(
+        self,
+        *,
+        path: Optional[str] = None,
+        nn_states: Optional[tuple[torch.Tensor, ...]] = None,
+        phy_states: Optional[tuple[torch.Tensor, ...]] = None,
+        routing_states: Optional[dict[str, torch.Tensor]] = None,
+    ) -> None:
+        """
+        Helper function to load physical, routing, and hidden nn states.
+        """
+        if path:
+            if path and (nn_states is not None or phy_states is not None or routing_states is not None):
+                raise ValueError(
+                    "Provide either `path` or explicit states, not both.",
+                )
+            if not os.path.exists(path):
+                raise FileNotFoundError(f"State path {path} not found.")
+
+            state_dict = torch.load(path, map_location=self.device)
+            nn_states = state_dict.get('nn_states', None)
+            phy_states = state_dict.get('phy_states', None)
+            routing_states = state_dict.get('routing_states', None)
+
+            if self.verbose:
+                log.info(
+                    f"Loaded states from file | "
+                    f"epoch: {state_dict.get('epoch', 'N/A')} | "
+                    f"Resume from timestep: {state_dict.get('last_timestep', 'N/A')}",
+                )
+        elif nn_states is not None or phy_states is not None or routing_states is not None:
+            if nn_states is not None and not isinstance(nn_states, tuple):
+                raise ValueError("`nn_states` must be a tuple of tensors.")
+            if phy_states is not None and not isinstance(phy_states, tuple):
+                raise ValueError("`phy_states` must be a tuple of tensors.")
+            if routing_states is not None and not isinstance(routing_states, dict):
+                raise ValueError("`routing_states` must be a dict of tensors.")
+        else:
+            raise ValueError(
+                "Either `path` or explicit state objects must be provided.",
+            )
+
+        if len(self.model_dict) == 1:
+            name = list(self.model_dict.keys())[0]
+
+            if nn_states is not None:
+                self.model_dict[name].nn_model.load_states(nn_states)
+
+            if phy_states is not None:
+                try:
+                    self.model_dict[name].phy_model.load_states(phy_states)
+                except AttributeError:
+                    pass
+
+            if routing_states is not None:
+                try:
+                    self.model_dict[name].phy_model.load_routing_state(routing_states)
+                except AttributeError:
+                    pass
+        else:
+            raise NotImplementedError(
+                "Operations on hidden states for multimodel ensembles is not yet supported.",
+            )
+#     def save_states(self) -> None:
+#         """
+#         Helper function to save physical and nn model states (trainable and
+#         non-trainable) to disk.
+#         """
+#         if 'test' in self.config['mode']:
+#             mode = 'test'
+#         else:
+#             mode = 'sim'
+#         time = self.config[mode]['end_time']
+
+#         if len(self.model_dict) == 1:
+#             name = list(self.model_dict.keys())[0]
+
+#             nn_states, phy_states = self.get_states()
+
+#             state_dict = {
+#                 'nn_states': nn_states,
+#                 'nn_trainable': self.model_dict[
+#                     name
+#                 ].state_dict(),  # weights and biases
+#                 'phy_states': phy_states,
+#                 'epoch': self.epoch,
+#                 'last_timestep': time if time else 'N/A',
+#             }
+#             #zhennan changed from torch.save(state_dict, self.config['model_dir'] + "model_states.pt")
+#             save_dir = os.path.join(self.config['model_dir'], "sim/restart") ## the restart always go with simulation
+#             os.makedirs(save_dir, exist_ok=True)
+#             torch.save(state_dict, os.path.join(save_dir, "model_states.pt"))
+            
+#         else:
+#             raise NotImplementedError(
+#                 "Operations on hidden states for multimodel ensembles is not yet supported.",
+#             )
+
+    #zhennan revised from above version
+    def save_states(self) -> None:
+        """
+        Helper function to save physical, routing, and nn model states to disk.
+        """
+        if 'test' in self.config['mode']:
+            mode = 'test'
+        else:
+            mode = 'sim'
+        time = self.config[mode]['end_time']
+
+        if len(self.model_dict) == 1:
+            name = list(self.model_dict.keys())[0]
+
+            nn_states, phy_states = self.get_states()
+
+            try:
+                routing_states = self.model_dict[name].phy_model.get_routing_state()
+            except AttributeError:
+                routing_states = None
+
+            state_dict = {
+                'nn_states': nn_states,
+                'nn_trainable': self.model_dict[name].state_dict(),
+                'phy_states': phy_states,
+                'routing_states': routing_states,
+                'epoch': self.epoch,
+                'last_timestep': time if time else 'N/A',
+            }
+
+            save_dir = os.path.join(self.config['model_dir'], "sim/restart")
+            os.makedirs(save_dir, exist_ok=True)
+            torch.save(state_dict, os.path.join(save_dir, "model_states.pt"))
+        else:
+            raise NotImplementedError(
+                "Operations on hidden states for multimodel ensembles is not yet supported.",
+            )
+
+    def _trim(
+        self,
+        output: torch.Tensor,
+        target: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Trim the output and target tensors to the same shape.
+
+        Really, we need to trim warmup at the model interface itself, but this
+        will have to do for now to avoid errors errant.
+
+        Parameters
+        ----------
+        output
+            The model output tensor.
+        target
+            The target tensor.
+
+        Returns
+        -------
+        tuple
+            The trimmed output and target tensors.
+        """
+        output = output.squeeze()
+        target = target.squeeze()
+
+        warm_up = self.config['model'].get('warm_up', 0)
+
+        # Remove warmup timesteps
+        target = target[warm_up:]
+
+        if output.shape != target.shape:
+            if output.shape[0] > target.shape[0]:
+                output = output[warm_up:]
+            elif target.shape[0] > output.shape[0]:
+                target = target[warm_up:]
+        return output, target

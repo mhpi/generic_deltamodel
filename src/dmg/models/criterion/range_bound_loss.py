@@ -25,6 +25,7 @@ class RangeBoundLoss(BaseCriterion):
 
         - loss_factor: Scaling factor for the loss. Default is 1.0.
     """
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -47,11 +48,11 @@ class RangeBoundLoss(BaseCriterion):
         **kwargs: Any,
     ) -> torch.Tensor:
         """Compute the range-bound loss.
-        
+
         Loss function that penalizes values outside of a specified range. Loss
         is calculated as the sum of the individual average losses for each batch
         in the prediction tensor.
-        
+
         Parameters
         ----------
         y_pred
@@ -60,7 +61,7 @@ class RangeBoundLoss(BaseCriterion):
             Tensor of target observation data.
         **kwargs
             Additional arguments for interface compatibility, not used.
-        
+
         Returns
         -------
         torch.Tensor

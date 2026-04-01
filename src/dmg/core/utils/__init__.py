@@ -1,10 +1,23 @@
+# src/dmg/core/utils/__init__.py
 from .dates import Dates
-from .factory import (import_data_loader, import_data_sampler,
-                      import_phy_model, import_trainer, load_criterion,
-                      load_nn_model)
-from .path import PathBuilder
-from .utils import (format_resample_interval, initialize_config, print_config, print_dataset_info,
-                    save_model, set_randomseed)
+from .factory import (
+    import_data_loader,
+    import_data_sampler,
+    import_phy_model,
+    import_trainer,
+    load_criterion,
+    load_nn_model,
+)
+from .topo_operator import PathWeightedAgg, reachability_matrix
+from .utils import (
+    format_resample_interval,
+    initialize_config,
+    print_config,
+    print_dataset_info,
+    save_model,
+    set_randomseed,
+)
+
 
 __all__ = [
     'import_data_loader',
@@ -14,11 +27,12 @@ __all__ = [
     'initialize_config',
     'load_criterion',
     'load_nn_model',
-    'PathBuilder',
     'Dates',
     'print_config',
     'print_dataset_info',
     'save_model',
     'set_randomseed',
     'format_resample_interval',
+    'reachability_matrix',
+    'PathWeightedAgg',
 ]

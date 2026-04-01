@@ -1,8 +1,13 @@
 import logging
 import os
 import time
+from pathlib import Path
 from typing import Any, Optional
 
+import matplotlib
+
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import tqdm
@@ -15,7 +20,7 @@ from dmg.core.utils.utils import save_outputs, save_train_state
 from dmg.models.model_handler import ModelHandler
 from dmg.trainers.base import BaseTrainer
 
-log = logging.getLogger(__name__)
+log = logging.getLogger('trainer')
 
 
 # try:
@@ -29,10 +34,10 @@ class Trainer(BaseTrainer):
     """Generic, unified trainer for neural networks and differentiable models.
 
     Inspired by the Hugging Face Trainer class.
-    
+
     Retrieves and formats data, initializes optimizers/schedulers/loss functions,
     and runs training and testing/inference loops.
-    
+
     Parameters
     ----------
     config
@@ -52,12 +57,15 @@ class Trainer(BaseTrainer):
         optimizer is initialized.
     scheduler
         Learning rate scheduler. If not provided, a new scheduler is initialized.
+    write_out
+        Whether to save model outputs and metrics to disk.
     verbose
         Whether to print verbose output.
 
     TODO: Incorporate support for validation loss and early stopping in
     training loop. This will also enable using ReduceLROnPlateau scheduler.
     """
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -68,18 +76,21 @@ class Trainer(BaseTrainer):
         loss_func: Optional[torch.nn.Module] = None,
         optimizer: Optional[torch.optim.Optimizer] = None,
         scheduler: Optional[torch.nn.Module] = None,
+        write_out: Optional[bool] = True,
         verbose: Optional[bool] = False,
     ) -> None:
         self.config = config
-        self.model = model or ModelHandler(config)
+        self.model = model or ModelHandler(config, verbose=verbose)
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
         self.dataset = dataset
         self.optimizer = optimizer
         self.scheduler = scheduler
+        self.write_out = write_out
         self.verbose = verbose
         self.sampler = import_data_sampler(config['data_sampler'])(config)
         self.is_in_train = False
+        self.exp_logger = None
 
         if 'train' in config['mode']:
             if not self.train_dataset:
@@ -91,14 +102,14 @@ class Trainer(BaseTrainer):
             # Loss function
             self.loss_func = loss_func or load_criterion(
                 self.train_dataset['target'],
-                config['loss_function'],
+                config['train']['loss_function'],
                 device=config['device'],
             )
             self.model.loss_func = self.loss_func
 
             # Optimizer and learning rate scheduler
             self.optimizer = optimizer or self.init_optimizer()
-            if config['delta_model']['nn_model']['lr_scheduler']:
+            if config['train']['lr_scheduler']:
                 self.use_scheduler = True
                 self.scheduler = scheduler or self.init_scheduler()
             else:
@@ -108,10 +119,27 @@ class Trainer(BaseTrainer):
             self.start_epoch = self.config['train']['start_epoch'] + 1
             if self.start_epoch > 1:
                 self.load_states()
-    
+
+            self._init_loggers()
+            self._init_loss_tracking()
+
+    def _init_loss_tracking(self) -> None:
+        """Initialize loss history lists and CSV log file."""
+        self.train_loss_history: list[float] = []
+        self.loss_component_history: dict[str, list[float]] = {}
+
+        if self.write_out:
+            self.plot_dir = self.config['plot_dir']
+
+            self.csv_log_file = os.path.join(
+                self.config['output_dir'], 'training_log.csv'
+            )
+            with open(self.csv_log_file, 'w') as f:
+                f.write('epoch,batch,loss,time_s,gpu_mem_mb\n')
+
     def init_optimizer(self) -> torch.optim.Optimizer:
         """Initialize a state optimizer.
-        
+
         Adding additional optimizers is possible by extending the optimizer_dict.
 
         Returns
@@ -119,8 +147,8 @@ class Trainer(BaseTrainer):
         torch.optim.Optimizer
             Initialized optimizer object.
         """
-        name = self.config['train']['optimizer']
-        learning_rate = self.config['delta_model']['nn_model']['learning_rate']
+        name = self.config['train']['optimizer']['name']
+        learning_rate = self.config['train']['lr']
         optimizer_dict = {
             # 'SGD': torch.optim.SGD,
             # 'Adam': torch.optim.Adam,
@@ -132,8 +160,10 @@ class Trainer(BaseTrainer):
         # Fetch optimizer class
         cls = optimizer_dict[name]
         if cls is None:
-            raise ValueError(f"Optimizer '{name}' not recognized. "
-                                f"Available options are: {list(optimizer_dict.keys())}")
+            raise ValueError(
+                f"Optimizer '{name}' not recognized. "
+                f"Available options are: {list(optimizer_dict.keys())}",
+            )
 
         # Initialize
         try:
@@ -147,11 +177,12 @@ class Trainer(BaseTrainer):
 
     def init_scheduler(self) -> torch.optim.lr_scheduler.LRScheduler:
         """Initialize a learning rate scheduler for the optimizer.
-        
+
         torch.optim.lr_scheduler.LRScheduler
             Initialized learning rate scheduler object.
         """
-        name = self.config['delta_model']['nn_model']['lr_scheduler']
+        params = self.config['train']['lr_scheduler'].copy()
+        name = params.pop('name')
         scheduler_dict = {
             'StepLR': torch.optim.lr_scheduler.StepLR,
             'ExponentialLR': torch.optim.lr_scheduler.ExponentialLR,
@@ -162,14 +193,16 @@ class Trainer(BaseTrainer):
         # Fetch scheduler class
         cls = scheduler_dict[name]
         if cls is None:
-            raise ValueError(f"Scheduler '{name}' not recognized. "
-                                f"Available options are: {list(scheduler_dict.keys())}")
+            raise ValueError(
+                f"Scheduler '{name}' not recognized. "
+                f"Available options are: {list(scheduler_dict.keys())}",
+            )
 
         # Initialize
         try:
             self.scheduler = cls(
                 self.optimizer,
-                **self.config['delta_model']['nn_model']['lr_scheduler_params'],
+                **params,
             )
         except RuntimeError as e:
             raise RuntimeError(f"Error initializing scheduler: {e}") from e
@@ -180,12 +213,14 @@ class Trainer(BaseTrainer):
         Load model, optimizer, and scheduler states from a checkpoint to resume
         training if a checkpoint file exists.
         """
-        path = self.config['model_path']
+        path = self.config['model_dir']
         for file in os.listdir(path):
             # Check for state checkpoint: looks like `train_state_epoch_XX.pt`.
-            if 'train_state' and (str(self.start_epoch-1) in file):
-                log.info("Loading trainer states --> Resuming Training from" /
-                         f" epoch {self.start_epoch}")
+            if ('train_state' in file) and (str(self.start_epoch - 1) in file):
+                log.info(
+                    "Loading trainer states --> Resuming Training from"
+                    / f" epoch {self.start_epoch}",
+                )
 
                 checkpoint = torch.load(os.path.join(path, file))
 
@@ -200,11 +235,13 @@ class Trainer(BaseTrainer):
                     torch.cuda.set_rng_state_all(checkpoint['cuda_random_state'])
                 return
             elif 'train_state' in file:
-                raise FileNotFoundError(f"Available checkpoint file {file} does" /
-                                        f" not match start epoch {self.start_epoch-1}.")
+                raise FileNotFoundError(
+                    f"Available checkpoint file {file} does"
+                    / f" not match start epoch {self.start_epoch - 1}.",
+                )
 
         # If no checkpoint file is found for named epoch...
-        raise FileNotFoundError(f"No checkpoint for epoch {self.start_epoch-1}.")
+        raise FileNotFoundError(f"No checkpoint for epoch {self.start_epoch - 1}.")
 
     def train(self) -> None:
         """Train the model."""
@@ -216,8 +253,10 @@ class Trainer(BaseTrainer):
             self.config,
         )
 
-        log.info(f"Training model: Beginning {self.start_epoch} of {self.epochs} epochs")
-        
+        log.info(
+            f"Training model: Beginning {self.start_epoch} of {self.epochs} epochs",
+        )
+
         # Training loop
         for epoch in range(self.start_epoch, self.epochs + 1):
             self.train_one_epoch(
@@ -227,9 +266,65 @@ class Trainer(BaseTrainer):
                 n_timesteps,
             )
 
+        self.exp_logger.finalize()
+
+    def _plot_loss_curves(self) -> None:
+        """Generate and save training loss plots (linear and log scale)."""
+        if not self.train_loss_history:
+            return
+
+        epochs = range(1, len(self.train_loss_history) + 1)
+        save_path = Path(self.plot_dir) / 'loss_plot.png'
+
+        multi_model = len(self.loss_component_history) > 1
+
+        for log_scale, suffix in [(False, ''), (True, '_log')]:
+            fig, ax = plt.subplots(figsize=(10, 6))
+
+            ax.plot(
+                epochs,
+                self.train_loss_history,
+                label='Total Loss' if multi_model else None,
+                color='blue',
+                linewidth=1.5,
+            )
+
+            if multi_model:
+                colors = ['orange', 'green', 'red', 'purple', 'brown']
+                for i, (name, losses) in enumerate(self.loss_component_history.items()):
+                    ax.plot(
+                        epochs,
+                        losses,
+                        label=name,
+                        color=colors[i % len(colors)],
+                        linewidth=1.5,
+                        linestyle='--',
+                    )
+
+            title = 'Training Loss'
+            if log_scale:
+                ax.set_yscale('log')
+                title += ' (Log Scale)'
+                ax.grid(True, which='both', ls='--', linewidth=0.5, alpha=0.7)
+            else:
+                ax.grid(True, ls='--', linewidth=0.5, alpha=0.7)
+
+            ax.set_title(title, fontsize=14)
+            ax.set_xlabel('Epoch', fontsize=12)
+            ax.set_ylabel('Loss', fontsize=12)
+            if multi_model:
+                ax.legend(loc='upper right', fontsize=10)
+            fig.tight_layout()
+
+            out = save_path.with_stem(f"{save_path.stem}{suffix}")
+            fig.savefig(out, dpi=150)
+            plt.close(fig)
+
+        log.info(f"Loss plots saved to {self.plot_dir}")
+
     def train_one_epoch(self, epoch, n_samples, n_minibatch, n_timesteps) -> None:
         """Train model for one epoch.
-        
+
         Parameters
         ----------
         epoch
@@ -242,15 +337,25 @@ class Trainer(BaseTrainer):
             Number of timesteps in the training dataset.
         """
         start_time = time.perf_counter()
-        prog_str = f"Epoch {epoch}/{self.epochs}"
 
         self.current_epoch = epoch
         self.total_loss = 0.0
 
+        if hasattr(self.model, 'loss_dict'):
+            for key in self.model.loss_dict:
+                self.model.loss_dict[key] = 0.0
+
+        prog_bar = tqdm.tqdm(
+            range(1, n_minibatch + 1),
+            desc=f"Epoch {epoch}/{self.epochs}",
+            leave=False,
+            dynamic_ncols=True,
+        )
+
         # Iterate through epoch in minibatches.
-        for mb in tqdm.tqdm(range(1, n_minibatch + 1), desc=prog_str,
-                            leave=False, dynamic_ncols=True):
+        for mb in prog_bar:
             self.current_batch = mb
+            batch_start = time.perf_counter()
 
             dataset_sample = self.sampler.get_training_sample(
                 self.train_dataset,
@@ -266,7 +371,20 @@ class Trainer(BaseTrainer):
             self.optimizer.step()
             self.optimizer.zero_grad()
 
-            self.total_loss += loss.item()
+            batch_loss = loss.item()
+            self.total_loss += batch_loss
+
+            if self.write_out:
+                batch_elapsed = time.perf_counter() - batch_start
+                mem = 0
+                if self.config['device'] != 'cpu':
+                    mem = int(
+                        torch.cuda.memory_reserved(device=self.config['device']) * 1e-6
+                    )
+                with open(self.csv_log_file, 'a') as f:
+                    f.write(
+                        f"{epoch},{mb},{batch_loss:.6f},{batch_elapsed:.2f},{mem}\n"
+                    )
 
             if self.verbose:
                 tqdm.tqdm.write(f"Epoch {epoch}, batch {mb} | loss: {loss.item()}")
@@ -279,16 +397,16 @@ class Trainer(BaseTrainer):
         self._log_epoch_stats(epoch, self.model.loss_dict, n_minibatch, start_time)
 
         # Save model and trainer states.
-        if epoch % self.config['train']['save_epoch'] == 0:
+        if (epoch % self.config['train']['save_epoch'] == 0) and self.write_out:
             self.model.save_model(epoch)
             save_train_state(
-                self.config,
+                self.config['model_dir'],
                 epoch=epoch,
                 optimizer=self.optimizer,
                 scheduler=self.scheduler,
                 clear_prior=True,
             )
-        
+
             # if self.config['do_tune']:
             #     # Create temporary checkpoint if needed
             #     chkpt = None
@@ -300,6 +418,47 @@ class Trainer(BaseTrainer):
 
             #     # Report to Ray Tune
             #     tune.report(loss=self.total_loss, checkpoint=chkpt)
+
+    def _apply_denorm(
+        self,
+        predictions: dict[str, np.ndarray],
+        dataset: dict,
+    ) -> dict[str, np.ndarray]:
+        """Apply denormalization to the target key in batched predictions.
+
+        Converts ML model predictions from normalized space to physical
+        units (mm/day or the configured output unit). Physics model
+        predictions are already in physical units and pass through unchanged.
+
+        Parameters
+        ----------
+        predictions
+            Batched predictions dict (key -> numpy array).
+        dataset
+            Dataset dict, may contain a 'denorm_fn' key.
+
+        Returns
+        -------
+        dict[str, np.ndarray]
+            Predictions with the target key denormalized.
+        """
+        denorm_fn = dataset.get('denorm_fn')
+        if denorm_fn is None:
+            return predictions
+
+        target_name = self.config['train']['target'][0]
+        if target_name not in predictions:
+            return predictions
+
+        pred = predictions[target_name]
+        needs_squeeze = pred.ndim == 2
+        if needs_squeeze:
+            pred = np.expand_dims(pred, 2)
+        pred = denorm_fn(pred)
+        if needs_squeeze:
+            pred = pred.squeeze(2)
+        predictions[target_name] = pred
+        return predictions
 
     def evaluate(self) -> None:
         """Run model evaluation and return both metrics and model outputs."""
@@ -316,15 +475,23 @@ class Trainer(BaseTrainer):
 
         # Model forward
         log.info(f"Validating Model: Forwarding {len(batch_start)} batches")
-        batch_predictions = self._forward_loop(self.eval_dataset, batch_start, batch_end)
+        batch_predictions = self._forward_loop(
+            self.eval_dataset,
+            batch_start,
+            batch_end,
+        )
 
-        # Save predictions and calculate metrics
+        # Batch, denormalize, save, and compute metrics
         log.info("Saving model outputs + Calculating metrics")
-        save_outputs(self.config, batch_predictions, observations)
+        self.model.save_states()
         self.predictions = self._batch_data(batch_predictions)
+        self.predictions = self._apply_denorm(self.predictions, self.eval_dataset)
+
+        save_outputs(self.config, batch_predictions, observations)
+        self._save_denormed_target(self.predictions)
 
         # Calculate metrics
-        self.calc_metrics(batch_predictions, observations)
+        self.calc_metrics(self.predictions, observations)
 
     def inference(self) -> None:
         """Run batch model inference and save model outputs."""
@@ -335,19 +502,39 @@ class Trainer(BaseTrainer):
 
         # Get start and end indices for each batch
         n_samples = self.dataset['xc_nn_norm'].shape[1]
-        batch_start = np.arange(0, n_samples, self.config['simulation']['batch_size'])
+        batch_start = np.arange(0, n_samples, self.config['sim']['batch_size'])
         batch_end = np.append(batch_start[1:], n_samples)
 
         # Model forward
         log.info(f"Inference: Forwarding {len(batch_start)} batches")
         batch_predictions = self._forward_loop(self.dataset, batch_start, batch_end)
 
-        # Save predictions
+        # Batch, denormalize, and save
         log.info("Saving model outputs")
-        save_outputs(self.config, batch_predictions)
+        self.model.save_states()
         self.predictions = self._batch_data(batch_predictions)
+        self.predictions = self._apply_denorm(self.predictions, self.dataset)
+
+        save_outputs(self.config, batch_predictions)
+        self._save_denormed_target(self.predictions)
 
         return self.predictions
+
+    def _save_denormed_target(
+        self,
+        predictions: dict[str, np.ndarray],
+    ) -> None:
+        """Overwrite the saved target prediction file with denormalized values.
+
+        Only writes if denormalization was applied (i.e., the prediction
+        values differ from what save_outputs wrote).
+        """
+        target_name = self.config['train']['target'][0]
+        if target_name in predictions:
+            np.save(
+                os.path.join(self.config['sim_dir'], f'{target_name}.npy'),
+                predictions[target_name],
+            )
 
     def _batch_data(
         self,
@@ -355,7 +542,7 @@ class Trainer(BaseTrainer):
         target_key: str = None,
     ) -> None:
         """Merge batch data into a single dictionary.
-        
+
         Parameters
         ----------
         batch_list
@@ -374,7 +561,9 @@ class Trainer(BaseTrainer):
                     dim = 1
                 else:
                     dim = 0
-                data[key] = torch.cat([d[key] for d in batch_list], dim=dim).cpu().numpy()
+                data[key] = (
+                    torch.cat([d[key] for d in batch_list], dim=dim).cpu().numpy()
+                )
             return data
 
         except ValueError as e:
@@ -400,56 +589,62 @@ class Trainer(BaseTrainer):
         # Track predictions accross batches
         batch_predictions = []
 
-        for i in tqdm.tqdm(range(len(batch_start)), desc='Forwarding', leave=False, dynamic_ncols=True):
-            self.current_batch = i
+        prog_bar = tqdm.tqdm(
+            range(len(batch_start)),
+            desc='Forwarding',
+            leave=False,
+            dynamic_ncols=True,
+        )
 
+        for mb in prog_bar:
             # Select a batch of data
             dataset_sample = self.sampler.get_validation_sample(
                 data,
-                batch_start[i],
-                batch_end[i],
+                batch_start[mb],
+                batch_end[mb],
             )
 
             prediction = self.model(dataset_sample, eval=True)
 
             # Save the batch predictions
-            model_name = self.config['delta_model']['phy_model']['model'][0]
             prediction = {
-                key: tensor.cpu().detach() for key, tensor in prediction[model_name].items()
+                key: tensor.detach().cpu()
+                for key, tensor in prediction[self.model.models[0]].items()
             }
             batch_predictions.append(prediction)
         return batch_predictions
 
     def calc_metrics(
         self,
-        batch_predictions: list[dict[str, torch.Tensor]],
+        predictions: dict[str, np.ndarray],
         observations: torch.Tensor,
     ) -> None:
         """Calculate and save model performance metrics.
 
         Parameters
         ----------
-        batch_predictions
-            List of dictionaries containing model predictions.
+        predictions
+            Batched (and denormalized) predictions dict.
         observations
             Target variable observation data.
         """
         target_name = self.config['train']['target'][0]
-        predictions = self._batch_data(batch_predictions, target_name)
+        warm_up = self.config['model'].get('warm_up', 0)
+        pred = predictions[target_name]
+        if pred.ndim == 2:
+            pred = np.expand_dims(pred, 2)
         target = np.expand_dims(observations[:, :, 0].cpu().numpy(), 2)
 
-        # Remove warm-up data
-        # if self.config['delta_model']['phy_model']['warm_up_states']:  # NOTE: remove if bug does not reoccur
-        target = target[self.config['delta_model']['phy_model']['warm_up']:, :]
+        target = target[warm_up:, :]
 
         # Compute metrics
         metrics = Metrics(
-            np.swapaxes(predictions.squeeze(), 1, 0),
+            np.swapaxes(pred.squeeze(), 1, 0),
             np.swapaxes(target.squeeze(), 1, 0),
         )
 
         # Save all metrics and aggregated statistics.
-        metrics.dump_metrics(self.config['out_path'])
+        metrics.dump_metrics(self.config['output_dir'])
 
     def _log_epoch_stats(
         self,
@@ -471,12 +666,44 @@ class Trainer(BaseTrainer):
         start_time
             Start time of the epoch.
         """
-        avg_loss_dict = {key: value / n_minibatch + 1 for key, value in loss_dict.items()}
-        loss = ", ".join(f"{key}: {value:.6f}" for key, value in avg_loss_dict.items())
+        avg_loss_dict = {key: value / n_minibatch for key, value in loss_dict.items()}
+        avg_total_loss = self.total_loss / n_minibatch
+        loss_str = ", ".join(
+            f"{key}: {value:.6f}" for key, value in avg_loss_dict.items()
+        )
         elapsed = time.perf_counter() - start_time
-        mem_aloc = int(torch.cuda.memory_reserved(device=self.config['device']) * 0.000001)
+        mem_aloc = 0
+
+        if self.config['device'] != 'cpu':
+            mem_aloc = int(
+                torch.cuda.memory_reserved(device=self.config['device']) * 0.000001,
+            )
 
         log.info(
-            f"Loss after epoch {epoch}: {loss} \n"
+            f"Loss after epoch {epoch}: {loss_str} \n"
             f"~ Runtime {elapsed:.2f} s, {mem_aloc} Mb reserved GPU memory",
         )
+
+        # Track loss history
+        self.train_loss_history.append(avg_total_loss)
+        for model_name, loss_val in avg_loss_dict.items():
+            if model_name not in self.loss_component_history:
+                self.loss_component_history[model_name] = []
+            self.loss_component_history[model_name].append(loss_val)
+
+        # For experiment loggers: create a single dictionary of metrics to log
+        metrics_to_log = {
+            'Loss/train_total': avg_total_loss,
+        }
+        for model_name, loss_val in avg_loss_dict.items():
+            metrics_to_log[f'Loss/{model_name}'] = loss_val
+
+        if self.use_scheduler:
+            metrics_to_log['learning_rate'] = self.scheduler.get_last_lr()[0]
+
+        # Loop through all active loggers and log the metrics
+        self.exp_logger.log_metrics(metrics_to_log, step=epoch)
+
+        # Update loss plots
+        if self.write_out:
+            self._plot_loss_curves()

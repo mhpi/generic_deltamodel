@@ -12,13 +12,14 @@ log = logging.getLogger(__name__)
 
 class RayTrainable(tune.Trainable):
     """Trainer class for Ray Tune."""
+
     def setup(self, config):
         """Setup the trainer."""
         self.config = config
         self.epoch = 0
 
         # Load model
-        self.model = dModel(config, verbose=self.config['verbose'])
+        self.model = dModel(config, verbose=True)
 
         # Load data
         data_loader_cls = import_data_loader(self.config['data_loader'])

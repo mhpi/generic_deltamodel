@@ -11,11 +11,10 @@ from omegaconf import DictConfig, OmegaConf
 from pydantic import ValidationError
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
+from dmg.core.utils.config import Config
 from dmg.core.utils.dates import Dates
-from dmg.core.utils.path import PathBuilder
 
-log = logging.getLogger(__name__)
+log = logging.getLogger('utils')
 
 
 def set_system_spec(config: dict) -> tuple[str, str]:
@@ -39,12 +38,14 @@ def set_system_spec(config: dict) -> tuple[str, str]:
         else:
             raise ValueError("MPS is not available on this system.")
     elif config['device'] == 'cuda':
-        # Set the first device as the active device.
-        if torch.cuda.is_available() and config['gpu_id'] < torch.cuda.device_count(): 
-            device = torch.device(f"cuda:{config['gpu_id']}") ## zhennan changed it for correct syntax
+        # Set the first device as the active device. 
+        if torch.cuda.is_available() and config['gpu_id'] < torch.cuda.device_count():
+            device = torch.device(f'cuda:{config["gpu_id"]}') 
             torch.cuda.set_device(device)
         else:
-            raise ValueError(f"Selected CUDA device {config['gpu_id']} is not available.")
+            raise ValueError(
+                f"Selected CUDA device {config['gpu_id']} is not available.",
+            )
     else:
         raise ValueError(f"Invalid device: {config['device']}")
 
@@ -69,6 +70,7 @@ def set_randomseed(seed=0) -> None:
     os.environ["PYTHONHASHSEED"] = str(seed)
     try:
         import torch
+
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         torch.manual_seed(seed)
@@ -81,15 +83,16 @@ def set_randomseed(seed=0) -> None:
 
 def initialize_config(
     config: Union[DictConfig, dict],
-    write_path: bool = True,
+    make_dirs: Optional[bool] = True,
+    write_out: Optional[bool] = True,
 ) -> dict[str, Any]:
     """Parse and initialize configuration settings.
-    
+
     Parameters
     ----------
     config
         Configuration settings from Hydra.
-        
+
     Returns
     -------
     dict
@@ -97,18 +100,38 @@ def initialize_config(
     """
     if type(config) is DictConfig:
         try:
-            config = OmegaConf.to_container(config, resolve=True)
+            config = OmegaConf.to_container(
+                config,
+                resolve=True,
+            )  # Remove for dot-access configs.
+            config = Config(**config).model_dump(mode='json')
         except ValidationError as e:
-            log.exception("Configuration validation error", exc_info=e)
-            raise e
+            clean_errors = []
+            for error in e.errors():
+                # Join the error location path (e.g., ('model', 'phy')) into 'model -> phy'
+                location = " -> ".join(map(str, error['loc']))
+                message = error['msg'].replace("Value error, ", "")
+
+                clean_errors.append(f"  - At '{location}': {message}")
+
+            # Join all formatted errors
+            error_message = "\n".join(clean_errors)
+
+            log.critical(
+                f"❌ Configuration validation failed with {len(e.errors())} "
+                f"error(s):\n{error_message}\n Check configuration file and "
+                f"try again.\n",
+            )
+
+            sys.exit(1)  # Exit cleanly
 
     config['device'], config['dtype'] = set_system_spec(config)
 
     # Convert date ranges to integer values.
-    train_time = Dates(config['train'], config['delta_model']['rho'])
-    test_time = Dates(config['test'], config['delta_model']['rho'])
-    sim_time = Dates(config['simulation'], config['delta_model']['rho'])
-    all_time = Dates(config['observations'], config['delta_model']['rho'])
+    train_time = Dates(config['train'], config['model']['rho'])
+    test_time = Dates(config['test'], config['model']['rho'])
+    sim_time = Dates(config['sim'], config['model']['rho'])
+    all_time = Dates(config['observations'], config['model']['rho'])
 
     exp_time_start = min(
         train_time.start_time,
@@ -129,98 +152,89 @@ def initialize_config(
     config['experiment_time'] = [exp_time_start, exp_time_end]
     config['all_time'] = [all_time.start_time, all_time.end_time]
 
-    # TODO: add this handling directly to the trainer; this is not generalizable in current form.
-    # change multimodel_type type to None if none.
-    if config.get('multimodel_type', '')  in ['none', 'None', '']:
-        config['multimodel_type'] = None
-
-    if config['delta_model']['nn_model'].get('lr_scheduler', '') in ['none', 'None', '']:
-        config['delta_model']['nn_model']['lr_scheduler'] = None
-
-    if config.get('trained_model', '') in ['none', 'None', '']:
-        config['trained_model'] = ''
-
     # Create output directories and add path to config.
-    out_path = PathBuilder(config)
-    if write_path:
-        config = out_path.write_path(config)
-    
+    if make_dirs:
+        os.makedirs(
+            os.path.dirname(config['model_dir']),
+            exist_ok=True,
+        )  # NOTE: necessary for ngen
+        os.makedirs(config['plot_dir'], exist_ok=True)
+        os.makedirs(config['sim_dir'], exist_ok=True)
+        if config['logging']:
+            os.makedirs(config['log_dir'], exist_ok=True)
+
     # Convert string back to data type.
     config['dtype'] = eval(config['dtype'])
+
+    # Raytune
+    config['do_tune'] = config.get('do_tune', False)
 
     return config
 
 
 def save_model(
-    config: dict[str, Any],
+    path: str,
     model: torch.nn.Module,
     model_name: str,
     epoch: int,
-    create_dirs: Optional[bool] = False,
+    make_dir: Optional[bool] = True,
 ) -> None:
     """Save model state dict.
-    
+
     Parameters
     ----------
-    config
-        Configuration settings.
+    path
+        Path to save the model.
     model
         Model to save.
     model_name
         Name of the model.
     epoch
         Last completed epoch of training.
-    create_dirs
-        Create directories for saving files. Default is False.
+    make_dir
+        Create directories for saving files.
     """
-    if create_dirs:
-        out_path = PathBuilder(config)
-        out_path.write_path(config)
+    if (not os.path.exists(path)) and make_dir:
+        os.makedirs(path)
 
-    save_name = f"d{str(model_name)}_Ep{str(epoch)}.pt"
-
-    full_path = os.path.join(config['model_path'], save_name)
-    torch.save(model.state_dict(), full_path)
+    torch.save(
+        model.state_dict(),
+        os.path.join(path, f"{model_name.lower()}_ep{str(epoch)}.pt"),
+    )
 
 
 def save_train_state(
-    config: dict[str, Any],
+    path: str,
     epoch: int,
-    optimizer:torch.nn.Module,
+    optimizer: torch.nn.Module,
     scheduler: Optional[torch.nn.Module] = None,
-    create_dirs: Optional[bool] = False,
+    make_dir: Optional[bool] = True,
     clear_prior: Optional[bool] = False,
 ) -> None:
     """Save dict of all experiment states for training.
-    
+
     Parameters
     ----------
-    config
-        Configuration settings.
+    path
+        Path to save the training state.
     epoch
         Last completed epoch of training.
     optimizer
         Optimizer state dict.
     scheduler
         Learning rate scheduler state dict.
-    create_dirs
-        Create directories for saving files. Default is False.
+    make_dir
+        Create directories for saving files.
     clear_prior
-        Clear previous saved states. Default is False.
+        Clear previous saved states.
     """
-    root = 'train_state'
-
-    if create_dirs:
-        out_path = PathBuilder(config)
-        out_path.write_path(config)
+    if (not os.path.exists(path)) and make_dir:
+        os.makedirs(path)
 
     if clear_prior:
-        for file in os.listdir(config['model_path']):
-            if root in file:
-                os.remove(os.path.join(config['model_path'], file))
-
-    file_name = f'{root}_Ep{str(epoch)}.pt'
-    full_path = os.path.join(config['model_path'], file_name)
+        for file in os.listdir(path):
+            if 'trainer_state' in file:
+                os.remove(os.path.join(path, file))
 
     scheduler_state = None
     cuda_state = None
@@ -230,23 +244,22 @@ def save_train_state(
     if torch.cuda.is_available():
         cuda_state = torch.cuda.get_rng_state()
 
-    torch.save({
-        'epoch': epoch,
-        'optimizer_state_dict': optimizer.state_dict(),
-        'scheduler_state_dict': scheduler_state,
-        'random_state': torch.get_rng_state(),
-        'cuda_state': cuda_state,
-    }, full_path)
+    torch.save(
+        {
+            'epoch': epoch,
+            'optimizer_state_dict': optimizer.state_dict(),
+            'scheduler_state_dict': scheduler_state,
+            'random_state': torch.get_rng_state(),
+            'cuda_state': cuda_state,
+        },
+        os.path.join(path, f'trainer_state_ep{str(epoch)}.pt'),
+    )
 
 
-def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
+def save_outputs(config, predictions, y_obs=None) -> None:
     """Save outputs from a model."""
     if torch.is_tensor(y_obs):
         y_obs = y_obs.cpu().numpy()
-
-    if create_dirs:
-        out_path = PathBuilder(config)
-        out_path.write_path(config)
 
     if type(predictions) is list:
         # Handle a single model
@@ -259,11 +272,18 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
             c_tensor = torch.cat([d[key] for d in predictions], dim=dim)
             file_name = key + ".npy"
 
-            np.save(os.path.join(config['out_path'], file_name), c_tensor.numpy())
+            np.save(os.path.join(config['sim_dir'], file_name), c_tensor.numpy())
 
     elif type(predictions) is dict:
         # Handle multiple models
-        models = config['delta_model']['phy_model']['model']
+        if config['model']['phy']:
+            models = config['model']['phy']['name']
+        elif config['model']['nn']:
+            models = config['model']['nn']['name']
+        else:
+            raise ValueError("No models specified in configuration.")
+
+        models = config['model']['phy']['model']
         for key in predictions[models[0]][0].keys():
             out_dict = {}
 
@@ -279,22 +299,22 @@ def save_outputs(config, predictions, y_obs=None, create_dirs=False) -> None:
                 ).numpy()
 
             file_name = key + '.npy'
-            np.save(os.path.join(config['out_path'], file_name), out_dict)
+            np.save(os.path.join(config['sim_dir'], file_name), out_dict)
 
     else:
         raise ValueError("Invalid output format.")
 
     # Reading flow observation
-    if  y_obs is not None:
+    if y_obs is not None:
         for var in config['train']['target']:
             item_obs = y_obs[:, :, config['train']['target'].index(var)]
             file_name = var + '_obs.npy'
-            np.save(os.path.join(config['out_path'], file_name), item_obs)
+            np.save(os.path.join(config['sim_dir'], file_name), item_obs)
 
 
 def load_model(config, model_name, epoch):
     """Load trained PyTorch models.
-    
+
     Parameters
     ----------
     config
@@ -303,7 +323,7 @@ def load_model(config, model_name, epoch):
         Name of the model to load.
     epoch
         Epoch number to load the specific state of the model.
-    
+
     Returns
     -------
     torch.nn.Module
@@ -325,45 +345,77 @@ def print_config(config: dict[str, Any]) -> None:
     print()
     print("\033[1m" + "Current Configuration" + "\033[0m")
     print(f"  {'Experiment Mode:':<20}{config['mode']:<20}")
+    if 'test' in config['mode']:
+        print(f"  {'Test Mode:':<20}{config['test']['name']:<20}")
+
+    if config['logging']:
+        print(f"  {'Logging:':<20}{str(config['logging']):<20}")
+
     if config['multimodel_type'] is not None:
         print(f"  {'Ensemble Mode:':<20}{config['multimodel_type']:<20}")
-    for i, mod in enumerate(config['delta_model']['phy_model']['model']):
-        print(f"  {f'Model {i+1}:':<20}{mod:<20}")
+
+    if config['model'].get('phy', None):
+        for i, mod in enumerate(config['model']['phy']['name']):
+            print(f"  {f'Model {i + 1}:':<20}{mod:<20}")
+            print(
+                f"  {'Dynamic Params: ':<20}{str(config['model']['phy']['dynamic_params'][mod]):<20}",
+            )
+
     print()
 
     print("\033[1m" + "Data Loader" + "\033[0m")
     print(f"  {'Data Source:':<20}{config['observations']['name']:<20}")
     if 'train' in config['mode']:
-        print(f"  {'Train Range :':<20}{config['train']['start_time']:<20}{config['train']['end_time']:<20}")
+        print(
+            f"  {'Train Range :':<20}{config['train']['start_time']:<20}{config['train']['end_time']:<20}",
+        )
     if 'test' in config['mode']:
-        print(f"  {'Test Range :':<20}{config['test']['start_time']:<20}{config['test']['end_time']:<20}")
-    if 'simulation' in config['mode']:
-        print(f"  {'Simulation Range :':<20}{config['simulation']['start_time']:<20}{config['simulation']['end_time']:<20}")
+        print(
+            f"  {'Test Range :':<20}{config['test']['start_time']:<20}{config['test']['end_time']:<20}",
+        )
+    if config['mode'] == 'sim':
+        print(
+            f"  {'Simulation Range :':<20}{config['sim']['start_time']:<20}{config['sim']['end_time']:<20}",
+        )
     if config['train']['start_epoch'] > 0 and 'train' in config['mode']:
-        print(f"  {'Resume training from epoch:':<20}{config['train']['start_epoch']:<20}")
+        print(
+            f"  {'Resume training from epoch:':<20}{config['train']['start_epoch']:<20}",
+        )
     print()
 
-    print("\033[1m" + "Model Parameters" + "\033[0m")
-    print(f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}")
-    if config['delta_model']['nn_model']['model'] != 'LstmMlpModel':
-        print(f"  {'Dropout:':<20}{config['delta_model']['nn_model']['dropout']:<20}{'Hidden Size:':<20}{config['delta_model']['nn_model']['hidden_size']:<20}")
-    else:
-        print(f"  {'LSTM Dropout:':<20}{config['delta_model']['nn_model']['lstm_dropout']:<20}{'LSTM Hidden Size:':<20}{config['delta_model']['nn_model']['lstm_hidden_size']:<20}")
-        print(f"  {'MLP Dropout:':<20}{config['delta_model']['nn_model']['mlp_dropout']:<20}{'MLP Hidden Size:':<20}{config['delta_model']['nn_model']['mlp_hidden_size']:<20}")
-    print(f"  {'Warmup:':<20}{config['delta_model']['phy_model'].get('warm_up', '0'):<20}{'Concurrent Models:':<20}{config['delta_model']['phy_model']['nmul']:<20}")
-    print(f"  {'Loss Fn:':<20}{config['loss_function']['model']:<20}")
+    print("\033[1m" + "Experiment Parameters" + "\033[0m")
+    print(
+        f"  {'Train Epochs:':<20}{config['train']['epochs']:<20}{'Batch Size:':<20}{config['train']['batch_size']:<20}",
+    )
+
+    print(
+        f"  {'Start Epoch:':<20}{config['train']['start_epoch']:<20}{'Save Epoch:':<20}{config['train']['save_epoch']:<20}",
+    )
+    print(f"  {'Loss Fn:':<20}{config['train']['loss_function']['name']:<20}")
+    print(
+        f"  {'Optimizer:':<20}{config['train']['optimizer']['name']:<20}{'LR Scheduler:':<20}{(config['train'].get('lr_scheduler') or {}).get('name', 'None'):<20}",
+    )
     print()
 
     if config['multimodel_type'] is not None:
         print("\033[1m" + "Multimodel Parameters" + "\033[0m")
-        print(f"  {'Mosaic:':<20}{config['multimodel']['mosaic']:<20}{'Dropout:':<20}{config['multimodel']['dropout']:<20}")
-        print(f"  {'Learning Rate:':<20}{config['multimodel']['learning_rate']:<20}{'Hidden Size:':<20}{config['multimodel']['hidden_size']:<20}")
-        print(f"  {'Scaling Fn:':<20}{config['multimodel']['scaling_function']:<20}{'Loss Fn:':<20}{config['multimodel']['loss_function']:<20}")
-        print(f"  {'Range-bound Loss:':<20}{config['multimodel']['use_rb_loss']:<20}{'Loss Factor:':<20}{config['multimodel']['loss_factor']:<20}")
+        print(
+            f"  {'Mosaic:':<20}{config['multimodel']['mosaic']:<20}{'Dropout:':<20}{config['multimodel']['dropout']:<20}",
+        )
+        print(
+            f"  {'Learning Rate:':<20}{config['multimodel']['learning_rate']:<20}{'Hidden Size:':<20}{config['multimodel']['hidden_size']:<20}",
+        )
+        print(
+            f"  {'Scaling Fn:':<20}{config['multimodel']['scaling_function']:<20}{'Loss Fn:':<20}{config['multimodel']['loss_function']:<20}",
+        )
+        print(
+            f"  {'Range-bound Loss:':<20}{config['multimodel']['use_rb_loss']:<20}{'Loss Factor:':<20}{config['multimodel']['loss_factor']:<20}",
+        )
         print()
 
     print("\033[1m" + 'Machine' + "\033[0m")
-    print(f"  {'Use Device:':<20}{str(config['device']):<20}")
+    print(f"  {'Device:':<20}{str(config['device']):<20}")
+    print(f"  {'Dtype:':<20}{str(config['dtype']):<20}")
     print()
 
 def print_dataset_info(dataset):
@@ -426,7 +478,7 @@ def camel_to_snake(camel_str):
 
 def format_resample_interval(resample: str) -> str:
     """Formats the resampling interval into a human-readable string.
-    
+
     Parameters
     ----------
     resample

@@ -51,7 +51,10 @@ class BaseSampler(Dataset, ABC):
             The data as a PyTorch tensor.
         """
         return torch.tensor(
-            data, dtype=self.dtype, device=self.device, requires_grad=False,
+            data,
+            dtype=self.dtype,
+            device=self.device,
+            requires_grad=False,
         )
 
     def validate_config(self):

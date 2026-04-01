@@ -15,7 +15,7 @@ class RmseCombLoss(BaseCriterion):
         p: predicted value,
         t: target value,
         RMSE = sqrt(mean((p - t)^2))
-    
+
     The log-sqrt RMSE is calculated as:
         p: predicted value,
         t: target value,
@@ -34,6 +34,7 @@ class RmseCombLoss(BaseCriterion):
 
         - beta: Stability term to prevent division by zero. Default is 1e-6.
     """
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -55,7 +56,7 @@ class RmseCombLoss(BaseCriterion):
         **kwargs: Any,
     ) -> torch.Tensor:
         """Compute loss.
-        
+
         Parameters
         ----------
         y_pred

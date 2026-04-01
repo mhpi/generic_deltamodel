@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 class MsHydroLoader(BaseLoader):
     """Data loader for multiscale hydrological data loading.
-    
+
     All data is read from Zarr store and loaded as PyTorch tensors. According to
     config settings, generates...
     - `dataset` for model inference,
@@ -33,6 +33,7 @@ class MsHydroLoader(BaseLoader):
     overwrite
         Whether to overwrite existing normalization statistics.
     """
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -43,17 +44,20 @@ class MsHydroLoader(BaseLoader):
         self.config = config
         self.test_split = test_split
         self.overwrite = overwrite
-        self.supported_data = ['merit']  # Add new supported observation names here.
+        self.supported_data = [
+            'merit',
+            'merit71',
+        ]  # Add new supported observation names here.
         self.data_name = config['observations']['name']
-        self.nn_attributes = config['delta_model']['nn_model'].get('attributes', [])
-        self.nn_forcings = config['delta_model']['nn_model'].get('forcings', [])
-        self.phy_attributes = config['delta_model']['phy_model'].get('attributes', [])
-        self.phy_forcings = config['delta_model']['phy_model'].get('forcings', [])
+        self.nn_attributes = config['model']['nn'].get('attributes', [])
+        self.nn_forcings = config['model']['nn'].get('forcings', [])
+        self.phy_attributes = config['model']['phy'].get('attributes', [])
+        self.phy_forcings = config['model']['phy'].get('forcings', [])
         self.all_forcings = self.config['observations']['all_forcings']
         self.all_attributes = self.config['observations']['all_attributes']
 
         self.target = config['train']['target']
-        self.log_norm_vars = config['delta_model']['phy_model']['use_log_norm']
+        self.log_norm_vars = config['model'].get('use_log_norm', [])
         self.device = config['device']
         self.dtype = config['dtype']
 
@@ -70,8 +74,8 @@ class MsHydroLoader(BaseLoader):
     def load_dataset(self) -> None:
         """Load dataset into dictionary of nn and physics model input arrays."""
         mode = self.config['mode']
-        if mode == 'simulation':
-            self.dataset = self._preprocess_data(scope='simulation')
+        if mode == 'sim':
+            self.dataset = self._preprocess_data(scope='sim')
         elif self.test_split:
             self.train_dataset = self._preprocess_data(scope='train')
             self.eval_dataset = self._preprocess_data(scope='test')
@@ -85,12 +89,12 @@ class MsHydroLoader(BaseLoader):
         scope: Optional[str],
     ) -> dict[str, torch.Tensor]:
         """Read data, preprocess, and return as tensors for models.
-        
+
         Parameters
         ----------
         scope
             Scope of data to read, affects what timespan of data is loaded.
-            
+
         Returns
         -------
         dict[str, torch.Tensor]
@@ -129,7 +133,7 @@ class MsHydroLoader(BaseLoader):
 
     def read_data(self, scope: Optional[str]) -> tuple[NDArray[np.float32]]:
         """Read data from the data file.
-                
+
         Parameters
         ----------
         scope
@@ -145,12 +149,14 @@ class MsHydroLoader(BaseLoader):
                 time = self.config['train_time']
             elif scope == 'test':
                 time = self.config['test_time']
-            elif scope == 'simulation':
+            elif scope == 'sim':
                 time = self.config['sim_time']
             elif scope == 'all':
                 time = self.config['all_time']
             else:
-                raise ValueError("Scope must be 'train', 'test', 'simulation', or 'all'.")
+                raise ValueError(
+                    "Scope must be 'train', 'test', 'sim', or 'all'.",
+                )
         except KeyError as e:
             raise ValueError(f"Key {e} for data path not in dataset config.") from e
 
@@ -165,8 +171,8 @@ class MsHydroLoader(BaseLoader):
 
         # Load data
         root_zone = zarr.open_group(
-            self.config['observations']['subbasin_data_path'],
-            mode = 'r',
+            self.config['observations']['data_path'],
+            mode='r',
         )
         subbasin_id_all = np.array(
             root_zone[self.config['observations']['subbasin_id_name']][:],
@@ -179,10 +185,13 @@ class MsHydroLoader(BaseLoader):
             if i == 0:
                 forc_array = np.expand_dims(root_zone[forc][:, idx_start:idx_end], -1)
             else:
-                forc_array = np.concatenate((
-                    forc_array,
-                    np.expand_dims(root_zone[forc][:, idx_start:idx_end], -1),
-                ), axis = -1)
+                forc_array = np.concatenate(
+                    (
+                        forc_array,
+                        np.expand_dims(root_zone[forc][:, idx_start:idx_end], -1),
+                    ),
+                    axis=-1,
+                )
         forc_array = self._fill_nan(forc_array)
 
         # Attribute subset for nn model
@@ -190,24 +199,31 @@ class MsHydroLoader(BaseLoader):
             if attr not in self.all_attributes:
                 raise ValueError(f"Attribute {attr} not in the list of all attributes.")
             if i == 0:
-                attr_array = np.expand_dims(root_zone['attrs'][attr][:],-1)
+                attr_array = np.expand_dims(root_zone['attrs'][attr][:], -1)
             else:
-                attr_array = np.concatenate((
-                    attr_array,
-                    np.expand_dims(root_zone['attrs'][attr][:], -1),
-                ), axis = -1)
+                attr_array = np.concatenate(
+                    (
+                        attr_array,
+                        np.expand_dims(root_zone['attrs'][attr][:], -1),
+                    ),
+                    axis=-1,
+                )
 
         # Get upstream area and elevation
         try:
             ac_name = self.config['observations']['upstream_area_name']
             ac_array = root_zone['attrs'][ac_name][:]
         except ValueError as e:
-            raise ValueError("Upstream area is not provided. This is needed for high-resolution streamflow model.") from e
+            raise ValueError(
+                "Upstream area is not provided. This is needed for high-resolution streamflow model.",
+            ) from e
         try:
             elevation_name = self.config['observations']['elevation_name']
             elev_array = root_zone['attrs'][elevation_name][:]
         except ValueError as e:
-            raise ValueError("Elevation is not provided. This is needed for high-resolution streamflow model.") from e
+            raise ValueError(
+                "Elevation is not provided. This is needed for high-resolution streamflow model.",
+            ) from e
 
         return [
             ac_array,
@@ -221,7 +237,7 @@ class MsHydroLoader(BaseLoader):
     def load_norm_stats(self) -> None:
         """Load or calculate normalization statistics if necessary."""
         self.out_path = os.path.join(
-            self.config['model_path'],
+            os.path.dirname(self.config['model_dir']),
             'normalization_statistics.json',
         )
 
@@ -232,8 +248,10 @@ class MsHydroLoader(BaseLoader):
         else:
             # Init normalization stats if file doesn't exist or overwrite is True.
             # NOTE: will be supported with release of multiscale training code.
-            raise ValueError("Normalization statistics not found. Confirm " \
-                             "`normalization_statistics.json` is in your model directory.")
+            raise ValueError(
+                "Normalization statistics not found. Confirm "
+                "`normalization_statistics.json` is in your model directory: .",
+            )
 
     def normalize(
         self,
@@ -248,7 +266,7 @@ class MsHydroLoader(BaseLoader):
             Neural network dynamic data.
         c_nn
             Neural network static data.
-        
+
         Returns
         -------
         NDArray[np.float32]
@@ -279,14 +297,14 @@ class MsHydroLoader(BaseLoader):
         vars: list[str],
     ) -> NDArray[np.float32]:
         """Standard data normalization.
-        
+
         Parameters
         ----------
         data
             Data to normalize.
         vars
             List of variable names in data to normalize.
-        
+
         Returns
         -------
         NDArray[np.float32]
@@ -321,14 +339,14 @@ class MsHydroLoader(BaseLoader):
         vars: list[str],
     ) -> NDArray[np.float32]:
         """De-normalize data.
-        
+
         Parameters
         ----------
         data
             Data to de-normalize.
         vars
             List of variable names in data to de-normalize.
-        
+
         Returns
         -------
         NDArray[np.float32]
@@ -356,12 +374,12 @@ class MsHydroLoader(BaseLoader):
 
     def _fill_nan(self, array: NDArray[np.float32]) -> NDArray[np.float32]:
         """Fill NaN values in a 3D array with linear interpolation.
-        
+
         Parameters
         ----------
         array
             3D array with NaN values to fill.
-        
+
         Returns
         -------
         NDArray[np.float32]
