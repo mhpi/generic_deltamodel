@@ -584,6 +584,7 @@ class ModelHandler(torch.nn.Module):
                 os.makedirs(save_dir, exist_ok=True)
                 torch.save(state_dict, os.path.join(save_dir, "model_states.pt"))
             else: #simulation mode 
+                print("save for simulation")
                 save_dir = os.path.join(self.config['sim_dir'], "simulation_gefs/save_states_restart")
                 os.makedirs(save_dir, exist_ok=True)
                 torch.save(state_dict, os.path.join(save_dir, "model_states.pt"))

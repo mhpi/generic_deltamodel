@@ -371,7 +371,7 @@ def run_segment(
     phy_model.cache_states = cache_states
     phy_model.warm_up_states = warm_up_states
 
-    # model.eval()
+    model.eval()
 
     if state_path is not None:
         model.load_states(path=state_path)
@@ -404,251 +404,8 @@ def startid_endid(config, warm, ENSEMBLE_START_DATE, FORECAST):
     history_len = len(timesteps) - warm - FORECAST
     # print("sidx, eidx, timesteps, history_len are", sidx, eidx, timesteps, history_len)
     return sidx, eidx, timesteps, history_len 
-
-def plot_forecast_separate(
-    GAGE_NAME_PATH,
-    gage_id,
-    start_date,
-    obs,                 # length = history_len + HORIZON
-    sim,                 # length = history_len
-    ens_preds,           # shape = [n_ens, HORIZON]
-    history_len,
-    Q_all_np,            # continuous output from long run
-    sidx,                # input index of forecast start in the dataset timeline
-    FORECAST,
-    WARMUPTIME,
-    det_pred=None,       # length = HORIZON
-    save_dir=None,
-    file_prefix=None,
-):
-    """
-    Save two separate figures:
-      1) Top forecast figure
-      2) Bottom continuous-run figure
-    """
-    gage_name = obtain_gage_name(GAGE_NAME_PATH, gage_id)
-
-    ens_preds = np.asarray(ens_preds)
-    if ens_preds.ndim != 2:
-        raise ValueError(f"ens_preds must be [n_ens, HORIZON], got {ens_preds.shape}")
-
-    HORIZON = ens_preds.shape[1]
-    if HORIZON != FORECAST:
-        print(f"WARNING: HORIZON={HORIZON} != FORECAST={FORECAST}")
-
-    start_date = pd.to_datetime(start_date)
-
-    # ---------- Top plot dates ----------
-    dates_obs_top = pd.date_range(
-        start=start_date - pd.Timedelta(days=history_len),
-        periods=history_len + HORIZON,
-    )
-    dates_sim_top = pd.date_range(
-        start=start_date - pd.Timedelta(days=history_len),
-        periods=history_len,
-    )
-
-    # ---------- Pad ensembles ----------
-    padded_ensembles = np.full((ens_preds.shape[0], history_len + HORIZON), np.nan)
-    padded_ensembles[:, history_len:] = ens_preds
-
-    ens_min = np.full(history_len + HORIZON, np.nan)
-    ens_max = np.full(history_len + HORIZON, np.nan)
-    if not np.all(np.isnan(ens_preds)):
-        ens_min[history_len:] = np.nanmin(ens_preds, axis=0)
-        ens_max[history_len:] = np.nanmax(ens_preds, axis=0)
-
-    # ---------- Continuous run dates ----------
-    dataset_day0 = start_date - pd.Timedelta(days=sidx)
-    dates_cont = pd.date_range(
-        start=dataset_day0 + pd.Timedelta(days=WARMUPTIME),
-        periods=len(Q_all_np),
-    )
-
-    # ---------- x-range shared by both ----------
-    pad_days = 3
-    x0, x1 = dates_obs_top[0], dates_obs_top[-1]
-
-    # ==========================================================
-    # FIGURE 1: TOP FORECAST
-    # ==========================================================
-    fig1, ax1 = plt.subplots(figsize=(12, 5.5))
-
-    ax1.plot(dates_obs_top, obs, "k-", lw=2, label="Observed")
-    ax1.plot(dates_sim_top, sim, "r-", lw=1.5, label="Simulation (history)")
-
-    ax1.fill_between(dates_obs_top, ens_min, ens_max, color="green", alpha=0.1, label="Ensembles")
-    for i in range(ens_preds.shape[0]):
-        ax1.plot(dates_obs_top, padded_ensembles[i], lw=1.5, color="darkgreen")
-
-    if det_pred is not None:
-        det_pred = np.asarray(det_pred).reshape(-1)
-        if det_pred.shape[0] != HORIZON:
-            raise ValueError(f"det_pred length {det_pred.shape[0]} != HORIZON {HORIZON}")
-        padded_det = np.full(history_len + HORIZON, np.nan)
-        padded_det[history_len:] = det_pred
-        ax1.plot(
-            dates_obs_top,
-            padded_det,
-            lw=1.5,
-            color="purple",
-            label="HBV Restart"
-        )
-    # ---------- Metrics for top figure ----------
-    obs = np.asarray(obs).reshape(-1)
-    sim = np.asarray(sim).reshape(-1)
-    ens_preds = np.asarray(ens_preds)
-
-    # Split observed into history and forecast parts
-    obs_hist = obs[:history_len]
-    obs_fcst = obs[history_len:history_len + HORIZON]
-
-    # --- Pre-forecast metrics: sim vs observed history ---
-    pre_nse, pre_kge = np.nan, np.nan
-    valid_pre = np.isfinite(sim) & np.isfinite(obs_hist)
-
-    if valid_pre.sum() > 1:
-        pre_nse = nse(sim[valid_pre], obs_hist[valid_pre])
-        pre_kge = kge(sim[valid_pre], obs_hist[valid_pre])
-
-    # --- Forecast ensemble metrics: each ensemble member vs observed forecast ---
-    ens_nse_list = []
-    ens_kge_list = []
-
-    for i in range(ens_preds.shape[0]):
-        pred_i = ens_preds[i]
-        valid_i = np.isfinite(pred_i) & np.isfinite(obs_fcst)
-
-        if valid_i.sum() > 1:
-            ens_nse_i = nse(pred_i[valid_i], obs_fcst[valid_i])
-            ens_kge_i = kge(pred_i[valid_i], obs_fcst[valid_i])
-        else:
-            ens_nse_i = np.nan
-            ens_kge_i = np.nan
-
-        ens_nse_list.append(ens_nse_i)
-        ens_kge_list.append(ens_kge_i)
-
-    ens_nse_arr = np.asarray(ens_nse_list)
-    ens_kge_arr = np.asarray(ens_kge_list)
-    metric_text = "GEFS Ensembles\n"
-    for i in range(len(ens_nse_arr)):
-        metric_text += f"E{i+1}: NSE={ens_nse_arr[i]:.3f}, KGE={ens_kge_arr[i]:.3f}\n"
-            
-    ax1.axvspan(dates_obs_top[0], dates_obs_top[history_len], color="gray", alpha=0.2, label="Pre-Forecast")
-    ax1.axvspan(dates_obs_top[history_len], dates_obs_top[-1], color="orange", alpha=0.2, label="Forecast")
-    
-    metric_text = (
-        f"Pre-Forecast\n"
-        f"NSE={pre_nse:.3f}, KGE={pre_kge:.3f}\n\n"
-        f"GEFS Ensembles\n"
-    )
-    for i in range(len(ens_nse_arr)):
-        metric_text += f"E{i+1}: NSE={ens_nse_arr[i]:.3f}, KGE={ens_kge_arr[i]:.3f}\n"
-        
-    ax1.text(
-        0.98, 0.98,
-        metric_text,
-        transform=ax1.transAxes,
-        va="top",
-        ha="right",
-        bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
-    )
-    
-    
-    ax1.set_xlim(x0 - pd.Timedelta(days=pad_days), x1 + pd.Timedelta(days=pad_days))
-    ax1.set_title(f"GEFS Forecast — Gage {gage_id} ({gage_name})")
-    ax1.set_xlabel("Date")
-    ax1.set_ylabel("Streamflow (mm/day)")
-    ax1.grid(True, linestyle="--", linewidth=1.5, alpha=0.7)
-
-    h1, l1 = ax1.get_legend_handles_labels()
-    ax1.legend(h1, l1, loc="upper center", ncol=max(1, int(np.ceil(len(l1) / 4))))
-    fig1.tight_layout()
-
-    # ==========================================================
-    # FIGURE 2: BOTTOM CONTINUOUS RUN
-    # ==========================================================
-    fig2, ax2 = plt.subplots(figsize=(12, 4.8))
-
-    mask = (dates_cont >= x0) & (dates_cont <= x1)
-    cont_dates_win = dates_cont[mask]
-    cont_vals_win = np.asarray(Q_all_np)[mask]
  
-    # ---------- Align observed data with continuous run ----------
-    obs_series = pd.Series(np.asarray(obs), index=dates_obs_top)
-    cont_series = pd.Series(cont_vals_win, index=cont_dates_win)
 
-    common_dates = obs_series.index.intersection(cont_series.index)
-    obs_aligned = obs_series.loc[common_dates].values
-    cont_aligned = cont_series.loc[common_dates].values
-
-    valid = np.isfinite(obs_aligned) & np.isfinite(cont_aligned)
-
-    nse_val, kge_val = np.nan, np.nan
-    if valid.sum() > 1:
-        obs_valid = obs_aligned[valid]
-        cont_valid = cont_aligned[valid]
-
-        ax2.plot(
-            common_dates[valid],
-            obs_valid,
-            "k-",
-            lw=1.5,
-            markersize=6,
-            label="Observed"
-        )
-
-        nse_val = nse(cont_valid, obs_valid)
-        kge_val = kge(cont_valid, obs_valid)
-    
-    ax2.plot(
-        cont_dates_win,
-        cont_vals_win,
-        "-",
-        color="red",
-        lw=1.5,
-        markersize=6,
-        label="Continuous Simulation"
-    )
-    ax2.text(
-        0.98, 0.98, # position of these nse kge values
-        f"NSE = {nse_val:.3f}\nKGE = {kge_val:.3f}",
-        transform=ax2.transAxes,
-        va="top",
-        ha="right",
-        bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
-    )
-
-    ax2.set_xlim(x0 - pd.Timedelta(days=pad_days), x1 + pd.Timedelta(days=pad_days))
-    ax2.set_title(f"Continuous Run — Gage {gage_id} ({gage_name})")
-    ax2.set_xlabel("Date")
-    ax2.set_ylabel("Streamflow (mm/day)")
-    ax2.grid(True, linestyle="--", linewidth=1.5, alpha=0.7)
-    ax2.legend(loc="upper center")
-    fig2.tight_layout()
-
-    # ---------- Save ----------
-    if save_dir is not None:
-        os.makedirs(save_dir, exist_ok=True)
-        if file_prefix is None:
-            file_prefix = f"GAGE_{gage_id}"
-
-        top_path = os.path.join(save_dir, f"{file_prefix}_forecast.png")
-        bottom_path = os.path.join(save_dir, f"{file_prefix}_continuous.png")
-
-        fig1.savefig(top_path, dpi=300, bbox_inches="tight")
-        fig2.savefig(bottom_path, dpi=300, bbox_inches="tight")
- 
-        print(f"Saved bottom figure to: {bottom_path}")
-
-    plt.show()
-    print(f"Saved plot for basin {gage_id} → {save_dir}")
-    plt.close(fig1)
-    plt.close(fig2)
-    
- 
- 
 def evaluate_one_basin(model, dataset, basin_idx, device, nmul, staind, tdRep, routing, dydrop):
     #  
     x_phy = torch.nan_to_num(
@@ -735,5 +492,397 @@ def cleannans(metrics, METRIC):
     metrics_clean = {METRIC: clean_metric_vals}
     return metrics_clean
 
+    
+def plot_forecast_separate(
+    GAGE_NAME_PATH,
+    gage_id,
+    start_date,
+    obs,                 # length = history_len + HORIZON
+    sim,                 # length = history_len
+    ens_preds,           # shape = [n_ens, HORIZON]
+    history_len,
+    Q_all_np,            # continuous output from long run
+    sidx,                # input index of forecast start in the dataset timeline
+    FORECAST,
+    WARMUPTIME,
+    det_pred=None,       # length = HORIZON
+    save_dir=None,
+    file_prefix=None,
+    plot_history_days=60,
+):
+    """
+    Save three separate figures:
+      1) Top forecast figure (full history + forecast)
+      2) Bottom continuous-run figure
+      3) Cleaner zoomed forecast figure (plot_history_days + FORECAST)
 
- 
+    Notes
+    -----
+    HBV restart is plotted with a connector segment from the last history
+    simulation point to the first restart point, without forcing the values
+    to be equal.
+    """
+    gage_name = obtain_gage_name(GAGE_NAME_PATH, gage_id)
+
+    ens_preds = np.asarray(ens_preds)
+    if ens_preds.ndim != 2:
+        raise ValueError(f"ens_preds must be [n_ens, HORIZON], got {ens_preds.shape}")
+
+    HORIZON = ens_preds.shape[1]
+    if HORIZON != FORECAST:
+        print(f"WARNING: HORIZON={HORIZON} != FORECAST={FORECAST}")
+
+    start_date = pd.to_datetime(start_date)
+
+    # ---------- Top plot dates ----------
+    dates_obs_top = pd.date_range(
+        start=start_date - pd.Timedelta(days=history_len),
+        periods=history_len + HORIZON,
+    )
+    dates_sim_top = pd.date_range(
+        start=start_date - pd.Timedelta(days=history_len),
+        periods=history_len,
+    )
+
+    # ---------- Pad ensembles ----------
+    padded_ensembles = np.full((ens_preds.shape[0], history_len + HORIZON), np.nan)
+    padded_ensembles[:, history_len:] = ens_preds
+
+    ens_min = np.full(history_len + HORIZON, np.nan)
+    ens_max = np.full(history_len + HORIZON, np.nan)
+    if not np.all(np.isnan(ens_preds)):
+        ens_min[history_len:] = np.nanmin(ens_preds, axis=0)
+        ens_max[history_len:] = np.nanmax(ens_preds, axis=0)
+
+    # ---------- Continuous run dates ----------
+    dataset_day0 = start_date - pd.Timedelta(days=sidx)
+    dates_cont = pd.date_range(
+        start=dataset_day0 + pd.Timedelta(days=WARMUPTIME),
+        periods=len(Q_all_np),
+    )
+
+    # ---------- x-ranges ----------
+    pad_days = 3
+
+    # full range for original plot 1 and continuous plot 2
+    x0, x1 = dates_obs_top[0], dates_obs_top[-1]
+
+    # zoomed range for plot 3
+    plot_history_days = min(plot_history_days, history_len)
+    x0_zoom = start_date - pd.Timedelta(days=plot_history_days)
+    x1_zoom = start_date + pd.Timedelta(days=FORECAST - 1)
+
+    # ---------- Convert arrays ----------
+    obs = np.asarray(obs).reshape(-1)
+    sim = np.asarray(sim).reshape(-1)
+    ens_preds = np.asarray(ens_preds)
+
+    # Split observed into history and forecast parts
+    obs_hist = obs[:history_len]
+    obs_fcst = obs[history_len:history_len + HORIZON]
+
+    # --- Pre-forecast metrics: sim vs observed history ---
+    pre_nse, pre_kge = np.nan, np.nan
+    valid_pre = np.isfinite(sim) & np.isfinite(obs_hist)
+
+    if valid_pre.sum() > 1:
+        pre_nse = nse(sim[valid_pre], obs_hist[valid_pre])
+        pre_kge = kge(sim[valid_pre], obs_hist[valid_pre])
+
+    # --- Forecast ensemble metrics: each ensemble member vs observed forecast ---
+    ens_nse_list = []
+    ens_kge_list = []
+
+    for i in range(ens_preds.shape[0]):
+        pred_i = ens_preds[i]
+        valid_i = np.isfinite(pred_i) & np.isfinite(obs_fcst)
+
+        if valid_i.sum() > 1:
+            ens_nse_i = nse(pred_i[valid_i], obs_fcst[valid_i])
+            ens_kge_i = kge(pred_i[valid_i], obs_fcst[valid_i])
+        else:
+            ens_nse_i = np.nan
+            ens_kge_i = np.nan
+
+        ens_nse_list.append(ens_nse_i)
+        ens_kge_list.append(ens_kge_i)
+
+    ens_nse_arr = np.asarray(ens_nse_list)
+    ens_kge_arr = np.asarray(ens_kge_list)
+
+    metric_text = (
+        f"Pre-Forecast\n"
+        f"NSE={pre_nse:.3f}, KGE={pre_kge:.3f}\n\n"
+        f"GEFS Ensembles\n"
+    )
+    for i in range(len(ens_nse_arr)):
+        metric_text += f"E{i+1}: NSE={ens_nse_arr[i]:.3f}, KGE={ens_kge_arr[i]:.3f}\n"
+
+    # ---------- Restart dates for connector-style plotting ----------
+    has_det = det_pred is not None
+    if has_det:
+        det_pred = np.asarray(det_pred).reshape(-1)
+        if det_pred.shape[0] != HORIZON:
+            raise ValueError(f"det_pred length {det_pred.shape[0]} != HORIZON {HORIZON}")
+
+        restart_dates = pd.date_range(start=start_date, periods=HORIZON)
+        connector_dates = [dates_sim_top[-1], restart_dates[0]]
+        connector_vals = [sim[-1], det_pred[0]]
+
+    # ==========================================================
+    # FIGURE 1: TOP FORECAST (FULL RANGE)
+    # ==========================================================
+    fig1, ax1 = plt.subplots(figsize=(12, 5.5))
+
+    ax1.plot(dates_obs_top, obs, "k-", lw=2, label="Observed")
+    ax1.plot(dates_sim_top, sim, "r-", lw=1.5, label="Simulation (history)")
+
+    ax1.fill_between(
+        dates_obs_top, ens_min, ens_max,
+        color="green", alpha=0.1, label="Ensembles"
+    )
+    for i in range(ens_preds.shape[0]):
+        ax1.plot(dates_obs_top, padded_ensembles[i], lw=1.5, color="darkgreen")
+
+    if has_det:
+        # connector: last history point -> first restart point
+        ax1.plot(
+            connector_dates,
+            connector_vals,
+            color="purple",
+            lw=1.5
+        )
+        # actual restart line
+        ax1.plot(
+            restart_dates,
+            det_pred,
+            color="purple",
+            lw=1.5,
+            label="HBV Restart"
+        )
+
+    ax1.axvspan(
+        dates_obs_top[0], dates_obs_top[history_len],
+        color="gray", alpha=0.2, label="Pre-Forecast"
+    )
+    ax1.axvspan(
+        dates_obs_top[history_len], dates_obs_top[-1],
+        color="orange", alpha=0.2, label="Forecast"
+    )
+
+    ax1.text(
+        0.98, 0.98,
+        metric_text,
+        transform=ax1.transAxes,
+        va="top",
+        ha="right",
+        bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
+    )
+
+    ax1.set_xlim(x0 - pd.Timedelta(days=pad_days), x1 + pd.Timedelta(days=pad_days))
+    ax1.set_title(f"GEFS Forecast — Gage {gage_id} ({gage_name})")
+    ax1.set_xlabel("Date")
+    ax1.set_ylabel("Streamflow (mm/day)")
+    ax1.grid(True, linestyle="--", linewidth=1.5, alpha=0.7)
+
+    h1, l1 = ax1.get_legend_handles_labels()
+    ax1.legend(h1, l1, loc="upper center", ncol=max(1, int(np.ceil(len(l1) / 4))))
+    fig1.tight_layout()
+
+    # ==========================================================
+    # FIGURE 2: BOTTOM CONTINUOUS RUN
+    # ==========================================================
+    fig2, ax2 = plt.subplots(figsize=(12, 4.8))
+
+    mask = (dates_cont >= x0) & (dates_cont <= x1)
+    cont_dates_win = dates_cont[mask]
+    cont_vals_win = np.asarray(Q_all_np)[mask]
+
+    # ---------- Align observed data with continuous run ----------
+    obs_series = pd.Series(obs, index=dates_obs_top)
+    cont_series = pd.Series(cont_vals_win, index=cont_dates_win)
+
+    common_dates = obs_series.index.intersection(cont_series.index)
+    obs_aligned = obs_series.loc[common_dates].values
+    cont_aligned = cont_series.loc[common_dates].values
+
+    valid = np.isfinite(obs_aligned) & np.isfinite(cont_aligned)
+
+    nse_val, kge_val = np.nan, np.nan
+    if valid.sum() > 1:
+        obs_valid = obs_aligned[valid]
+        cont_valid = cont_aligned[valid]
+
+        ax2.plot(
+            common_dates[valid],
+            obs_valid,
+            "k-",
+            lw=1.5,
+            markersize=6,
+            label="Observed"
+        )
+
+        nse_val = nse(cont_valid, obs_valid)
+        kge_val = kge(cont_valid, obs_valid)
+
+    ax2.plot(
+        cont_dates_win,
+        cont_vals_win,
+        "-",
+        color="red",
+        lw=1.5,
+        markersize=6,
+        label="Continuous Simulation"
+    )
+
+    if has_det:
+        ax2.plot(
+            connector_dates,
+            connector_vals,
+            color="purple",
+            lw=1.5
+        )
+        ax2.plot(
+            restart_dates,
+            det_pred,
+            color="purple",
+            lw=1.5,
+            label="HBV Restart"
+        )
+
+    ax2.text(
+        0.98, 0.98,
+        f"NSE = {nse_val:.3f}\nKGE = {kge_val:.3f}",
+        transform=ax2.transAxes,
+        va="top",
+        ha="right",
+        bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
+    )
+
+    ax2.set_xlim(x0 - pd.Timedelta(days=pad_days), x1 + pd.Timedelta(days=pad_days))
+    ax2.set_title(f"Continuous Run — Gage {gage_id} ({gage_name})")
+    ax2.set_xlabel("Date")
+    ax2.set_ylabel("Streamflow (mm/day)")
+    ax2.grid(True, linestyle="--", linewidth=1.5, alpha=0.7)
+    ax2.legend(loc="upper center")
+    fig2.tight_layout()
+
+    # ==========================================================
+    # FIGURE 3: ZOOMED FORECAST (plot_history_days + FORECAST)
+    # ==========================================================
+    fig3, ax3 = plt.subplots(figsize=(12, 5.5))
+
+    ax3.plot(dates_obs_top, obs, "k-", lw=2, label="Observed")
+    ax3.plot(dates_sim_top, sim, "r-", lw=1.5, label="Simulation (history)")
+
+    ax3.fill_between(
+        dates_obs_top, ens_min, ens_max,
+        color="green", alpha=0.1, label="Ensembles"
+    )
+    for i in range(ens_preds.shape[0]):
+        ax3.plot(dates_obs_top, padded_ensembles[i], lw=1.5, color="darkgreen")
+
+    if has_det:
+        ax3.plot(
+            connector_dates,
+            connector_vals,
+            color="purple",
+            lw=1.5
+        )
+        ax3.plot(
+            restart_dates,
+            det_pred,
+            color="purple",
+            lw=1.5,
+            label="HBV Restart"
+        )
+
+    ax3.axvspan(x0_zoom, start_date, color="gray", alpha=0.2, label="Pre-Forecast")
+    ax3.axvspan(start_date, x1_zoom, color="orange", alpha=0.2, label="Forecast")
+
+    ax3.text(
+        0.98, 0.98,
+        metric_text,
+        transform=ax3.transAxes,
+        va="top",
+        ha="right",
+        bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
+    )
+
+    ax3.set_xlim(
+        x0_zoom - pd.Timedelta(days=pad_days),
+        x1_zoom + pd.Timedelta(days=pad_days)
+    ) 
+    # ---------- Auto y-range for zoomed window ----------
+    y_candidates = []
+
+    mask_obs_zoom = (dates_obs_top >= x0_zoom) & (dates_obs_top <= x1_zoom)
+    if np.any(mask_obs_zoom):
+        y_candidates.append(obs[mask_obs_zoom])
+
+    mask_sim_zoom = (dates_sim_top >= x0_zoom) & (dates_sim_top <= x1_zoom)
+    if np.any(mask_sim_zoom):
+        y_candidates.append(sim[mask_sim_zoom])
+
+    for i in range(ens_preds.shape[0]):
+        ens_series_i = padded_ensembles[i]
+        if np.any(mask_obs_zoom):
+            y_candidates.append(ens_series_i[mask_obs_zoom])
+
+    if has_det:
+        mask_det_zoom = (restart_dates >= x0_zoom) & (restart_dates <= x1_zoom)
+        if np.any(mask_det_zoom):
+            y_candidates.append(det_pred[mask_det_zoom])
+        y_candidates.append(np.asarray(connector_vals))
+
+    if len(y_candidates) > 0:
+        y_all = np.concatenate([np.asarray(y).ravel() for y in y_candidates])
+        y_all = y_all[np.isfinite(y_all)]
+
+        if y_all.size > 0:
+            y_min = np.min(y_all)
+            y_max = np.max(y_all)
+
+            if y_max > y_min:
+                y_pad = 0.08 * (y_max - y_min)
+            else:
+                y_pad = max(0.1, 0.08 * max(abs(y_max), 1.0))
+
+            ax3.set_ylim(max(0, y_min - y_pad), y_max + y_pad)
+
+
+    ax3.set_title(
+        f"GEFS Forecast (Zoomed {plot_history_days}-Day History) — "
+        f"Gage {gage_id} ({gage_name})"
+    )
+    ax3.set_xlabel("Date")
+    ax3.set_ylabel("Streamflow (mm/day)")
+    ax3.grid(True, linestyle="--", linewidth=1.5, alpha=0.7)
+
+    h3, l3 = ax3.get_legend_handles_labels()
+    ax3.legend(h3, l3, loc="upper center", ncol=max(1, int(np.ceil(len(l3) / 4))))
+    fig3.tight_layout()
+
+    # ---------- Save ----------
+    if save_dir is not None:
+        os.makedirs(save_dir, exist_ok=True)
+        if file_prefix is None:
+            file_prefix = f"GAGE_{gage_id}"
+
+        top_path = os.path.join(save_dir, f"{file_prefix}_forecast.png")
+        bottom_path = os.path.join(save_dir, f"{file_prefix}_continuous.png")
+        zoom_path = os.path.join(save_dir, f"{file_prefix}_forecast_zoom.png")
+
+        fig1.savefig(top_path, dpi=300, bbox_inches="tight")
+        fig2.savefig(bottom_path, dpi=300, bbox_inches="tight")
+        fig3.savefig(zoom_path, dpi=300, bbox_inches="tight")
+
+        print(f"Saved top figure to: {top_path}")
+        print(f"Saved bottom figure to: {bottom_path}")
+        print(f"Saved zoomed figure to: {zoom_path}")
+
+    plt.show()
+    print(f"Saved plot for basin {gage_id} → {save_dir}")
+    plt.close(fig1)
+    plt.close(fig2)
+    plt.close(fig3)
