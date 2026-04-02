@@ -38,9 +38,9 @@ def set_system_spec(config: dict) -> tuple[str, str]:
         else:
             raise ValueError("MPS is not available on this system.")
     elif config['device'] == 'cuda':
-        # Set the first device as the active device.
+        # Set the first device as the active device. 
         if torch.cuda.is_available() and config['gpu_id'] < torch.cuda.device_count():
-            device = torch.device(f'cuda:{config["gpu_id"]}')
+            device = torch.device(f'cuda:{config["gpu_id"]}') 
             torch.cuda.set_device(device)
         else:
             raise ValueError(
@@ -272,7 +272,8 @@ def save_outputs(config, predictions, y_obs=None) -> None:
             c_tensor = torch.cat([d[key] for d in predictions], dim=dim)
             file_name = key + ".npy"
 
-            np.save(os.path.join(config['sim_dir'], file_name), c_tensor.numpy())
+            # zhennan changed np.save(os.path.join(config['sim_dir'], file_name), c_tensor.numpy())
+            np.save(os.path.join(config['output_dir'], file_name), c_tensor.numpy())
 
     elif type(predictions) is dict:
         # Handle multiple models
@@ -299,7 +300,8 @@ def save_outputs(config, predictions, y_obs=None) -> None:
                 ).numpy()
 
             file_name = key + '.npy'
-            np.save(os.path.join(config['sim_dir'], file_name), out_dict)
+            # np.save(os.path.join(config['sim_dir'], file_name), out_dict)
+            np.save(os.path.join(config['output_dir'], file_name), out_dict) # zhennan changed the path directory
 
     else:
         raise ValueError("Invalid output format.")
@@ -418,7 +420,21 @@ def print_config(config: dict[str, Any]) -> None:
     print(f"  {'Dtype:':<20}{str(config['dtype']):<20}")
     print()
 
-
+def print_dataset_info(dataset):
+    print("\n\033[1mDataset Inputs\033[0m") 
+    # Header row
+    print(f"{'Dataset key':<15}{'Shape':<20}{'Description'}")
+    print("-" * 60) 
+    # Rows
+    print(f"{'x_phy':<15}{str(tuple(dataset['x_phy'].size())):<20} # [time, basin, forcing_features]")
+    print(f"{'c_phy':<15}{str(tuple(dataset['c_phy'].size())):<20} # [basin, attr_features] (no physical attributes here)")
+    print(f"{'x_nn':<15}{str(tuple(dataset['x_nn'].size())):<20} # [time, basin, nn_forcing_features]")
+    print(f"{'c_nn':<15}{str(tuple(dataset['c_nn'].size())):<20} # [basin, nn_attr_features]")
+    print(f"{'xc_nn_norm':<15}{str(tuple(dataset['xc_nn_norm'].size())):<20} # [time, basin, combined_features]")
+    print(f"{'target':<15}{str(tuple(dataset['target'].size())):<20} # [time, basin, 1] observed streamflow") 
+    print("\nSample of target tensor (first 5 timesteps, first basin):")
+    print(f"{dataset['target'][:5, 0, 0]}")
+    
 def find_shared_keys(*dicts: dict[str, Any]) -> list[str]:
     """Find keys shared between multiple dictionaries.
 

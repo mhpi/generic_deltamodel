@@ -113,8 +113,8 @@ class ModelHandler(torch.nn.Module):
 
         # Epoch to load
         if self.config['mode'] == 'train':
-            load_epoch = self.config['train']['start_epoch']
-        elif self.config['mode'] in ['test', 'sim']:
+            load_epoch = self.config['train']['start_epoch'] 
+        elif self.config['mode'] in ['test', 'sim']: 
             load_epoch = self.config['test']['test_epoch']
         else:
             load_epoch = self.config.get('load_epoch', 0)
@@ -174,9 +174,14 @@ class ModelHandler(torch.nn.Module):
                 if f"{name.lower()}_ep" not in path:
                     path = os.path.join(path, f"{name.lower()}_ep{epoch}.pt")
                 if not os.path.exists(path):
-                    raise FileNotFoundError(
-                        f"{path} not found for model {name}.",
-                    )
+                    # raise FileNotFoundError(
+                    #     ,
+                    # )
+                    ## zhennan revised
+                    print(f"{path} not found for model {name}.")
+                # else:
+                #     print(f"{path} is found for model {name}.") # zhennan added
+                # print("bfajnfdankdf")
                 if name == 'wNN':
                     self.ensemble_generator.load_state_dict(
                         torch.load(
@@ -203,7 +208,8 @@ class ModelHandler(torch.nn.Module):
 
                 if self.verbose:
                     log.info(f"Loaded model: {name}, Ep {epoch}")
-
+            
+            
     def train(self, mode: bool = True) -> 'ModelHandler':
         """Set all models to training mode (or eval mode if mode=False).
 
@@ -464,32 +470,37 @@ class ModelHandler(torch.nn.Module):
         if len(self.model_dict) == 1:
             name = list(self.model_dict.keys())[0]
             nn_states = self.model_dict[name].nn_model.get_states()
+            
             try:
                 phy_states = self.model_dict[name].phy_model.get_states()
             except AttributeError:
                 phy_states = None
-
+            if self.verbose:
+                print("nn states", nn_states)
+                print("phy states", phy_states)
             return nn_states, phy_states
         else:
             raise NotImplementedError(
                 "Operations on hidden states for multimodel ensembles is not yet supported.",
             )
 
+ 
+    #zhennan revised from above version
     def load_states(
         self,
         *,
         path: Optional[str] = None,
         nn_states: Optional[tuple[torch.Tensor, ...]] = None,
         phy_states: Optional[tuple[torch.Tensor, ...]] = None,
+        routing_states: Optional[dict[str, torch.Tensor]] = None,
     ) -> None:
         """
-        Helper function to load physical and hidden (non-trainable) nn model
-        states (e.g., for sequential simulations).
+        Helper function to load physical, routing, and hidden nn states.
         """
         if path:
-            if path and nn_states and phy_states:
+            if path and (nn_states is not None or phy_states is not None or routing_states is not None):
                 raise ValueError(
-                    "Provide either `path` or `nn_states` and `phy_states`, not both.",
+                    "Provide either `path` or explicit states, not both.",
                 )
             if not os.path.exists(path):
                 raise FileNotFoundError(f"State path {path} not found.")
@@ -497,41 +508,51 @@ class ModelHandler(torch.nn.Module):
             state_dict = torch.load(path, map_location=self.device)
             nn_states = state_dict.get('nn_states', None)
             phy_states = state_dict.get('phy_states', None)
+            routing_states = state_dict.get('routing_states', None)
+
             if self.verbose:
                 log.info(
                     f"Loaded states from file | "
                     f"epoch: {state_dict.get('epoch', 'N/A')} | "
                     f"Resume from timestep: {state_dict.get('last_timestep', 'N/A')}",
                 )
-        elif nn_states:
-            if not isinstance(nn_states, tuple):
+        elif nn_states is not None or phy_states is not None or routing_states is not None:
+            if nn_states is not None and not isinstance(nn_states, tuple):
                 raise ValueError("`nn_states` must be a tuple of tensors.")
-        elif phy_states:
-            if not isinstance(phy_states, tuple):
+            if phy_states is not None and not isinstance(phy_states, tuple):
                 raise ValueError("`phy_states` must be a tuple of tensors.")
+            if routing_states is not None and not isinstance(routing_states, dict):
+                raise ValueError("`routing_states` must be a dict of tensors.")
         else:
             raise ValueError(
-                "Either `path` or `nn_states` and `phy_states` must be provided.",
+                "Either `path` or explicit state objects must be provided.",
             )
 
         if len(self.model_dict) == 1:
             name = list(self.model_dict.keys())[0]
-            self.model_dict[name].nn_model.load_states(nn_states)
+
+            if nn_states is not None:
+                self.model_dict[name].nn_model.load_states(nn_states)
 
             if phy_states is not None:
                 try:
                     self.model_dict[name].phy_model.load_states(phy_states)
                 except AttributeError:
                     pass
+
+            if routing_states is not None:
+                try:
+                    self.model_dict[name].phy_model.load_routing_state(routing_states)
+                except AttributeError:
+                    pass
         else:
             raise NotImplementedError(
                 "Operations on hidden states for multimodel ensembles is not yet supported.",
             )
-
-    def save_states(self) -> None:
+  
+    def save_states(self) -> None: # zhenannan added the routing params
         """
-        Helper function to save physical and nn model states (trainable and
-        non-trainable) to disk.
+        Helper function to save physical, routing, and nn model states to disk.
         """
         if 'test' in self.config['mode']:
             mode = 'test'
@@ -544,21 +565,33 @@ class ModelHandler(torch.nn.Module):
 
             nn_states, phy_states = self.get_states()
 
+            try:
+                routing_states = self.model_dict[name].phy_model.get_routing_state()
+            except AttributeError:
+                routing_states = None
+
             state_dict = {
                 'nn_states': nn_states,
-                'nn_trainable': self.model_dict[
-                    name
-                ].state_dict(),  # weights and biases
+                'nn_trainable': self.model_dict[name].state_dict(),
                 'phy_states': phy_states,
+                'routing_states': routing_states,
                 'epoch': self.epoch,
                 'last_timestep': time if time else 'N/A',
             }
-            torch.save(state_dict, self.config['model_dir'] + "model_states.pt")
+            # zhennan revised the path directory
+            if 'test' in self.config['mode']: # test or test+train mode
+                save_dir = os.path.join(self.config['output_dir'], "save_states_restart")
+                os.makedirs(save_dir, exist_ok=True)
+                torch.save(state_dict, os.path.join(save_dir, "model_states.pt"))
+            else: #simulation mode 
+                print("save for simulation")
+                save_dir = os.path.join(self.config['sim_dir'], "simulation_gefs/save_states_restart")
+                os.makedirs(save_dir, exist_ok=True)
+                torch.save(state_dict, os.path.join(save_dir, "model_states.pt"))
         else:
             raise NotImplementedError(
                 "Operations on hidden states for multimodel ensembles is not yet supported.",
             )
-        torch.save(state_dict, self.config['model_dir'] + "model_states.pt")
 
     def _trim(
         self,

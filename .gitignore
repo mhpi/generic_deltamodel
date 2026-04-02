@@ -182,6 +182,12 @@ validation/
 
 # Model optimization config with RayTune
 !tune/
+<<<<<<< HEAD
+example/hydrology/predownloaded/
+example/hydrology/figs/
+example/hydrology/oldnotebooks/
+=======
 
 # UV lock
 uv.lock
+>>>>>>> upstream/master

@@ -13,9 +13,11 @@ from .utils import (
     format_resample_interval,
     initialize_config,
     print_config,
+    print_dataset_info,
     save_model,
     set_randomseed,
 )
+
 
 __all__ = [
     'import_data_loader',
@@ -27,6 +29,7 @@ __all__ = [
     'load_nn_model',
     'Dates',
     'print_config',
+    'print_dataset_info',
     'save_model',
     'set_randomseed',
     'format_resample_interval',

@@ -16,7 +16,8 @@ authors = [
 maintainers = [
     { name = "Leo Lonzarich", email = "lglonzaric@gmail.com" },
 ]
-requires-python = ">=3.9.0"
+ 
+requires-python = ">=3.9.0" 
 dynamic = ["version"]
 keywords = [
     "differentiable-modeling",
@@ -27,7 +28,7 @@ keywords = [
     "hybrid-modeling",
     "scientific-computing",
 ]
-dependencies = [
+dependencies = [ 
     "geopandas",
     "hydra-core",
     "ipykernel",
@@ -42,7 +43,7 @@ dependencies = [
     "torch",
     "tqdm",
     "xarray",
-    "zarr",
+    "zarr", 
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",

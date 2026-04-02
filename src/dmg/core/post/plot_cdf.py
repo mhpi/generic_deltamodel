@@ -15,6 +15,7 @@ def plot_cdf(
     dpi: int = 100,
     fontsize: int = 12,
     ticksize: int = 10,
+    save_path: str = 'cdf/',
 ):
     """
     Plots cumulative distribution function (CDF) for specified metric(s) for
@@ -48,10 +49,11 @@ def plot_cdf(
     ticksize
         Font size for the ticks. Default is 10.
     """
+    
     if not metrics or not metric_names:
         print("Error: No metrics data or metric names provided.")
         return
-
+    
     # Ensure model_labels matches the number of models
     if model_labels is None:
         model_labels = [f"Model {i + 1}" for i in range(len(metrics))]
@@ -60,6 +62,7 @@ def plot_cdf(
         return
 
     # Create the plot
+    
     if figsize:
         plt.figure(figsize=figsize, dpi=dpi)
     else:
@@ -134,4 +137,5 @@ def plot_cdf(
         )
 
     # Show the plot
+    plt.savefig(f"{save_path}", dpi=300, bbox_inches="tight")
     plt.show()

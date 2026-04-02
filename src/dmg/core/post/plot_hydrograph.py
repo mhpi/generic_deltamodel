@@ -72,8 +72,7 @@ def plot_hydrograph(
     plt.plot(
         data['time'],
         list(data['pred']),
-        label='Prediction',
-        marker='o',
+        label='Prediction', 
         color='r',
     )
 
@@ -81,9 +80,8 @@ def plot_hydrograph(
         plt.plot(
             data['time'],
             list(data['obs']),
-            label='Observation',
-            marker='o',
-            color='b',
+            label='Observation', 
+            color='black',
         )
 
     plt.title(title)
@@ -137,8 +135,8 @@ def plot_hydrograph(
     # Add grid lines
     ax.grid(which='major', linestyle='--', linewidth=0.7, alpha=0.8)
     ax.grid(which='minor', linestyle=':', linewidth=0.5, alpha=0.6)
-
-    plt.show()
+ 
+    plt.show() 
 
 
 def plot_hydrograph_grid(
@@ -266,4 +264,4 @@ def plot_hydrograph_grid(
     if save_path:
         plt.savefig(save_path)
 
-    plt.show()
+    plt.show() 
