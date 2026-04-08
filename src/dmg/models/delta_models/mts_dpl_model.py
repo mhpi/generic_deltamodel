@@ -59,7 +59,7 @@ class MtsDplModel(torch.nn.Module):
         else:
             raise ValueError(
                 "A (1) neural network and physics model or (2)"
-                / " configuration dictionary is required.",
+                " configuration dictionary is required.",
             )
 
         self.initialized = True
@@ -105,8 +105,8 @@ class MtsDplModel(torch.nn.Module):
             The neural network.
         """
         return load_nn_model(
-            self.phy_model,
             self.config,
+            self.phy_model,
             device=self.device,
         )
 

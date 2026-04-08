@@ -74,7 +74,8 @@ class ModelHandler(torch.nn.Module):
             self.weights = {}
             self.loss_func_wnn = None
             self.range_bound_loss = RangeBoundLoss(config, device=self.device)
-        self.is_ensemble = False
+        else:
+            self.is_ensemble = False
 
     def list_models(self) -> list[str]:
         """List of models specified in the configuration.
@@ -411,9 +412,7 @@ class ModelHandler(torch.nn.Module):
 
         # Range bound loss
         if self.config['multimodel']['use_rb_loss']:
-            rb_loss = self.range_bound_loss(
-                weights_sum.clone().detach().requires_grad_(True),
-            )
+            rb_loss = self.range_bound_loss(weights_sum)
         else:
             rb_loss = 0.0
 
@@ -481,13 +480,18 @@ class ModelHandler(torch.nn.Module):
         path: Optional[str] = None,
         nn_states: Optional[tuple[torch.Tensor, ...]] = None,
         phy_states: Optional[tuple[torch.Tensor, ...]] = None,
+        routing_states: Optional[dict[str, torch.Tensor]] = None,
     ) -> None:
         """
-        Helper function to load physical and hidden (non-trainable) nn model
+        Helper function to load physical, routing, and hidden (non-trainable) nn model
         states (e.g., for sequential simulations).
         """
         if path:
-            if path and nn_states and phy_states:
+            if path and (
+                nn_states is not None
+                or phy_states is not None
+                or routing_states is not None
+            ):
                 raise ValueError(
                     "Provide either `path` or `nn_states` and `phy_states`, not both.",
                 )
@@ -497,6 +501,8 @@ class ModelHandler(torch.nn.Module):
             state_dict = torch.load(path, map_location=self.device)
             nn_states = state_dict.get('nn_states', None)
             phy_states = state_dict.get('phy_states', None)
+            routing_states = state_dict.get('routing_states', None)
+
             if self.verbose:
                 log.info(
                     f"Loaded states from file | "
@@ -516,13 +522,20 @@ class ModelHandler(torch.nn.Module):
 
         if len(self.model_dict) == 1:
             name = list(self.model_dict.keys())[0]
-            self.model_dict[name].nn_model.load_states(nn_states)
-
+            if nn_states is not None:
+                self.model_dict[name].nn_model.load_states(nn_states)
             if phy_states is not None:
                 try:
                     self.model_dict[name].phy_model.load_states(phy_states)
                 except AttributeError:
                     pass
+
+            if routing_states is not None:
+                try:
+                    self.model_dict[name].phy_model.load_routing_state(routing_states)
+                except AttributeError:
+                    pass
+
         else:
             raise NotImplementedError(
                 "Operations on hidden states for multimodel ensembles is not yet supported.",
@@ -530,7 +543,7 @@ class ModelHandler(torch.nn.Module):
 
     def save_states(self) -> None:
         """
-        Helper function to save physical and nn model states (trainable and
+        Helper function to save physical, routing, and nn model states (trainable and
         non-trainable) to disk.
         """
         if 'test' in self.config['mode']:
@@ -558,7 +571,6 @@ class ModelHandler(torch.nn.Module):
             raise NotImplementedError(
                 "Operations on hidden states for multimodel ensembles is not yet supported.",
             )
-        torch.save(state_dict, self.config['model_dir'] + "model_states.pt")
 
     def _trim(
         self,

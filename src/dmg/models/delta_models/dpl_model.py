@@ -60,7 +60,7 @@ class DplModel(torch.nn.Module):
         else:
             raise ValueError(
                 "A (1) initialized neural network and physics model or (2)"
-                / " configuration dictionary is required.",
+                " configuration dictionary is required.",
             )
 
         self.initialized = True
