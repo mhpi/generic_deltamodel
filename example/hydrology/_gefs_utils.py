@@ -739,8 +739,8 @@ def startid_endid(start_date, forecast, config, warm_up=0):
         len(timesteps) - warm_up - forecast (usable history window).
     """
     timesteps = Dates(
-        config["simulation"],
-        config["delta_model"]["rho"],
+        config["sim"],
+        config["model"]["rho"],
     ).batch_daily_time_range
     sidx = np.where(timesteps == start_date)[0][0]
     eidx = sidx + forecast
