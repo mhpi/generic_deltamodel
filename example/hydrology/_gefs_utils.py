@@ -1,5 +1,6 @@
 """Utilities for GEFS-based hydrology forecasting example.
-> See './example/hydrology/example_dhbv_1_1p_gefs.ipynb'.
+
+See ./example/hydrology/example_dhbv_1_1p_gefs.ipynb.
 
 NOTE: may be formally adopted into dmg at a later time.
 
@@ -8,23 +9,25 @@ NOTE: may be formally adopted into dmg at a later time.
 
 import os
 import random
+from typing import Any, Optional
 
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
-from src.dmg.core.utils import Dates
 
-# ── Metrics ───────────────────────────────────────────────────────────────────
+from dmg.core.utils import Dates
+
+### Metrics
 
 
-def nse(sim, obs):
+def nse(sim: np.ndarray, obs: np.ndarray) -> float:
     """Nash-Sutcliffe Efficiency."""
     return 1 - np.sum((sim - obs) ** 2) / np.sum((obs - obs.mean()) ** 2)
 
 
-def kge(sim, obs):
+def kge(sim: np.ndarray, obs: np.ndarray) -> float:
     """Kling-Gupta Efficiency."""
     r = np.corrcoef(sim, obs)[0, 1]
     alpha = sim.std() / obs.std()
@@ -32,10 +35,10 @@ def kge(sim, obs):
     return 1 - np.sqrt((r - 1) ** 2 + (alpha - 1) ** 2 + (beta - 1) ** 2)
 
 
-# ── Dataset helpers ───────────────────────────────────────────────────────────
+### Dataset helpers
 
 
-def print_dataset_info(dataset):
+def print_dataset_info(dataset: dict[str, torch.Tensor]) -> None:
     """Print dataset tensor shapes and descriptions."""
     print("\n\033[1mDataset Inputs\033[0m")
     # Header row
@@ -64,13 +67,39 @@ def print_dataset_info(dataset):
     print(f"{dataset['target'][:5, 0, 0]}")
 
 
-def get_parameters_from_model(dpl_model, data, n_par, mu, device="cpu"):
+def get_parameters_from_model(
+    dpl_model: Any,
+    data: dict[str, torch.Tensor],
+    n_par: int,
+    mu: int,
+    device: str = "cpu",
+) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
     """Obtain parameters from a dPL model's neural network.
 
     Handles three possible output shapes from the NN:
-      - F == n_par          : no ensemble, no routing weights
-      - F == n_par * mu     : ensemble parameters, no routing weights
-      - F == n_par * mu + 2 : ensemble parameters + routing weights
+
+    - F == n_par: no ensemble, no routing weights.
+    - F == n_par * mu: ensemble parameters, no routing weights.
+    - F == n_par * mu + 2: ensemble parameters + routing weights.
+
+    Parameters
+    ----------
+    dpl_model
+        Instantiated DplModel containing a nn_model attribute.
+    data
+        Dataset dict containing xc_nn_norm.
+    n_par
+        Number of HBV parameters.
+    mu
+        Number of ensemble parameter sets (nmul).
+    device
+        Device to move output tensors to.
+
+    Returns
+    -------
+    tuple[torch.Tensor, Optional[torch.Tensor]]
+        (pars, rts) where pars has shape [T, B, n_par, mu]
+        and rts has shape [B, 2] or is None if not present.
     """
     nn_model = dpl_model.nn_model
     xc_nn = data["xc_nn_norm"].to(device)
@@ -104,11 +133,25 @@ def get_parameters_from_model(dpl_model, data, n_par, mu, device="cpu"):
     return pars, rts  # pars: [T, B, n_par, mu], rts: [B, 2] or None
 
 
-# ── Gage metadata ─────────────────────────────────────────────────────────────
+### Gage metadata
 
 
-def obtain_gage_name(GAGE_NAME_PATH, gage_id):
-    """Obtain gage name from gage ID using the provided CSV file."""
+def obtain_gage_name(GAGE_NAME_PATH: str, gage_id: int) -> str:
+    """Obtain gage name from gage ID using the provided CSV file.
+
+    Parameters
+    ----------
+    GAGE_NAME_PATH
+        Path to a semicolon-delimited CSV with columns gauge_id and
+        gauge_name.
+    gage_id
+        USGS gage ID to look up.
+
+    Returns
+    -------
+    str
+        Human-readable gage name.
+    """
     gage_names = pd.read_csv(GAGE_NAME_PATH, sep=";", dtype={"gauge_id": str})
     gage_names['gauge_id'] = gage_names['gauge_id'].str.lstrip('0')
     match = gage_names.loc[gage_names['gauge_id'] == str(gage_id), 'gauge_name']
@@ -117,17 +160,17 @@ def obtain_gage_name(GAGE_NAME_PATH, gage_id):
     return match.values[0]
 
 
-# ── Bias correction ───────────────────────────────────────────────────────────
+### Bias correction
 
 
 def compute_bias_correction_from_dataset(
-    daymet_tensor,
-    gefs_df,
-    timesteps,
-    basin_idx,
-    window=15,
-    method="scalar",
-):
+    daymet_tensor: torch.Tensor,
+    gefs_df: pd.DataFrame,
+    timesteps: np.ndarray,
+    basin_idx: int,
+    window: int = 15,
+    method: str = "scalar",
+) -> dict[str, dict[int, Any]]:
     """Compute bias correction factors for GEFS forcings using Daymet climatology.
 
     Uses a moving day-of-year window to compute either scalar ratios or CDF
@@ -135,26 +178,27 @@ def compute_bias_correction_from_dataset(
 
     Parameters
     ----------
-    daymet_tensor : torch.Tensor, shape [time, basin, 3]
-        Historical Daymet forcings (prcp, tmean, pet) from the dataset.
-    gefs_df : pd.DataFrame
-        GEFS historical forcings with columns: date, prcp, tmean, pet.
-    timesteps : np.ndarray
+    daymet_tensor
+        Historical Daymet forcings of shape [time, basin, 3]
+        with channels (prcp, tmean, pet).
+    gefs_df
+        GEFS historical forcings with columns: date, prcp, tmean,
+        pet.
+    timesteps
         Daily time axis corresponding to the Daymet tensor.
-    basin_idx : int
+    basin_idx
         Basin index to select from the Daymet tensor.
-    window : int
-        ±days around each DOY used to compute moving-window statistics.
-    method : {"scalar", "cdf"}
-        Bias correction method.
-        - "scalar": mean ratio (Daymet / GEFS).
-        - "cdf": quantile mapping from GEFS to Daymet.
+    window
+        +/-days around each DOY used to compute moving-window statistics.
+    method
+        Bias correction method: "scalar" for mean ratio (Daymet / GEFS),
+        or "cdf" for quantile mapping from GEFS to Daymet.
 
     Returns
     -------
-    dict
-        corrections[var][doy] = scalar (method="scalar") or
-                                 (q_gefs, q_daymet) (method="cdf").
+    dict[str, dict[int, Any]]
+        corrections[var][doy] is a scalar ratio when method="scalar",
+        or a (q_gefs, q_daymet) tuple when method="cdf".
     """
     df_daymet = pd.DataFrame(
         {
@@ -197,8 +241,29 @@ def compute_bias_correction_from_dataset(
     return corrections
 
 
-def pre_processing(df, corrections, method="scalar"):
-    """Apply bias corrections to a GEFS forecast DataFrame."""
+def pre_processing(
+    df: pd.DataFrame,
+    corrections: dict[str, dict[int, Any]],
+    method: str = "scalar",
+) -> pd.DataFrame:
+    """Apply bias corrections to a GEFS forecast DataFrame.
+
+    Parameters
+    ----------
+    df
+        GEFS forecast DataFrame with columns date, prcp, tmean,
+        pet.
+    corrections
+        Correction factors as returned by
+        :func:`compute_bias_correction_from_dataset`.
+    method
+        Bias correction method: "scalar" or "cdf".
+
+    Returns
+    -------
+    pd.DataFrame
+        Copy of df with bias-corrected forcing columns.
+    """
     df = df.copy()
     df["doy"] = df["date"].dt.dayofyear
 
@@ -222,7 +287,10 @@ def pre_processing(df, corrections, method="scalar"):
     return df
 
 
-def post_processing(sim_pre_GEFS, ens_preds):
+def post_processing(
+    sim_pre_GEFS: np.ndarray,
+    ens_preds: np.ndarray,
+) -> np.ndarray:
     """Offset-correct ensemble forecasts to connect smoothly with prior simulation.
 
     Applies a per-ensemble constant offset so that the first forecast value
@@ -230,15 +298,16 @@ def post_processing(sim_pre_GEFS, ens_preds):
 
     Parameters
     ----------
-    sim_pre_GEFS : np.ndarray, shape [T]
-        Simulated streamflow before the forecast window (Daymet-forced HBV).
-    ens_preds : np.ndarray, shape [N_ENSEMBLES, FORECAST]
-        Raw ensemble forecast values.
+    sim_pre_GEFS
+        Simulated streamflow before the forecast window (Daymet-forced HBV),
+        shape [T].
+    ens_preds
+        Raw ensemble forecast values, shape [N_ENSEMBLES, FORECAST].
 
     Returns
     -------
-    np.ndarray, shape [N_ENSEMBLES, FORECAST]
-        Offset-corrected ensemble forecasts.
+    np.ndarray
+        Offset-corrected ensemble forecasts, shape [N_ENSEMBLES, FORECAST].
     """
     Q_sim_end = sim_pre_GEFS[-1]
     ens_preds_corrected = []
@@ -248,23 +317,42 @@ def post_processing(sim_pre_GEFS, ens_preds):
     return np.array(ens_preds_corrected)
 
 
-# ── Plotting ──────────────────────────────────────────────────────────────────
+### Plotting
 
 
 def plot_ensemble_hydrograph(
-    gage_path,
-    gage_id,
-    start_date,
-    obs,
-    sim,
-    ens_preds,
-    history_len,
-    save_path=None,
-):
+    gage_path: str,
+    gage_id: int,
+    start_date: str,
+    obs: np.ndarray,
+    sim: np.ndarray,
+    ens_preds: np.ndarray,
+    history_len: int,
+    save_path: Optional[str] = None,
+) -> None:
     """Plot ensemble hydrograph: history window + forecast period.
 
     Shows observed (black), simulation (red) for history, and each GEFS
     ensemble member in a distinct color for the forecast.
+
+    Parameters
+    ----------
+    gage_path
+        Path to the gage names CSV file.
+    gage_id
+        USGS gage ID.
+    start_date
+        Forecast start date (parseable by :func:`pandas.to_datetime`).
+    obs
+        Observed streamflow, shape [history_len + FORECAST].
+    sim
+        Simulated streamflow for the history window, shape [history_len + 1].
+    ens_preds
+        Ensemble forecast values, shape [N_ENSEMBLES, FORECAST].
+    history_len
+        Number of historical days to display.
+    save_path
+        File path to save the figure. If None, figure is only displayed.
     """
     print("the length is here", len(sim), len(obs))
     gage_name = obtain_gage_name(gage_path, gage_id)
@@ -312,7 +400,7 @@ def plot_ensemble_hydrograph(
         label="GEFS Forecast",
     )
 
-    plt.title(f"GEFS Forecast — Gage {gage_id} ({gage_name})")
+    plt.title(f"GEFS Forecast - Gage {gage_id} ({gage_name})")
     plt.xlabel("Date")
     plt.ylabel("Streamflow (mm/day)")
     handles, labels = plt.gca().get_legend_handles_labels()
@@ -326,55 +414,64 @@ def plot_ensemble_hydrograph(
 
 
 def plot_forecast_separate(
-    GAGE_NAME_PATH,
-    gage_id,
-    start_date,
-    obs,
-    sim,
-    ens_preds,
-    history_len,
-    sidx,
-    FORECAST,
-    WARMUPTIME,
-    Q_all_np=None,
-    det_pred=None,
-    save_dir=None,
-    file_prefix=None,
-    plot_history_days=60,
-):
+    GAGE_NAME_PATH: str,
+    gage_id: int,
+    start_date: str,
+    obs: np.ndarray,
+    sim: np.ndarray,
+    ens_preds: np.ndarray,
+    history_len: int,
+    sidx: int,
+    FORECAST: int,
+    WARMUPTIME: int,
+    Q_all_np: Optional[np.ndarray] = None,
+    det_pred: Optional[np.ndarray] = None,
+    save_dir: Optional[str] = None,
+    file_prefix: Optional[str] = None,
+    plot_history_days: int = 60,
+) -> None:
     """Save three separate forecast figures for a single basin.
 
-    Figure 1: Full history + forecast with ensemble spread and metrics.
-    Figure 2: Continuous Daymet-forced run vs observed (only if Q_all_np given).
-    Figure 3: Zoomed-in forecast (plot_history_days of history + FORECAST days).
+    - **Figure 1**: Full history + forecast with ensemble spread and metrics.
+    - **Figure 2**: Continuous Daymet-forced run vs observed (skipped if
+      Q_all_np is None).
+    - **Figure 3**: Zoomed-in forecast (plot_history_days of history +
+      FORECAST days).
 
     Parameters
     ----------
-    GAGE_NAME_PATH : str
-    gage_id : int
-    start_date : str or pd.Timestamp
-    obs : np.ndarray, shape [history_len + FORECAST]
-        Observed streamflow.
-    sim : np.ndarray, shape [history_len]
-        Simulated streamflow for the history window (Daymet-forced).
-    ens_preds : np.ndarray, shape [N_ENSEMBLES, FORECAST]
-    history_len : int
-    sidx : int
+    GAGE_NAME_PATH
+        Path to the gage names CSV file.
+    gage_id
+        USGS gage ID.
+    start_date
+        Forecast start date (parseable by :func:`pandas.to_datetime`).
+    obs
+        Observed streamflow, shape [history_len + FORECAST].
+    sim
+        Simulated streamflow for the history window (Daymet-forced),
+        shape [history_len].
+    ens_preds
+        Ensemble forecast values, shape [N_ENSEMBLES, FORECAST].
+    history_len
+        Number of historical days shown in the figure.
+    sidx
         Index of the forecast start in the full dataset time axis.
-    FORECAST : int
+    FORECAST
         Forecast horizon in days.
-    WARMUPTIME : int
+    WARMUPTIME
         Model warm-up length in days.
-    Q_all_np : np.ndarray or None
+    Q_all_np
         Full continuous-run output. If None, Figure 2 is skipped.
-    det_pred : np.ndarray or None, shape [FORECAST]
-        Optional deterministic restart prediction to overlay.
-    save_dir : str or None
-        Directory to save figures. If None, only displays.
-    file_prefix : str or None
+    det_pred
+        Optional deterministic restart prediction to overlay, shape
+        [FORECAST].
+    save_dir
+        Directory to save figures. If None, figures are only displayed.
+    file_prefix
         Filename prefix. Defaults to "GAGE_{gage_id}".
-    plot_history_days : int
-        History days shown in Figure 3.
+    plot_history_days
+        Number of history days shown in Figure 3.
     """
     gage_name = obtain_gage_name(GAGE_NAME_PATH, gage_id)
 
@@ -496,7 +593,7 @@ def plot_forecast_separate(
         label="Forecast",
     )
     ax1.set_xlim(x0 - pd.Timedelta(days=pad_days), x1 + pd.Timedelta(days=pad_days))
-    ax1.set_title(f"GEFS Forecast — Gage {gage_id} ({gage_name})")
+    ax1.set_title(f"GEFS Forecast - Gage {gage_id} ({gage_name})")
     h1, l1 = ax1.get_legend_handles_labels()
     ax1.legend(h1, l1, loc="upper center", ncol=max(1, int(np.ceil(len(l1) / 4))))
     fig1.tight_layout()
@@ -552,7 +649,7 @@ def plot_forecast_separate(
             bbox={'boxstyle': 'round', 'facecolor': 'white', 'alpha': 0.8},
         )
         ax2.set_xlim(x0 - pd.Timedelta(days=pad_days), x1 + pd.Timedelta(days=pad_days))
-        ax2.set_title(f"Continuous Run — Gage {gage_id} ({gage_name})")
+        ax2.set_title(f"Continuous Run - Gage {gage_id} ({gage_name})")
         ax2.set_xlabel("Date")
         ax2.set_ylabel("Streamflow (mm/day)")
         ax2.grid(True, linestyle="--", linewidth=1.5, alpha=0.7)
@@ -595,7 +692,7 @@ def plot_forecast_separate(
             ax3.set_ylim(max(0, y_min - y_pad), y_max + y_pad)
 
     ax3.set_title(
-        f"GEFS Forecast (Zoomed {plot_history_days}-Day History) — "
+        f"GEFS Forecast (Zoomed {plot_history_days}-Day History) - "
         f"Gage {gage_id} ({gage_name})"
     )
     h3, l3 = ax3.get_legend_handles_labels()
@@ -623,22 +720,46 @@ def plot_forecast_separate(
             dpi=300,
             bbox_inches="tight",
         )
-        print(f"Saved figures for basin {gage_id} → {save_dir}")
+        print(f"Saved figures for basin {gage_id} -> {save_dir}")
 
     plt.show()
     plt.close("all")
 
 
-# ── Tensor utilities ──────────────────────────────────────────────────────────
+### Tensor utilities
 
 
-def to_time_first(x_torch, device):
-    """Convert tensor from [B, T, F] → [T, B, F] and move to device."""
+def to_time_first(x_torch: torch.Tensor, device: str) -> torch.Tensor:
+    """Convert tensor from [B, T, F] to [T, B, F] and move to device.
+
+    Parameters
+    ----------
+    x_torch
+        Input tensor of shape [B, T, F].
+    device
+        Target device string (e.g., "cpu", "cuda").
+
+    Returns
+    -------
+    torch.Tensor
+        Permuted tensor of shape [T, B, F] on the target device.
+    """
     return x_torch.permute(1, 0, 2).float().to(device)
 
 
-def safe_minmax(tensor):
-    """Return (min, max) of a tensor, ignoring NaNs."""
+def safe_minmax(tensor: torch.Tensor) -> tuple[float, float]:
+    """Return (min, max) of a tensor, ignoring NaNs.
+
+    Parameters
+    ----------
+    tensor
+        Input tensor (any shape).
+
+    Returns
+    -------
+    tuple[float, float]
+        (min_value, max_value), or (nan, nan) for empty tensors.
+    """
     if tensor.numel() == 0:
         return np.nan, np.nan
     safe_min = torch.where(
@@ -654,18 +775,44 @@ def safe_minmax(tensor):
     return float(torch.min(safe_min)), float(torch.max(safe_max))
 
 
-# ── Diagnostic utilities ──────────────────────────────────────────────────────
+### Diagnostic utilities
 
 
-def checknans(warm_states):
-    """Print NaN count and min/max for each HBV warm state."""
+def checknans(warm_states: tuple[torch.Tensor, ...]) -> None:
+    """Print NaN count and min/max for each HBV warm state.
+
+    Parameters
+    ----------
+    warm_states
+        Tuple of HBV state tensors (sp, mw, sm, suz, slz).
+    """
     for name, st in zip(["sp", "mw", "sm", "suz", "slz"], warm_states):
         smin, smax = safe_minmax(st)
         print(name, "nan#", torch.isnan(st).sum().item(), "min", smin, "max", smax)
 
 
-def GEFSdataErrorCheck(idx_list, fc_block, horizon, start_date, showblock=False):
-    """Validate an extracted GEFS forecast block."""
+def GEFSdataErrorCheck(
+    idx_list: list[int],
+    fc_block: pd.DataFrame,
+    horizon: int,
+    start_date: str,
+    showblock: bool = False,
+) -> None:
+    """Validate an extracted GEFS forecast block.
+
+    Parameters
+    ----------
+    idx_list
+        Row indices of start_date in the GEFS DataFrame.
+    fc_block
+        Extracted GEFS rows for the forecast window.
+    horizon
+        Required number of forecast days.
+    start_date
+        Forecast start date (used in error messages).
+    showblock
+        If True, print the full forecast block when validation passes.
+    """
     if not idx_list:
         raise ValueError(f"Starting GEFS date {start_date.date()} not exist!")
     if len(fc_block) < horizon:
@@ -675,31 +822,55 @@ def GEFSdataErrorCheck(idx_list, fc_block, horizon, start_date, showblock=False)
         print(fc_block.to_string(index=False))
 
 
-def cleannans(metrics, METRIC):
-    """Return a copy of metrics with NaN and None values removed for METRIC."""
+def cleannans(metrics: dict[str, list], METRIC: str) -> dict[str, list[float]]:
+    """Return a copy of metrics with NaN and None values removed for one metric.
+
+    Parameters
+    ----------
+    metrics
+        Per-basin metrics dict (e.g., as loaded from metrics.json).
+    METRIC
+        Name of the metric to filter (e.g., "nse").
+
+    Returns
+    -------
+    dict[str, list[float]]
+        Dict with a single key METRIC mapping to the cleaned value list.
+    """
     metric_vals = metrics[METRIC]
     clean = [float(x) for x in metric_vals if x is not None and not np.isnan(float(x))]
     return {METRIC: clean}
 
 
-# ── Basin selection & timing ──────────────────────────────────────────────────
+### Basin selection & timing
 
 
-def selectbasins(rand, seed, basin_pool, n_basins, basin: int = 2046000):
+def selectbasins(
+    rand: bool,
+    seed: int,
+    basin_pool: list[int],
+    n_basins: int,
+    basin: int = 2046000,
+) -> list[int]:
     """Select basins for testing: random sample or a single fixed basin.
 
     Parameters
     ----------
-    rand : bool
+    rand
         If True, randomly sample n_basins from basin_pool.
-    seed : int
+    seed
         Random seed for reproducibility.
-    basin_pool : list
+    basin_pool
         Full list of available basin IDs.
-    n_basins : int
+    n_basins
         Number of basins to select (used when rand=True).
-    basin : int
+    basin
         Fixed basin ID used when rand=False.
+
+    Returns
+    -------
+    list[int]
+        Selected basin IDs.
     """
     if rand:
         random.seed(seed)
@@ -712,31 +883,33 @@ def selectbasins(rand, seed, basin_pool, n_basins, basin: int = 2046000):
     return selected_basins
 
 
-def startid_endid(start_date, forecast, config, warm_up=0):
+def startid_endid(
+    start_date: pd.Timestamp,
+    forecast: int,
+    config: dict[str, Any],
+    warm_up: int = 0,
+) -> tuple[int, int, np.ndarray, int]:
     """Get start/end time indices and history length for a forecast run.
 
     Parameters
     ----------
-    start_date : pd.Timestamp
+    start_date
         Forecast start date.
-    forecast : int
+    forecast
         Forecast horizon in days.
-    config : dict
-        Model configuration dict (must contain 'simulation' and
-        'delta_model.rho' keys).
-    warm_up : int, optional
+    config
+        Model configuration dict (must contain 'sim' and
+        'model.rho' keys).
+    warm_up
         Model warm-up length in days (used to compute history_len).
 
     Returns
     -------
-    sidx : int
-        Index of start_date in the simulation time axis.
-    eidx : int
-        sidx + forecast.
-    timesteps : np.ndarray
-        Full simulation time axis.
-    history_len : int
-        len(timesteps) - warm_up - forecast (usable history window).
+    tuple[int, int, np.ndarray, int]
+        (sidx, eidx, timesteps, history_len) where sidx is the index
+        of start_date in the simulation time axis, eidx = sidx +
+        forecast, timesteps is the full daily time axis, and
+        history_len = len(timesteps) - warm_up - forecast.
     """
     timesteps = Dates(
         config["sim"],
@@ -748,32 +921,32 @@ def startid_endid(start_date, forecast, config, warm_up=0):
     return sidx, eidx, timesteps, history_len
 
 
-# ── Forecasting ───────────────────────────────────────────────────────────────
+### Forecasting
 
 
 def run_warm_forecasts(
-    hbv,
-    pars_last,
-    rtwts_hist,
-    warm_states,
-    gage_id,
-    basin_idx,
-    dataset,
-    start_date,
-    horizon,
-    varF,
-    N_ENSEMBLES,
-    GEFS_DIR,
-    timesteps,
-    WINDOW,
-    CORRECTION,
-    device,
-    staind=-1,
-    tdRep=None,
-    nmul=16,
-    routing=True,
-    dydrop=0.0,
-):
+    hbv: Any,
+    pars_last: torch.Tensor,
+    rtwts_hist: torch.Tensor,
+    warm_states: tuple[torch.Tensor, ...],
+    gage_id: int,
+    basin_idx: int,
+    dataset: dict[str, torch.Tensor],
+    start_date: pd.Timestamp,
+    horizon: int,
+    varF: list[str],
+    N_ENSEMBLES: int,
+    GEFS_DIR: str,
+    timesteps: np.ndarray,
+    WINDOW: int,
+    CORRECTION: Optional[str],
+    device: str,
+    staind: int = -1,
+    tdRep: Optional[list[int]] = None,
+    nmul: int = 16,
+    routing: bool = True,
+    dydrop: float = 0.0,
+) -> np.ndarray:
     """Run warm-started HBV ensemble forecasts using GEFS forcings.
 
     For each ensemble member, loads the corresponding GEFS forcing file,
@@ -782,51 +955,54 @@ def run_warm_forecasts(
 
     Parameters
     ----------
-    hbv : nn.Module
-        Instantiated HBV physics model.
-    pars_last : torch.Tensor, shape [FORECAST, 1, n_par, mu]
-        NN-generated HBV parameters repeated over the forecast horizon.
-    rtwts_hist : torch.Tensor, shape [1, 2]
-        Routing weights from the NN.
-    warm_states : tuple of torch.Tensor
+    hbv
+        Instantiated HBV physics model (nn.Module).
+    pars_last
+        NN-generated HBV parameters repeated over the forecast horizon,
+        shape [FORECAST, 1, n_par, mu].
+    rtwts_hist
+        Routing weights from the NN, shape [1, 2].
+    warm_states
         HBV state tensors (sp, mw, sm, suz, slz) from end of history run.
-    gage_id : int
+    gage_id
         USGS gage ID (used to locate GEFS forcing files).
-    basin_idx : int
+    basin_idx
         Basin index in the dataset.
-    dataset : dict
+    dataset
         Full model dataset (used for bias correction climatology).
-    start_date : pd.Timestamp
+    start_date
         Forecast start date.
-    horizon : int
+    horizon
         Forecast horizon in days.
-    varF : list of str
-        Forcing variable names expected by HBV (e.g. ['prcp', 'tmean', 'pet']).
-    N_ENSEMBLES : int
+    varF
+        Forcing variable names expected by HBV (e.g., ['prcp', 'tmean', 'pet']).
+    N_ENSEMBLES
         Number of GEFS ensemble members to run.
-    GEFS_DIR : str
+    GEFS_DIR
         Root directory containing GEFS ensemble subdirectories.
-    timesteps : np.ndarray
+    timesteps
         Full simulation time axis (for bias correction DOY alignment).
-    WINDOW : int
-        ±day window for DOY-based bias correction.
-    CORRECTION : str or None
-        Bias correction method ("scalar", "cdf") or None/empty to skip.
-    device : torch.device
-    staind : int
+    WINDOW
+        +/-day window for DOY-based bias correction.
+    CORRECTION
+        Bias correction method ("scalar", "cdf") or None to skip.
+    device
+        Target device string.
+    staind
         HBV state index option.
-    tdRep : list of int
-        HBV time-delay representation list.
-    nmul : int
+    tdRep
+        HBV time-delay representation list. Defaults to [1, 3, 13].
+    nmul
         Number of ensemble parameter sets (mu).
-    routing : bool
+    routing
         Whether to apply routing in HBV.
-    dydrop : float
+    dydrop
         HBV dynamic parameter dropout rate.
 
     Returns
     -------
-    np.ndarray, shape [N_ENSEMBLES, horizon]
+    np.ndarray
+        Ensemble forecast array, shape [N_ENSEMBLES, horizon].
     """
     if tdRep is None:
         tdRep = [1, 3, 13]
@@ -903,7 +1079,13 @@ def run_warm_forecasts(
     return np.array(ens_preds)  # [N_ENSEMBLES, horizon]
 
 
-def build_xc_nn_norm_forecast(data_loader, basin_idx, fc_block, device, verbose=False):
+def build_xc_nn_norm_forecast(
+    data_loader: Any,
+    basin_idx: int,
+    fc_block: pd.DataFrame,
+    device: str,
+    verbose: bool = False,
+) -> torch.Tensor:
     """Build normalized NN input tensor for a GEFS forecast block.
 
     Normalizes GEFS forcings and concatenates with static basin attributes,
@@ -911,17 +1093,22 @@ def build_xc_nn_norm_forecast(data_loader, basin_idx, fc_block, device, verbose=
 
     Parameters
     ----------
-    data_loader : object
-        DataLoader with .nn_forcings, .nn_attributes, .to_norm(), and .dataset.
-    basin_idx : int
-    fc_block : pd.DataFrame
-        GEFS forecast block with forcing columns.
-    device : torch.device
-    verbose : bool
+    data_loader
+        DataLoader with nn_forcings, nn_attributes, to_norm(),
+        and dataset attributes.
+    basin_idx
+        Basin index to extract static attributes for.
+    fc_block
+        GEFS forecast block DataFrame with forcing columns.
+    device
+        Target device string.
+    verbose
+        If True, print intermediate shapes for debugging.
 
     Returns
     -------
-    torch.Tensor, shape [T, 1, n_features]
+    torch.Tensor
+        Normalized input tensor, shape [T, 1, n_features].
     """
     if verbose:
         print("===== BUILD XC_NN_NORM FORECAST =====")
@@ -958,50 +1145,64 @@ def build_xc_nn_norm_forecast(data_loader, basin_idx, fc_block, device, verbose=
 
 
 def run_warm_forecasts_restart(
-    model,
-    state_path,
-    gage_id,
-    basin_idx,
-    start_date,
-    horizon,
-    N_ENSEMBLES,
-    GEFS_DIR,
-    data_loader,
-    timesteps,
-    WINDOW,
-    CORRECTION,
-    device,
-    verbose=False,
-):
+    model: Any,
+    state_path: str,
+    gage_id: int,
+    basin_idx: int,
+    start_date: pd.Timestamp,
+    horizon: int,
+    N_ENSEMBLES: int,
+    GEFS_DIR: str,
+    data_loader: Any,
+    timesteps: np.ndarray,
+    WINDOW: int,
+    CORRECTION: Optional[str],
+    device: str,
+    verbose: bool = False,
+) -> np.ndarray:
     """Run GEFS ensemble forecasts by reloading saved model states for each member.
 
-    Unlike run_warm_forecasts (which uses pre-computed HBV states and parameters),
-    this function reloads the full model checkpoint (LSTM + HBV states) saved by
-    model.save_states() and runs the complete LSTM → HBV pipeline for each ensemble
-    member with GEFS forcings.
+    Unlike :func:`run_warm_forecasts` (which uses pre-computed HBV states and
+    parameters), this function reloads the full model checkpoint (LSTM + HBV
+    states) saved by model.save_states() and runs the complete LSTM -> HBV
+    pipeline for each ensemble member with GEFS forcings.
 
     Parameters
     ----------
-    model : ModelHandler
-    state_path : str
+    model
+        Initialized ModelHandler instance.
+    state_path
         Path to the saved model state file (.pt).
-    gage_id : int
-    basin_idx : int
-    start_date : pd.Timestamp
-    horizon : int
-    N_ENSEMBLES : int
-    GEFS_DIR : str
-    data_loader : object
-        DataLoader with dataset, nn_forcings, nn_attributes, and to_norm().
-    timesteps : np.ndarray
-    WINDOW : int
-    CORRECTION : str or None
-    device : torch.device
-    verbose : bool
+    gage_id
+        USGS gage ID (used to locate GEFS forcing files).
+    basin_idx
+        Basin index in the dataset.
+    start_date
+        Forecast start date.
+    horizon
+        Forecast horizon in days.
+    N_ENSEMBLES
+        Number of GEFS ensemble members to run.
+    GEFS_DIR
+        Root directory containing GEFS ensemble subdirectories.
+    data_loader
+        DataLoader with dataset, nn_forcings, nn_attributes,
+        and to_norm() attributes.
+    timesteps
+        Full simulation time axis (for bias correction DOY alignment).
+    WINDOW
+        +/-day window for DOY-based bias correction.
+    CORRECTION
+        Bias correction method ("scalar", "cdf") or None to skip.
+    device
+        Target device string.
+    verbose
+        If True, print intermediate shapes for debugging.
 
     Returns
     -------
-    np.ndarray, shape [N_ENSEMBLES, horizon]
+    np.ndarray
+        Ensemble forecast array, shape [N_ENSEMBLES, horizon].
     """
     ens_preds = []
     name = list(model.model_dict.keys())[0]
@@ -1080,47 +1281,54 @@ def run_warm_forecasts_restart(
 
 
 def run_segment(
-    model,
-    dataset,
-    basin_idx,
-    device,
-    name=None,
-    start_idx=None,
-    end_idx=None,
-    warm_up=0,
-    cache_states=False,
-    warm_up_states=True,
-    state_path=None,
-):
-    """Run the LSTM → HBV pipeline on a single basin time segment.
+    model: Any,
+    dataset: dict[str, torch.Tensor],
+    basin_idx: int,
+    device: str,
+    name: Optional[str] = None,
+    start_idx: Optional[int] = None,
+    end_idx: Optional[int] = None,
+    warm_up: int = 0,
+    cache_states: bool = False,
+    warm_up_states: bool = True,
+    state_path: Optional[str] = None,
+) -> np.ndarray:
+    """Run the LSTM -> HBV pipeline on a single basin time segment.
 
     Slices the dataset for one basin and time window, sets physics model
     options, optionally loads saved states, then runs a forward pass.
 
     Parameters
     ----------
-    model : ModelHandler
-    dataset : dict
-        Must contain 'xc_nn_norm' [T, B, F] and 'x_phy' [T, B, F].
-    basin_idx : int
-    device : torch.device
-    name : str or None
+    model
+        Initialized ModelHandler instance.
+    dataset
+        Must contain 'xc_nn_norm' of shape [T, B, F] and
+        'x_phy' of shape [T, B, F].
+    basin_idx
+        Basin index to slice from the dataset.
+    device
+        Target device string.
+    name
         Key in model.model_dict. Defaults to the first key.
-    start_idx, end_idx : int or None
-        Time slice (Python slice semantics).
-    warm_up : int
+    start_idx
+        Start of the time slice (Python slice semantics).
+    end_idx
+        End of the time slice (Python slice semantics).
+    warm_up
         Warm-up days to pass to the physics model.
-    cache_states : bool
+    cache_states
         Whether the physics model should cache its end states.
-    warm_up_states : bool
+    warm_up_states
         Whether to use warm-up states during the forward pass.
-    state_path : str or None
+    state_path
         If given, load saved model states before the forward pass.
 
     Returns
     -------
-    np.ndarray, shape [T_out]
-        Simulated streamflow for the requested segment (after warm-up).
+    np.ndarray
+        Simulated streamflow for the requested segment (after warm-up),
+        shape [T_out].
     """
     if name is None:
         name = list(model.model_dict.keys())[0]
@@ -1155,11 +1363,26 @@ def run_segment(
     return fluxes["streamflow"][:, 0, 0].detach().cpu().numpy()
 
 
-# ── Evaluation output ─────────────────────────────────────────────────────────
+### Evaluation output
 
 
-def print_selected_basin_metrics_from_json(metrics, selected_basins, basin_pool):
-    """Print NSE and KGE for a list of basins from a per-basin metrics dict."""
+def print_selected_basin_metrics_from_json(
+    metrics: dict[str, list],
+    selected_basins: list[int],
+    basin_pool: list[int],
+) -> None:
+    """Print NSE and KGE for a list of basins from a per-basin metrics dict.
+
+    Parameters
+    ----------
+    metrics
+        Per-basin metrics dict (e.g., loaded from metrics.json), with
+        keys "nse" and "kge" mapping to per-basin value lists.
+    selected_basins
+        Basin IDs to print metrics for.
+    basin_pool
+        Ordered list of all basin IDs (used to resolve index from ID).
+    """
     sumnse, sumkge = 0.0, 0.0
     count = 0
 
