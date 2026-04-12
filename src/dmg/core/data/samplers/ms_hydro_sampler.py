@@ -69,6 +69,8 @@ class MsHydroSampler(BaseSampler):
         """Generate batch for model forwarding only."""
         dataset_sample = {}
         for key, value in dataset.items():
+            if not hasattr(value, 'ndim'):
+                continue
             if value.ndim == 3:
                 if key in ['x_phy', 'xc_nn_norm']:
                     warm_up = 0

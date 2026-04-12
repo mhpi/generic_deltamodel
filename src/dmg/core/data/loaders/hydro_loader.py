@@ -196,10 +196,14 @@ class HydroLoader(BaseLoader):
             'target': self.to_tensor(target),
         }
 
-        # Attach function to convert model predictions back to mm/day.
+        # Attach functions to convert predictions and observations to output unit.
         if self.norm_target and scope != 'train':
             dataset['denorm_fn'] = partial(
                 self.denormalize_prediction,
+                c_nn,
+            )
+            dataset['obs_convert_fn'] = partial(
+                self.convert_obs_to_output_unit,
                 c_nn,
             )
 
@@ -722,6 +726,36 @@ class HydroLoader(BaseLoader):
                 data[..., k] = denormed
 
         return data
+
+    def convert_obs_to_output_unit(
+        self,
+        c_nn: NDArray[np.float32],
+        data: NDArray[np.float32],
+    ) -> NDArray[np.float32]:
+        """Convert observations from mm/day to the configured output unit.
+
+        Parameters
+        ----------
+        c_nn
+            Neural network static data.
+        data
+            Observation data in mm/day, shape (T, N, num_targets).
+
+        Returns
+        -------
+        NDArray[np.float32]
+            Observations in the configured output unit.
+        """
+        if self.output_unit == 'mm/d':
+            return data
+
+        area_name = self.config['observations']['area_name']
+        basin_area = c_nn[:, self.nn_attributes.index(area_name)]
+        area = np.expand_dims(basin_area, axis=0).repeat(data.shape[0], 0)
+
+        result = data.copy()
+        result[:, :, 0] = self._from_mm_per_day(result[:, :, 0], area)
+        return result
 
     def denormalize_prediction(
         self,

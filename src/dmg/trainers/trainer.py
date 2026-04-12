@@ -490,8 +490,15 @@ class Trainer(BaseTrainer):
         save_outputs(self.config, batch_predictions, observations)
         self._save_denormed_target(self.predictions)
 
+        # Convert observations to output unit before computing metrics so they
+        # match the (potentially denormalized) predictions.
+        obs_np = observations.cpu().numpy()
+        obs_convert_fn = self.eval_dataset.get('obs_convert_fn')
+        if obs_convert_fn is not None:
+            obs_np = obs_convert_fn(obs_np)
+
         # Calculate metrics
-        self.calc_metrics(self.predictions, observations)
+        self.calc_metrics(self.predictions, obs_np)
 
     def inference(self) -> None:
         """Run batch model inference and save model outputs."""
@@ -617,7 +624,7 @@ class Trainer(BaseTrainer):
     def calc_metrics(
         self,
         predictions: dict[str, np.ndarray],
-        observations: torch.Tensor,
+        observations: np.ndarray,
     ) -> None:
         """Calculate and save model performance metrics.
 
@@ -626,14 +633,15 @@ class Trainer(BaseTrainer):
         predictions
             Batched (and denormalized) predictions dict.
         observations
-            Target variable observation data.
+            Target variable observation data as a numpy array, already
+            converted to match the output unit of predictions.
         """
         target_name = self.config['train']['target'][0]
         warm_up = self.config['model'].get('warm_up', 0)
         pred = predictions[target_name]
         if pred.ndim == 2:
             pred = np.expand_dims(pred, 2)
-        target = np.expand_dims(observations[:, :, 0].cpu().numpy(), 2)
+        target = np.expand_dims(observations[:, :, 0], 2)
 
         target = target[warm_up:, :]
 

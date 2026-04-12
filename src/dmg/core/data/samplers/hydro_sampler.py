@@ -122,4 +122,5 @@ class HydroSampler(BaseSampler):
                 device=self.device,
             )
             for key, value in dataset.items()
+            if hasattr(value, 'ndim')
         }
