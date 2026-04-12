@@ -83,7 +83,7 @@ def plot_hydrograph(
             list(data['obs']),
             label='Observation',
             marker='o',
-            color='b',
+            color='black',
         )
 
     plt.title(title)

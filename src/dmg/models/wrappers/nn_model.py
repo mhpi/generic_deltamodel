@@ -45,7 +45,7 @@ class NnModel(torch.nn.Module):
         else:
             raise ValueError(
                 "A (1) initialized neural network or (2)"
-                / " configuration dictionary is required.",
+                " configuration dictionary is required.",
             )
 
         if len(self.target_names) != config['nn']['out_size']:
@@ -83,9 +83,10 @@ class NnModel(torch.nn.Module):
             The output predictions.
         """
         prediction = self.nn_model(data_dict['xc_nn_norm'])
+        warm_up = self.config.get('model', {}).get('warm_up', 0)
 
         out_dict = {}
         for name in self.target_names:
-            out_dict[name] = prediction[self.config['warm_up'] :, ...]
+            out_dict[name] = prediction[warm_up:, ...]
 
         return out_dict

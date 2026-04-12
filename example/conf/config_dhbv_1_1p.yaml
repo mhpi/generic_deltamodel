@@ -16,7 +16,7 @@ defaults:
   - hydra: settings
   - observations: camels_531  # camels_531, camels_671
 
-name: ${model.nn.name}-${model.phy.name}
+name: ${model.nn.name}-${model.phy.name}dd
 
 
 ## General -------------------------------#

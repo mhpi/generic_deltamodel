@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 def geoplot_single_metric(
     gdf: gpd.GeoDataFrame,
     metric_name: str,
+    save_path: Optional[str] = None,
     title: Optional[str] = None,
     map_color: Optional[bool] = False,
     draw_rivers: Optional[bool] = False,
@@ -113,4 +114,8 @@ def geoplot_single_metric(
     # Add labels and title
     plt.title(title or f"Spatial Map of {metric_name.upper()}", fontsize=14)
     plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, dpi=300)
+
     plt.show()
