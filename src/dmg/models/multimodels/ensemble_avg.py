@@ -51,7 +51,7 @@ def model_average(
                 print(key, model_preds_dict[mod][key].size())
 
                 ensemble_pred[key] += model_preds_dict[mod][key][
-                    config['warm_up'] :,
+                    config['warmup'] :,
                     :,
                 ].squeeze()
             else:

@@ -23,7 +23,7 @@ class MsHydroSampler(BaseSampler):
         super().__init__()
         self.config = config
         self.device = config['device']
-        self.warm_up = config['model']['warm_up']
+        self.warmup = config['model']['warmup']
         self.rho = config['model']['rho']
 
     def load_data(self):
@@ -73,11 +73,11 @@ class MsHydroSampler(BaseSampler):
                 continue
             if value.ndim == 3:
                 if key in ['x_phy', 'xc_nn_norm']:
-                    warm_up = 0
+                    warmup = 0
                 else:
-                    warm_up = self.config['model']['warm_up']
+                    warmup = self.config['model']['warmup']
                 dataset_sample[key] = torch.tensor(
-                    value[warm_up:, i_s:i_e, :],
+                    value[warmup:, i_s:i_e, :],
                     dtype=torch.float32,
                     device=self.config['device'],
                 )

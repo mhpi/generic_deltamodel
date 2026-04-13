@@ -610,14 +610,14 @@ class ModelHandler(torch.nn.Module):
         output = output.squeeze()
         target = target.squeeze()
 
-        warm_up = self.config['model'].get('warm_up', 0)
+        warmup = self.config['model'].get('warmup', 0)
 
         # Remove warmup timesteps
-        target = target[warm_up:]
+        target = target[warmup:]
 
         if output.shape != target.shape:
             if output.shape[0] > target.shape[0]:
-                output = output[warm_up:]
+                output = output[warmup:]
             elif target.shape[0] > output.shape[0]:
-                target = target[warm_up:]
+                target = target[warmup:]
         return output, target

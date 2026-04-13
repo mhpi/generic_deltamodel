@@ -25,7 +25,7 @@ class HydroSampler(BaseSampler):
         self.config = config
         self.device = config['device']
         self.rho = config['model']['rho']
-        self.warm_up = config['model'].get('warm_up', 0)
+        self.warmup = config['model'].get('warmup', 0)
 
     def load_data(self):
         """Custom implementation for loading data."""
@@ -50,13 +50,13 @@ class HydroSampler(BaseSampler):
         # Handle time indexing and create an empty tensor for selection
         if i_t is not None:
             x_tensor = torch.zeros(
-                [self.rho + self.warm_up, batch_size, nx],
+                [self.rho + self.warmup, batch_size, nx],
                 device=self.device,
                 requires_grad=has_grad,
             )
             for k in range(batch_size):
                 x_tensor[:, k : k + 1, :] = x[
-                    i_t[k] - self.warm_up : i_t[k] + self.rho,
+                    i_t[k] - self.warmup : i_t[k] + self.rho,
                     i_grid[k] : i_grid[k] + 1,
                     :,
                 ]
@@ -70,7 +70,7 @@ class HydroSampler(BaseSampler):
         if c is not None:
             c_tensor = torch.from_numpy(c).float().to(self.device)
             c_tensor = (
-                c_tensor[i_grid].unsqueeze(1).repeat(1, self.rho + self.warm_up, 1)
+                c_tensor[i_grid].unsqueeze(1).repeat(1, self.rho + self.warmup, 1)
             )
             return (
                 (x_tensor, c_tensor)
@@ -92,7 +92,7 @@ class HydroSampler(BaseSampler):
             ngrid_train,
             nt,
             (batch_size, self.rho),
-            warm_up=self.warm_up,
+            warmup=self.warmup,
         )
 
         return {

@@ -227,7 +227,7 @@ def _extract_predictions_and_targets(
             target = target.cpu().numpy()
 
         # Apply warmup removal if needed (same as in trainer.calc_metrics)
-        warmup = config['model']['warm_up']
+        warmup = config['model']['warmup']
         if warmup > 0:
             target = target[warmup:, :, :]
 
