@@ -100,7 +100,9 @@ class MsHydroLoader(BaseLoader):
         dict[str, torch.Tensor]
             Dictionary of data tensors for running models.
         """
-        ac_all, elev_all, subbasin_id_all, x_nn, x_phy, c_nn = self.read_data(scope)
+        ac_all, elev_all, ai_all, subbasin_id_all, x_nn, x_phy, c_nn = self.read_data(
+            scope
+        )
 
         # Remove nan
         x_phy = np.swapaxes(x_phy, 1, 0)
@@ -110,19 +112,10 @@ class MsHydroLoader(BaseLoader):
         self.load_norm_stats()
         xc_nn_norm, c_nn_norm = self.normalize(x_nn, c_nn)
 
-        # Build data dict of Torch tensors
-        # dataset = {
-        #     'ac_all': self.to_tensor(ac_all),
-        #     'elev_all': self.to_tensor(elev_all),
-        #     'subbasin_id_all': self.to_tensor(subbasin_id_all),
-        #     'c_nn': self.to_tensor(c_nn),
-        #     'xc_nn_norm': self.to_tensor(xc_nn_norm),
-        #     'c_nn_norm': self.to_tensor(c_nn_norm),
-        #     'x_phy': self.to_tensor(x_phy),
-        # }
         dataset = {
             'ac_all': ac_all,
             'elev_all': elev_all,
+            'ai_all': ai_all,
             'subbasin_id_all': subbasin_id_all,
             'c_nn': c_nn,
             'xc_nn_norm': xc_nn_norm,
@@ -209,7 +202,7 @@ class MsHydroLoader(BaseLoader):
                     axis=-1,
                 )
 
-        # Get upstream area and elevation
+        # Get upstream area, elevation, and subbasin unit area
         try:
             ac_name = self.config['observations']['upstream_area_name']
             ac_array = root_zone['attrs'][ac_name][:]
@@ -224,10 +217,18 @@ class MsHydroLoader(BaseLoader):
             raise ValueError(
                 "Elevation is not provided. This is needed for high-resolution streamflow model.",
             ) from e
+        try:
+            ai_name = self.config['observations']['subbasin_area_name']
+            ai_array = root_zone['attrs'][ai_name][:]
+        except (ValueError, KeyError) as e:
+            raise ValueError(
+                "Subbasin area (catchment size) is not provided. This is needed for area-weighted aggregation.",
+            ) from e
 
         return [
             ac_array,
             elev_array,
+            ai_array,
             subbasin_id_all,
             forc_array,
             forc_array.copy(),
