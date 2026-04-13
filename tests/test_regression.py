@@ -169,10 +169,12 @@ EXP_ROUTING_BOUNDS = {
 # ---------------------------------------------------------------------------
 
 EXP_FINAL_LOSS_VALUES = [
-    24.07529079914093,  # Local machine loss
-    26.94981688261032,  # GHA runner loss
+    20.376566857099533,  # Local machine loss (warmup=2 applied)
+    24.07529079914093,  # Local machine loss (legacy, pre-warmup-fix)
+    26.94981688261032,  # GHA runner loss (legacy, pre-warmup-fix)
 ]
 EXP_NSE_VALUES = [
+    -31.14540672302246,  # Local machine NSE (warmup=2 applied)
     -33.58369255065918,
     -33.43178367614746,
 ]
