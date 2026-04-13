@@ -73,11 +73,11 @@ def _get_nn_params(dpl_model, dataset):
             return dpl_model.nn_model(dataset['xc_nn_norm'])
 
 
-def compute_mse_loss(dpl_model, model_dataset, warm_up):
+def compute_mse_loss(dpl_model, model_dataset, warmup):
     """Compute MSE loss between model output and target."""
     output = dpl_model(model_dataset)
     streamflow = output['streamflow']
-    target = model_dataset['target'][warm_up:]
+    target = model_dataset['target'][warmup:]
     n = min(streamflow.shape[0], target.shape[0])
     loss = (streamflow[:n] - target[:n]).pow(2).mean()
     return loss, output
