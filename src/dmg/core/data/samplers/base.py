@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 
 import torch
 from numpy.typing import NDArray
@@ -26,16 +26,6 @@ class BaseSampler(Dataset, ABC):
         # Set dtype and device from config or provide defaults
         # self.dtype = self.config.get("dtype", torch.float32)
         # self.device = self.config.get("device", torch.device("cpu"))
-
-    @abstractmethod
-    def load_data(self):
-        """Load data from a specific source."""
-        pass
-
-    @abstractmethod
-    def preprocess_data(self):
-        """Preprocess the data as needed."""
-        pass
 
     def to_tensor(self, data: NDArray) -> torch.Tensor:
         """Convert numpy array to PyTorch tensor.

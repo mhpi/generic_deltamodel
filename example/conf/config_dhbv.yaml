@@ -72,7 +72,7 @@ sim:
 ## Differentiable Model -----------------------------#
 model:
   rho: 365
-  warm_up: 365
+  warmup: 365
   use_log_norm: [prcp]
   output_unit: mm/d  # options: mm/d, m3/s, ft3/s
 
@@ -81,7 +81,7 @@ model:
 
     name: [Hbv]
     nmul: 16
-    warm_up_states: True
+    warmup_states: True
     dy_drop: 0.0
     dynamic_params:
       Hbv: [parBETA, parBETAET]

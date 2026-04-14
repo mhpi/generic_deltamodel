@@ -322,7 +322,7 @@ class PhyModelConfig(BaseModel):
 
     ## Optional defaults for mhpi models ##
     nmul: Optional[int] = None
-    warm_up_states: Optional[bool] = None
+    warmup_states: Optional[bool] = None
     dy_drop: Optional[float] = None
     routing: Optional[bool] = None
 
@@ -390,7 +390,7 @@ class ModelConfig(BaseModel):
     )
 
     ## Optional defaults for mhpi models ##
-    warm_up: Optional[int] = None
+    warmup: Optional[int] = None
     use_log_norm: Optional[list[str]] = None
     flow_regime: Optional[FlowRegimeEnum] = None
     output_unit: Optional[StreamflowUnitEnum] = StreamflowUnitEnum.mm_per_day
@@ -550,7 +550,7 @@ class Config(BaseModel):
         # Assign state caching and warmup to sub-models.
         if self.model.phy:
             self.model.phy.cache_states = self.cache_states
-            self.model.phy.warm_up = self.model.warm_up
+            self.model.phy.warmup = self.model.warmup
         if self.model.nn:
             self.model.nn.cache_states = self.cache_states
 

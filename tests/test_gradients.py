@@ -35,8 +35,8 @@ class TestGradientFlow:
         dpl_model = model.model_dict[model_name]
 
         dpl_model.train()
-        warm_up = model_config['model']['warm_up']
-        loss, _ = compute_mse_loss(dpl_model, model_dataset, warm_up)
+        warmup = model_config['model']['warmup']
+        loss, _ = compute_mse_loss(dpl_model, model_dataset, warmup)
         loss.backward()
 
         for name, param in dpl_model.nn_model.named_parameters():
@@ -57,8 +57,8 @@ class TestGradientFlow:
         dpl_model = model.model_dict[model_name]
 
         dpl_model.train()
-        warm_up = model_config['model']['warm_up']
-        loss, _ = compute_mse_loss(dpl_model, model_dataset, warm_up)
+        warmup = model_config['model']['warmup']
+        loss, _ = compute_mse_loss(dpl_model, model_dataset, warmup)
         loss.backward()
 
         phy_params_with_grad = [
@@ -82,8 +82,8 @@ class TestGradientFlow:
         _skip_if_zero_streamflow(dpl_model, model_dataset)
 
         dpl_model.train()
-        warm_up = model_config['model']['warm_up']
-        loss, _ = compute_mse_loss(dpl_model, model_dataset, warm_up)
+        warmup = model_config['model']['warmup']
+        loss, _ = compute_mse_loss(dpl_model, model_dataset, warmup)
         loss.backward()
 
         nonzero_count = 0
@@ -131,7 +131,7 @@ class TestGradientMechanics:
     ):
         """Verify gradient computation is deterministic given same inputs."""
         model_name = get_phy_model_name(model_config)
-        warm_up = model_config['model']['warm_up']
+        warmup = model_config['model']['warmup']
 
         set_randomseed(model_config['seed'])
         model1 = ModelHandler(model_config)
@@ -147,10 +147,10 @@ class TestGradientMechanics:
 
         # But we still need grad computation, so use enable_grad.
         with torch.enable_grad():
-            loss1, _ = compute_mse_loss(dpl1, model_dataset, warm_up)
+            loss1, _ = compute_mse_loss(dpl1, model_dataset, warmup)
             loss1.backward()
 
-            loss2, _ = compute_mse_loss(dpl2, model_dataset, warm_up)
+            loss2, _ = compute_mse_loss(dpl2, model_dataset, warmup)
             loss2.backward()
 
         for (name1, p1), (name2, p2) in zip(
@@ -191,14 +191,14 @@ class TestGradientMechanics:
         """Verify gradients accumulate correctly without zero_grad."""
         set_randomseed(model_config['seed'])
         model_name = get_phy_model_name(model_config)
-        warm_up = model_config['model']['warm_up']
+        warmup = model_config['model']['warmup']
 
         model = ModelHandler(model_config)
         dpl_model = model.model_dict[model_name]
         _skip_if_zero_streamflow(dpl_model, model_dataset)
         dpl_model.train()
 
-        loss1, _ = compute_mse_loss(dpl_model, model_dataset, warm_up)
+        loss1, _ = compute_mse_loss(dpl_model, model_dataset, warmup)
         loss1.backward()
 
         first_grads = {
@@ -207,7 +207,7 @@ class TestGradientMechanics:
             if param.grad is not None and param.grad.norm() > 1e-10
         }
 
-        loss2, _ = compute_mse_loss(dpl_model, model_dataset, warm_up)
+        loss2, _ = compute_mse_loss(dpl_model, model_dataset, warmup)
         loss2.backward()
 
         accumulated = 0

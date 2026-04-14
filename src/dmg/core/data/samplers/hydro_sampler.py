@@ -25,15 +25,7 @@ class HydroSampler(BaseSampler):
         self.config = config
         self.device = config['device']
         self.rho = config['model']['rho']
-        self.warm_up = config['model'].get('warm_up', 0)
-
-    def load_data(self):
-        """Custom implementation for loading data."""
-        print("Loading data...")
-
-    def preprocess_data(self):
-        """Custom implementation for preprocessing data."""
-        print("Preprocessing data...")
+        self.warmup = config['model'].get('warmup', 0)
 
     def select_subset(
         self,
@@ -43,35 +35,63 @@ class HydroSampler(BaseSampler):
         c: Optional[NDArray[np.float32]] = None,
         tuple_out: bool = False,
         has_grad: bool = False,
+        warmup: Optional[int] = None,
+        device: Optional[str] = None,
     ) -> torch.Tensor:
-        """Select a subset of input tensor."""
+        """Select a subset of input tensor.
+
+        Parameters
+        ----------
+        x
+            Input tensor to select from.
+        i_grid
+            Grid indices for selection.
+        i_t
+            Time indices for selection (optional).
+        c
+            Additional context for selection (optional).
+        tuple_out
+            Whether to return a tuple of (x_tensor, c_tensor) or concatenate them.
+        has_grad
+            Whether the output tensor requires gradients.
+        warmup
+            Optional warmup period to override the default.
+        device
+            Optional device to override the default.
+
+        Returns
+        -------
+        torch.Tensor
+            Selected subset of the input tensor, optionally concatenated with
+            context.
+        """
+        device = device if device is not None else self.device
+        warmup = warmup if warmup is not None else self.warmup
         batch_size, nx = len(i_grid), x.shape[-1]
 
         # Handle time indexing and create an empty tensor for selection
         if i_t is not None:
             x_tensor = torch.zeros(
-                [self.rho + self.warm_up, batch_size, nx],
-                device=self.device,
+                [self.rho + warmup, batch_size, nx],
+                device=device,
                 requires_grad=has_grad,
             )
             for k in range(batch_size):
                 x_tensor[:, k : k + 1, :] = x[
-                    i_t[k] - self.warm_up : i_t[k] + self.rho,
+                    i_t[k] - warmup : i_t[k] + self.rho,
                     i_grid[k] : i_grid[k] + 1,
                     :,
                 ]
         else:
             x_tensor = (
-                x[:, i_grid, :].float().to(self.device)
+                x[:, i_grid, :].float().to(device)
                 if x.ndim == 3
-                else x[i_grid, :].float().to(self.device)
+                else x[i_grid, :].float().to(device)
             )
 
         if c is not None:
-            c_tensor = torch.from_numpy(c).float().to(self.device)
-            c_tensor = (
-                c_tensor[i_grid].unsqueeze(1).repeat(1, self.rho + self.warm_up, 1)
-            )
+            c_tensor = torch.from_numpy(c).float().to(device)
+            c_tensor = c_tensor[i_grid].unsqueeze(1).repeat(1, self.rho + warmup, 1)
             return (
                 (x_tensor, c_tensor)
                 if tuple_out
@@ -92,7 +112,7 @@ class HydroSampler(BaseSampler):
             ngrid_train,
             nt,
             (batch_size, self.rho),
-            warm_up=self.warm_up,
+            warmup=self.warmup,
         )
 
         return {
@@ -105,7 +125,7 @@ class HydroSampler(BaseSampler):
                 i_t,
                 has_grad=False,
             ),
-            'target': self.select_subset(dataset['target'], i_sample, i_t),
+            'target': self.select_subset(dataset['target'], i_sample, i_t, warmup=0),
             'batch_sample': i_sample,
         }
 

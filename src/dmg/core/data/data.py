@@ -84,7 +84,7 @@ def random_index(
     ngrid: int,
     nt: int,
     dim_subset: tuple[int, int],
-    warm_up: int = 0,
+    warmup: int = 0,
 ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
     """Generate random indices for grid and time.
 
@@ -96,7 +96,7 @@ def random_index(
         Number of time steps.
     dim_subset
         Tuple of batch size and rho.
-    warm_up
+    warmup
         Number of warm-up time steps.
 
     Returns
@@ -106,7 +106,7 @@ def random_index(
     """
     batch_size, rho = dim_subset
     i_grid = np.random.randint(0, ngrid, size=batch_size)
-    i_t = np.random.randint(0 + warm_up, nt - rho, size=batch_size)
+    i_t = np.random.randint(0 + warmup, nt - rho, size=batch_size)
     return i_grid, i_t
 
 
@@ -142,16 +142,16 @@ def create_training_grid(
     rho = min(t.shape[0], config['model']['rho'])
 
     if config['model']:
-        warm_up = config['model'].get('warm_up', 0)
+        warmup = config['model'].get('warmup', 0)
     else:
-        warm_up = 0
+        warmup = 0
 
     # Calculate number of iterations per epoch.
     n_iter_ep = int(
         np.ceil(
             np.log(0.01)
             / np.log(
-                1 - config['train']['batch_size'] * rho / n_samples / (n_t - warm_up),
+                1 - config['train']['batch_size'] * rho / n_samples / (n_t - warmup),
             ),
         ),
     )
@@ -172,7 +172,7 @@ def select_subset(
     c: Optional[NDArray[np.float32]] = None,
     tuple_out: bool = False,
     has_grad: bool = False,
-    warm_up: int = 0,
+    warmup: int = 0,
 ) -> torch.Tensor:
     """Select a subset of input array.
 
@@ -194,7 +194,7 @@ def select_subset(
         If True, return a tuple of tensors.
     has_grad
         If True, create tensors with gradient tracking.
-    warm_up
+    warmup
         Number of warm-up time steps.
 
     Returns
@@ -212,10 +212,10 @@ def select_subset(
     batch_size = i_grid.shape[0]
 
     if i_t is not None:
-        x_tensor = torch.zeros([rho + warm_up, batch_size, nx], requires_grad=has_grad)
+        x_tensor = torch.zeros([rho + warmup, batch_size, nx], requires_grad=has_grad)
         for k in range(batch_size):
             temp = x[
-                np.arange(i_t[k] - warm_up, i_t[k] + rho),
+                np.arange(i_t[k] - warmup, i_t[k] + rho),
                 i_grid[k] : i_grid[k] + 1,
                 :,
             ]
@@ -233,7 +233,7 @@ def select_subset(
         nc = c.shape[-1]
         temp = np.repeat(
             np.reshape(c[i_grid, :], [batch_size, 1, nc]),
-            rho + warm_up,
+            rho + warmup,
             axis=1,
         )
         c_tensor = torch.from_numpy(temp).float()

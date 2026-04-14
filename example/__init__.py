@@ -74,13 +74,13 @@ def take_data_sample(
         if value.ndim == 3:
             # Determine warm-up period based on the key
             if key in ['x_phy', 'xc_nn_norm']:
-                warm_up = 0
+                warmup = 0
             else:
-                warm_up = config['model']['warm_up']
+                warmup = config['model']['warmup']
 
             # Clone and detach the tensor to avoid the warning
             dataset_sample[key] = (
-                value[warm_up:days, :basins, :]
+                value[warmup:days, :basins, :]
                 .clone()
                 .detach()
                 .to(dtype=torch.float32, device=config['device'])
@@ -103,12 +103,12 @@ def take_data_sample(
     # Adjust the 'target' tensor based on the configuration
     if (
         'HBV1_1p' in config['model']['phy']['name']
-        and config['model']['phy']['warm_up_states']
+        and config['model']['phy']['warmup_states']
         and config['multimodel_type'] == 'none'
     ):
         pass  # Keep 'warmup' days for dHBV1.1p
     else:
-        warm_up = config['model']['warm_up']
-        dataset_sample['target'] = dataset_sample['target'][warm_up:days, :basins]
+        warmup = config['model']['warmup']
+        dataset_sample['target'] = dataset_sample['target'][warmup:days, :basins]
 
     return dataset_sample

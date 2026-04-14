@@ -139,7 +139,7 @@ def test_model_serialization(model_config, model_dataset, tmp_path):
     """Test saving and loading DplModel states."""
     set_randomseed(model_config['seed'])
     model_name = get_phy_model_name(model_config)
-    warm_up = model_config['model']['warm_up']
+    warmup = model_config['model']['warmup']
 
     model1 = ModelHandler(model_config)
     dpl1 = model1.model_dict[model_name]
@@ -148,7 +148,7 @@ def test_model_serialization(model_config, model_dataset, tmp_path):
     dpl1.train()
     for _ in range(3):
         optimizer.zero_grad()
-        loss, _ = compute_mse_loss(dpl1, model_dataset, warm_up)
+        loss, _ = compute_mse_loss(dpl1, model_dataset, warmup)
         loss.backward()
         optimizer.step()
 

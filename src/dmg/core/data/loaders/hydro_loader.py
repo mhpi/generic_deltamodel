@@ -429,17 +429,43 @@ class HydroLoader(BaseLoader):
         target: NDArray[np.float32],
     ) -> None:
         """Load or calculate normalization statistics if necessary."""
-        self.out_path = os.path.join(
-            self.config['model_dir'],
-            'normalization_statistics.json',
-        )
+        # Look for pretrained norm stats first (critical for test/eval mode).
+        pretrained_dir = self.config.get('pretrained_model_dir')
+        if pretrained_dir:
+            pretrained_stats = os.path.join(
+                pretrained_dir,
+                'normalization_statistics.json',
+            )
+            if os.path.isfile(pretrained_stats):
+                self.out_path = pretrained_stats
+            else:
+                self.out_path = os.path.join(
+                    self.config['model_dir'],
+                    'normalization_statistics.json',
+                )
+        else:
+            self.out_path = os.path.join(
+                self.config['model_dir'],
+                'normalization_statistics.json',
+            )
 
+        recompute = False
         if os.path.isfile(self.out_path) and (not self.overwrite):
             if not self.norm_stats:
                 with open(self.out_path) as f:
                     self.norm_stats = json.load(f)
+
+            # Check if target and forcing variable names are in cached stats.
+            missing_target = [v for v in self.target if v not in self.norm_stats]
+            if missing_target:
+                recompute = True
+            missing_forcings = [v for v in self.nn_forcings if v not in self.norm_stats]
+            if missing_forcings:
+                recompute = True
         else:
-            # Init normalization stats if file doesn't exist or overwrite is True.
+            recompute = True
+
+        if recompute:
             self.norm_stats = self._init_norm_stats(x_nn, c_nn, target)
 
     def _init_norm_stats(
@@ -503,10 +529,9 @@ class HydroLoader(BaseLoader):
         self,
         x: NDArray[np.float32],
         basin_area: NDArray[np.float32] = None,
-    ) -> list[float]:
-        """
-        Calculate statistics for normalization with optional basin
-        area adjustment.
+    ) -> tuple[float, ...]:
+        """Calculate Gaussian normalization statistics with optional basin area
+        adjustment. 10th percentile, 90th percentile, mean, std.
 
         Parameters
         ----------
@@ -517,8 +542,8 @@ class HydroLoader(BaseLoader):
 
         Returns
         -------
-        list[float]
-            List of statistics [10th percentile, 90th percentile, mean, std].
+        tuple[float, ...]
+            Tuple of statistics [10th percentile, 90th percentile, mean, std].
         """
         # Handle invalid values
         x[x == -999] = np.nan
@@ -554,10 +579,11 @@ class HydroLoader(BaseLoader):
         mean = np.mean(transformed).astype(float)
         std = np.std(transformed).astype(float)
 
-        return [p10, p90, mean, max(std, 0.001)]
+        return (p10, p90, mean, max(std, 0.001))
 
-    def _calc_gamma_stats(self, x: NDArray[np.float32]) -> list[float]:
-        """Calculate gamma statistics for streamflow and precipitation data.
+    def _calc_gamma_stats(self, x: NDArray[np.float32]) -> tuple[float, ...]:
+        """Calculate log-sqrt (gamma) normalization statistics. 10th percentile,
+        90th percentile, mean, std.
 
         Parameters
         ----------
@@ -566,8 +592,8 @@ class HydroLoader(BaseLoader):
 
         Returns
         -------
-        list[float]
-            List of statistics [10th percentile, 90th percentile, mean, std].
+        tuple[float, ...]
+            Tuple of statistics [10th percentile, 90th percentile, mean, std].
         """
         a = np.swapaxes(x, 1, 0).flatten()
         b = a[(~np.isnan(a))]
@@ -577,7 +603,7 @@ class HydroLoader(BaseLoader):
         mean = np.mean(b).astype(float)
         std = np.std(b).astype(float)
 
-        return [p10, p90, mean, max(std, 0.001)]
+        return (p10, p90, mean, max(std, 0.001))
 
     def _get_basin_area(self, c_nn: NDArray[np.float32]) -> NDArray[np.float32]:
         """Get basin area from attributes.

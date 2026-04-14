@@ -38,8 +38,8 @@ class TestParameterConvergence:
         _skip_if_zero_streamflow(dpl_model, model_dataset)
         optimizer = torch.optim.Adam(dpl_model.parameters(), lr=0.01)
 
-        warm_up = model_config['model']['warm_up']
-        target = model_dataset['target'][warm_up:]
+        warmup = model_config['model']['warmup']
+        target = model_dataset['target'][warmup:]
 
         param_history = []
         dpl_model.train()
@@ -79,8 +79,8 @@ class TestParameterConvergence:
         _skip_if_zero_streamflow(dpl_model, model_dataset)
         optimizer = torch.optim.Adam(dpl_model.parameters(), lr=0.01)
 
-        warm_up = model_config['model']['warm_up']
-        target = model_dataset['target'][warm_up:]
+        warmup = model_config['model']['warmup']
+        target = model_dataset['target'][warmup:]
 
         dpl_model.train()
 

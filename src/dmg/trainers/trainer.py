@@ -637,13 +637,13 @@ class Trainer(BaseTrainer):
             converted to match the output unit of predictions.
         """
         target_name = self.config['train']['target'][0]
-        warm_up = self.config['model'].get('warm_up', 0)
+        warmup = self.config['model'].get('warmup', 0)
         pred = predictions[target_name]
         if pred.ndim == 2:
             pred = np.expand_dims(pred, 2)
         target = np.expand_dims(observations[:, :, 0], 2)
 
-        target = target[warm_up:, :]
+        target = target[warmup:, :]
 
         # Compute metrics
         metrics = Metrics(

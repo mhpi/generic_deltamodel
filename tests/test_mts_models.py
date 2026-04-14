@@ -70,12 +70,12 @@ def mts_config():
         },
         'model': {
             'rho': 10,
-            'warm_up': 2,
+            'warmup': 2,
             'use_log_norm': ['prcp'],
             'phy': {
                 'name': ['Hbv_2_mts'],  # Multi-timescale physics model
                 'nmul': 1,
-                'warm_up_states': True,
+                'warmup_states': True,
                 'dy_drop': 0.0,
                 'dynamic_params': {
                     'Hbv_2_mts': ['parBETA', 'parBETAET'],

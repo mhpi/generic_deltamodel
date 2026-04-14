@@ -887,7 +887,7 @@ def startid_endid(
     start_date: pd.Timestamp,
     forecast: int,
     config: dict[str, Any],
-    warm_up: int = 0,
+    warmup: int = 0,
 ) -> tuple[int, int, np.ndarray, int]:
     """Get start/end time indices and history length for a forecast run.
 
@@ -900,7 +900,7 @@ def startid_endid(
     config
         Model configuration dict (must contain 'sim' and
         'model.rho' keys).
-    warm_up
+    warmup
         Model warm-up length in days (used to compute history_len).
 
     Returns
@@ -909,7 +909,7 @@ def startid_endid(
         (sidx, eidx, timesteps, history_len) where sidx is the index
         of start_date in the simulation time axis, eidx = sidx +
         forecast, timesteps is the full daily time axis, and
-        history_len = len(timesteps) - warm_up - forecast.
+        history_len = len(timesteps) - warmup - forecast.
     """
     timesteps = Dates(
         config["sim"],
@@ -917,7 +917,7 @@ def startid_endid(
     ).batch_daily_time_range
     sidx = np.where(timesteps == start_date)[0][0]
     eidx = sidx + forecast
-    history_len = len(timesteps) - warm_up - forecast
+    history_len = len(timesteps) - warmup - forecast
     return sidx, eidx, timesteps, history_len
 
 
@@ -1210,8 +1210,8 @@ def run_warm_forecasts_restart(
     phy_model = model.model_dict[name].phy_model
 
     phy_model.cache_states = True
-    phy_model.warm_up = 0
-    phy_model.warm_up_states = True
+    phy_model.warmup = 0
+    phy_model.warmup_states = True
 
     for ens_id in range(N_ENSEMBLES):
         model.load_states(path=state_path)
@@ -1288,9 +1288,9 @@ def run_segment(
     name: Optional[str] = None,
     start_idx: Optional[int] = None,
     end_idx: Optional[int] = None,
-    warm_up: int = 0,
+    warmup: int = 0,
     cache_states: bool = False,
-    warm_up_states: bool = True,
+    warmup_states: bool = True,
     state_path: Optional[str] = None,
 ) -> np.ndarray:
     """Run the LSTM -> HBV pipeline on a single basin time segment.
@@ -1315,11 +1315,11 @@ def run_segment(
         Start of the time slice (Python slice semantics).
     end_idx
         End of the time slice (Python slice semantics).
-    warm_up
+    warmup
         Warm-up days to pass to the physics model.
     cache_states
         Whether the physics model should cache its end states.
-    warm_up_states
+    warmup_states
         Whether to use warm-up states during the forward pass.
     state_path
         If given, load saved model states before the forward pass.
@@ -1345,9 +1345,9 @@ def run_segment(
         ].clone(),
     }
 
-    phy_model.warm_up = warm_up
+    phy_model.warmup = warmup
     phy_model.cache_states = cache_states
-    phy_model.warm_up_states = warm_up_states
+    phy_model.warmup_states = warmup_states
 
     model.eval()
 

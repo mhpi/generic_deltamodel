@@ -65,7 +65,7 @@ sim:
 ## Differentiable Model -----------------------------#
 model:
   rho: 365
-  warm_up: 365
+  warmup: 365
   output_unit: mm/d  # options: mm/d, m3/s, ft3/s
 
   phy:

@@ -105,12 +105,12 @@ def _hbv_config_dict():
         **_SHARED_CONFIG,
         'model': {
             'rho': 10,
-            'warm_up': 2,
+            'warmup': 2,
             'use_log_norm': ['prcp'],
             'phy': {
                 'name': ['Hbv'],
                 'nmul': 1,
-                'warm_up_states': True,
+                'warmup_states': True,
                 'dy_drop': 0.0,
                 'dynamic_params': {'Hbv': ['parBETA', 'parBETAET']},
                 'routing': True,
@@ -137,12 +137,12 @@ def _hbv_1_1p_config_dict():
         **_SHARED_CONFIG,
         'model': {
             'rho': 10,
-            'warm_up': 2,
+            'warmup': 2,
             'use_log_norm': ['prcp'],
             'phy': {
                 'name': ['Hbv_1_1p'],
                 'nmul': 1,
-                'warm_up_states': False,
+                'warmup_states': False,
                 'dy_drop': 0.0,
                 'dynamic_params': {
                     'Hbv_1_1p': ['parBETA', 'parK0', 'parBETAET'],
@@ -171,12 +171,12 @@ def _hbv_2_config_dict():
         **_SHARED_CONFIG,
         'model': {
             'rho': 10,
-            'warm_up': 2,
+            'warmup': 2,
             'use_log_norm': ['prcp'],
             'phy': {
                 'name': ['Hbv_2'],
                 'nmul': 1,
-                'warm_up_states': True,
+                'warmup_states': True,
                 'dy_drop': 0.0,
                 'dynamic_params': {
                     'Hbv_2': ['parBETA', 'parK0', 'parBETAET'],

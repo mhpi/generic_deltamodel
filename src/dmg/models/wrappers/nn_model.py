@@ -83,10 +83,10 @@ class NnModel(torch.nn.Module):
             The output predictions.
         """
         prediction = self.nn_model(data_dict['xc_nn_norm'])
-        warm_up = self.config.get('model', {}).get('warm_up', 0)
+        warmup = self.config.get('model', {}).get('warmup', 0)
 
         out_dict = {}
         for name in self.target_names:
-            out_dict[name] = prediction[warm_up:, ...]
+            out_dict[name] = prediction[warmup:, ...]
 
         return out_dict
