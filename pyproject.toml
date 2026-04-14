@@ -66,7 +66,8 @@ geo = [
     "cartopy",
 ]
 hydrodl2 = [
-    "hydrodl2"
+    "hydrodl2 @ git+https://github.com/mhpi/hydrodl2.git@master", # temp since PyPI randomly quarantined the package
+    # "hydrodl2"
 ]
 logging = [
     "tensorboard",
