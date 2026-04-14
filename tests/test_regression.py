@@ -170,6 +170,7 @@ EXP_ROUTING_BOUNDS = {
 
 EXP_FINAL_LOSS_VALUES = [
     20.376566857099533,  # Local machine loss (warmup=2 applied)
+    23.238269597291946,  # GHA runner loss (warmup=2 applied)
     24.07529079914093,  # Local machine loss (legacy, pre-warmup-fix)
     26.94981688261032,  # GHA runner loss (legacy, pre-warmup-fix)
 ]

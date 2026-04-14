@@ -82,7 +82,7 @@ Homepage = "https://mhpi.github.io/codes/frameworks/"
 Repository = "https://github.com/mhpi/generic_deltamodel"
 Documentation = "https://github.com/mhpi/generic_deltamodel/tree/master/docs"
 Issues = "https://github.com/mhpi/generic_deltamodel/issues"
-Changelog = "https://github.com/mhpi/hydrodl2/blob/master/docs/CHANGELOG.md"
+Changelog = "https://github.com/mhpi/generic_deltamodel/blob/master/docs/CHANGELOG.md"
 
 [tool.hatch]
 version.source = "vcs"
