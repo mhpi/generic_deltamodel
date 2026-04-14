@@ -175,6 +175,7 @@ EXP_FINAL_LOSS_VALUES = [
     26.94981688261032,  # GHA runner loss (legacy, pre-warmup-fix)
 ]
 EXP_NSE_VALUES = [
+    -30.995567321777344,  # GHA runner NSE (warmup=2 applied)
     -31.14540672302246,  # Local machine NSE (warmup=2 applied)
     -33.58369255065918,
     -33.43178367614746,
