@@ -1,5 +1,6 @@
 <p align="center">
-  <img src="./docs/images/dmg.drawio.svg" alt="𝛿MG logo" width="300">
+  <img src="https://raw.githubusercontent.com/mhpi/generic_deltamodel/master/docs/images/dmg.drawio.svg" alt="𝛿MG logo" width="300">
+
 </p>
 
 <h1 align="center">PyTorch Differentiable Modeling Framework</h1>
@@ -43,7 +44,8 @@ uv pip install "dmg[logging]"     # TensorBoard and W&B
 uv pip install "dmg[tune]"        # Hyperparameter tuning (Optuna/Ray)
 ```
 
-For development installs, see [setup](./docs/setup.md).
+For development installs, see [setup](https://github.com/mhpi/generic_deltamodel/blob/main/docs/setup.md)
+.
 
 </br>
 
@@ -78,7 +80,7 @@ parameters = self.nn_model(dataset_sample['xc_nn_norm'])
 predictions = self.phy_model(dataset_sample, parameters)
 ```
 
-We recommend starting with the [δHBV 1.0 tutorial](./example/hydrology/example_dhbv_1_0.ipynb) ([Colab](https://colab.research.google.com/drive/19PRLrI-L7cGeYzkk2tOetULzQK8s_W7v?usp=sharing)), then exploring the full [example notebooks](https://github.com/mhpi/generic_deltamodel/tree/master/example/hydrology). See [how to run](./docs/how_to_run.md) for CLI usage.
+We recommend starting with the [δHBV 1.0 tutorial](https://github.com/mhpi/generic_deltamodel/blob/master/example/hydrology/example_dhbv_1_0.ipynb) ([Colab](https://colab.research.google.com/drive/19PRLrI-L7cGeYzkk2tOetULzQK8s_W7v?usp=sharing)), then exploring the full [example notebooks](https://github.com/mhpi/generic_deltamodel/tree/master/example/hydrology). See [how to run](https://github.com/mhpi/generic_deltamodel/blob/main/docs/how_to_run.md) for CLI usage.
 
 </br>
 
@@ -92,19 +94,19 @@ Lumped differentiable rainfall-runoff models [𝛿HBV 1.0](https://agupubs.onlin
 
 In the unseen extreme events spatial test, we used water years with a 5-year or lower return period peak flow from 1990/10/01 to 2014/09/30 for training, and held out the water years with greater than a 5-year return period peak flow for testing. The spatial test was conducted using a 5-fold cross-validation approach for basins in the [CAMELS dataset](https://gdex.ucar.edu/dataset/camels.html). This application has been benchmarked against LSTM and demonstrates better extrapolation abilities. Find more details and results in [Song, Sawadekar, et al. (2024)](https://essopenarchive.org/doi/full/10.22541/essoar.172304428.82707157).
 
-![Alt text](./docs/images/extreme_temporal.png)
+![Unseen extreme events](https://raw.githubusercontent.com/mhpi/generic_deltamodel/master/docs/images/extreme_temporal.png)
 
 ### 3. National- and Global-scale Distributed Modeling
 
 A national-scale water modeling study on approximately 180,000 river reaches (with a median length of 7 km) across CONUS using the high-resolution, multiscale, differentiable water model 𝛿HBV 2.0. This model is also operating at global scales ([Ji, Song, et al., 2025](https://www.nature.com/articles/s41467-025-64367-1)) and has been used to generate high-quality, seamless simulations for both [CONUS](https://zenodo.org/records/15784945) and the [globe](https://zenodo.org/records/17552954). Find more details and results in [Song, Bindas, et al. (2025)](https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2024WR038928).
 
-![Alt text](./docs/images/conus_dataset.jpg)
+![Seamless streamflow simulation](https://raw.githubusercontent.com/mhpi/generic_deltamodel/master/docs/images/conus_dataset.jpg)
 
 ### 4. Global-scale Photosynthesis Modeling
 
 Differentiable modeling has also been applied to parameterize global-scale sapflow simulations. This work is currently in development; see [Aboelyazeed et al. (2024)](https://doi.org/10.22541/au.173101418.87755465/v1) for more details.
 
-![Alt text](./docs/images/ecosystems_global_vcmax.png)
+![Global-scale photosynthesis model](https://raw.githubusercontent.com/mhpi/generic_deltamodel/master/docs/images/ecosystems_global_vcmax.png)
 
 </br>
 
@@ -112,12 +114,12 @@ Differentiable modeling has also been applied to parameterize global-scale sapfl
 
 | | |
 |---|---|
-| [Setup](./docs/setup.md) | Installation options (PyPI, pip, UV, Conda) |
-| [How to Run](./docs/how_to_run.md) | CLI usage and custom model development |
-| [Configuration](./docs/configuration.md) | Config file system and full settings glossary |
-| [API Reference](./docs/api_reference.md) | Public API — models, loss functions, NNs, utilities |
-| [Examples](./example/hydrology/) | Jupyter notebook tutorials |
-| [Changelog](./docs/CHANGELOG.md) | Release history |
+| [Setup](https://github.com/mhpi/generic_deltamodel/blob/master/docs/setup.md) | Installation options (PyPI, pip, UV, Conda) |
+| [How to Run](https://github.com/mhpi/generic_deltamodel/blob/master/docs/how_to_run.md) | CLI usage and custom model development |
+| [Configuration](https://github.com/mhpi/generic_deltamodel/blob/master/docs/configuration.md) | Config file system and full settings glossary |
+| [API Reference](https://github.com/mhpi/generic_deltamodel/blob/master/docs/api_reference.md) | Public API — models, loss functions, NNs, utilities |
+| [Examples](https://github.com/mhpi/generic_deltamodel/tree/master/example/hydrology) | Jupyter notebook tutorials |
+| [Changelog](https://github.com/mhpi/generic_deltamodel/blob/master/docs/CHANGELOG.md) | Release history |
 
 </br>
 
@@ -174,7 +176,7 @@ This work is maintained by [MHPI](http://water.engr.psu.edu/shen/) and advised b
 
 ## Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](./docs/CONTRIBUTING.md) for details.
+We welcome contributions! See [CONTRIBUTING.md](https://github.com/mhpi/generic_deltamodel/blob/master/docs/CONTRIBUTING.md) for details.
 
 ---
 
