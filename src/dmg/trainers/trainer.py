@@ -79,12 +79,12 @@ class Trainer(BaseTrainer):
         write_out: Optional[bool] = True,
         verbose: Optional[bool] = False,
     ) -> None:
-        self.config = config
-        self.model = model or ModelHandler(config, verbose=verbose)
+        super().__init__(config, model)
+        self.model = self.model or ModelHandler(config, verbose=verbose)
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
         self.dataset = dataset
-        self.optimizer = optimizer
+        self.optimizer = optimizer  # overrides base None if caller supplies one
         self.scheduler = scheduler
         self.write_out = write_out
         self.verbose = verbose

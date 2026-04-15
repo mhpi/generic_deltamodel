@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 
 import torch
 from numpy.typing import NDArray
@@ -10,22 +10,22 @@ class BaseSampler(Dataset, ABC):
 
     All data samplers should inherit from this class to enforce minimum
     requirements for use within dMG.
-
-    Parameters
-    ----------
-    config : dict
-        The configuration dictionary.
     """
 
     def __init__(
         self,
     ):
         super().__init__()
-        # self.config = config
+        self.dtype = torch.float32
+        self.device = torch.device("cpu")
 
-        # Set dtype and device from config or provide defaults
-        # self.dtype = self.config.get("dtype", torch.float32)
-        # self.device = self.config.get("device", torch.device("cpu"))
+    @abstractmethod
+    def get_training_sample(self, dataset: dict, *args, **kwargs) -> dict:
+        """Generate a training batch from the dataset."""
+
+    @abstractmethod
+    def get_validation_sample(self, dataset: dict, *args, **kwargs) -> dict:
+        """Generate a batch for validation/evaluation."""
 
     def to_tensor(self, data: NDArray) -> torch.Tensor:
         """Convert numpy array to PyTorch tensor.
@@ -49,7 +49,11 @@ class BaseSampler(Dataset, ABC):
 
     def validate_config(self):
         """Validate the configuration dictionary to ensure required keys."""
-        required_keys = ["dtype", "device"]  # Add required keys here
+        if not hasattr(self, 'config') or self.config is None:
+            raise AttributeError(
+                "Subclass must set self.config before calling validate_config."
+            )
+        required_keys = ["dtype", "device"]
         for key in required_keys:
             if key not in self.config:
                 raise ValueError(f"Missing required config key: {key}")

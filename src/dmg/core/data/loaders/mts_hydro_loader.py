@@ -23,8 +23,7 @@ class MtsHydroLoader(BaseLoader):
     """MTS hydrological data loader."""
 
     def __init__(self, config: dict[str, Any]) -> None:
-        super().__init__()
-        self.config = config
+        super().__init__(config=config)
 
         observation_paths = config['observations']['observation']
         path_forcing = Path(observation_paths['path_forcing'])

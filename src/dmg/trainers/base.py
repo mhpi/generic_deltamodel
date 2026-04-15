@@ -1,9 +1,12 @@
+import logging
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
 import torch
 
 from dmg.core.logging.factory import get_exp_logger
+
+log = logging.getLogger(__name__)
 
 
 class BaseTrainer(ABC):
@@ -53,8 +56,8 @@ class BaseTrainer(ABC):
 
     @abstractmethod
     def inference(self) -> None:
-        """Run testing loop and save results."""
-        raise NotImplementedError("Derived classes must implement `evaluate` method.")
+        """Run inference (simulation) without computing loss or metrics."""
+        raise NotImplementedError("Derived classes must implement `inference` method.")
 
     @abstractmethod
     def calc_metrics(
@@ -86,8 +89,9 @@ class BaseTrainer(ABC):
         if self.model is None:
             raise ValueError("Model is not initialized. Cannot save model.")
         model_path = self.config.get("save_path", "./model.pth")
-        torch.save(self.model.state_dict(), f"{model_path}_epoch_{epoch}.pth")
-        print(f"Model saved to {model_path}_epoch_{epoch}.pth")
+        save_path = f"{model_path}_epoch_{epoch}.pth"
+        torch.save(self.model.state_dict(), save_path)
+        log.info(f"Model saved to {save_path}")
 
     def load_model(self, checkpoint_path: str) -> None:
         """Load model from a checkpoint.
@@ -99,18 +103,20 @@ class BaseTrainer(ABC):
         """
         if self.model is None:
             raise ValueError("Model is not initialized. Cannot load model.")
-        self.model.load_state_dict(torch.load(checkpoint_path))
-        print(f"Model loaded from {checkpoint_path}")
+        self.model.load_state_dict(
+            torch.load(checkpoint_path, weights_only=True),
+        )
+        log.info(f"Model loaded from {checkpoint_path}")
 
     def log_config(self) -> None:
         """Log the configuration details."""
-        print("Trainer Configuration:")
+        log.info("Trainer Configuration:")
         for key, value in self.config.items():
-            print(f"{key}: {value}")
+            log.info(f"  {key}: {value}")
 
     def validate_config(self) -> None:
         """Ensure the configuration contains required keys."""
-        required_keys = ['rain', 'test', 'delta_model']
+        required_keys = ['train', 'test', 'model']
         missing_keys = [key for key in required_keys if key not in self.config]
         if missing_keys:
             raise ValueError(f"Configuration is missing required keys: {missing_keys}")

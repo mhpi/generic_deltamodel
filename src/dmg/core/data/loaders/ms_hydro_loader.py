@@ -40,10 +40,7 @@ class MsHydroLoader(BaseLoader):
         test_split: Optional[bool] = False,
         overwrite: Optional[bool] = False,
     ) -> None:
-        super().__init__()
-        self.config = config
-        self.test_split = test_split
-        self.overwrite = overwrite
+        super().__init__(config=config, test_split=test_split, overwrite=overwrite)
         self.supported_data = [
             'merit',
             'merit71',

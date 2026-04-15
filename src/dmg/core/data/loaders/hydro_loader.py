@@ -64,10 +64,7 @@ class HydroLoader(BaseLoader):
         overwrite: Optional[bool] = False,
         holdout_index: Optional[int] = None,
     ) -> None:
-        super().__init__()
-        self.config = config
-        self.test_split = test_split
-        self.overwrite = overwrite
+        super().__init__(config=config, test_split=test_split, overwrite=overwrite)
         self.holdout_index = holdout_index
         self.supported_data = [
             'camels_671',
