@@ -324,7 +324,7 @@ class Metrics(BaseModel):
         ]
         header = ', '.join(name for name, _ in columns)
         values = ', '.join(
-            f'{np.nanmedian(arr):.6f}' if arr.size > 0 else 'N/A' for _, arr in columns
+            f'{np.nanmedian(arr):.6f}' if len(arr) > 0 else 'N/A' for _, arr in columns
         )
         print(f"\nMedian Metrics Summary\n{header}\n{values}\n")
 
