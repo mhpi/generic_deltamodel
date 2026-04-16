@@ -413,7 +413,7 @@ class DistributedDataReader:
         runoff_times = pd.date_range(
             start=runoff_start_time,
             periods=xr_runoff['time'].shape[0],
-            freq='h',
+            freq='H',
         )
         runoff_time_indexes = np.where(runoff_times.year.isin(years))[0]
         gauge_runoff = xr_runoff['gauge'].data
@@ -627,7 +627,7 @@ class DistributedDataReader:
         runoff_times = pd.date_range(
             start=runoff_start_time,
             periods=xr_runoff['time'].shape[0],
-            freq='h',
+            freq='H',
         )
         runoff_time_indexes = np.where(runoff_times.year.isin(years))[0]
         gauge_runoff = xr_runoff['gauge'].data
@@ -656,7 +656,7 @@ class DistributedDataReader:
             pd.date_range(
                 start=f'{years[0]}-01-01',
                 periods=runoff.shape[1],
-                freq='h',
+                freq='H',
             ).astype(int)
             // 10**9
         )
@@ -814,7 +814,7 @@ class DistributedDataReader:
             warmup_dates = pd.date_range(
                 end=f'{years[0]}-01-01',
                 periods=self.warmup_days + 1,
-                freq='d',
+                freq='D',
             )[:-1]
             warm_years = warmup_dates.year.unique().tolist()
             years = warm_years + years
@@ -822,7 +822,7 @@ class DistributedDataReader:
             pre_read_dates = pd.date_range(
                 start=f'{warm_years[0]}-01-01',
                 end=f'{warm_years[-1]}-12-31',
-                freq='d',
+                freq='D',
             )
             start_time_index = (len(pre_read_dates) - len(warmup_dates)) * 24
             data.target = data.target[:, start_time_index:]

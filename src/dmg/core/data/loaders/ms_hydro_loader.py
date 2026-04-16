@@ -154,7 +154,7 @@ class MsHydroLoader(BaseLoader):
         all_time = pd.date_range(
             self.config['all_time'][0],
             self.config['all_time'][-1],
-            freq='d',
+            freq='D',
         )
         idx_start = all_time.get_loc(time[0])
         idx_end = all_time.get_loc(time[-1]) + 1
