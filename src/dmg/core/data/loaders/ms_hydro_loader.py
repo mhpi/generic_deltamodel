@@ -40,10 +40,7 @@ class MsHydroLoader(BaseLoader):
         test_split: Optional[bool] = False,
         overwrite: Optional[bool] = False,
     ) -> None:
-        super().__init__()
-        self.config = config
-        self.test_split = test_split
-        self.overwrite = overwrite
+        super().__init__(config=config, test_split=test_split, overwrite=overwrite)
         self.supported_data = [
             'merit',
             'merit71',
@@ -157,7 +154,7 @@ class MsHydroLoader(BaseLoader):
         all_time = pd.date_range(
             self.config['all_time'][0],
             self.config['all_time'][-1],
-            freq='d',
+            freq='D',
         )
         idx_start = all_time.get_loc(time[0])
         idx_end = all_time.get_loc(time[-1]) + 1

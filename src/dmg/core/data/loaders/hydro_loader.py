@@ -64,10 +64,7 @@ class HydroLoader(BaseLoader):
         overwrite: Optional[bool] = False,
         holdout_index: Optional[int] = None,
     ) -> None:
-        super().__init__()
-        self.config = config
-        self.test_split = test_split
-        self.overwrite = overwrite
+        super().__init__(config=config, test_split=test_split, overwrite=overwrite)
         self.holdout_index = holdout_index
         self.supported_data = [
             'camels_671',
@@ -255,7 +252,7 @@ class HydroLoader(BaseLoader):
         all_time = pd.date_range(
             self.config['all_time'][0],
             self.config['all_time'][-1],
-            freq='d',
+            freq='D',
         )
         idx_start = all_time.get_loc(time[0])
         idx_end = all_time.get_loc(time[-1]) + 1

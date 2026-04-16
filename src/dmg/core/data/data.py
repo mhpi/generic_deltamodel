@@ -43,10 +43,10 @@ def time_to_date(t: int, hr: bool = False) -> Union[dt.date, dt.datetime]:
     if type(t) is int:
         if t < 30000000 and t > 10000000:
             t = dt.datetime.strptime(str(t), "%Y%m%d").date()
-            tOut = t if hr is False else t.datetime()
+            tOut = t if hr is False else dt.datetime.combine(t, dt.time())
 
     if type(t) is dt.date:
-        tOut = t if hr is False else t.datetime()
+        tOut = t if hr is False else dt.datetime.combine(t, dt.time())
 
     if type(t) is dt.datetime:
         tOut = t.date() if hr is False else t
@@ -204,10 +204,14 @@ def select_subset(
     """
     nx = x.shape[-1]
     nt = x.shape[0]
-    if x.shape[0] == len(i_grid):  # hack
-        i_grid = np.arange(0, len(i_grid))  # hack
+    if x.shape[0] == len(i_grid):
+        # x is in (ngrid, time, features) layout rather than (time, ngrid, features);
+        # reset i_grid to a sequential range so indexing below treats each row as a basin.
+        i_grid = np.arange(0, len(i_grid))
     if nt <= rho:
-        i_t.fill(0)
+        # Sequence is shorter than rho; clamp start index to warmup so that
+        # np.arange(i_t[k] - warmup, ...) never produces negative indices.
+        i_t.fill(warmup)
 
     batch_size = i_grid.shape[0]
 
@@ -244,7 +248,7 @@ def select_subset(
             return x_tensor, c_tensor
         return torch.cat((x_tensor, c_tensor), dim=2)
 
-    return x_tensor.to(config['device']) if torch.cuda.is_available() else x_tensor
+    return x_tensor.to(config['device'])
 
 
 def numpy_to_torch_dict(

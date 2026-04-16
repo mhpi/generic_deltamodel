@@ -54,7 +54,7 @@ handler.save_model(epoch=10)     # Save checkpoint
 ```
 
 Key methods:
-- `load_model(epoch)` — Load model weights from checkpoint or initialize new.
+- `load_model(epoch)` — Load model weights from checkpoint (strict key matching) or initialize new.
 - `forward(dataset_dict, eval=False)` — Run forward pass.
 - `calc_loss(dataset_dict, loss_func=None)` — Calculate loss.
 - `train(mode=True)` — Set train/eval mode on all internal models.

@@ -194,7 +194,7 @@ class ModelHandler(torch.nn.Module):
                             weights_only=True,
                             map_location=self.device,
                         ),
-                        strict=False,
+                        strict=True,
                     )
                     self.model_dict[name].to(self.device)
 
@@ -612,12 +612,14 @@ class ModelHandler(torch.nn.Module):
 
         warmup = self.config['model'].get('warmup', 0)
 
-        # Remove warmup timesteps
+        # Remove warmup timesteps from target.
         target = target[warmup:]
 
         if output.shape != target.shape:
             if output.shape[0] > target.shape[0]:
+                # output still includes the warmup period — trim it.
                 output = output[warmup:]
             elif target.shape[0] > output.shape[0]:
-                target = target[warmup:]
+                # target is longer than output for some other reason; align lengths.
+                target = target[: output.shape[0]]
         return output, target
