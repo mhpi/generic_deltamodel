@@ -20,7 +20,18 @@ log = logging.getLogger(__name__)
 
 
 class MtsHydroLoader(BaseLoader):
-    """MTS hydrological data loader."""
+    """Data loader for multi-timescale (MTS) hydrological data.
+
+    Loads distributed hourly forcing, attribute, runoff, and topology data
+    for multi-timescale differentiable model experiments. Data is streamed
+    in year-sized chunks to support large datasets that do not fit in memory.
+
+    Parameters
+    ----------
+    config
+        Configuration dictionary containing observation paths, model settings,
+        and train/valid/test time ranges.
+    """
 
     def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config=config)
@@ -92,11 +103,20 @@ class MtsHydroLoader(BaseLoader):
         self.norm_stats = {'stdarray': np.array(stats_dict['stds'])}
 
     def load_dataset(self, mode: str = None):
-        """
-        Load dataset for the specified mode ('train', 'valid', 'test') to
-        self.dataset. 'test' is also used for simulation. If number of chunks is
-        1, load the entire dataset into memory. Otherwise, use a generator to
-        yield data chunk by chunk.
+        """Load dataset for the specified mode into self.dataset.
+
+        If the number of chunks is 1, loads the entire dataset into memory.
+        Otherwise, sets self.dataset to a generator that yields chunks.
+
+        Parameters
+        ----------
+        mode
+            One of 'train', 'valid', 'test', or 'simulation'.
+
+        Raises
+        ------
+        ValueError
+            If mode is not one of the accepted values.
         """
         if mode == 'train':
             if self.train_dataset is not None:
@@ -142,18 +162,26 @@ class MtsHydroLoader(BaseLoader):
 
     def _preprocess_data(self) -> dict[str, torch.Tensor]:
         """Read, preprocess, and return data as dictionary of torch tensors."""
-        print("Preprocessing data...")
+        log.info("Preprocessing data...")
 
     def load_norm_stats(self) -> None:
-        """Load normalization statistics from preprocessing paths."""
+        """Load normalization statistics from preprocessing paths.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the stats or preprocessor file does not exist.
+        json.JSONDecodeError
+            If the stats file cannot be parsed as JSON.
+        """
         try:
             preprocessing_paths = self.config['observations']['preprocessing']
             with open(Path(preprocessing_paths['path_stats']), 'rb') as f:
                 self.stats_dict = json.load(f)
             self.preprocessor = DistributedDataPreprocessor()
             self.preprocessor.load_stat(Path(preprocessing_paths['path_preprocess']))
-        except ValueError as e:
-            raise ValueError("Error loading normalization statistics.") from e
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            raise type(e)(f"Error loading normalization statistics: {e}") from e
 
     def cleanup_memory(self) -> None:
         """Clean up loaded datasets to free memory."""
@@ -161,7 +189,12 @@ class MtsHydroLoader(BaseLoader):
 
 
 class DistributedDataSchema(BaseModel):
-    """MTS data schema."""
+    """Pydantic schema for a single MTS data chunk.
+
+    Holds all tensors required for one training/validation/test chunk,
+    including dynamic inputs, static attributes, runoff targets, and
+    topology/routing information.
+    """
 
     # target: TensorType["n_gages", "t"]
     # dyn_input: TensorType["n_units", "t", "d"]
@@ -194,7 +227,53 @@ class DistributedDataSchema(BaseModel):
 
 
 class DistributedDataReader:
-    """MTS data reader."""
+    """Reads and chunks distributed hourly MTS forcing and runoff data.
+
+    Parameters
+    ----------
+    path_forcing
+        Path to the directory containing yearly forcing NetCDF files.
+    path_attrs
+        Path to the basin attributes NetCDF file.
+    path_topo
+        Path to the topology JSON file describing the river network.
+    path_runoff
+        Path to the runoff (streamflow) NetCDF file.
+    path_gauges
+        Path to the gauge metadata CSV file.
+    path_units
+        Path to the catchment divide GeoPackage file.
+    runoff_start_time
+        Start datetime string for the runoff time series (e.g. '2010-01-01').
+    forcing_order
+        Ordered list of forcing variable names (e.g. ['P', 'Temp', 'PET']).
+    attribute_order
+        Ordered list of basin attribute names.
+    routing_attr_order
+        Ordered list of routing attribute names.
+    chunk_year_size
+        Number of years per data chunk. Default is 1.
+    warmup_days
+        Number of warmup days prepended to each chunk. Default is 365.
+    runoff_thres
+        Per-gauge runoff threshold below which values are set to NaN.
+    train_start_year
+        First year of the training period.
+    train_end_year
+        Last year of the training period.
+    valid_start_year
+        First year of the validation period.
+    valid_end_year
+        Last year of the validation period.
+    test_start_year
+        First year of the test period.
+    test_end_year
+        Last year of the test period.
+    selected_gauges
+        Subset of gauge IDs to use. If None, all available gauges are used.
+    selected_basins
+        Subset of basin IDs to use. If None, all available basins are used.
+    """
 
     def __init__(
         self,
@@ -280,7 +359,38 @@ class DistributedDataReader:
         runoff_start_time: str,
         area_thres: float,
         years: list[int],
-    ):
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Determine the valid gauge and basin IDs after applying data filters.
+
+        Intersects forcing, attribute, runoff, and topology data sources to
+        find the set of gauges and basins that have sufficient data coverage.
+        Gauges are filtered by drainage area and require at least 80% of their
+        upstream basins to have forcing and attribute data.
+
+        Parameters
+        ----------
+        path_forcing
+            Path to the directory containing yearly forcing NetCDF files.
+        path_attrs
+            Path to the basin attributes NetCDF file.
+        path_topo
+            Path to the topology JSON file describing the river network.
+        path_runoff
+            Path to the runoff NetCDF file.
+        path_gauges
+            Path to the gauge metadata CSV file.
+        runoff_start_time
+            Start datetime string for the runoff time series.
+        area_thres
+            Maximum drainage area (km²) for gauge inclusion.
+        years
+            List of years used to check data availability.
+
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray]
+            Arrays of selected gauge IDs and selected basin IDs.
+        """
         # forcing basins
         xr_forcing = xr.open_dataset(f'{path_forcing}/forcing_{years[0]}.nc')
         basin_forcing = xr_forcing['gauge'].data
@@ -374,8 +484,23 @@ class DistributedDataReader:
 
         return selected_gauges, selected_basins
 
-    def get_element_ids(self, area_thres: float, years: list[int]):
-        """Get selected gauge and basin ids based on area threshold and years."""
+    def get_element_ids(
+        self, area_thres: float, years: list[int]
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Get selected gauge and basin IDs based on area threshold and years.
+
+        Parameters
+        ----------
+        area_thres
+            Maximum drainage area (km²) for gauge inclusion.
+        years
+            List of years used to check data availability.
+
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray]
+            Arrays of selected gauge IDs and selected basin IDs.
+        """
         return self._get_element_ids(
             path_forcing=self.path_forcing,
             path_attrs=self.path_attrs,
@@ -403,6 +528,48 @@ class DistributedDataReader:
         selected_basins: list[int],
         runoff_thres: list[float],
     ) -> DistributedDataSchema:
+        """Read and assemble a distributed hourly data chunk for the given years.
+
+        Loads forcing (P, Temp, PET), basin attributes, runoff targets, and
+        topology/routing data. Aligns all data sources to the selected gauges
+        and basins, computes topological routing attributes, and returns
+        everything as a typed schema.
+
+        Parameters
+        ----------
+        path_forcing
+            Path to the directory containing yearly forcing NetCDF files.
+        path_attrs
+            Path to the basin attributes NetCDF file.
+        path_topo
+            Path to the topology JSON file describing the river network.
+        path_runoff
+            Path to the runoff NetCDF file.
+        path_units
+            Path to the catchment divide GeoPackage file.
+        runoff_start_time
+            Start datetime string for the runoff time series.
+        forcing_order
+            Ordered list of forcing variable names.
+        attribute_order
+            Ordered list of basin attribute names.
+        routing_attr_order
+            Ordered list of routing attribute names.
+        years
+            List of years to read (including any warmup years).
+        selected_gauges
+            Gauge IDs to include.
+        selected_basins
+            Basin IDs to include.
+        runoff_thres
+            Per-gauge runoff thresholds; values below threshold are set to NaN.
+
+        Returns
+        -------
+        DistributedDataSchema
+            Schema containing all tensors for the requested years.
+        """
+
         def get_element_indexes(
             element_array: np.ndarray,
             elements: Union[np.ndarray, list],
@@ -592,7 +759,18 @@ class DistributedDataReader:
         )
 
     def read_distributed_hourly_data(self, years: list[int]) -> DistributedDataSchema:
-        """Read distributed hourly data for the specified years."""
+        """Read distributed hourly data for the specified years.
+
+        Parameters
+        ----------
+        years
+            List of calendar years to include in the returned chunk.
+
+        Returns
+        -------
+        DistributedDataSchema
+            Schema containing all tensors for the requested years.
+        """
         return self._read_distributed_hourly_data(
             path_forcing=self.path_forcing,
             path_attrs=self.path_attrs,
@@ -610,7 +788,23 @@ class DistributedDataReader:
         )
 
     def yield_chunk_set(self, start_year: int, end_year: int, shuffle: bool = False):
-        """Predict targets within start_year and end_year (inclusive), with warmup days before each chunk."""
+        """Yield data chunks spanning start_year to end_year, each prepended with warmup days.
+
+        Parameters
+        ----------
+        start_year
+            First calendar year of the period to yield.
+        end_year
+            Last calendar year of the period to yield (inclusive).
+        shuffle
+            If True, yield chunks in random order. Default is False.
+
+        Yields
+        ------
+        DistributedDataSchema
+            One chunk of data per call, covering ``chunk_year_size`` years plus
+            ``warmup_days`` of preceding data.
+        """
         chunk_starts = list(range(start_year, end_year + 1, self.chunk_year_size))
         if shuffle:
             perm = torch.randperm(len(chunk_starts)).tolist()
@@ -637,7 +831,13 @@ class DistributedDataReader:
             yield data
 
     def yield_train_set(self):
-        """Get training set."""
+        """Yield training chunks in random order.
+
+        Raises
+        ------
+        ValueError
+            If train start/end years were not provided at construction.
+        """
         if self.train_start_year is None or self.train_end_year is None:
             raise ValueError("train years are not specified.")
         yield from self.yield_chunk_set(
@@ -647,7 +847,13 @@ class DistributedDataReader:
         )
 
     def yield_valid_set(self):
-        """Get validation set."""
+        """Yield validation chunks in chronological order.
+
+        Raises
+        ------
+        ValueError
+            If valid start/end years were not provided at construction.
+        """
         if self.valid_start_year is None or self.valid_end_year is None:
             raise ValueError("validation years are not specified.")
         yield from self.yield_chunk_set(
@@ -657,7 +863,13 @@ class DistributedDataReader:
         )
 
     def yield_test_set(self):
-        """Get test set."""
+        """Yield test chunks in chronological order.
+
+        Raises
+        ------
+        ValueError
+            If test start/end years were not provided at construction.
+        """
         if self.test_start_year is None or self.test_end_year is None:
             raise ValueError("test years are not specified.")
         yield from self.yield_chunk_set(
@@ -668,7 +880,20 @@ class DistributedDataReader:
 
 
 class DistributedDataPreprocessor:
-    """MTS preprocessor."""
+    """Normalizer and transformer for MTS distributed data chunks.
+
+    Fits mean/std statistics over a ``DistributedDataSchema`` and applies
+    z-score normalization with optional log-transforms for precipitation-like
+    dynamic inputs and streamflow targets.
+
+    Parameters
+    ----------
+    norm_dyn_indexes
+        Indices of dynamic input channels to log-transform before normalizing.
+        If None or empty, no log-transform is applied.
+    use_norm_target
+        If True, apply a log-transform to the runoff target before normalizing.
+    """
 
     def __init__(
         self,
@@ -681,7 +906,12 @@ class DistributedDataPreprocessor:
         self.use_norm_target = use_norm_target
 
     @staticmethod
-    def _nanstd(x: torch.Tensor, dim: Union[int, list], keepdim=False, unbiased=True):
+    def _nanstd(
+        x: torch.Tensor,
+        dim: Union[int, list],
+        keepdim: bool = False,
+        unbiased: bool = True,
+    ) -> torch.Tensor:
         mask = ~torch.isnan(x)
         count = mask.sum(dim=dim, keepdim=keepdim)
 
@@ -738,8 +968,15 @@ class DistributedDataPreprocessor:
         else:
             return x
 
-    def fit(self, data: DistributedDataSchema):
-        """Get stats."""
+    def fit(self, data: DistributedDataSchema) -> None:
+        """Compute and store normalization statistics from a data chunk.
+
+        Parameters
+        ----------
+        data
+            A loaded data chunk whose mean and std will be stored for later
+            use by ``transform`` and ``inverse_transform``.
+        """
         dyn_input = self._norm_input_transform(data.dyn_input)
         self.mean['dyn_input'] = dyn_input.nanmean(dim=(0, 1))
         self.std['dyn_input'] = self._nanstd(dyn_input, dim=(0, 1))
@@ -755,7 +992,22 @@ class DistributedDataPreprocessor:
         self.std['rout_static_input'] = self._nanstd(data.rout_static_input, dim=(0, 1))
 
     def transform(self, data: DistributedDataSchema) -> DistributedDataSchema:
-        """MTS transform."""
+        """Normalize a data chunk using stored mean/std statistics.
+
+        Applies optional log-transforms and z-score normalization to dynamic
+        inputs, static inputs, routing attributes, and targets. Returns a new
+        schema with both raw and scaled fields populated.
+
+        Parameters
+        ----------
+        data
+            Raw data chunk to normalize.
+
+        Returns
+        -------
+        DistributedDataSchema
+            Copy of ``data`` with ``scaled_*`` fields populated.
+        """
         eps = 1e-6
         # dynamic input
         dyn_input = self._norm_input_transform(data.dyn_input)
@@ -800,7 +1052,23 @@ class DistributedDataPreprocessor:
         tensor_data: torch.Tensor,
         varname: str,
     ) -> torch.Tensor:
-        """Transform."""
+        """Reverse normalization for a single variable.
+
+        Applies the inverse z-score and, for ``'dyn_input'`` or ``'target'``,
+        the inverse log-transform.
+
+        Parameters
+        ----------
+        tensor_data
+            Normalized tensor to denormalize.
+        varname
+            Key into the stored statistics (e.g. ``'dyn_input'``, ``'target'``).
+
+        Returns
+        -------
+        torch.Tensor
+            Denormalized tensor in original units.
+        """
         descaled_data = tensor_data * self.std[varname].expand_as(
             tensor_data,
         ) + self.mean[varname].expand_as(tensor_data)
@@ -810,8 +1078,20 @@ class DistributedDataPreprocessor:
             descaled_data = self._norm_target_inverse_transform(descaled_data)
         return descaled_data
 
-    def fillna(self, data: DistributedDataSchema):
-        """Fill nans."""
+    def fillna(self, data: DistributedDataSchema) -> DistributedDataSchema:
+        """Replace NaN values in a data chunk with stored mean statistics.
+
+        Parameters
+        ----------
+        data
+            Data chunk that may contain NaN values in dynamic inputs, static
+            inputs, or routing attributes.
+
+        Returns
+        -------
+        DistributedDataSchema
+            Copy of ``data`` with NaN values replaced by channel-wise means.
+        """
         dyn_input = self._fillna_with_ref(data.dyn_input, self.mean['dyn_input'])
         static_input = self._fillna_with_ref(
             data.static_input,
@@ -836,19 +1116,33 @@ class DistributedDataPreprocessor:
             unit=data.unit,
         )
 
-    def save_stat(self, path: Union[str, Path]):
-        """Save stats."""
+    def save_stat(self, path: Union[str, Path]) -> None:
+        """Serialize normalization statistics to a JSON file.
+
+        Parameters
+        ----------
+        path
+            Destination file path for the serialized statistics.
+        """
         save_data = {
             'mean': {key: value.tolist() for key, value in self.mean.items()},
             'std': {key: value.tolist() for key, value in self.std.items()},
             'norm_dyn_indexes': self.norm_dyn_indexes,
             'use_norm_target': self.use_norm_target,
         }
-        json.dump(save_data, open(path, 'w'))
+        with open(path, 'w') as f:
+            json.dump(save_data, f)
 
-    def load_stat(self, path: Union[str, Path]):
-        """Load stats."""
-        load_data = json.load(open(path))
+    def load_stat(self, path: Union[str, Path]) -> None:
+        """Load normalization statistics from a JSON file.
+
+        Parameters
+        ----------
+        path
+            Path to the JSON file previously written by ``save_stat``.
+        """
+        with open(path) as f:
+            load_data = json.load(f)
         self.mean = {
             key: torch.tensor(value) for key, value in load_data['mean'].items()
         }
@@ -856,16 +1150,30 @@ class DistributedDataPreprocessor:
         self.norm_dyn_indexes = load_data['norm_dyn_indexes']
         self.use_norm_target = load_data['use_norm_target']
 
-    def load_to_device(self, device: torch.device):
-        """Load to device."""
+    def load_to_device(self, device: torch.device) -> None:
+        """Move all stored statistic tensors to ``device``.
+
+        Parameters
+        ----------
+        device
+            Target device (e.g. ``torch.device('cuda')``).
+        """
         for key in self.mean:
             self.mean[key] = self.mean[key].to(device)
             self.std[key] = self.std[key].to(device)
 
-    def combine_chunk_stats(self, stats: list[dict]):
-        """
-        :param stats: [{'mean': dict, 'std': dict, 'count': int}].
-        :return:
+    def combine_chunk_stats(self, stats: list[dict]) -> None:
+        """Merge per-chunk statistics into a single global mean and std.
+
+        Uses the pooled variance formula to combine statistics computed
+        independently over multiple data chunks.
+
+        Parameters
+        ----------
+        stats
+            List of per-chunk statistic dicts, each with keys ``'mean'``
+            (dict of tensors), ``'std'`` (dict of tensors), and ``'count'``
+            (int number of samples in the chunk).
         """
         total_count = sum([stat['count'] for stat in stats])
         combined_mean = {}
