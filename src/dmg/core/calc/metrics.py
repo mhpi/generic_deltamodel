@@ -105,6 +105,10 @@ class Metrics(BaseModel):
         if target.ndim == 1:
             target = np.expand_dims(target, axis=0)
 
+        # Use float64 for metric accumulation to prevent overflow.
+        pred = pred.astype(np.float64)
+        target = target.astype(np.float64)
+
         super().__init__(pred=pred, target=target)
 
     def model_post_init(self, __context: Any) -> Any:
@@ -114,7 +118,7 @@ class Metrics(BaseModel):
 
         Parameters
         ----------
-        __context : Any
+        __context
             Context object.
 
         Returns
@@ -250,7 +254,7 @@ class Metrics(BaseModel):
 
         Parameters
         ----------
-        path : str
+        path
             Path to save file.
         """
         stats = self.calc_stats()
@@ -288,7 +292,7 @@ class Metrics(BaseModel):
 
         Parameters
         ----------
-        path : str
+        path
             Path to save file.
         """
         # Save aggregate statistics
@@ -302,12 +306,34 @@ class Metrics(BaseModel):
         with open(save_path, "w") as f:
             json.dump(json_dat, f)
 
+    def print_summary(self) -> None:
+        """Print a comma-separated summary table of median metrics."""
+        columns = [
+            ('NSE', self.nse),
+            ('KGE', self.kge),
+            ('Bias', self.bias_rel),
+            ('Corr', self.corr),
+            ('RMSE', self.rmse),
+            ('lowRMSE', self.rmse_low),
+            ('highRMSE', self.rmse_high),
+            ('rdMax', self.d_max_rel),
+            ('FLV', self.flv),
+            ('FHV', self.fhv),
+            ('absFLV', self.flv_abs),
+            ('absFHV', self.fhv_abs),
+        ]
+        header = ', '.join(name for name, _ in columns)
+        values = ', '.join(
+            f'{np.nanmedian(arr):.6f}' if arr.size > 0 else 'N/A' for _, arr in columns
+        )
+        print(f"\nMedian Metrics Summary\n{header}\n{values}\n")
+
     def tile_mean(self, data: NDArray[np.float32]) -> NDArray[np.float32]:
         """Calculate mean of target.
 
         Parameters
         ----------
-        data : NDArray[np.float32]
+        data
             Data to calculate mean.
 
         Returns
@@ -444,14 +470,14 @@ class Metrics(BaseModel):
 
         Parameters
         ----------
-        pred : NDArray[np.float32]
+        pred
             Predictions.
-        target : NDArray[np.float32]
+        target
             Target values.
-        lb : int, optional
-            Lower bound. Default is 0.
-        ub : int, optional
-            Upper bound. Default is 10.
+        lb
+            Lower bound.
+        ub
+            Upper bound.
         """
         idx_max = np.nanargmax(target)
         if idx_max < lb:
