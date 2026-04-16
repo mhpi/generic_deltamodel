@@ -23,6 +23,16 @@ All notable changes to 𝛿MG are documented here.
 ### Fixed
 - Bug patches for daily dHBV 2.0 runs.
 - Multi-timescale NextGen integration fixes.
+- `time_to_date()`: calling `.datetime()` on a `datetime.date` object raised `AttributeError` when `hr=True`; replaced with `datetime.combine(t, time())`.
+- `select_subset()`: when `nt <= rho` and `warmup > 0`, time indices were clamped to 0 instead of `warmup`, producing negative NumPy indices that silently wrapped around and read wrong data.
+- `select_subset()`: device placement was conditionally gated on `torch.cuda.is_available()`, causing tensors to stay on CPU even when `config['device']` specified otherwise. Now always honors `config['device']`.
+- `ModelHandler._trim()`: warmup was stripped from `target` twice when output and target lengths differed, misaligning loss computation. The second removal now truncates to match lengths instead.
+- `ModelHandler.load_model()`: checkpoints were loaded with `strict=False`, silently accepting incompatible architectures. Now uses `strict=True`.
+- `ModelHandler.save_states()`: `torch.save` was called a second time after the `else: raise NotImplementedError` block, causing a `NameError` when more than one model was present.
+- `DplModel._init_phy_model()`: used `/` (division) instead of `+` for string concatenation in a `raise ValueError`, causing a `TypeError` before the intended error could be raised.
+- `BaseSampler.to_tensor()`: `self.dtype` and `self.device` were referenced but never initialized; set to `float32` / `cpu` defaults in `__init__`.
+- `BaseLoader.to_tensor()`: same uninitialized `self.dtype`/`self.device` issue as `BaseSampler`; fixed with same defaults.
+- `BaseTrainer.validate_config()`: checked for config keys `'rain'` and `'delta_model'` instead of `'train'` and `'model'`, causing the validator to reject all valid configs.
 
 ---
 

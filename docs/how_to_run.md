@@ -58,12 +58,15 @@ To use 𝛿MG to build and experiment with your own differentiable model, a few 
     - Data loader: Loads full dataset
         - `dmg/core/data/loaders/`
         - Specify in `data_loader` setting in master configuration.
+        - Must inherit from `BaseLoader` and implement `load_dataset()` and `_preprocess_data(t_range)`.
     - Data sampler: Takes samples of full dataset for minibatching during model training and testing.
         - `dmg/core/data/samplers/`
         - Specify in `data_sampler` setting in master configuration.
+        - Must inherit from `BaseSampler` and implement `get_training_sample(dataset, ...)` and `get_validation_sample(dataset, ...)`.
     - Trainer: Handles training and testing experiments, as well as batching data for model forward.
         - `dmg/trainers/`
         - Specify in `trainer` setting in master configuration.
+        - Must inherit from `BaseTrainer` and implement `init_optimizer()`, `train()`, `evaluate()`, `inference()`, and `calc_metrics()`.
     - NN: Neural network
         - `dmg/models/neural_networks/`
         - Specify as `delta_model: nn_model: model` setting in master configuration.

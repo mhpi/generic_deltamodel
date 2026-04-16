@@ -653,6 +653,7 @@ class Trainer(BaseTrainer):
 
         # Save all metrics and aggregated statistics.
         metrics.dump_metrics(self.config['output_dir'])
+        metrics.print_summary()
 
     def _log_epoch_stats(
         self,
