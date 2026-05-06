@@ -57,6 +57,51 @@ class HydroLoader(BaseLoader):
     key name to `self.supported_data`.
     """
 
+    @property
+    def dataset(self) -> dict:
+        """General dataset."""
+        if self._dataset is None:
+            raise AttributeError(
+                "'dataset' is not populated in the current mode. "
+                "In train/test mode, use 'train_dataset' or 'eval_dataset' instead."
+            )
+        return self._dataset
+
+    @dataset.setter
+    def dataset(self, value) -> None:
+        """General dataset setter."""
+        self._dataset = value
+
+    @property
+    def train_dataset(self) -> dict:
+        """Training dataset."""
+        if self._train_dataset is None:
+            raise AttributeError(
+                "'train_dataset' is not populated in the current mode. "
+                "In sim mode, use 'dataset' instead."
+            )
+        return self._train_dataset
+
+    @train_dataset.setter
+    def train_dataset(self, value) -> None:
+        """Training dataset setter."""
+        self._train_dataset = value
+
+    @property
+    def eval_dataset(self) -> dict:
+        """Evaluation dataset."""
+        if self._eval_dataset is None:
+            raise AttributeError(
+                "'eval_dataset' is not populated in the current mode. "
+                "In sim mode, use 'dataset' instead."
+            )
+        return self._eval_dataset
+
+    @eval_dataset.setter
+    def eval_dataset(self, value) -> None:
+        """Evaluation dataset setter."""
+        self._eval_dataset = value
+
     def __init__(
         self,
         config: dict[str, Any],
@@ -102,9 +147,9 @@ class HydroLoader(BaseLoader):
             'mm/d',
         )
 
-        self.train_dataset = None
-        self.eval_dataset = None
-        self.dataset = None
+        self._train_dataset = None
+        self._eval_dataset = None
+        self._dataset = None
         self.norm_stats = None
 
         if self.data_name not in self.supported_data:
@@ -132,29 +177,29 @@ class HydroLoader(BaseLoader):
         is_spatial_test = self.config.get('test', {}).get('type') == 'spatial'
 
         if mode == 'sim':
-            self.dataset = self._preprocess_data(scope='sim')
+            self._dataset = self._preprocess_data(scope='sim')
         elif is_spatial_test:
             # For spatial testing, load data and split by basin using utility function
             train_dataset = self._preprocess_data(scope='train')
             test_dataset = self._preprocess_data(scope='test')
 
-            self.train_dataset, _ = split_dataset_by_basin(
+            self._train_dataset, _ = split_dataset_by_basin(
                 train_dataset,
                 self.config,
                 self.holdout_index,
             )
-            _, self.eval_dataset = split_dataset_by_basin(
+            _, self._eval_dataset = split_dataset_by_basin(
                 test_dataset,
                 self.config,
                 self.holdout_index,
             )
         elif self.test_split:
-            self.train_dataset = self._preprocess_data(scope='train')
-            self.eval_dataset = self._preprocess_data(scope='test')
+            self._train_dataset = self._preprocess_data(scope='train')
+            self._eval_dataset = self._preprocess_data(scope='test')
         elif mode in ['train', 'test']:
-            self.train_dataset = self._preprocess_data(scope=mode)
+            self._train_dataset = self._preprocess_data(scope=mode)
         else:
-            self.dataset = self._preprocess_data(scope='all')
+            self._dataset = self._preprocess_data(scope='all')
 
     def _preprocess_data(
         self,
