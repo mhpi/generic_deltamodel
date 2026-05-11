@@ -39,7 +39,7 @@ def load_config(path: str) -> dict[str, Any]:
         config = hydra.compose(config_name=config_name)
 
     # Convert date ranges / set device and dtype / create output dirs.
-    config = initialize_config(config)
+    config = initialize_config(config, make_dirs=False)
 
     return config
 

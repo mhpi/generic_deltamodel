@@ -53,13 +53,13 @@ def set_system_spec(config: dict) -> tuple[str, str]:
     return str(device), str(dtype)
 
 
-def set_randomseed(seed=0) -> None:
+def set_randomseed(seed: int = 0) -> None:
     """Fix random seeds for reproducibility.
 
     Parameters
     ----------
-    seed : int, optional
-        Random seed to set. If None, a random seed is used. Default is 0.
+    seed
+        Random seed to set. If None, a random seed is used.
     """
     if seed is None:
         # seed = int(np.random.uniform(low=0, high=1e6))
@@ -84,7 +84,6 @@ def set_randomseed(seed=0) -> None:
 def initialize_config(
     config: Union[DictConfig, dict],
     make_dirs: Optional[bool] = True,
-    write_out: Optional[bool] = True,
 ) -> dict[str, Any]:
     """Parse and initialize configuration settings.
 
@@ -92,6 +91,8 @@ def initialize_config(
     ----------
     config
         Configuration settings from Hydra.
+    make_dirs
+        Create output directories if they do not exist.
 
     Returns
     -------
@@ -256,8 +257,23 @@ def save_train_state(
     )
 
 
-def save_outputs(config, predictions, y_obs=None) -> None:
-    """Save outputs from a model."""
+def save_outputs(
+    config: dict,
+    predictions: Union[list, dict],
+    y_obs: Optional[np.ndarray] = None
+) -> None:
+    """Save outputs from a model.
+    
+    Parameters
+    ----------
+    config
+        Configuration dictionary with paths and model settings.
+    predictions
+        Model predictions to save. Can be a list of dicts (for single model) or
+        a dict of lists of dicts (for multiple models).
+    y_obs
+        Optional array of observed values to save.
+    """
     if torch.is_tensor(y_obs):
         y_obs = y_obs.cpu().numpy()
 
@@ -312,7 +328,7 @@ def save_outputs(config, predictions, y_obs=None) -> None:
             np.save(os.path.join(config['sim_dir'], file_name), item_obs)
 
 
-def load_model(config, model_name, epoch):
+def load_model(config: dict, model_name: str, epoch: int) -> torch.nn.Module:
     """Load trained PyTorch models.
 
     Parameters
@@ -445,7 +461,7 @@ def find_shared_keys(*dicts: dict[str, Any]) -> list[str]:
     return list(shared_keys)
 
 
-def snake_to_camel(snake_str):
+def snake_to_camel(snake_str: str) -> str:
     """
     Convert snake strings (underscore word separation, lower case) to
     Camel-case strings (no word separation, capitalized first letter of a word).
@@ -454,7 +470,7 @@ def snake_to_camel(snake_str):
     return ''.join(x.title() for x in components)
 
 
-def camel_to_snake(camel_str):
+def camel_to_snake(camel_str: str) -> str:
     """
     Convert CamelCase or PascalCase strings to snake_case while properly handling
     consecutive uppercase letters (e.g., 'DiracDF' -> 'dirac_df').
