@@ -258,12 +258,10 @@ def save_train_state(
 
 
 def save_outputs(
-    config: dict,
-    predictions: Union[list, dict],
-    y_obs: Optional[np.ndarray] = None
+    config: dict, predictions: Union[list, dict], y_obs: Optional[np.ndarray] = None
 ) -> None:
     """Save outputs from a model.
-    
+
     Parameters
     ----------
     config

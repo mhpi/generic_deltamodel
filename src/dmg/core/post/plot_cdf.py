@@ -142,5 +142,9 @@ def plot_cdf(
     if save_path is not None:
         os.makedirs(save_path, exist_ok=True)
         metric_label = "_".join(metric_names)
-        plt.savefig(os.path.join(save_path, f"cdf_{metric_label}.png"), dpi=300, bbox_inches="tight")
+        plt.savefig(
+            os.path.join(save_path, f"cdf_{metric_label}.png"),
+            dpi=300,
+            bbox_inches="tight",
+        )
     plt.show()

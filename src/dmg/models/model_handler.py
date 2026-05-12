@@ -578,7 +578,9 @@ class ModelHandler(torch.nn.Module):
                 'epoch': self.epoch,
                 'last_timestep': time if time else 'N/A',
             }
-            torch.save(state_dict, os.path.join(self.config['output_dir'], "model_states.pt"))
+            torch.save(
+                state_dict, os.path.join(self.config['output_dir'], "model_states.pt")
+            )
         else:
             raise NotImplementedError(
                 "Operations on hidden states for multimodel ensembles is not supported.",
@@ -611,7 +613,7 @@ class ModelHandler(torch.nn.Module):
         target = target.squeeze()
 
         if output.shape[0] > target.shape[0]:
-            output = output[output.shape[0] - target.shape[0]:]
+            output = output[output.shape[0] - target.shape[0] :]
         elif target.shape[0] > output.shape[0]:
-            target = target[target.shape[0] - output.shape[0]:]
+            target = target[target.shape[0] - output.shape[0] :]
         return output, target
