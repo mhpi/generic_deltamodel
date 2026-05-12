@@ -578,7 +578,7 @@ class ModelHandler(torch.nn.Module):
                 'epoch': self.epoch,
                 'last_timestep': time if time else 'N/A',
             }
-            torch.save(state_dict, self.config['model_dir'] + "model_states.pt")
+            torch.save(state_dict, os.path.join(self.config['output_dir'], "model_states.pt"))
         else:
             raise NotImplementedError(
                 "Operations on hidden states for multimodel ensembles is not supported.",

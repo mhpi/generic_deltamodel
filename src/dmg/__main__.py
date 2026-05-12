@@ -97,18 +97,25 @@ def main(config: DictConfig) -> None:
         if config['test']['name'] == 'temporal':
             log.info("Processing data...")
             data_loader_cls = import_data_loader(config['data_loader'])
-            data_loader = data_loader_cls(config, test_split=True, overwrite=False)
-
-            ### Create trainer object ###
             trainer_cls = import_trainer(config['trainer'])
-            trainer = trainer_cls(
-                config,
-                model,
-                train_dataset=data_loader.train_dataset,
-                eval_dataset=data_loader.eval_dataset,
-                dataset=data_loader.dataset,
-                verbose=config.get('verbose', False),
-            )
+
+            if config['mode'] == 'sim':
+                data_loader = data_loader_cls(config, test_split=False, overwrite=False)
+                trainer = trainer_cls(
+                    config,
+                    model,
+                    dataset=data_loader.dataset,
+                    verbose=config.get('verbose', False),
+                )
+            else:
+                data_loader = data_loader_cls(config, test_split=True, overwrite=False)
+                trainer = trainer_cls(
+                    config,
+                    model,
+                    train_dataset=data_loader.train_dataset,
+                    eval_dataset=data_loader.eval_dataset,
+                    verbose=config.get('verbose', False),
+                )
 
         ### Run mode ###
         run_mode(config, model, trainer)
