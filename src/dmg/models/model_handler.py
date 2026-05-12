@@ -578,7 +578,9 @@ class ModelHandler(torch.nn.Module):
                 'epoch': self.epoch,
                 'last_timestep': time if time else 'N/A',
             }
-            torch.save(state_dict, self.config['model_dir'] + "model_states.pt")
+            torch.save(
+                state_dict, os.path.join(self.config['output_dir'], "model_states.pt")
+            )
         else:
             raise NotImplementedError(
                 "Operations on hidden states for multimodel ensembles is not supported.",
@@ -610,16 +612,8 @@ class ModelHandler(torch.nn.Module):
         output = output.squeeze()
         target = target.squeeze()
 
-        warmup = self.config['model'].get('warmup', 0)
-
-        # Remove warmup timesteps from target.
-        target = target[warmup:]
-
-        if output.shape != target.shape:
-            if output.shape[0] > target.shape[0]:
-                # output still includes the warmup period — trim it.
-                output = output[warmup:]
-            elif target.shape[0] > output.shape[0]:
-                # target is longer than output for some other reason; align lengths.
-                target = target[: output.shape[0]]
+        if output.shape[0] > target.shape[0]:
+            output = output[output.shape[0] - target.shape[0] :]
+        elif target.shape[0] > output.shape[0]:
+            target = target[target.shape[0] - output.shape[0] :]
         return output, target

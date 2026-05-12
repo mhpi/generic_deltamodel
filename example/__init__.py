@@ -15,7 +15,7 @@ __all__ = [
 ]
 
 
-def load_config(path: str) -> dict[str, Any]:
+def load_config(path: str, make_dirs: bool = True) -> dict[str, Any]:
     """Parse and initialize configuration settings from yaml with Hydra.
 
     This loader handles config files in nonlinear directory structures.
@@ -24,6 +24,8 @@ def load_config(path: str) -> dict[str, Any]:
     ----------
     config_path
         Path to the configuration file.
+    make_dirs
+        Whether to create output directories specified in the config.
 
     Returns
     -------
@@ -39,7 +41,7 @@ def load_config(path: str) -> dict[str, Any]:
         config = hydra.compose(config_name=config_name)
 
     # Convert date ranges / set device and dtype / create output dirs.
-    config = initialize_config(config)
+    config = initialize_config(config, make_dirs=make_dirs)
 
     return config
 

@@ -25,6 +25,7 @@ data_loader: MsHydroLoader
 data_sampler: MsHydroSampler
 trainer: MsTrainer
 
+output_dir: ./example_dhbv2  # Path to save model predictions and metrics.
 model_dir: ./path/to/your/model/  # Pretrained dHBV 2.0 (+ input data) can be downloaded from: https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/models/4-dhbv_2.zip
 
 

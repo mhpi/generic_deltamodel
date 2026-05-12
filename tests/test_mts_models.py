@@ -114,7 +114,7 @@ def mts_config():
     }
 
     config_tmp = OmegaConf.create(config_dict)
-    config = initialize_config(config_tmp, write_out=False)
+    config = initialize_config(config_tmp, make_dirs=False)
     return config
 
 

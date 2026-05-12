@@ -1,3 +1,5 @@
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -15,7 +17,7 @@ def plot_cdf(
     dpi: int = 100,
     fontsize: int = 12,
     ticksize: int = 10,
-    save_path: str = 'cdf/',
+    save_path: str = None,
 ):
     """
     Plots cumulative distribution function (CDF) for specified metric(s) for
@@ -137,5 +139,12 @@ def plot_cdf(
         )
 
     # Show the plot
-    plt.savefig(f"{save_path}", dpi=300, bbox_inches="tight")
+    if save_path is not None:
+        os.makedirs(save_path, exist_ok=True)
+        metric_label = "_".join(metric_names)
+        plt.savefig(
+            os.path.join(save_path, f"cdf_{metric_label}.png"),
+            dpi=300,
+            bbox_inches="tight",
+        )
     plt.show()
