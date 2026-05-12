@@ -173,8 +173,8 @@ EXP_FINAL_LOSS_VALUES = [
     26.94981688261032,  # GHA runner
 ]
 EXP_NSE_VALUES = [
-    -32.043819578347694,  # Local machine NSE (warmup-trim-fix: loss over full rho)
-    # GHA runner value TBD after CI run with fix
+    -32.043819578347694,  # Local machine
+    -33.43177369067762,  # GHA runner
 ]
 
 # ---------------------------------------------------------------------------- #
