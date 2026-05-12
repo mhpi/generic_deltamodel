@@ -19,7 +19,7 @@ def build_config(config_dict):
     """Helper function to build a mock configuration dictionary."""
     # Convert to OmegaConf dict to run Pydantic field validation.
     config_tmp = OmegaConf.create(config_dict)
-    config = initialize_config(config_tmp, write_out=False)
+    config = initialize_config(config_tmp, make_dirs=False)
 
     # Use temporary directory for outputs
     config['output_dir'] = os.path.join(os.getcwd(), config['output_dir'])
@@ -31,6 +31,8 @@ def build_config(config_dict):
     # Create output directories
     os.makedirs(config['model_dir'], exist_ok=True)
     os.makedirs(config['sim_dir'], exist_ok=True)
+    os.makedirs(config['plot_dir'], exist_ok=True)
+    os.makedirs(config['log_dir'], exist_ok=True)
 
     return config
 

@@ -2,6 +2,8 @@
 
 import pickle
 
+import pytest
+
 from dmg.core.data.loaders.hydro_loader import HydroLoader
 
 # ---------------------------------------------------------------------------- #
@@ -26,14 +28,17 @@ def test_hydro_loader_init(config, mock_dataset, tmp_path):
     loader_split = HydroLoader(config, test_split=True)
     assert loader_split.train_dataset is not None
     assert loader_split.eval_dataset is not None
-    assert loader_split.dataset is None
+    with pytest.raises(AttributeError):
+        _ = loader_split.dataset
     assert 'xc_nn_norm' in loader_split.train_dataset
     assert 'xc_nn_norm' in loader_split.eval_dataset
 
     # Test with test_split = False
     config['mode'] = 'simulation'  # Change mode to avoid splitting
     loader_no_split = HydroLoader(config, test_split=False)
-    assert loader_no_split.train_dataset is None
-    assert loader_no_split.eval_dataset is None
+    with pytest.raises(AttributeError):
+        _ = loader_no_split.train_dataset
+    with pytest.raises(AttributeError):
+        _ = loader_no_split.eval_dataset
     assert loader_no_split.dataset is not None
     assert 'xc_nn_norm' in loader_no_split.dataset
