@@ -169,8 +169,8 @@ EXP_ROUTING_BOUNDS = {
 # ---------------------------------------------------------------------------
 
 EXP_FINAL_LOSS_VALUES = [
-    23.998552292585373,  # Local machine loss (warmup-trim-fix: loss over full rho)
-    # GHA runner value TBD after CI run with fix
+    23.998552292585373,  # Local machine
+    26.94981688261032,  # GHA runner
 ]
 EXP_NSE_VALUES = [
     -32.043819578347694,  # Local machine NSE (warmup-trim-fix: loss over full rho)
