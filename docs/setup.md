@@ -84,7 +84,7 @@ git clone https://github.com/mhpi/generic_deltamodel.git
   Create a base environment for Python versions 3.9–3.13:
 
   ```shell
-  conda env create -n dmg python=3.x
+  conda create -n dmg python=3.x
   ```
 
   Activate the environment with `conda activate dmg`.
@@ -125,7 +125,7 @@ git clone https://github.com/mhpi/generic_deltamodel.git
   If you would like to develop in or contribute to hydrodl2, clone the [hydrodl2 master branch](https://github.com/mhpi/hydrodl2) from GitHub and install in developer mode (similar to 𝛿MG):
 
   ```bash
-  git clone git@github.com:mhpi/hydrodl2.git
+  git clone https://github.com/mhpi/hydrodl2.git
   pip install -e ./hydrodl2
 
   # or
