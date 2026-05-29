@@ -52,7 +52,7 @@ For development installs, see [setup](https://github.com/mhpi/generic_deltamodel
 ## Quick Start
 
 ### Before Running:
-- **Environment**: See [setup.md](./../../docs/setup.md) for ENV setup. δMG must be installed with dependencies + [hydrodl2](https://github.com/mhpi/hydrodl2) to run this notebook.
+- **Environment**: See [setup.md](https://github.com/mhpi/generic_deltamodel/blob/master/docs/setup.md) for ENV setup. δMG must be installed with dependencies + [hydrodl2](https://github.com/mhpi/hydrodl2) to run this notebook.
 
 - **Data**: Download our CAMELS ([details here](https://ral.ucar.edu/solutions/products/camels)) data extraction from [AWS](https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/data/1-camels.zip). Then, update the data configs:
 
