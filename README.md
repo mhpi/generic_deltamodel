@@ -51,6 +51,21 @@ For development installs, see [setup](https://github.com/mhpi/generic_deltamodel
 
 ## Quick Start
 
+### Before Running:
+- **Environment**: See [setup.md](./../../docs/setup.md) for ENV setup. δMG must be installed with dependencies + [hydrodl2](https://github.com/mhpi/hydrodl2) to run this notebook.
+
+- **Data**: Download our CAMELS ([details here](https://ral.ucar.edu/solutions/products/camels)) data extraction from [AWS](https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/data/1-camels.zip). Then, update the data configs:
+
+    - In [camels_531.yaml](./../conf/observations/camels_531.yaml) and [camels_671.yaml](./../conf/observations/camels_671.yaml), update...
+        1. `data_path` with path to `camels_daymetv2`,
+        2. `gage_info` with path to `gage_id.npy`,
+        3. `subset_path` with path to `531sub_id.txt` (camels_531 only).
+
+    - The full 671-basin or 531-basin CAMELS datasets can be selected by setting `observations: camels_671` or `camels_531` in the model config, respectively.
+
+- **Hardware**: The NNs used in this model require CUDA support only available with Nvidia GPUs. For those without access, T4 GPUs can be used when running this notebook with δMG on [Google Colab](https://colab.research.google.com/).
+
+### Running:
 Use an LSTM to learn parameters for the [HBV](https://en.wikipedia.org/wiki/HBV_hydrology_model) hydrologic model:
 
 ```python
@@ -80,9 +95,8 @@ parameters = self.nn_model(dataset_sample['xc_nn_norm'])
 predictions = self.phy_model(dataset_sample, parameters)
 ```
 
-%([Colab](https://colab.research.google.com/drive/19PRLrI-L7cGeYzkk2tOetULzQK8s_W7v?usp=sharing))
+We recommend starting with the [δHBV 1.0 tutorial](https://github.com/mhpi/generic_deltamodel/blob/master/example/hydrology/example_dhbv_1_0.ipynb) ([Colab](https://colab.research.google.com/drive/19PRLrI-L7cGeYzkk2tOetULzQK8s_W7v?usp=sharing)), then exploring the full [example notebooks](https://github.com/mhpi/generic_deltamodel/tree/master/example/hydrology). See [how to run](https://github.com/mhpi/generic_deltamodel/blob/master/docs/how_to_run.md) for CLI usage.
 
-We recommend starting with the [δHBV 1.0 tutorial](https://github.com/mhpi/generic_deltamodel/blob/master/example/hydrology/example_dhbv_1_0.ipynb), then exploring the full [example notebooks](https://github.com/mhpi/generic_deltamodel/tree/master/example/hydrology). See [how to run](https://github.com/mhpi/generic_deltamodel/blob/main/docs/how_to_run.md) for CLI usage.
 
 </br>
 
