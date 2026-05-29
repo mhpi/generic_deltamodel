@@ -80,7 +80,9 @@ parameters = self.nn_model(dataset_sample['xc_nn_norm'])
 predictions = self.phy_model(dataset_sample, parameters)
 ```
 
-We recommend starting with the [δHBV 1.0 tutorial](https://github.com/mhpi/generic_deltamodel/blob/master/example/hydrology/example_dhbv_1_0.ipynb) ([Colab](https://colab.research.google.com/drive/19PRLrI-L7cGeYzkk2tOetULzQK8s_W7v?usp=sharing)), then exploring the full [example notebooks](https://github.com/mhpi/generic_deltamodel/tree/master/example/hydrology). See [how to run](https://github.com/mhpi/generic_deltamodel/blob/main/docs/how_to_run.md) for CLI usage.
+%([Colab](https://colab.research.google.com/drive/19PRLrI-L7cGeYzkk2tOetULzQK8s_W7v?usp=sharing))
+
+We recommend starting with the [δHBV 1.0 tutorial](https://github.com/mhpi/generic_deltamodel/blob/master/example/hydrology/example_dhbv_1_0.ipynb), then exploring the full [example notebooks](https://github.com/mhpi/generic_deltamodel/tree/master/example/hydrology). See [how to run](https://github.com/mhpi/generic_deltamodel/blob/main/docs/how_to_run.md) for CLI usage.
 
 </br>
 
@@ -92,7 +94,7 @@ Lumped differentiable rainfall-runoff models [𝛿HBV 1.0](https://agupubs.onlin
 
 ### 2. Unseen Extreme Events Test with 𝛿HBV 1.1p
 
-In the unseen extreme events spatial test, we used water years with a 5-year or lower return period peak flow from 1990/10/01 to 2014/09/30 for training, and held out the water years with greater than a 5-year return period peak flow for testing. The spatial test was conducted using a 5-fold cross-validation approach for basins in the [CAMELS dataset](https://gdex.ucar.edu/dataset/camels.html). This application has been benchmarked against LSTM and demonstrates better extrapolation abilities. Find more details and results in [Song, Sawadekar, et al. (2026)](https://doi.org/10.1029/2025WR040414).
+In the unseen extreme events spatial test, we used water years with a 5-year or lower return period peak flow from 1990/10/01 to 2014/09/30 for training, and held out the water years with greater than a 5-year return period peak flow for testing. The spatial test was conducted using a 5-fold cross-validation approach for basins in the [CAMELS dataset](https://gdex.ucar.edu/dataset/camels.html). This application has been benchmarked against LSTM and demonstrates better extrapolation abilities. Find more details and results in [Song, Sawadekar, et al. (2026)](https://doi.org/10.1029/2025WR040414). The [δHBV 1.1p tutorial](https://github.com/mhpi/generic_deltamodel/blob/master/example/hydrology/example_dhbv_1_1p.ipynb) walks through the training and evaluation of this model.
 
 ![Unseen extreme events](https://raw.githubusercontent.com/mhpi/generic_deltamodel/master/docs/images/extreme_temporal.png)
 
