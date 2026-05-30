@@ -210,38 +210,34 @@ class Trainer(BaseTrainer):
 
     def load_states(self) -> None:
         """
-        Load model, optimizer, and scheduler states from a checkpoint to resume
-        training if a checkpoint file exists.
+        Load optimizer, scheduler, and RNG states from the checkpoint for
+        ``start_epoch - 1`` so training can resume from that epoch.
+
+        The matching checkpoint file is written by
+        :func:`dmg.core.utils.utils.save_train_state` as
+        ``trainer_state_ep{N}.pt`` in ``self.config['model_dir']``.
         """
         path = self.config['model_dir']
-        for file in os.listdir(path):
-            # Check for state checkpoint: looks like `train_state_epoch_XX.pt`.
-            if ('train_state' in file) and (str(self.start_epoch - 1) in file):
-                log.info(
-                    "Loading trainer states --> Resuming Training from"
-                    / f" epoch {self.start_epoch}",
-                )
+        prev_epoch = self.start_epoch - 1
+        target = os.path.join(path, f'trainer_state_ep{prev_epoch}.pt')
+        if not os.path.exists(target):
+            raise FileNotFoundError(
+                f"No checkpoint trainer_state_ep{prev_epoch}.pt in {path} for epoch {prev_epoch}.",
+            )
+        log.info(
+            f"Loading trainer states --> Resuming training from epoch {self.start_epoch}",
+        )
+        checkpoint = torch.load(target)
 
-                checkpoint = torch.load(os.path.join(path, file))
+        # Restore optimizer / scheduler.
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        if self.scheduler:
+            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
 
-                # Restore optimizer states
-                self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-                if self.scheduler:
-                    self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-
-                # Restore random states
-                torch.set_rng_state(checkpoint['random_state'])
-                if torch.cuda.is_available() and 'cuda_random_state' in checkpoint:
-                    torch.cuda.set_rng_state_all(checkpoint['cuda_random_state'])
-                return
-            elif 'train_state' in file:
-                raise FileNotFoundError(
-                    f"Available checkpoint file {file} does"
-                    / f" not match start epoch {self.start_epoch - 1}.",
-                )
-
-        # If no checkpoint file is found for named epoch...
-        raise FileNotFoundError(f"No checkpoint for epoch {self.start_epoch - 1}.")
+        # Restore RNG state so minibatch sampling stays reproducible across resume.
+        torch.set_rng_state(checkpoint['random_state'])
+        if torch.cuda.is_available() and 'cuda_random_state' in checkpoint:
+            torch.cuda.set_rng_state_all(checkpoint['cuda_random_state'])
 
     def train(self) -> None:
         """Train the model."""
