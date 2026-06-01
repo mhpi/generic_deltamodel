@@ -118,6 +118,7 @@ class HydroLoader(BaseLoader):
             'prism_531',
             'camels_671_lstm',
             'camels_531_lstm',
+            'camels_de',
         ]
         self.data_name = config['observations']['name']
         self.nn_attributes = config['model']['nn'].get('attributes', [])

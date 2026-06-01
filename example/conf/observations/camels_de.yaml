@@ -1,0 +1,49 @@
+# CAMELS-DE v1.0.0 dataset extraction for dHBV 1.1p training.
+#
+# Source: Loritz, R., et al. (2024). CAMELS-DE. doi:10.5194/essd-16-5625-2024
+# Download (raw): https://zenodo.org/records/13837553
+# Preprocess to the pickle below with: example/hydrology/preprocess_camels_de.py
+#
+# Forcings (3): precipitation (mm/d), mean air temperature (degC), Hargreaves PET (mm/d).
+# Target: discharge_spec_obs (mm/d).
+# Attributes (15): subset of CAMELS-USA dHBV 1.1p attributes that map onto CAMELS-DE.
+#   - direct: p_mean, p_seasonality, frac_snow, high_prec_freq/dur, low_prec_freq/dur, elev_mean
+#   - renamed: area_gages2 (from `area`)
+#   - derived: pet_mean (mean of Hargreaves PET), aridity (pet_mean / p_mean)
+#   - proxies: frac_forest (from forests_and_seminatural_areas_perc / 100),
+#              sand/silt/clay_frac (from top 0-30 cm CAMELS-DE soil layers / 100)
+
+name: camels_de
+data_path: ./your/path/to/camels_de.pkl       # produced by preprocess_camels_de.py
+gage_info: ./your/path/to/gage_info.npy        # produced by preprocess_camels_de.py
+subset_path: null                              # use all rows in gage_info.npy
+
+area_name: area_gages2
+prcp_mean_name: p_mean
+target_unit: mm/d                              # discharge_spec_obs is already mm/d
+
+start_time: 1980/01/02
+end_time: 2020/12/31
+
+all_forcings: [
+  prcp,
+  tmean,
+  pet,
+]
+all_attributes: [
+  p_mean,
+  pet_mean,
+  aridity,
+  p_seasonality,
+  frac_snow,
+  high_prec_freq,
+  high_prec_dur,
+  low_prec_freq,
+  low_prec_dur,
+  elev_mean,
+  area_gages2,
+  frac_forest,
+  sand_frac,
+  silt_frac,
+  clay_frac,
+]
