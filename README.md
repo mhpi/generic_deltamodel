@@ -51,6 +51,21 @@ For development installs, see [setup](https://github.com/mhpi/generic_deltamodel
 
 ## Quick Start
 
+### Before Running:
+- **Environment**: See [setup.md](https://github.com/mhpi/generic_deltamodel/blob/master/docs/setup.md) for ENV setup. δMG must be installed with dependencies + [hydrodl2](https://github.com/mhpi/hydrodl2) to run this notebook.
+
+- **Data**: Download our CAMELS ([details here](https://ral.ucar.edu/solutions/products/camels)) data extraction from [AWS](https://mhpi-spatial.s3.us-east-2.amazonaws.com/mhpi-release/data/1-camels.zip). Then, update the data configs:
+
+    - In [camels_531.yaml](./../conf/observations/camels_531.yaml) and [camels_671.yaml](./../conf/observations/camels_671.yaml), update...
+        1. `data_path` with path to `camels_daymetv2`,
+        2. `gage_info` with path to `gage_id.npy`,
+        3. `subset_path` with path to `531sub_id.txt` (camels_531 only).
+
+    - The full 671-basin or 531-basin CAMELS datasets can be selected by setting `observations: camels_671` or `camels_531` in the model config, respectively.
+
+- **Hardware**: The NNs used in this model require CUDA support only available with Nvidia GPUs. For those without access, T4 GPUs can be used when running this notebook with δMG on [Google Colab](https://colab.research.google.com/).
+
+### Running:
 Use an LSTM to learn parameters for the [HBV](https://en.wikipedia.org/wiki/HBV_hydrology_model) hydrologic model:
 
 ```python
@@ -92,7 +107,7 @@ Lumped differentiable rainfall-runoff models [𝛿HBV 1.0](https://agupubs.onlin
 
 ### 2. Unseen Extreme Events Test with 𝛿HBV 1.1p
 
-In the unseen extreme events spatial test, we used water years with a 5-year or lower return period peak flow from 1990/10/01 to 2014/09/30 for training, and held out the water years with greater than a 5-year return period peak flow for testing. The spatial test was conducted using a 5-fold cross-validation approach for basins in the [CAMELS dataset](https://gdex.ucar.edu/dataset/camels.html). This application has been benchmarked against LSTM and demonstrates better extrapolation abilities. Find more details and results in [Song, Sawadekar, et al. (2026)](https://doi.org/10.1029/2025WR040414).
+In the unseen extreme events spatial test, we used water years with a 5-year or lower return period peak flow from 1990/10/01 to 2014/09/30 for training, and held out the water years with greater than a 5-year return period peak flow for testing. The spatial test was conducted using a 5-fold cross-validation approach for basins in the [CAMELS dataset](https://gdex.ucar.edu/dataset/camels.html). This application has been benchmarked against LSTM and demonstrates better extrapolation abilities. Find more details and results in [Song, Sawadekar, et al. (2026)](https://doi.org/10.1029/2025WR040414). The [δHBV 1.1p tutorial](https://github.com/mhpi/generic_deltamodel/blob/master/example/hydrology/example_dhbv_1_1p.ipynb) walks through the training and evaluation of this model.
 
 ![Unseen extreme events](https://raw.githubusercontent.com/mhpi/generic_deltamodel/master/docs/images/extreme_temporal.png)
 
