@@ -20,10 +20,30 @@ from dmg.core.utils.pydantic_compat import PYDANTIC_V2, v1_mock_self
 log = logging.getLogger(__name__)
 
 
+# Substrings that mark a value as an unset config template placeholder.
+# Validation logs a warning and defers to caller (e.g. programmatic override)
+# instead of raising, so a placeholder YAML can still be loaded and patched.
+_PLACEHOLDER_MARKERS = ('your/path/to', 'path/to/your')
+
+
 def check_path(key: str, v: str) -> Path:
-    """Checks if a given path exists and is valid."""
+    """Check that ``v`` is an existing path.
+
+    If ``v`` looks like an unset configuration template placeholder
+    (e.g. ``./your/path/to/...``), log a warning and return the path
+    object without erroring. This allows callers to instantiate a config
+    from a template and override paths programmatically before use.
+    Real missing paths (i.e. not matching any placeholder marker) still
+    raise as before.
+    """
     path = Path(v)
     if not path.exists():
+        if any(marker in str(v) for marker in _PLACEHOLDER_MARKERS):
+            log.warning(
+                f"{key} = {v!r} looks like an unset placeholder; "
+                f"skipping existence check. Override before use.",
+            )
+            return path
         log_str = f"Path does not exist for {key}: {v}"
         log.error(log_str)
         raise ValueError(log_str)
