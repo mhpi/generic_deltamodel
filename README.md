@@ -44,7 +44,7 @@ uv pip install "dmg[logging]"     # TensorBoard and W&B
 uv pip install "dmg[tune]"        # Hyperparameter tuning (Optuna/Ray)
 ```
 
-For development installs, see [setup](https://github.com/mhpi/generic_deltamodel/blob/main/docs/setup.md)
+For development installs, see [setup](https://github.com/mhpi/generic_deltamodel/blob/master/docs/setup.md)
 .
 
 </br>
@@ -96,7 +96,6 @@ predictions = self.phy_model(dataset_sample, parameters)
 ```
 
 We recommend starting with the [δHBV 1.0 tutorial](https://github.com/mhpi/generic_deltamodel/blob/master/example/hydrology/example_dhbv_1_0.ipynb) ([Colab](https://colab.research.google.com/drive/19PRLrI-L7cGeYzkk2tOetULzQK8s_W7v?usp=sharing)), then exploring the full [example notebooks](https://github.com/mhpi/generic_deltamodel/tree/master/example/hydrology). See [how to run](https://github.com/mhpi/generic_deltamodel/blob/master/docs/how_to_run.md) for CLI usage.
-
 
 </br>
 
