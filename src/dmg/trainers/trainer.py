@@ -617,6 +617,7 @@ class Trainer(BaseTrainer):
             prediction = {
                 key: tensor.detach().cpu()
                 for key, tensor in prediction[self.model.models[0]].items()
+                if tensor is not None
             }
             batch_predictions.append(prediction)
         return batch_predictions
