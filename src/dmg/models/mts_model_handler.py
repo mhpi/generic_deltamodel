@@ -77,37 +77,44 @@ class MtsModelHandler(torch.nn.Module):
             high_freq_config=config['model']['phy']['hif_model'],
             device=torch.device(device),
         )
+        nn_cfg = config['model']['nn']
         low_freq_nn_model = LstmMlpModel(
-            nx1=len(config['model']['nn']['lof_model']['forcings'])
-            + len(config['model']['nn']['lof_model']['attributes']),
+            nx1=len(nn_cfg['lof_model']['forcings'])
+            + len(nn_cfg['lof_model']['attributes']),
             ny1=phy_model.low_freq_model.learnable_param_count1,
-            hiddeninv1=config['model']['nn']['lof_model']['lstm_hidden_size'],
-            nx2=len(config['model']['nn']['lof_model']['attributes']),
+            hiddeninv1=nn_cfg['lof_model']['lstm_hidden_size'],
+            nx2=len(nn_cfg['lof_model']['attributes']),
             ny2=phy_model.low_freq_model.learnable_param_count2,
-            hiddeninv2=config['model']['nn']['lof_model']['mlp_hidden_size'],
-            dr1=config['model']['nn']['lof_model']['lstm_dropout'],
-            dr2=config['model']['nn']['lof_model']['mlp_dropout'],
-            sub_batch_size=config['model']['nn']['sub_batch_size'],
+            hiddeninv2=nn_cfg['lof_model']['mlp_hidden_size'],
+            dr1=nn_cfg['lof_model']['lstm_dropout'],
+            dr2=nn_cfg['lof_model']['mlp_dropout'],
+            sub_batch_size=nn_cfg['sub_batch_size'],
+            use_in_proj=nn_cfg['lof_model'].get('use_in_proj', True),
             device=torch.device(device),
         )
         high_freq_nn_model = LstmMlp2Model(
-            nx1=len(config['model']['nn']['hif_model']['forcings'])
-            + len(config['model']['nn']['hif_model']['attributes']),
+            nx1=len(nn_cfg['hif_model']['forcings'])
+            + len(nn_cfg['hif_model']['attributes']),
             ny1=phy_model.high_freq_model.learnable_param_count1,
-            hiddeninv1=config['model']['nn']['hif_model']['lstm_hidden_size'],
-            nx2=len(config['model']['nn']['hif_model']['attributes']),
+            hiddeninv1=nn_cfg['hif_model']['lstm_hidden_size'],
+            nx2=len(nn_cfg['hif_model']['attributes']),
             ny2=phy_model.high_freq_model.learnable_param_count2,
-            hiddeninv2=config['model']['nn']['hif_model']['mlp_hidden_size'],
-            nx3=len(config['model']['nn']['hif_model']['attributes2']),
+            hiddeninv2=nn_cfg['hif_model']['mlp_hidden_size'],
+            nx3=len(nn_cfg['hif_model']['attributes2']),
             ny3=phy_model.high_freq_model.learnable_param_count3,
-            hiddeninv3=config['model']['nn']['hif_model']['mlp2_hidden_size'],
-            dr1=config['model']['nn']['hif_model']['lstm_dropout'],
-            dr2=config['model']['nn']['hif_model']['mlp_dropout'],
-            dr3=config['model']['nn']['hif_model']['mlp2_dropout'],
-            sub_batch_size=config['model']['nn']['sub_batch_size'],
+            hiddeninv3=nn_cfg['hif_model']['mlp2_hidden_size'],
+            dr1=nn_cfg['hif_model']['lstm_dropout'],
+            dr2=nn_cfg['hif_model']['mlp_dropout'],
+            dr3=nn_cfg['hif_model']['mlp2_dropout'],
+            sub_batch_size=nn_cfg['sub_batch_size'],
+            use_in_proj=nn_cfg['hif_model'].get('use_in_proj', True),
             device=torch.device(device),
         )
-        nn_model = StackLstmMlpModel(low_freq_nn_model, high_freq_nn_model)
+        nn_model = StackLstmMlpModel(
+            low_freq_nn_model,
+            high_freq_nn_model,
+            use_transfer=nn_cfg.get('use_transfer', True),
+        )
         dpl_model = DplModel(
             phy_model=phy_model,
             nn_model=nn_model,
@@ -188,19 +195,19 @@ class MtsModelHandler(torch.nn.Module):
             Model output for the target variable.
         """
         if mode == 'train':
-            self.dpl_model.phy_model.set_mode(is_simulate=False)
-            self.dpl_model.nn_model.set_mode(is_simulate=False)
+            self.dpl_model.phy_model.set_mode(False)
+            self.dpl_model.nn_model.set_mode(False)
             self.dpl_model.train()
             output = self.dpl_model(dataset_dict)
         elif mode == 'eval':
-            self.dpl_model.phy_model.set_mode(is_simulate=False)
-            self.dpl_model.nn_model.set_mode(is_simulate=False)
+            self.dpl_model.phy_model.set_mode(False)
+            self.dpl_model.nn_model.set_mode(False)
             self.dpl_model.eval()
             with torch.no_grad():
                 output = self.dpl_model(dataset_dict)
         elif mode == 'simulate':
-            self.dpl_model.phy_model.set_mode(is_simulate=True)
-            self.dpl_model.nn_model.set_mode(is_simulate=True)
+            self.dpl_model.phy_model.set_mode(True)
+            self.dpl_model.nn_model.set_mode(True)
             self.dpl_model.eval()
             with torch.no_grad():
                 output = self.dpl_model(dataset_dict)
