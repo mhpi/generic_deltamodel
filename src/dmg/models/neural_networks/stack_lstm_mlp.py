@@ -1,3 +1,4 @@
+import warnings
 from typing import Optional
 
 import torch
@@ -6,6 +7,8 @@ import torch.nn.functional as F
 from kan import KAN
 
 USE_KAN = False
+
+warnings.filterwarnings("ignore", message="dropout option adds dropout")
 
 
 class KAN_2(nn.Module):
