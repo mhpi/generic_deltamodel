@@ -371,7 +371,10 @@ class Trainer(BaseTrainer):
             # produces NaN. Common in physics-coupled losses with extreme
             # parameter regions.
             batch_loss = loss.item()
-            loss_finite = batch_loss == batch_loss and not (batch_loss in (float('inf'), float('-inf')))
+            loss_finite = batch_loss == batch_loss and batch_loss not in (
+                float('inf'),
+                float('-inf'),
+            )
             if loss_finite:
                 # Optional gradient clipping (default: off when grad_clip <= 0).
                 # Helps cap damage from rare large-gradient outliers.
@@ -743,16 +746,20 @@ class Trainer(BaseTrainer):
             # Both full-window (or both already post-warm-up); strip warm-up
             # symmetrically from both.
             if warmup > 0:
-                predictions = {k: (v[warmup:] if v.shape[0] == T_obs else v)
-                               for k, v in predictions.items()}
+                predictions = {
+                    k: (v[warmup:] if v.shape[0] == T_obs else v)
+                    for k, v in predictions.items()
+                }
                 observations = observations[warmup:]
         elif T_pred == T_obs - warmup:
             # Pred is already post-warm-up; strip target only.
             observations = observations[warmup:]
         elif T_pred - warmup == T_obs:
             # Target was already stripped; strip pred too.
-            predictions = {k: (v[warmup:] if v.shape[0] == T_pred else v)
-                           for k, v in predictions.items()}
+            predictions = {
+                k: (v[warmup:] if v.shape[0] == T_pred else v)
+                for k, v in predictions.items()
+            }
         else:
             raise ValueError(
                 f"_align_for_metrics: cannot align pred (T={T_pred}) and "
