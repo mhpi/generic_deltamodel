@@ -126,8 +126,11 @@ def main(config: DictConfig) -> None:
         log.error("|> An error occurred <|", exc_info=True)  # Logs full traceback
     finally:
         log.info("Cleaning up resources...")
-        torch.cuda.synchronize()
-        torch.cuda.empty_cache()
+
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+            torch.cuda.empty_cache()
+        
         total_time = time.perf_counter() - start_time
         log.info(
             f"| {config['mode']} completed | "
