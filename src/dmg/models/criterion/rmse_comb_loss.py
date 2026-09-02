@@ -83,13 +83,11 @@ class RmseCombLoss(BaseCriterion):
             loss1 = torch.sqrt(((p_sub - t_sub) ** 2).mean())
 
             # Log-Sqrt RMSE
-            # Clamp predictions before sqrt: models with an unconstrained output head
-            # (e.g. LSTM) can predict negative flow, and sqrt(negative) = NaN poisons the
-            # entire loss from the first step. Physics models never trip this because their
-            # discharge is non-negative by construction, which is why the bug is silent in
-            # dHBV benchmarks and fatal for pure-NN ones. loss1 (plain RMSE) still supplies
-            # the gradient that pushes negative predictions back up.
-            p_sub1 = torch.log10(torch.sqrt(torch.clamp(p_sub, min=0.0) + self.beta) + 0.1)
+            # Clamp predictions before sqrt: models with an unconstrained output
+            # (e.g. LSTM) can predict negative flow, and sqrt(negative) = NaN
+            p_sub1 = torch.log10(
+                torch.sqrt(torch.clamp(p_sub, min=0.0) + self.beta) + 0.1
+            )
             t_sub1 = torch.log10(torch.sqrt(t_sub + self.beta) + 0.1)
             loss2 = torch.sqrt(((p_sub1 - t_sub1) ** 2).mean())
 

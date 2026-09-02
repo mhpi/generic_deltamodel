@@ -554,9 +554,11 @@ class Trainer(BaseTrainer):
         if obs_convert_fn is not None:
             obs_np = obs_convert_fn(obs_np)
 
-        # Align pred/obs time axes (handles both full-window and post-warm-up
-        # model conventions; see Trainer._align_for_metrics docstring).
-        self.predictions, obs_np = self._align_for_metrics(self.predictions, obs_np)
+        # Every model strips its own warm-up, so predictions are always
+        # post-warm-up. Trim the same period off the observations to match.
+        warmup = int(self.config['model'].get('warmup', 0))
+        if warmup > 0:
+            obs_np = obs_np[warmup:]
 
         # Calculate metrics
         self.calc_metrics(self.predictions, obs_np)
@@ -697,8 +699,8 @@ class Trainer(BaseTrainer):
         observations
             Target variable observation data as a numpy array, already
             converted to match the output unit of predictions AND already
-            aligned to the prediction time axis (warm-up handled upstream
-            in ``_align_for_metrics``).
+            trimmed of the warm-up period so it lines up with the
+            post-warm-up predictions returned by every model.
         """
         target_name = self.config['train']['target'][0]
         pred = predictions[target_name]
@@ -709,9 +711,9 @@ class Trainer(BaseTrainer):
         if pred.shape != target.shape:
             raise ValueError(
                 f"calc_metrics: pred shape {pred.shape} does not match "
-                f"target shape {target.shape}. Models should return "
-                f"post-warm-up output; use Trainer._align_for_metrics() to "
-                f"reconcile legacy full-window models against post-warm-up targets."
+                f"target shape {target.shape}. Every model must return "
+                f"post-warm-up output (`nsteps - model.warmup` timesteps); "
+                f"a mismatch means one is not stripping its warm-up period."
             )
 
         # Compute metrics
@@ -723,71 +725,6 @@ class Trainer(BaseTrainer):
         # Save all metrics and aggregated statistics.
         metrics.dump_metrics(self.config['output_dir'])
         metrics.print_summary()
-
-    def _align_for_metrics(
-        self,
-        predictions: dict[str, np.ndarray],
-        observations: np.ndarray,
-    ) -> tuple[dict[str, np.ndarray], np.ndarray]:
-        """Reconcile prediction and target time axes before metric scoring.
-
-        The dMG model registry contains two conventions for what
-        ``Model.forward()`` returns over a test window of length ``T``:
-
-        - **post-warm-up**: returns ``T - warmup`` days (older Hbv_1_1p,
-          most physics-based models).
-        - **full-window**: returns the full ``T`` days, with the first
-          ``warmup`` rows being spin-up that should not be scored
-          (most pure-LSTM and newer Hbv variants).
-
-        This helper detects which convention the active model uses (by
-        comparing pred and target lengths) and strips warm-up symmetrically
-        so ``calc_metrics`` receives matched-shape arrays. Going forward, new
-        models should prefer the post-warm-up convention.
-
-        Parameters
-        ----------
-        predictions
-            Batched (and denormalized) predictions dict; values are
-            ``(T_pred, N, C)`` arrays.
-        observations
-            Target observation array of shape ``(T_obs, N, num_targets)``.
-
-        Returns
-        -------
-        Tuple of ``(predictions, observations)`` with their first axes aligned.
-        """
-        target_name = self.config['train']['target'][0]
-        warmup = int(self.config['model'].get('warmup', 0))
-        pred = predictions[target_name]
-        T_pred = pred.shape[0]
-        T_obs = observations.shape[0]
-
-        if T_pred == T_obs:
-            # Both full-window (or both already post-warm-up); strip warm-up
-            # symmetrically from both.
-            if warmup > 0:
-                predictions = {
-                    k: (v[warmup:] if v.shape[0] == T_obs else v)
-                    for k, v in predictions.items()
-                }
-                observations = observations[warmup:]
-        elif T_pred == T_obs - warmup:
-            # Pred is already post-warm-up; strip target only.
-            observations = observations[warmup:]
-        elif T_pred - warmup == T_obs:
-            # Target was already stripped; strip pred too.
-            predictions = {
-                k: (v[warmup:] if v.shape[0] == T_pred else v)
-                for k, v in predictions.items()
-            }
-        else:
-            raise ValueError(
-                f"_align_for_metrics: cannot align pred (T={T_pred}) and "
-                f"target (T={T_obs}) with warmup={warmup}. Expected pred to "
-                f"be post-warm-up (T_obs - warmup) or full-window (T_obs)."
-            )
-        return predictions, observations
 
     def _log_epoch_stats(
         self,

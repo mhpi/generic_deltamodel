@@ -131,7 +131,7 @@ def main(config: DictConfig) -> None:
         if torch.cuda.is_available():
             torch.cuda.synchronize()
             torch.cuda.empty_cache()
-        
+
         total_time = time.perf_counter() - start_time
         log.info(
             f"| {config['mode']} completed | "
