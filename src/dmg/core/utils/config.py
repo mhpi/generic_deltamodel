@@ -496,6 +496,7 @@ class Config(BaseModel):
     name: Optional[str] = None
     mode: Optional[ModeEnum] = Field(default=ModeEnum.train_test)
     do_tune: Optional[bool] = False
+    overwrite: Optional[bool] = False
     multimodel_type: Optional[MultimodelEnum] = None
     seed: Optional[int] = 0
     logging: Optional[LoggingEnum] = None
@@ -511,6 +512,7 @@ class Config(BaseModel):
 
     output_dir: Optional[str] = None
     model_dir: Optional[str] = None
+    pretrained_model_dir: Optional[str] = None
     plot_dir: Optional[str] = None
     sim_dir: Optional[str] = None
     log_dir: Optional[str] = None
@@ -580,8 +582,13 @@ class Config(BaseModel):
         ### Create output directories and add path to config. ###
         if not self.output_dir:
             self.output_dir = os.getcwd()
-        if not self.model_dir:
-            self.model_dir = os.path.join(self.output_dir, 'model/')
+        # When model_dir points to an external pretrained model, preserve it
+        # as the load path but always save new checkpoints under output_dir.
+        if self.model_dir:
+            self.pretrained_model_dir = self.model_dir
+        else:
+            self.pretrained_model_dir = None
+        self.model_dir = os.path.join(self.output_dir, 'model/')
         if not self.plot_dir:
             self.plot_dir = os.path.join(self.output_dir, 'plot/')
         if not self.sim_dir:

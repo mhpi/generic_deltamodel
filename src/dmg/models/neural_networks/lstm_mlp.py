@@ -138,9 +138,8 @@ class LstmMlpModel(torch.nn.Module):
         act_out = self.activation(lstm_out)
         ann_out = self.ann(x2)
 
-        self._hn_cache, self._cn_cache = self.lstminv.get_states()
-
         if self.cache_states:
+            self._hn_cache, self._cn_cache = self.lstminv.get_states()
             self.hn = self._hn_cache.to(x1.device)
             self.cn = self._cn_cache.to(x1.device)
 

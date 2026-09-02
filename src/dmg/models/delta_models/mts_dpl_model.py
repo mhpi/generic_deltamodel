@@ -89,7 +89,7 @@ class MtsDplModel(torch.nn.Module):
         else:
             raise ValueError(
                 "A (1) physics model name or (2) model spec in"
-                / " a configuration dictionary is required.",
+                " a configuration dictionary is required.",
             )
 
         model = import_phy_model(model_name)

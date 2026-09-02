@@ -131,6 +131,8 @@ The settings are broken down as they appear in the YAML configuration files, wit
 - `nn_parallel`: Dynamically weight model outputs using a neural network (NN) trained in parallel with models.
 - `nn_sequential`: Dynamically weight model outputs using a NN trained after pre-training models to be ensembled.
 
+**overwrite**: [bool] If True, allow a named experiment (`exp_name`) to reuse an output directory that already exists, overwriting its contents. If False (the default), 𝛿MG stops with an error rather than clobbering a previous run. Has no effect on timestamped runs, where `exp_name` is unset.
+
 **seed**: [111111] Seed to fix deterministic behavior in NumPy and PyTorch.
 
 **logging**: [none, tensorboard, wandb] Experiment logger.
@@ -156,6 +158,10 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 *model_dir*: Path to a directory containing trained model weights, may also include subdirectory of model outputs. Note this path must end with a forward slash ('/').
 
+This is a **load** path. During config initialization the value you set is copied to `pretrained_model_dir`, and `model_dir` is then reassigned to `{output_dir}/model/`, so a run started from pretrained weights writes its own checkpoints alongside its own outputs instead of overwriting the weights it started from. Leave unset to train from scratch.
+
+*pretrained_model_dir*: Derived automatically from `model_dir` — do not set this directly. It is what the model handler, the trainer's resume logic, and the data loader's cached normalization statistics read from, so evaluating or fine-tuning a pretrained model picks up that run's weights and norm stats while all writes go to `{output_dir}/model/`.
+
 *load_state_dir*: Path to a PyTorch save file (`.pt`) containing cached model states for a neural network or differentiable model (e.g., hidden and cell states for an LSTM, buckets for a physical model). If this path is provided, the Model Handler will attempt to load these states into the current model.
 
 </br>
@@ -171,13 +177,14 @@ The settings are broken down as they appear in the YAML configuration files, wit
 - **target**: Name(s) of target model output(s). Must match key names in model output dictionary, and must be provided as a list of strings.
 
 - **optimizer**:
-  - **name**: [Adadelta, Adam] Name of [PyTorch optimizer](https://docs.pytorch.org/docs/stable/optim.html).
+  - **name**: [SGD, Adam, AdamW, Adadelta, RMSprop] Name of [PyTorch optimizer](https://docs.pytorch.org/docs/stable/optim.html).
+  - Any other keys in this block are forwarded straight to the optimizer constructor, e.g. `momentum`, `weight_decay`, `betas`.
 
 - **lr_scheduler**:
   - **name**: [StepLR, ExponentialLR, CosineAnnealingLR] Name of [PyTorch learning rate scheduler](https://docs.pytorch.org/docs/stable/optim.html) for the optimizer.
 
 - **loss_function**:
-  - **name**: [KgeBatchLoss, KgeNormBatchLoss, MseLoss, NseBatchLoss, NseSqrtBatchLoss, RmseCombLoss, RmseLoss] Name of loss function for training. See `./src/dmg/models/criterion/` for all available loss functions. You can add custom criterion, but they must follow Class-File convention as illustrated for `data_loader`, etc.
+  - **name**: [KgeBatchLoss, KgeNormBatchLoss, MseLoss, NseBatchLoss, NseLogBatchLoss, NseSqrtBatchLoss, NseTrendBatchLoss, RmseCombLoss, RmseLoss] Name of loss function for training. See `./src/dmg/models/criterion/` for all available loss functions. You can add custom criterion, but they must follow Class-File convention as illustrated for `data_loader`, etc.
 
 - **batch_size**: Training batch size. Must be less than total number of samples.
 
@@ -186,6 +193,10 @@ The settings are broken down as they appear in the YAML configuration files, wit
 - **start_epoch**: Epoch to resume training from. A checkpoint file for this epoch must be present if not 0.
 
 - **save_epoch**: Save module weights after every epoch that is a multiple of this number.
+
+- **grad_clip**: [0.0] Maximum gradient L2 norm. Gradients are clipped to this norm before each optimizer step; 0 (the default) disables clipping. `grad_threshold` is accepted as a deprecated alias for the same setting.
+
+- **max_bad_batches**: [20] How many consecutive non-finite-loss minibatches to tolerate before aborting training. A batch whose loss is NaN or infinite is skipped rather than stepped, so one bad batch cannot poison the optimizer state; this caps how long that can go on before the run stops.
 
 </br>
 
@@ -200,6 +211,8 @@ The settings are broken down as they appear in the YAML configuration files, wit
 - **batch_size**: Testing batch size. Must be less than total number of samples.
 
 - **test_epoch**: Epoch to test model from. Model weights must be available for this epoch.
+
+- **year_by_year**: [bool] If True, shift `start_time` back to 1 January of the preceding year so that each evaluated year is preceded by a full calendar year of warm-up data. Intended for trainers that reset model states once per year; the default (False) leaves the test window exactly as configured.
 
 </br>
 
@@ -316,7 +329,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 
 - *scaling_function*: [sigmoid, softmax] Method to use for scaling learned weights.
 
-- *loss_function*: [KgeBatchLoss, KgeNormBatchLoss, MseLoss, NseBatchLoss, NseSqrtBatchLoss, RmseCombLoss, RmseLoss] Loss function for training. See `./src/dmg/models/criterion/` for all available loss functions. You can add custom criterion, but they must follow Class-File convention as illustrated for `data_loader`, etc.
+- *loss_function*: [KgeBatchLoss, KgeNormBatchLoss, MseLoss, NseBatchLoss, NseLogBatchLoss, NseSqrtBatchLoss, NseTrendBatchLoss, RmseCombLoss, RmseLoss] Loss function for training. See `./src/dmg/models/criterion/` for all available loss functions. You can add custom criterion, but they must follow Class-File convention as illustrated for `data_loader`, etc.
 
 - *use_rb_loss*: [bool] If True, include range-bound loss regularization. Penalize learned weights when their sum exceeds specific bounds.
 

@@ -258,10 +258,9 @@ class LstmModel(torch.nn.Module):
             dr_false=dr_false,
         )
 
-        self._hn_cache = hn.detach().cpu()
-        self._cn_cache = cn.detach().cpu()
-
         if self.cache_states:
+            self._hn_cache = hn.detach().cpu()
+            self._cn_cache = cn.detach().cpu()
             self.hn = self._hn_cache.to(x.device)
             self.cn = self._cn_cache.to(x.device)
 

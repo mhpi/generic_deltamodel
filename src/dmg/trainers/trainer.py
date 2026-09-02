@@ -1,3 +1,4 @@
+import gc
 import logging
 import os
 import time
@@ -150,26 +151,32 @@ class Trainer(BaseTrainer):
         name = self.config['train']['optimizer']['name']
         learning_rate = self.config['train']['lr']
         optimizer_dict = {
-            # 'SGD': torch.optim.SGD,
+            'SGD': torch.optim.SGD,
             'Adam': torch.optim.Adam,
             'AdamW': torch.optim.AdamW,
             'Adadelta': torch.optim.Adadelta,
-            # 'RMSprop': torch.optim.RMSprop,
+            'RMSprop': torch.optim.RMSprop,
         }
 
         # Fetch optimizer class
-        cls = optimizer_dict[name]
+        cls = optimizer_dict.get(name)
         if cls is None:
             raise ValueError(
                 f"Optimizer '{name}' not recognized. "
                 f"Available options are: {list(optimizer_dict.keys())}",
             )
 
+        # Forward any extra optimizer settings (momentum, weight_decay, betas).
+        opt_kwargs = {
+            k: v for k, v in self.config['train']['optimizer'].items() if k != 'name'
+        }
+
         # Initialize
         try:
             self.optimizer = cls(
                 self.model.get_parameters(),
                 lr=learning_rate,
+                **opt_kwargs,
             )
         except RuntimeError as e:
             raise RuntimeError(f"Error initializing optimizer: {e}") from e
@@ -191,7 +198,7 @@ class Trainer(BaseTrainer):
         }
 
         # Fetch scheduler class
-        cls = scheduler_dict[name]
+        cls = scheduler_dict.get(name)
         if cls is None:
             raise ValueError(
                 f"Scheduler '{name}' not recognized. "
@@ -217,7 +224,7 @@ class Trainer(BaseTrainer):
         :func:`dmg.core.utils.utils.save_train_state` as
         ``trainer_state_ep{N}.pt`` in ``self.config['model_dir']``.
         """
-        path = self.config['model_dir']
+        path = self.config.get('pretrained_model_dir') or self.config['model_dir']
         prev_epoch = self.start_epoch - 1
         target = os.path.join(path, f'trainer_state_ep{prev_epoch}.pt')
         if not os.path.exists(target):
@@ -255,12 +262,19 @@ class Trainer(BaseTrainer):
 
         # Training loop
         for epoch in range(self.start_epoch, self.epochs + 1):
+            # Disable garbage collection during the epoch for performance.
+            gc.collect()
+            gc.disable()
+
             self.train_one_epoch(
                 epoch,
                 n_samples,
                 n_minibatch,
                 n_timesteps,
             )
+
+            gc.enable()
+            gc.collect()
 
         self.exp_logger.finalize()
 
@@ -378,7 +392,11 @@ class Trainer(BaseTrainer):
             if loss_finite:
                 # Optional gradient clipping (default: off when grad_clip <= 0).
                 # Helps cap damage from rare large-gradient outliers.
-                max_norm = float(self.config['train'].get('grad_clip', 0.0))
+                max_norm = float(
+                    self.config['train'].get('grad_clip')
+                    # `grad_threshold` is the older spelling; still honored.
+                    or self.config['train'].get('grad_threshold', 0.0),
+                )
                 if max_norm > 0:
                     # Pull params from the optimizer's own param_groups -- this
                     # guarantees alignment with what the optimizer will step,
@@ -429,7 +447,10 @@ class Trainer(BaseTrainer):
             self.scheduler.step()
 
         if self.verbose:
-            log.info(f"\n ---- \n Epoch {epoch} total loss: {self.total_loss}")
+            log.info(
+                f"\n ---- \n Epoch {epoch} | Total Loss {self.total_loss} "
+                f"| Avg Loss {self.total_loss / n_minibatch:.6f} \n ---- \n",
+            )
         self._log_epoch_stats(epoch, self.model.loss_dict, n_minibatch, start_time)
 
         # Save model and trainer states.

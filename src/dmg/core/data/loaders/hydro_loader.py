@@ -252,7 +252,7 @@ class HydroLoader(BaseLoader):
 
         return dataset
 
-    def read_data(self, scope: Optional[str]) -> tuple[NDArray[np.float32]]:
+    def read_data(self, scope: Optional[str]) -> tuple[NDArray[np.float32], ...]:
         """Read data from the data file.
 
         Parameters
@@ -262,8 +262,8 @@ class HydroLoader(BaseLoader):
 
         Returns
         -------
-        tuple[NDArray[np.float32]]
-            Tuple of neural network + physics model inputes, and target data.
+        tuple[NDArray[np.float32], ...]
+            Tuple of neural network + physics model inputs, and target data.
         """
         try:
             if self.config['observations']['data_path']:
@@ -471,7 +471,17 @@ class HydroLoader(BaseLoader):
         c_nn: NDArray[np.float32],
         target: NDArray[np.float32],
     ) -> None:
-        """Load or calculate normalization statistics if necessary."""
+        """Load or calculate normalization statistics if necessary.
+
+        Parameters
+        ----------
+        x_nn
+            Neural network dynamic data.
+        c_nn
+            Neural network static data.
+        target
+            Target variable data.
+        """
         # Look for pretrained norm stats first (critical for test/eval mode).
         pretrained_dir = self.config.get('pretrained_model_dir')
         if pretrained_dir:

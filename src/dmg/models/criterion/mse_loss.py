@@ -67,3 +67,9 @@ class MSELoss(BaseCriterion):
         else:
             loss = torch.tensor(0.0, device=self.device)
         return loss
+
+
+# The component factory resolves `name` -> module via camel_to_snake, so the
+# config-facing name for `mse_loss.py` must be `MseLoss`. Alias it so both
+# spellings work and existing `from ... import MSELoss` keeps resolving.
+MseLoss = MSELoss

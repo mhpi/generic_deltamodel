@@ -104,6 +104,8 @@ Loss functions for training. Specify by class name in the `train.loss_function.n
 | `RmseCombLoss` | `dmg.models.criterion` | Combined RMSE + log-sqrt RMSE (alpha-weighted). |
 | `NseBatchLoss` | `dmg.models.criterion` | Nash-Sutcliffe Efficiency (NSE) batch loss. |
 | `NseSqrtBatchLoss` | `dmg.models.criterion` | Square-root NSE batch loss. |
+| `NseLogBatchLoss` | `dmg.models.criterion` | NSE batch loss on log-transformed flow; weights low-flow/baseflow accuracy. |
+| `NseTrendBatchLoss` | `dmg.models.criterion` | NSE batch loss weighted by `\|dQ/dt\|`; weights rising/falling limbs over steady flow. |
 | `KgeBatchLoss` | `dmg.models.criterion` | Kling-Gupta Efficiency (KGE) loss. |
 | `KgeNormBatchLoss` | `dmg.models.criterion` | Normalized KGE (N-KGE) loss. |
 | `RangeBoundLoss` | `dmg.models.criterion` | Penalty loss for multimodel weight bounds. |
