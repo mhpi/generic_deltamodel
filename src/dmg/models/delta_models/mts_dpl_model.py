@@ -69,7 +69,6 @@ class MtsDplModel(torch.nn.Module):
         # self.phy_model = torch.compile(self.phy_model, mode="reduce-overhead", fullgraph=False)
 
     def _init_phy_model(self, phy_model_name) -> torch.nn.Module:
-        # TODO: add Hbv_2h and Hbv_2_mts to hydrodl2, add Hbv_2_mts support to import_phy_model and load_component
         """Initialize a physics model.
 
         Parameters
@@ -93,11 +92,14 @@ class MtsDplModel(torch.nn.Module):
             )
 
         model = import_phy_model(model_name)
-        return model(self.config['phy'], device=self.device)
+        return model(
+            low_freq_config=self.config['phy']['lof_model'],
+            high_freq_config=self.config['phy']['hif_model'],
+            device=self.device,
+        )
 
     def _init_nn_model(self) -> torch.nn.Module:
-        # TODO: add LstmMlp2Model and StackLstmMlpModel to load_nn_model
-        """Initialize a neural network model.
+        """Initialize the low/high-frequency neural network pair.
 
         Returns
         -------

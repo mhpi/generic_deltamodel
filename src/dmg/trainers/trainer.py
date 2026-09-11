@@ -379,30 +379,24 @@ class Trainer(BaseTrainer):
 
             loss.backward()
 
-            # Defensive: skip optimizer step when the loss or any grad is
-            # non-finite. Otherwise a single bad batch poisons the optimizer
-            # accumulator (Adadelta in particular) and every subsequent batch
-            # produces NaN. Common in physics-coupled losses with extreme
-            # parameter regions.
+            # Skip optimizer step when the loss or any grad is non-finite.
+            # Otherwise a single bad batch pollutes the optimizer and every
+            # subsequent batch produces nans.
             batch_loss = loss.item()
             loss_finite = batch_loss == batch_loss and batch_loss not in (
                 float('inf'),
                 float('-inf'),
             )
             if loss_finite:
-                # Optional gradient clipping (default: off when grad_clip <= 0).
-                # Helps cap damage from rare large-gradient outliers.
+                # Optional grad clipping (default: off when grad_clip <= 0).
                 max_norm = float(
                     self.config['train'].get('grad_clip')
-                    # `grad_threshold` is the older spelling; still honored.
+                    # also check for older name
                     or self.config['train'].get('grad_threshold', 0.0),
                 )
                 if max_norm > 0:
-                    # Pull params from the optimizer's own param_groups -- this
-                    # guarantees alignment with what the optimizer will step,
-                    # and avoids touching `ModelHandler.get_parameters` (which
-                    # has a side effect: it assigns `self.parameters = []`,
-                    # shadowing the inherited nn.Module method).
+                    # Pull params from the optimizer's own param_groups to
+                    # ensure alignment with optimizer settings.
                     clip_params = [
                         p for g in self.optimizer.param_groups for p in g['params']
                     ]
@@ -554,8 +548,8 @@ class Trainer(BaseTrainer):
         if obs_convert_fn is not None:
             obs_np = obs_convert_fn(obs_np)
 
-        # Every model strips its own warm-up, so predictions are always
-        # post-warm-up. Trim the same period off the observations to match.
+        # Every model strips its own warmup, so predictions are always
+        # post-warmup. Trim the same period off the observations to match.
         warmup = int(self.config['model'].get('warmup', 0))
         if warmup > 0:
             obs_np = obs_np[warmup:]
@@ -699,8 +693,8 @@ class Trainer(BaseTrainer):
         observations
             Target variable observation data as a numpy array, already
             converted to match the output unit of predictions AND already
-            trimmed of the warm-up period so it lines up with the
-            post-warm-up predictions returned by every model.
+            trimmed of the warmup period so it lines up with the
+            post-warmup predictions returned by every model.
         """
         target_name = self.config['train']['target'][0]
         pred = predictions[target_name]
@@ -712,8 +706,8 @@ class Trainer(BaseTrainer):
             raise ValueError(
                 f"calc_metrics: pred shape {pred.shape} does not match "
                 f"target shape {target.shape}. Every model must return "
-                f"post-warm-up output (`nsteps - model.warmup` timesteps); "
-                f"a mismatch means one is not stripping its warm-up period."
+                f"post-warmup output (`nsteps - model.warmup` timesteps); "
+                f"a mismatch means one is not stripping its warmup period."
             )
 
         # Compute metrics

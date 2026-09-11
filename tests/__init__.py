@@ -34,7 +34,7 @@ def get_available_classes(
         module = importlib.import_module(f"{pkg_path}.{module_name}")
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
-            # Check if the attribute is a subclass of torch.nn.Module and not abstract
+            # Check if the attribute is a subclass of torch.nn.Module
             if (
                 isinstance(attr, type)
                 and attr is not base_class
