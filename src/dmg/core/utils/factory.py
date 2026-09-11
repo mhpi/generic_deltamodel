@@ -216,7 +216,11 @@ def _load_mts_nn(
         The initialized StackLstmMlpModel.
     """
     # Defer to avoid a circular import
-    from dmg.models.neural_networks import LstmMlp2Model, LstmMlpModel, StackLstmMlpModel
+    from dmg.models.neural_networks import (
+        LstmMlp2Model,
+        LstmMlpModel,
+        StackLstmMlpModel,
+    )
 
     if not phy_model or not (
         hasattr(phy_model, 'low_freq_model') and hasattr(phy_model, 'high_freq_model')
