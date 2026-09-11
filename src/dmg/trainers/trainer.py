@@ -330,7 +330,7 @@ class Trainer(BaseTrainer):
             fig.savefig(out, dpi=150)
             plt.close(fig)
 
-        log.info(f"Loss plots saved to {self.plot_dir}")
+        # log.info(f"Loss plots saved to {self.plot_dir}")
 
     def train_one_epoch(self, epoch, n_samples, n_minibatch, n_timesteps) -> None:
         """Train model for one epoch.
