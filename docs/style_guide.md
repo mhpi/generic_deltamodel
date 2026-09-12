@@ -12,7 +12,9 @@ particular order. Recommendations are welcome.
 and extended [example](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html)) with form
 
     ```python
-    def function_name(param1: type, param2: type, *args: Optional[tuple], **kwargs: Optional[dict]) -> type:
+    def function_name(
+        param1: type, param2: type, *args: Optional[tuple], **kwargs: Optional[dict]
+    ) -> type:
         """Brief summary of function's purpose.
 
         Extended description of function.

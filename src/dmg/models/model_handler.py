@@ -591,11 +591,13 @@ class ModelHandler(torch.nn.Module):
         output: torch.Tensor,
         target: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        """
-        Trim the output and target tensors to the same shape.
+        """Check that a prediction and its target share a time axis.
 
-        Really, we need to trim warmup at the model interface itself, but this
-        will have to do for now to avoid errors errant.
+        Every model strips its own warm-up period, so by the time a prediction
+        reaches the loss it already covers exactly the period the target does.
+        This used to silently slice whichever tensor was longer, which papered
+        over models that were not stripping their warm-up; it now fails loudly
+        instead.
 
         Parameters
         ----------
@@ -607,13 +609,16 @@ class ModelHandler(torch.nn.Module):
         Returns
         -------
         tuple
-            The trimmed output and target tensors.
+            The squeezed output and target tensors.
         """
         output = output.squeeze()
         target = target.squeeze()
 
-        if output.shape[0] > target.shape[0]:
-            output = output[output.shape[0] - target.shape[0] :]
-        elif target.shape[0] > output.shape[0]:
-            target = target[target.shape[0] - output.shape[0] :]
+        if output.shape[0] != target.shape[0]:
+            raise ValueError(
+                f"Model output has {output.shape[0]} timesteps but the target "
+                f"has {target.shape[0]}. Models must return post-warm-up output "
+                f"(`nsteps - model.warmup` timesteps); a mismatch means one of "
+                f"them is not stripping its warm-up period.",
+            )
         return output, target

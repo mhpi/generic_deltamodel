@@ -1,3 +1,4 @@
+import gc
 import logging
 import os
 import time
@@ -150,26 +151,32 @@ class Trainer(BaseTrainer):
         name = self.config['train']['optimizer']['name']
         learning_rate = self.config['train']['lr']
         optimizer_dict = {
-            # 'SGD': torch.optim.SGD,
+            'SGD': torch.optim.SGD,
             'Adam': torch.optim.Adam,
             'AdamW': torch.optim.AdamW,
             'Adadelta': torch.optim.Adadelta,
-            # 'RMSprop': torch.optim.RMSprop,
+            'RMSprop': torch.optim.RMSprop,
         }
 
         # Fetch optimizer class
-        cls = optimizer_dict[name]
+        cls = optimizer_dict.get(name)
         if cls is None:
             raise ValueError(
                 f"Optimizer '{name}' not recognized. "
                 f"Available options are: {list(optimizer_dict.keys())}",
             )
 
+        # Forward any extra optimizer settings (momentum, weight_decay, betas).
+        opt_kwargs = {
+            k: v for k, v in self.config['train']['optimizer'].items() if k != 'name'
+        }
+
         # Initialize
         try:
             self.optimizer = cls(
                 self.model.get_parameters(),
                 lr=learning_rate,
+                **opt_kwargs,
             )
         except RuntimeError as e:
             raise RuntimeError(f"Error initializing optimizer: {e}") from e
@@ -191,7 +198,7 @@ class Trainer(BaseTrainer):
         }
 
         # Fetch scheduler class
-        cls = scheduler_dict[name]
+        cls = scheduler_dict.get(name)
         if cls is None:
             raise ValueError(
                 f"Scheduler '{name}' not recognized. "
@@ -217,7 +224,7 @@ class Trainer(BaseTrainer):
         :func:`dmg.core.utils.utils.save_train_state` as
         ``trainer_state_ep{N}.pt`` in ``self.config['model_dir']``.
         """
-        path = self.config['model_dir']
+        path = self.config.get('pretrained_model_dir') or self.config['model_dir']
         prev_epoch = self.start_epoch - 1
         target = os.path.join(path, f'trainer_state_ep{prev_epoch}.pt')
         if not os.path.exists(target):
@@ -255,12 +262,19 @@ class Trainer(BaseTrainer):
 
         # Training loop
         for epoch in range(self.start_epoch, self.epochs + 1):
+            # Disable garbage collection during the epoch for performance.
+            gc.collect()
+            gc.disable()
+
             self.train_one_epoch(
                 epoch,
                 n_samples,
                 n_minibatch,
                 n_timesteps,
             )
+
+            gc.enable()
+            gc.collect()
 
         self.exp_logger.finalize()
 
@@ -316,7 +330,7 @@ class Trainer(BaseTrainer):
             fig.savefig(out, dpi=150)
             plt.close(fig)
 
-        log.info(f"Loss plots saved to {self.plot_dir}")
+        # log.info(f"Loss plots saved to {self.plot_dir}")
 
     def train_one_epoch(self, epoch, n_samples, n_minibatch, n_timesteps) -> None:
         """Train model for one epoch.
@@ -365,26 +379,24 @@ class Trainer(BaseTrainer):
 
             loss.backward()
 
-            # Defensive: skip optimizer step when the loss or any grad is
-            # non-finite. Otherwise a single bad batch poisons the optimizer
-            # accumulator (Adadelta in particular) and every subsequent batch
-            # produces NaN. Common in physics-coupled losses with extreme
-            # parameter regions.
+            # Skip optimizer step when the loss or any grad is non-finite.
+            # Otherwise a single bad batch pollutes the optimizer and every
+            # subsequent batch produces nans.
             batch_loss = loss.item()
             loss_finite = batch_loss == batch_loss and batch_loss not in (
                 float('inf'),
                 float('-inf'),
             )
             if loss_finite:
-                # Optional gradient clipping (default: off when grad_clip <= 0).
-                # Helps cap damage from rare large-gradient outliers.
-                max_norm = float(self.config['train'].get('grad_clip', 0.0))
+                # Optional grad clipping (default: off when grad_clip <= 0).
+                max_norm = float(
+                    self.config['train'].get('grad_clip')
+                    # also check for older name
+                    or self.config['train'].get('grad_threshold', 0.0),
+                )
                 if max_norm > 0:
-                    # Pull params from the optimizer's own param_groups -- this
-                    # guarantees alignment with what the optimizer will step,
-                    # and avoids touching `ModelHandler.get_parameters` (which
-                    # has a side effect: it assigns `self.parameters = []`,
-                    # shadowing the inherited nn.Module method).
+                    # Pull params from the optimizer's own param_groups to
+                    # ensure alignment with optimizer settings.
                     clip_params = [
                         p for g in self.optimizer.param_groups for p in g['params']
                     ]
@@ -429,7 +441,10 @@ class Trainer(BaseTrainer):
             self.scheduler.step()
 
         if self.verbose:
-            log.info(f"\n ---- \n Epoch {epoch} total loss: {self.total_loss}")
+            log.info(
+                f"\n ---- \n Epoch {epoch} | Total Loss {self.total_loss} "
+                f"| Avg Loss {self.total_loss / n_minibatch:.6f} \n ---- \n",
+            )
         self._log_epoch_stats(epoch, self.model.loss_dict, n_minibatch, start_time)
 
         # Save model and trainer states.
@@ -533,9 +548,11 @@ class Trainer(BaseTrainer):
         if obs_convert_fn is not None:
             obs_np = obs_convert_fn(obs_np)
 
-        # Align pred/obs time axes (handles both full-window and post-warm-up
-        # model conventions; see Trainer._align_for_metrics docstring).
-        self.predictions, obs_np = self._align_for_metrics(self.predictions, obs_np)
+        # Every model strips its own warmup, so predictions are always
+        # post-warmup. Trim the same period off the observations to match.
+        warmup = int(self.config['model'].get('warmup', 0))
+        if warmup > 0:
+            obs_np = obs_np[warmup:]
 
         # Calculate metrics
         self.calc_metrics(self.predictions, obs_np)
@@ -676,8 +693,8 @@ class Trainer(BaseTrainer):
         observations
             Target variable observation data as a numpy array, already
             converted to match the output unit of predictions AND already
-            aligned to the prediction time axis (warm-up handled upstream
-            in ``_align_for_metrics``).
+            trimmed of the warmup period so it lines up with the
+            post-warmup predictions returned by every model.
         """
         target_name = self.config['train']['target'][0]
         pred = predictions[target_name]
@@ -688,9 +705,9 @@ class Trainer(BaseTrainer):
         if pred.shape != target.shape:
             raise ValueError(
                 f"calc_metrics: pred shape {pred.shape} does not match "
-                f"target shape {target.shape}. Models should return "
-                f"post-warm-up output; use Trainer._align_for_metrics() to "
-                f"reconcile legacy full-window models against post-warm-up targets."
+                f"target shape {target.shape}. Every model must return "
+                f"post-warmup output (`nsteps - model.warmup` timesteps); "
+                f"a mismatch means one is not stripping its warmup period."
             )
 
         # Compute metrics
@@ -702,71 +719,6 @@ class Trainer(BaseTrainer):
         # Save all metrics and aggregated statistics.
         metrics.dump_metrics(self.config['output_dir'])
         metrics.print_summary()
-
-    def _align_for_metrics(
-        self,
-        predictions: dict[str, np.ndarray],
-        observations: np.ndarray,
-    ) -> tuple[dict[str, np.ndarray], np.ndarray]:
-        """Reconcile prediction and target time axes before metric scoring.
-
-        The dMG model registry contains two conventions for what
-        ``Model.forward()`` returns over a test window of length ``T``:
-
-        - **post-warm-up**: returns ``T - warmup`` days (older Hbv_1_1p,
-          most physics-based models).
-        - **full-window**: returns the full ``T`` days, with the first
-          ``warmup`` rows being spin-up that should not be scored
-          (most pure-LSTM and newer Hbv variants).
-
-        This helper detects which convention the active model uses (by
-        comparing pred and target lengths) and strips warm-up symmetrically
-        so ``calc_metrics`` receives matched-shape arrays. Going forward, new
-        models should prefer the post-warm-up convention.
-
-        Parameters
-        ----------
-        predictions
-            Batched (and denormalized) predictions dict; values are
-            ``(T_pred, N, C)`` arrays.
-        observations
-            Target observation array of shape ``(T_obs, N, num_targets)``.
-
-        Returns
-        -------
-        Tuple of ``(predictions, observations)`` with their first axes aligned.
-        """
-        target_name = self.config['train']['target'][0]
-        warmup = int(self.config['model'].get('warmup', 0))
-        pred = predictions[target_name]
-        T_pred = pred.shape[0]
-        T_obs = observations.shape[0]
-
-        if T_pred == T_obs:
-            # Both full-window (or both already post-warm-up); strip warm-up
-            # symmetrically from both.
-            if warmup > 0:
-                predictions = {
-                    k: (v[warmup:] if v.shape[0] == T_obs else v)
-                    for k, v in predictions.items()
-                }
-                observations = observations[warmup:]
-        elif T_pred == T_obs - warmup:
-            # Pred is already post-warm-up; strip target only.
-            observations = observations[warmup:]
-        elif T_pred - warmup == T_obs:
-            # Target was already stripped; strip pred too.
-            predictions = {
-                k: (v[warmup:] if v.shape[0] == T_pred else v)
-                for k, v in predictions.items()
-            }
-        else:
-            raise ValueError(
-                f"_align_for_metrics: cannot align pred (T={T_pred}) and "
-                f"target (T={T_obs}) with warmup={warmup}. Expected pred to "
-                f"be post-warm-up (T_obs - warmup) or full-window (T_obs)."
-            )
-        return predictions, observations
 
     def _log_epoch_stats(
         self,

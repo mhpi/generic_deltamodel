@@ -51,7 +51,7 @@ class MtsModelHandler(torch.nn.Module):
         super().__init__()
         self.config = config
         self.name = 'Differentiable Model Handler'
-        self.model_path = config['model_dir']
+        self.model_path = config.get('pretrained_model_dir') or config['model_dir']
         self.verbose = verbose
         self.target_name = config['train']['target'][0]
         self.models = self.list_models()

@@ -70,7 +70,8 @@ def main(config: DictConfig) -> None:
         start_time = time.perf_counter()
 
         ### Initializations ###
-        check_experiment_exists(config.get('exp_name'))
+        if not config.get('overwrite', False):
+            check_experiment_exists(config.get('exp_name'))
         config = initialize_config(config)
         set_randomseed(config['seed'])
 
@@ -130,7 +131,7 @@ def main(config: DictConfig) -> None:
         if torch.cuda.is_available():
             torch.cuda.synchronize()
             torch.cuda.empty_cache()
-        
+
         total_time = time.perf_counter() - start_time
         log.info(
             f"| {config['mode']} completed | "
@@ -140,4 +141,6 @@ def main(config: DictConfig) -> None:
 
 if __name__ == '__main__':
     os.environ['DMG_VERSION'] = __version__
+    # Minimize cuda memory fragmentation (esp. useful for dynamic batch sizes).
+    os.environ.setdefault('PYTORCH_CUDA_ALLOC_CONF', 'expandable_segments:True')
     main()

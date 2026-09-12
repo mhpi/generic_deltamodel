@@ -73,28 +73,28 @@ class MsTrainer(BaseTrainer):
         """Initialize a model state optimizer."""
         raise NotImplementedError(
             "Method not implemented. Multiscale training"
-            / " will be enabled at a later date.",
+            " will be enabled at a later date.",
         )
 
     def init_scheduler(self) -> None:
         """Initialize a learning rate scheduler for the optimizer."""
         raise NotImplementedError(
             "Method not implemented. Multiscale training"
-            / " will be enabled at a later date.",
+            " will be enabled at a later date.",
         )
 
     def train(self) -> None:
         """Entry point for training loop."""
         raise NotImplementedError(
             "Method not implemented. Multiscale training"
-            / " will be enabled at a later date.",
+            " will be enabled at a later date.",
         )
 
     def evaluate(self) -> None:
         """Run model evaluation and return both metrics and model outputs."""
         raise NotImplementedError(
             "Method not implemented. Multiscale training"
-            / " will be enabled at a later date.",
+            " will be enabled at a later date.",
         )
 
     def inference(self) -> None:
@@ -202,12 +202,12 @@ class MsTrainer(BaseTrainer):
         """Calculate and save model performance metrics."""
         raise NotImplementedError(
             "Method not implemented. Multiscale training"
-            / " will be enabled at a later date.",
+            " will be enabled at a later date.",
         )
 
     def _log_epoch_stats(self) -> None:
         """Log statistics after each epoch."""
         raise NotImplementedError(
             "Method not implemented. Multiscale training"
-            / " will be enabled at a later date.",
+            " will be enabled at a later date.",
         )

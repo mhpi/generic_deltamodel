@@ -18,7 +18,18 @@ from dmg.core.utils import initialize_config, set_randomseed
 from dmg.models.delta_models.mts_dpl_model import MtsDplModel
 from dmg.models.mts_model_handler import MtsModelHandler
 
-_MTS_SKIP_REASON = "Requires hydrodl2 with Hbv_2_mts model"
+_MTS_SKIP_REASON = (
+    "MtsModelHandler is a temporary/WIP class (self.models, self.dpl_model, "
+    "forward(mode=...)) and does not yet implement the model_type/model_dict "
+    "and forward(eval=...) API these tests assert on"
+)
+_MTS_FORWARD_SKIP_REASON = (
+    "mts_mock_dataset lacks routing/topology tensors "
+    "(ac_all, elev_all, outlet_topo, areas) required by Hbv_2_mts.forward, "
+    "and this test calls StackLstmMlpModel with the wrong call signature "
+    "(raw tensors instead of (low_freq, static) / (high_freq, static, regional) "
+    "tuples plus batch=)"
+)
 
 
 # ---------------------------------------------------------------------------- #
@@ -74,27 +85,63 @@ def mts_config():
             'use_log_norm': ['prcp'],
             'phy': {
                 'name': ['Hbv_2_mts'],  # Multi-timescale physics model
-                'nmul': 1,
-                'warmup_states': True,
-                'dy_drop': 0.0,
                 'dynamic_params': {
                     'Hbv_2_mts': ['parBETA', 'parBETAET'],
                 },
-                'routing': True,
-                'nearzero': 1e-5,
-                'forcings': ['prcp', 'tmean', 'pet'],
-                'attributes': [],
-                'cache_states': False,
+                'lof_model': {
+                    'nmul': 1,
+                    'warmup_states': True,
+                    'dy_drop': 0.0,
+                    'dynamic_params': {
+                        'Hbv_2': ['parBETA', 'parBETAET'],
+                    },
+                    'routing': True,
+                    'nearzero': 1e-5,
+                    'forcings': ['prcp', 'tmean', 'pet'],
+                    'attributes': [],
+                    'cache_states': False,
+                },
+                'hif_model': {
+                    'nmul': 1,
+                    'warmup_states': True,
+                    'dy_drop': 0.0,
+                    'dynamic_params': {
+                        'Hbv_2_hourly': ['parBETA', 'parBETAET'],
+                    },
+                    'routing': True,
+                    'nearzero': 1e-5,
+                    'forcings': ['prcp', 'tmean', 'pet'],
+                    'attributes': [],
+                    'cache_states': False,
+                    'train_spatial_chunk_size': 1000,
+                    'simulate_spatial_chunk_size': 1000,
+                    'simulate_temporal_chunk_size': 1000,
+                    'train_warmup': 2,
+                },
             },
             'nn': {
                 'name': 'StackLstmMlpModel',  # Multi-scale NN
-                'dropout': 0.5,
-                'hidden_size': 32,
-                'hidden_size_low_freq': 16,
-                'forcings': ['prcp', 'tmean', 'pet'],
-                'attributes': ['area_gages2'],
-                'regional_attributes': [],
-                'cache_states': False,
+                'sub_batch_size': 5,
+                'use_transfer': True,
+                'lof_model': {
+                    'forcings': ['prcp', 'tmean', 'pet'],
+                    'attributes': ['area_gages2'],
+                    'lstm_hidden_size': 16,
+                    'mlp_hidden_size': 16,
+                    'lstm_dropout': 0.5,
+                    'mlp_dropout': 0.5,
+                },
+                'hif_model': {
+                    'forcings': ['prcp', 'tmean', 'pet'],
+                    'attributes': ['area_gages2'],
+                    'attributes2': [],
+                    'lstm_hidden_size': 32,
+                    'mlp_hidden_size': 32,
+                    'mlp2_hidden_size': 32,
+                    'lstm_dropout': 0.5,
+                    'mlp_dropout': 0.5,
+                    'mlp2_dropout': 0.5,
+                },
             },
         },
         'observations': {
@@ -134,24 +181,26 @@ def mts_mock_dataset(mts_config):
     # High-frequency inputs (e.g., hourly)
     n_timesteps_hf = n_timesteps * 24  # 24 hours per day
 
+    lof_nn_cfg = mts_config['model']['nn']['lof_model']
+    hif_nn_cfg = mts_config['model']['nn']['hif_model']
+
     return {
         # Low-frequency inputs
         'xc_nn_norm_low_freq': torch.rand(
             n_timesteps,
             n_basins,
-            len(mts_config['model']['nn']['forcings'])
-            + len(mts_config['model']['nn']['attributes']),
+            len(lof_nn_cfg['forcings']) + len(lof_nn_cfg['attributes']),
         ),
         # High-frequency inputs
         'xc_nn_norm_high_freq': torch.rand(
             n_timesteps_hf,
             n_basins,
-            len(mts_config['model']['nn']['forcings']),
+            len(hif_nn_cfg['forcings']),
         ),
         # Static attributes
         'c_nn_norm': torch.rand(
             n_basins,
-            len(mts_config['model']['nn']['attributes']),
+            len(lof_nn_cfg['attributes']),
         ),
         # Regional attributes (if any)
         'rc_nn_norm': torch.rand(n_basins, 0),  # Empty for this test
@@ -159,11 +208,11 @@ def mts_mock_dataset(mts_config):
         'x_phy': torch.rand(
             n_timesteps,
             n_basins,
-            len(mts_config['model']['phy']['forcings']),
+            len(mts_config['model']['phy']['lof_model']['forcings']),
         ),
         'c_phy': torch.rand(
             n_basins,
-            len(mts_config['model']['phy']['attributes']),
+            len(mts_config['model']['phy']['lof_model']['attributes']),
         ),
         # Target
         'target': torch.rand(n_timesteps, n_basins, 1),
@@ -175,10 +224,13 @@ def mts_mock_dataset(mts_config):
 # ---------------------------------------------------------------------------- #
 
 
-@pytest.mark.skip(reason=_MTS_SKIP_REASON)
 class TestMtsDplModel:
     """Test MtsDplModel (multi-timescale differentiable model)."""
 
+    @pytest.mark.filterwarnings(
+        "ignore:dropout option adds dropout:UserWarning",
+        "ignore:Initializing zero-element tensors is a no-op:UserWarning",
+    )
     def test_mts_dpl_model_initialization(self, mts_config):
         """Test MtsDplModel initializes correctly."""
         model = MtsDplModel(config=mts_config['model'], device='cpu')
@@ -187,6 +239,7 @@ class TestMtsDplModel:
         assert model.nn_model is not None
         assert model.phy_model is not None
 
+    @pytest.mark.skip(reason=_MTS_FORWARD_SKIP_REASON)
     def test_mts_dpl_model_forward_pass(self, mts_config, mts_mock_dataset):
         """Test forward pass with multi-timescale data."""
         set_randomseed(mts_config['seed'])
@@ -199,6 +252,7 @@ class TestMtsDplModel:
         assert not torch.isnan(output).any()
         assert not torch.isinf(output).any()
 
+    @pytest.mark.skip(reason=_MTS_FORWARD_SKIP_REASON)
     def test_mts_separate_parameter_paths(self, mts_config, mts_mock_dataset):
         """Test that low/high-frequency parameters are generated separately."""
         set_randomseed(mts_config['seed'])

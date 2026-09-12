@@ -128,6 +128,20 @@ def initialize_config(
 
     config['device'], config['dtype'] = set_system_spec(config)
 
+    # Year-by-year evaluation: prepend one calendar year before test start
+    # so each test year Y gets year Y-1 as warmup data (matching the reference
+    # HydroDL pipeline where LSTM states are reset per year).
+    if config['test'].get('year_by_year', False):
+        from datetime import datetime as _dt
+
+        _orig_start = _dt.strptime(config['test']['start_time'], '%Y/%m/%d')
+        config['test']['_original_start_time'] = config['test']['start_time']
+        config['test']['start_time'] = _dt(
+            _orig_start.year - 1,
+            1,
+            1,
+        ).strftime('%Y/%m/%d')
+
     # Convert date ranges to integer values.
     train_time = Dates(config['train'], config['model']['rho'])
     test_time = Dates(config['test'], config['model']['rho'])
@@ -209,6 +223,7 @@ def save_train_state(
     epoch: int,
     optimizer: torch.nn.Module,
     scheduler: Optional[torch.nn.Module] = None,
+    scaler: Optional[torch.nn.Module] = None,
     make_dir: Optional[bool] = True,
     clear_prior: Optional[bool] = False,
 ) -> None:
@@ -224,6 +239,8 @@ def save_train_state(
         Optimizer state dict.
     scheduler
         Learning rate scheduler state dict.
+    scaler
+        GradScaler state dict for mixed precision training.
     make_dir
         Create directories for saving files.
     clear_prior
@@ -245,13 +262,19 @@ def save_train_state(
     if torch.cuda.is_available():
         cuda_state = torch.cuda.get_rng_state()
 
+    scaler_state = None
+    if scaler is not None:
+        scaler_state = scaler.state_dict()
+
     torch.save(
         {
             'epoch': epoch,
             'optimizer_state_dict': optimizer.state_dict(),
             'scheduler_state_dict': scheduler_state,
+            'scaler_state_dict': scaler_state,
             'random_state': torch.get_rng_state(),
             'cuda_state': cuda_state,
+            'numpy_random_state': np.random.get_state(),
         },
         os.path.join(path, f'trainer_state_ep{str(epoch)}.pt'),
     )
@@ -278,7 +301,9 @@ def save_outputs(
     if type(predictions) is list:
         # Handle a single model
         for key in predictions[0].keys():
-            if len(predictions[0][key].shape) == 3:
+            if predictions[0][key] is None:
+                continue
+            elif len(predictions[0][key].shape) == 3:
                 dim = 1
             else:
                 dim = 0

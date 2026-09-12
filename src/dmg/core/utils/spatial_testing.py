@@ -14,8 +14,16 @@ from dmg.core.utils.factory import import_data_loader, import_trainer
 log = logging.getLogger(__name__)
 
 
-def run_spatial_testing(config: DictConfig, model) -> None:
-    """Execute spatial testing across all holdout indices."""
+def run_spatial_testing(config: DictConfig, model: torch.nn.Module) -> None:
+    """Execute spatial testing across all holdout indices.
+
+    Parameters
+    ----------
+    config
+        Configuration dictionary containing testing parameters and holdout indices.
+    model
+        The model to be evaluated (used in test mode, reinitialized in train mode).
+    """
     holdout_indices = config['test']['holdout_indexs']
     extent = config['test']['extent']
 

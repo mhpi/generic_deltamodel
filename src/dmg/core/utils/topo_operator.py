@@ -6,10 +6,27 @@ import scipy.sparse as sp
 from scipy.sparse.linalg import splu, spsolve_triangular
 
 
-def reachability_matrix(G, row_nodes, col_nodes):
-    """
+def reachability_matrix(
+    G: nx.DiGraph, row_nodes: list[int], col_nodes: list[int]
+) -> np.ndarray:
+    """Compute reachability matrix M for graph G and given node sets.
+
     M[i, j] = 1 if col_nodes[j] can reach row_nodes[i] (downstream),
     counting self-reach as True.
+
+    Parameters
+    ----------
+    G
+        A directed graph (networkx.DiGraph) where edges point from upstream to downstream.
+    row_nodes
+        List of node IDs corresponding to the rows of the output matrix M.
+    col_nodes
+        List of node IDs corresponding to the columns of the output matrix M.
+
+    Returns
+    -------
+    np.ndarray
+        A binary matrix M of shape (len(row_nodes), len(col_nodes)).
     """
     row_nodes = [int(n) for n in row_nodes]
     col_nodes = [int(n) for n in col_nodes]
@@ -48,16 +65,27 @@ def reachability_matrix(G, row_nodes, col_nodes):
 
 class PathWeightedAgg:
     """
-    Fast path aggregations on a river-style DiGraph (each node has out-degree <= 1).
-    Inclusive path a->b (a, ..., b).
+    Fast path aggregations on a river-style DiGraph (each node has
+    out-degree <= 1). Inclusive path a->b (a, ..., b).
 
     Features:
       - reduction: "mean" (default) or "sum"
       - if y_attr is None: use naive mean/sum over x
       - if y_attr is provided: use weighted mean/sum with weights y
+
+    Parameters
+    ----------
+    G
+        A directed acyclic graph (networkx.DiGraph) where edges point from upstream to
+        downstream. Each node can have at most one downstream neighbor (out-degree ≤ 1).
+    x_attr
+        The node attribute name to use as the value for aggregation.
+    y_attr
+        The node attribute name to use as the weight for weighted aggregation.
+
     """
 
-    def __init__(self, G: nx.DiGraph, x_attr="x", y_attr="y"):
+    def __init__(self, G: nx.DiGraph, x_attr: str = 'x', y_attr: str = 'y'):
         # Structure checks
         if any(G.out_degree(n) > 1 for n in G.nodes()):
             raise ValueError(
@@ -68,7 +96,7 @@ class PathWeightedAgg:
 
         self.G = G
         self.x_attr = x_attr
-        self.y_attr = y_attr  # can be None
+        self.y_attr = y_attr
 
         nodes = list(G.nodes())
         nid = {n: i for i, n in enumerate(nodes)}
@@ -83,7 +111,7 @@ class PathWeightedAgg:
 
         roots = [nid[n] for n in nodes if G.out_degree(n) == 0]
 
-        # attributes
+        # Attributes
         x = np.array([G.nodes[n].get(x_attr, 0.0) for n in nodes], dtype=float)
         if y_attr is None:
             y = None
@@ -149,20 +177,41 @@ class PathWeightedAgg:
             self.tout[a_idx] <= self.tout[b_idx]
         )
 
-    def _inclusive_prefix_slice(self, arr, a_idx, b_idx):
-        """Sum over inclusive path a->b using root-to-node prefixes; arr is a prefix array."""
+    def _inclusive_prefix_slice(self, arr: np.ndarray, a_idx: int, b_idx: int):
+        """
+        Sum over inclusive path a->b using root-to-node prefixes; arr is a
+        prefix array.
+        """
         if arr is None:
             return None
         pb = self.parent[b_idx]
         return arr[a_idx] if pb == -1 else (arr[a_idx] - arr[pb])
 
-    def query(self, a, b, reduction="mean"):
-        """
-        Compute aggregation over inclusive path a->b.
+    def query(self, a: int, b: int, reduction: str = 'mean') -> float:
+        """Compute aggregation over inclusive path a->b.
+
         reduction: "mean" or "sum"
           - if weights present: weighted mean/sum using y
           - if weights absent (y_attr=None): naive mean/sum over x
-        Returns np.nan if no a->b path; for weighted mean with zero total weight, returns np.nan.
+        Returns np.nan if no a->b path; for weighted mean with zero total weight,
+        returns np.nan.
+
+        Parameters
+        ----------
+        a
+            The starting node ID of the path (upstream).
+        b
+            The ending node ID of the path (downstream).
+        reduction
+            The type of aggregation to perform: "mean" for average or "sum" for
+            total sum.
+
+        Returns
+        -------
+        float
+            The aggregated value along the path from node a to node b. Returns
+            NaN if there is no path from a to b, or if the weighted mean is
+            undefined due to zero total weight.
         """
         ia, ib = self.nid[a], self.nid[b]
         if not self._is_ancestor(ib, ia):
@@ -186,8 +235,27 @@ class PathWeightedAgg:
         else:
             return sum_x / cnt  # cnt >= 1 for a valid path
 
-    def query_many(self, pairs, reduction="mean"):
-        """Vectorized batch for many (a, b). Directional (a->b only)."""
+    def query_many(
+        self, pairs: list[tuple[int, int]], reduction: str = 'mean'
+    ) -> np.ndarray:
+        """Vectorized batch for many (a, b). Directional (a->b only).
+
+        Parameters
+        ----------
+        pairs
+            A list of tuples, where each tuple contains two node IDs (a, b) for
+            which to compute the aggregation along the path from a to b.
+        reduction
+            The type of aggregation to perform: 'mean' for average or 'sum' for
+            total sum.
+
+        Returns
+        -------
+        np.ndarray
+            A numpy array containing the aggregated values for each pair of nodes.
+            The value is NaN for pairs where there is no path from a to b, or if
+            the weighted mean is undefined due to zero total weight.
+        """
         ia = np.fromiter((self.nid[a] for a, _ in pairs), dtype=np.int64)
         ib = np.fromiter((self.nid[b] for _, b in pairs), dtype=np.int64)
 
@@ -222,29 +290,45 @@ class PathWeightedAgg:
 
 
 def outlet_accum_attribute(
-    G,
-    outlets,
-    A,
-    W,
-    agg="mean",  # "mean" or "sum"
-    fill_value=np.nan,  # value to fill for unreachable nodes (default NaN)
-):
-    """
-    Compute aggregated attribute along flow-paths to each outlet.
-    Args:
-      G        : networkx.DiGraph with edges upstream -> downstream (must be DAG).
-      outlets  : list of node ids; rows of returned matrix follow this order.
-      A        : 1D numpy array (topo order) or dict/node->value for attribute.
-      W        : 1D numpy array (topo order) or dict/node->value for weight.
-                 If agg == "sum" you can pass W=None (then W treated as 1).
-      agg      : "mean" (weighted mean = sum(A*W)/sum(W)) or "sum" (sum of A*W).
-      fill_value: value to put where node does not reach outlet (or denom==0).
+    G: nx.DiGraph,
+    outlets: list[int],
+    A: np.ndarray | dict[int, float],
+    W: np.ndarray | dict[int, float] | None,
+    agg: str = 'mean',  # "mean" or "sum"
+    fill_value: float = np.nan,
+) -> tuple[np.ndarray, list[int]]:
+    """Compute aggregated attribute along flow-paths to each outlet.
+
+    Parameters
+    ----------
+    G
+        A directed acyclic graph (networkx.DiGraph) where edges point from upstream to
+        downstream.
+    outlets
+        List of node IDs corresponding to the outlets (downstream nodes) for which to
+        compute the aggregated attribute.
+    A
+        A 1D numpy array (in topological order) or a dict mapping node IDs
+        to float values for the attribute to be aggregated.
+    W
+        A 1D numpy array (in topological order) or a dict mapping node IDs
+        to float values for the weights to be used in weighted aggregation. If
+        agg is "sum", W can be None (treated as all ones).
+    agg
+        The type of aggregation to perform: "mean" for weighted average or "sum" for
+        weighted total sum.
+    fill_value
+        The value to assign to entries in the output matrix where a node does not reach
+        the outlet (i.e., there is no path from the node to the outlet) or
+        where the denominator is zero in the case of weighted mean.
 
     Returns
     -------
-      Out: numpy array shape (No, N) where No=len(outlets) and N=number of topo nodes.
-           Columns are in topo-node order (returned topo_nodes maps col idx->node id).
-      topo_nodes: list of nodes in topological (upstream->downstream) order (columns order).
+    tuple[np.ndarray, list[int]]
+        numpy array shape (No, N) where No=len(outlets) and N=number of topo nodes.
+        Columns are in topo-node order (returned topo_nodes maps col idx->node id).
+        Also a list of nodes in topological (upstream->downstream) order
+        (columns order).
     """
     # 1) topo order
     topo_nodes = list(nx.topological_sort(G))
