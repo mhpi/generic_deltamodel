@@ -19,11 +19,11 @@ Core differentiable model classes that couple neural networks with physics-based
 from dmg.models.delta_models import DplModel
 
 model = DplModel(
-    phy_model=phy_model,       # Physics model (torch.nn.Module)
-    nn_model=nn_model,         # Neural network (torch.nn.Module)
-    phy_model_name='Hbv',      # Or specify name to auto-initialize
-    config=config,             # Config dict (required if using name-based init)
-    device='cpu',              # 'cpu' or 'cuda'
+    phy_model=phy_model,  # Physics model (torch.nn.Module)
+    nn_model=nn_model,  # Neural network (torch.nn.Module)
+    phy_model_name='Hbv',  # Or specify name to auto-initialize
+    config=config,  # Config dict (required if using name-based init)
+    device='cpu',  # 'cpu' or 'cuda'
 )
 
 output = model(data_dict)  # Returns dict of physics model outputs
@@ -46,11 +46,11 @@ High-level managers that handle model initialization, multimodel ensembles, loss
 from dmg.models.model_handler import ModelHandler
 
 handler = ModelHandler(config, device='cuda', verbose=True)
-handler.load_model(epoch=0)      # Load from checkpoint or create new
-handler.train(mode=True)         # Set training mode
-output = handler.forward(data)   # Forward pass (returns dict)
-loss = handler.calc_loss(data)   # Compute loss
-handler.save_model(epoch=10)     # Save checkpoint
+handler.load_model(epoch=0)  # Load from checkpoint or create new
+handler.train(mode=True)  # Set training mode
+output = handler.forward(data)  # Forward pass (returns dict)
+loss = handler.calc_loss(data)  # Compute loss
+handler.save_model(epoch=10)  # Save checkpoint
 ```
 
 Key methods:
@@ -83,11 +83,11 @@ Available neural network architectures. Specify by class name in the `model.nn.n
 from dmg.models.neural_networks import LstmModel
 
 lstm = LstmModel(
-    nx=10,             # Input feature dimension
-    ny=5,              # Output dimension
-    hidden_size=256,   # Hidden state size
-    dr=0.5,            # Dropout rate
-    cache_states=False # Whether to cache hidden/cell states
+    nx=10,  # Input feature dimension
+    ny=5,  # Output dimension
+    hidden_size=256,  # Hidden state size
+    dr=0.5,  # Dropout rate
+    cache_states=False,  # Whether to cache hidden/cell states
 )
 ```
 
@@ -135,9 +135,9 @@ Data loaders preprocess and load full datasets. Specify by class name in the `da
 from dmg.core.data.loaders import HydroLoader
 
 loader = HydroLoader(config, test_split=False)
-train_data = loader.train_dataset   # dict of tensors
-eval_data = loader.eval_dataset     # dict of tensors
-full_data = loader.dataset          # dict of tensors (inference)
+train_data = loader.train_dataset  # dict of tensors
+eval_data = loader.eval_dataset  # dict of tensors
+full_data = loader.dataset  # dict of tensors (inference)
 ```
 
 **Unit Handling and Denormalization**
@@ -197,9 +197,9 @@ trainer = Trainer(
     train_dataset=loader.train_dataset,
     eval_dataset=loader.eval_dataset,
 )
-trainer.train()       # Run training loop
-trainer.evaluate()    # Run evaluation
-trainer.inference()   # Run inference/simulation
+trainer.train()  # Run training loop
+trainer.evaluate()  # Run evaluation
+trainer.inference()  # Run inference/simulation
 ```
 
 </br>

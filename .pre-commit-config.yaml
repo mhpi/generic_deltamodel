@@ -10,13 +10,13 @@ repos:
       - id: check-toml
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.5
+    rev: v0.16.7
     hooks:
       - id: ruff-check
-        types_or: [python, pyi, jupyter]
+        types_or: [python, pyi, jupyter, markdown]
         args: [--fix, --config, pyproject.toml]
       - id: ruff-format
-        types_or: [python, pyi, jupyter]
+        types_or: [python, pyi, jupyter, markdown]
         args: [--config, pyproject.toml]
 
   - repo: https://github.com/kynan/nbstripout

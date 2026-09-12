@@ -101,6 +101,7 @@ git clone https://github.com/mhpi/generic_deltamodel.git
 
   ```python
   import torch
+
   print(torch.cuda.is_available())
   ```
 
