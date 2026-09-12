@@ -185,6 +185,7 @@ def _hbv_2_config_dict():
                 },
                 'routing': True,
                 'nearzero': 1e-5,
+                'elev_threshold': True,
                 'forcings': ['prcp', 'tmean', 'pet'],
                 'attributes': [],
                 'cache_states': False,

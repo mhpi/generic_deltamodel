@@ -42,9 +42,11 @@ def _assert_close_to_any(actual, expected_values, stat_name, model_name, rtol=1e
     """Assert actual matches any value in expected_values within tolerance.
 
     LSTM CPU non-determinism means different hardware produces different (but
-    individually reproducible) outputs.  Each entry in expected_values is a
-    known value from one environment.
+    reproducible) outputs. Each entry in expected_values is a known value for
+    one environment.
     """
+    if os.environ.get('DUMP_REGRESSION_VALUES'):
+        print(f"DUMP {model_name} {stat_name} {actual.item():.10e}")
     for exp in expected_values:
         if torch.isclose(actual, torch.tensor(exp), rtol=rtol, atol=1e-8):
             return
@@ -60,6 +62,7 @@ def _assert_close_to_any(actual, expected_values, stat_name, model_name, rtol=1e
 #  Expected learnable parameter counts
 # ---------------------------------------------------------------------------- #
 
+
 EXP_PARAM_COUNTS = {
     'Hbv': {'total': 15},
     'Hbv_1_1p': {'total': 16},
@@ -70,6 +73,7 @@ EXP_PARAM_COUNTS = {
 # ---------------------------------------------------------------------------- #
 #  Expected regression statistics
 # ---------------------------------------------------------------------------- #
+
 
 EXP_SNAPSHOTS = {
     'Hbv': {
@@ -92,13 +96,11 @@ EXP_SNAPSHOTS = {
         'capillary_mean': [6.5453238785e-02, 7.44503066e-02],
     },
     'Hbv_2': {
-        # NOTE: Fixed the SLZ lateral-flow clamp floor (was `min=0.0`, now
-        # `min=self.nearzero`) in hbv_2.py/hbv_2_hourly.py
         'n_timesteps': 57,
         'streamflow_mean': [1.0122714684e-06, 9.5164079994e-07],
         'streamflow_sum': [5.7699473109e-04, 5.4243527120e-04],
-        'AET_hydro_mean': [5.7138103247e-01, 5.0397413969e-01],
-        'recharge_mean': [1.4684200287e-01, 1.0238368809e-01],
+        'AET_hydro_mean': [5.69155753e-01, 5.0397413969e-01],
+        'recharge_mean': [1.46327555e-01, 1.0238368809e-01],
         'capillary_mean': [3.3562719182e-06, 3.0932321806e-06],
     },
 }
@@ -107,6 +109,7 @@ EXP_SNAPSHOTS = {
 # ---------------------------------------------------------------------------- #
 #  Expected parameter bounds
 # ---------------------------------------------------------------------------- #
+
 
 EXP_PARAMETER_BOUNDS = {
     'Hbv': {
@@ -166,9 +169,11 @@ EXP_ROUTING_BOUNDS = {
 }
 
 
-# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------- #
 #  Expected training regression values
-# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------- #
+
+
 EXP_FINAL_LOSS_VALUES = [
     23.998552292585373,  # Local machine
     26.94981688261032,  # GHA runner
