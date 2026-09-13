@@ -27,7 +27,7 @@ _MTS_FORWARD_SKIP_REASON = (
     "mts_mock_dataset lacks routing/topology tensors "
     "(ac_all, elev_all, outlet_topo, areas) required by Hbv_2_mts.forward, "
     "and this test calls StackLstmMlpModel with the wrong call signature "
-    "(raw tensors instead of (low_freq, static) / (high_freq, static, regional) "
+    "(raw tensors instead of (lof, static) / (hif, static, regional) "
     "tuples plus batch=)"
 )
 
@@ -186,13 +186,13 @@ def mts_mock_dataset(mts_config):
 
     return {
         # Low-frequency inputs
-        'xc_nn_norm_low_freq': torch.rand(
+        'xc_nn_norm_lof': torch.rand(
             n_timesteps,
             n_basins,
             len(lof_nn_cfg['forcings']) + len(lof_nn_cfg['attributes']),
         ),
         # High-frequency inputs
-        'xc_nn_norm_high_freq': torch.rand(
+        'xc_nn_norm_hif': torch.rand(
             n_timesteps_hf,
             n_basins,
             len(hif_nn_cfg['forcings']),
@@ -263,8 +263,8 @@ class TestMtsDplModel:
         if type(model.nn_model).__name__ == 'StackLstmMlpModel':
             with torch.no_grad():
                 params_lf, params_hf = model.nn_model(
-                    mts_mock_dataset['xc_nn_norm_low_freq'],
-                    mts_mock_dataset['xc_nn_norm_high_freq'],
+                    mts_mock_dataset['xc_nn_norm_lof'],
+                    mts_mock_dataset['xc_nn_norm_hif'],
                     mts_mock_dataset['c_nn_norm'],
                 )
 
@@ -366,8 +366,8 @@ class TestMtsDataHandling:
     def test_mts_dataset_structure(self, mts_mock_dataset):
         """Verify MTS dataset has correct structure."""
         required_keys = [
-            'xc_nn_norm_low_freq',
-            'xc_nn_norm_high_freq',
+            'xc_nn_norm_lof',
+            'xc_nn_norm_hif',
             'c_nn_norm',
             'target',
         ]
@@ -377,8 +377,8 @@ class TestMtsDataHandling:
 
     def test_mts_timescale_ratio(self, mts_mock_dataset):
         """Verify high-frequency data has correct temporal resolution."""
-        lf_timesteps = mts_mock_dataset['xc_nn_norm_low_freq'].shape[0]
-        hf_timesteps = mts_mock_dataset['xc_nn_norm_high_freq'].shape[0]
+        lf_timesteps = mts_mock_dataset['xc_nn_norm_lof'].shape[0]
+        hf_timesteps = mts_mock_dataset['xc_nn_norm_hif'].shape[0]
 
         # High-frequency should have more timesteps
         assert hf_timesteps > lf_timesteps, (
