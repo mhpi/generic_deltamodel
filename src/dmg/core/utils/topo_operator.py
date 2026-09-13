@@ -1,4 +1,5 @@
 from collections import deque
+from typing import Union
 
 import networkx as nx
 import numpy as np
@@ -292,8 +293,8 @@ class PathWeightedAgg:
 def outlet_accum_attribute(
     G: nx.DiGraph,
     outlets: list[int],
-    A: np.ndarray | dict[int, float],
-    W: np.ndarray | dict[int, float] | None,
+    A: Union[np.ndarray, dict[int, float]],
+    W: Union[np.ndarray, dict[int, float], None],
     agg: str = 'mean',  # "mean" or "sum"
     fill_value: float = np.nan,
 ) -> tuple[np.ndarray, list[int]]:
