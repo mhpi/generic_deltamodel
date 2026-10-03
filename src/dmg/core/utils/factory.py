@@ -205,7 +205,7 @@ def _load_mts_nn(
         'hif_model' sub-configs.
     phy_model
         A multi-timescale physics model (e.g., Hbv_2_mts) exposing
-        'low_freq_model'/'high_freq_model' with learnable_param_count*
+        'lof_model'/'hif_model' with learnable_param_count*
         attributes.
     device
         The device to run the model on.
@@ -223,23 +223,23 @@ def _load_mts_nn(
     )
 
     if not phy_model or not (
-        hasattr(phy_model, 'low_freq_model') and hasattr(phy_model, 'high_freq_model')
+        hasattr(phy_model, 'lof_model') and hasattr(phy_model, 'hif_model')
     ):
         raise ValueError(
             "StackLstmMlpModel requires a multi-timescale physics model (e.g.,"
-            " Hbv_2_mts) exposing 'low_freq_model'/'high_freq_model'.",
+            " Hbv_2_mts) exposing 'lof_model'/'hif_model'.",
         )
 
     lof_cfg = nn_config['lof_model']
     hif_cfg = nn_config['hif_model']
     sub_batch_size = nn_config['sub_batch_size']
 
-    low_freq_nn_model = LstmMlpModel(
+    lof_nn_model = LstmMlpModel(
         nx1=len(lof_cfg['forcings']) + len(lof_cfg['attributes']),
-        ny1=phy_model.low_freq_model.learnable_param_count1,
+        ny1=phy_model.lof_model.learnable_param_count1,
         hiddeninv1=lof_cfg['lstm_hidden_size'],
         nx2=len(lof_cfg['attributes']),
-        ny2=phy_model.low_freq_model.learnable_param_count2,
+        ny2=phy_model.lof_model.learnable_param_count2,
         hiddeninv2=lof_cfg['mlp_hidden_size'],
         dr1=lof_cfg['lstm_dropout'],
         dr2=lof_cfg['mlp_dropout'],
@@ -247,15 +247,15 @@ def _load_mts_nn(
         use_in_proj=lof_cfg.get('use_in_proj', True),
         device=device,
     )
-    high_freq_nn_model = LstmMlp2Model(
+    hif_nn_model = LstmMlp2Model(
         nx1=len(hif_cfg['forcings']) + len(hif_cfg['attributes']),
-        ny1=phy_model.high_freq_model.learnable_param_count1,
+        ny1=phy_model.hif_model.learnable_param_count1,
         hiddeninv1=hif_cfg['lstm_hidden_size'],
         nx2=len(hif_cfg['attributes']),
-        ny2=phy_model.high_freq_model.learnable_param_count2,
+        ny2=phy_model.hif_model.learnable_param_count2,
         hiddeninv2=hif_cfg['mlp_hidden_size'],
         nx3=len(hif_cfg['attributes2']),
-        ny3=phy_model.high_freq_model.learnable_param_count3,
+        ny3=phy_model.hif_model.learnable_param_count3,
         hiddeninv3=hif_cfg['mlp2_hidden_size'],
         dr1=hif_cfg['lstm_dropout'],
         dr2=hif_cfg['mlp_dropout'],
@@ -265,8 +265,8 @@ def _load_mts_nn(
         device=device,
     )
     model = StackLstmMlpModel(
-        low_freq_nn_model,
-        high_freq_nn_model,
+        lof_nn_model,
+        hif_nn_model,
         use_transfer=nn_config.get('use_transfer', True),
     )
     return model.to(device)

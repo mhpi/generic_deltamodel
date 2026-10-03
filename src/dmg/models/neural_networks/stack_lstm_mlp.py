@@ -132,7 +132,14 @@ class LstmMlpModel(torch.nn.Module):
     ) -> None:
         super().__init__()
         self.name = 'LstmMlpModel'
+        self.cache_states = cache_states
         self.use_in_proj = use_in_proj
+        self.hn, self.cn = None, None
+
+        # Reuse MLP outputs while input tensors are unchanged. MLPs only read
+        # static attributes, so they are time-invariant. Only use for inference.
+        self.cache_static = False
+        self._ann_cache = None
 
         if ny1 == 0:
             self.lstm_inv = None
@@ -175,10 +182,32 @@ class LstmMlpModel(torch.nn.Module):
         """If True, ensables sub-batch mode for CPU forward."""
         self.sub_batch_mode = is_simulate
 
+    def reset_states(self):
+        """Clear internal LSTM states."""
+        self.hn = None
+        self.cn = None
+
+    def reset_static_cache(self):
+        """Clear the cached MLP output."""
+        self._ann_cache = None
+
+    def _static_out(self, z2: torch.Tensor) -> torch.Tensor:
+        """MLP output for `z2`, reused while `z2` is the same tensor."""
+        if not self.cache_static or self.training:
+            return self.ann(z2)
+
+        if self._ann_cache is not None and self._ann_cache[0] is z2:
+            return self._ann_cache[1]
+
+        ann_out = self.ann(z2)
+        self._ann_cache = (z2, ann_out)
+        return ann_out
+
     def forward(
         self,
         z1: torch.Tensor,
         z2: torch.Tensor,
+        reset_state: bool = True,
     ) -> list[torch.Tensor]:
         """Forward pass.
 
@@ -188,6 +217,9 @@ class LstmMlpModel(torch.nn.Module):
             The LSTM input tensor.
         z2
             The MLP input tensor.
+        reset_state
+            If False, continue from internally cached LSTM states (requires
+            `cache_states=True`) instead of a fresh zero state.
 
         Returns
         -------
@@ -201,6 +233,12 @@ class LstmMlpModel(torch.nn.Module):
         if self.lstm_inv is not None and self.use_in_proj:
             z1 = self.in_proj(z1)
 
+        # Resolve initial state
+        if self.cache_states and self.hn is not None and not reset_state:
+            hx = (self.hn, self.cn)
+        else:
+            hx = None
+
         if self.sub_batch_mode:  # output cpu tensor to save gpu memory
             device = next(self.parameters()).device
             total_size = z2.size(0)
@@ -212,7 +250,16 @@ class LstmMlpModel(torch.nn.Module):
                 end = min(start + self.sub_batch_size, total_size)
                 if self.lstm_inv is not None:
                     batch_z1 = z1[:, start:end, :].to(device)
-                    lstm_out_sub, (h_out_sub, c_out_sub) = self.lstm_inv(batch_z1)
+                    batch_hx = None
+                    if hx is not None:
+                        batch_hx = (
+                            hx[0][:, start:end, :].to(device),
+                            hx[1][:, start:end, :].to(device),
+                        )
+                    lstm_out_sub, (h_out_sub, c_out_sub) = self.lstm_inv(
+                        batch_z1,
+                        batch_hx,
+                    )
                     lstm_out_sub = torch.sigmoid(self.linear_out(lstm_out_sub))
                     lstm_out_list.append(lstm_out_sub.detach().cpu())
                     h_out_list.append(h_out_sub.detach().cpu())
@@ -224,12 +271,18 @@ class LstmMlpModel(torch.nn.Module):
                 lstm_out = torch.cat(lstm_out_list, dim=1)
                 h_out = torch.cat(h_out_list, dim=1)
                 c_out = torch.cat(c_out_list, dim=1)
+                if self.cache_states:
+                    self.hn = h_out.detach()
+                    self.cn = c_out.detach()
             ann_out = torch.cat(ann_out_list, dim=0)
         else:
             if self.lstm_inv is not None:
-                lstm_out, (h_out, c_out) = self.lstm_inv(z1)
+                lstm_out, (h_out, c_out) = self.lstm_inv(z1, hx)
                 lstm_out = torch.sigmoid(self.linear_out(lstm_out))
-            ann_out = self.ann(z2)
+                if self.cache_states:
+                    self.hn = h_out.detach()
+                    self.cn = c_out.detach()
+            ann_out = self._static_out(z2)
         return [lstm_out, h_out, c_out, ann_out]
 
 
@@ -294,6 +347,11 @@ class LstmMlp2Model(torch.nn.Module):
         self.use_in_proj = use_in_proj
         self.hn, self.cn = None, None
 
+        # Reuse MLP outputs while input tensors are unchanged. MLPs only read
+        # static attributes, so they are time-invariant. Only use for inference.
+        self.cache_static = False
+        self._ann_cache = None
+
         if ny1 == 0:
             self.lstm_inv = None
             self.linear_out = None
@@ -353,6 +411,30 @@ class LstmMlp2Model(torch.nn.Module):
         """Clear internal LSTM states."""
         self.hn = None
         self.cn = None
+
+    def reset_static_cache(self):
+        """Clear the cached MLP outputs."""
+        self._ann_cache = None
+
+    def _static_out(
+        self,
+        z2: torch.Tensor,
+        z3: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """MLP outputs, reused while `z2`/`z3` are the same tensors."""
+        if not self.cache_static or self.training:
+            return self.ann1(z2), self.ann2(z3)
+
+        if (
+            self._ann_cache is not None
+            and self._ann_cache[0] is z2
+            and self._ann_cache[1] is z3
+        ):
+            return self._ann_cache[2], self._ann_cache[3]
+
+        ann_out1, ann_out2 = self.ann1(z2), self.ann2(z3)
+        self._ann_cache = (z2, z3, ann_out1, ann_out2)
+        return ann_out1, ann_out2
 
     def forward(
         self,
@@ -444,8 +526,7 @@ class LstmMlp2Model(torch.nn.Module):
                 if self.cache_states:
                     self.hn = hn_new.detach()
                     self.cn = cn_new.detach()
-            ann_out1 = self.ann1(z2)
-            ann_out2 = self.ann2(z3)
+            ann_out1, ann_out2 = self._static_out(z2, z3)
         return [lstm_out, ann_out1, ann_out2]
 
 
@@ -483,9 +564,10 @@ class StackLstmMlpModel(torch.nn.Module):
 
     def forward(
         self,
-        input1: Optional[tuple[torch.Tensor, torch.Tensor]],
+        input1: tuple[torch.Tensor, torch.Tensor],
         input2: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
-        batch: bool = True,
+        batch: Optional[bool] = True,
+        lof_reset_state: Optional[bool] = True,
     ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
         """Forward pass.
 
@@ -493,9 +575,16 @@ class StackLstmMlpModel(torch.nn.Module):
         to initialize the HF LSTM, and caches LF params for step-wise use.
         When batch=False: skips the LF model and uses cached params + HF
         internal state (requires cache_states=True on lstm_mlp2).
+
+        `lof_reset_state=False` continues the LF LSTM from its cached hidden
+        state (requires cache_states=True on lstm_mlp), so the LF model can be
+        spun up once over a long window and then advanced over short ones.
         """
         if batch and input1 is not None:
-            lstm_out_1, h_out_1, c_out_1, ann_out_1 = self.lstm_mlp(*input1)
+            lstm_out_1, h_out_1, c_out_1, ann_out_1 = self.lstm_mlp(
+                *input1,
+                reset_state=lof_reset_state,
+            )
             self.lof_params_cache = [lstm_out_1[-1:].detach(), ann_out_1.detach()]
 
             h_out_init = torch.tensor([])

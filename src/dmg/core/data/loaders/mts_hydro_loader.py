@@ -46,22 +46,17 @@ class MtsHydroLoader(BaseLoader):
         runoff_start_time = observation_paths['runoff_start_time']
         preprocessing_paths = config['observations']['preprocessing']
 
-        forcing_order = config['delta_model']['nn_model']['high_freq_model']['forcings']
-        attribute_order = config['delta_model']['nn_model']['high_freq_model'][
-            'attributes'
-        ]
-        routing_attr_order = config['delta_model']['nn_model']['high_freq_model'][
-            'attributes2'
-        ]
+        hif_nn_config = config['model']['nn']['hif_model']
+        forcing_order = hif_nn_config['forcings']
+        attribute_order = hif_nn_config['attributes']
+        routing_attr_order = hif_nn_config['attributes2']
         train_start_year = pd.to_datetime(config['train']['start_time']).year
         train_end_year = pd.to_datetime(config['train']['end_time']).year
         valid_start_year = pd.to_datetime(config['valid']['start_time']).year
         valid_end_year = pd.to_datetime(config['valid']['end_time']).year
         test_start_year = pd.to_datetime(config['test']['start_time']).year
         test_end_year = pd.to_datetime(config['test']['end_time']).year
-        warmup_days = config['delta_model']['phy_model']['low_freq_model'][
-            'window_size'
-        ]
+        warmup_days = config['model']['phy']['lof_model']['window_size']
         chunk_year_size = config['train']['chunk_year_size']
 
         self.preprocessing_paths = preprocessing_paths

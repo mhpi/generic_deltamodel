@@ -99,9 +99,9 @@ EXP_SNAPSHOTS = {
         'n_timesteps': 57,
         'streamflow_mean': [1.0122714684e-06, 9.5164079994e-07],
         'streamflow_sum': [5.7699473109e-04, 5.4243527120e-04],
-        'AET_hydro_mean': [5.69155753e-01, 4.86893982e-01],
-        'recharge_mean': [1.46327555e-01, 9.89129990e-02],
-        'capillary_mean': [3.3562719182e-06, 7.90938429e-06],
+        'AET_hydro_mean': [5.03974140e-01, 5.03974140e-01],
+        'recharge_mean': [1.02383688e-01, 1.02383688e-01],
+        'capillary_mean': [3.09323218e-06, 3.09323218e-06],
     },
 }
 

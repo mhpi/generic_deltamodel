@@ -73,18 +73,17 @@ class MtsModelHandler(torch.nn.Module):
         device = self.device
 
         phy_model = Hbv_2_mts(
-            low_freq_config=config['model']['phy']['lof_model'],
-            high_freq_config=config['model']['phy']['hif_model'],
+            config=config['model']['phy'],
             device=torch.device(device),
         )
         nn_cfg = config['model']['nn']
-        low_freq_nn_model = LstmMlpModel(
+        lof_nn_model = LstmMlpModel(
             nx1=len(nn_cfg['lof_model']['forcings'])
             + len(nn_cfg['lof_model']['attributes']),
-            ny1=phy_model.low_freq_model.learnable_param_count1,
+            ny1=phy_model.lof_model.learnable_param_count1,
             hiddeninv1=nn_cfg['lof_model']['lstm_hidden_size'],
             nx2=len(nn_cfg['lof_model']['attributes']),
-            ny2=phy_model.low_freq_model.learnable_param_count2,
+            ny2=phy_model.lof_model.learnable_param_count2,
             hiddeninv2=nn_cfg['lof_model']['mlp_hidden_size'],
             dr1=nn_cfg['lof_model']['lstm_dropout'],
             dr2=nn_cfg['lof_model']['mlp_dropout'],
@@ -92,16 +91,16 @@ class MtsModelHandler(torch.nn.Module):
             use_in_proj=nn_cfg['lof_model'].get('use_in_proj', True),
             device=torch.device(device),
         )
-        high_freq_nn_model = LstmMlp2Model(
+        hif_nn_model = LstmMlp2Model(
             nx1=len(nn_cfg['hif_model']['forcings'])
             + len(nn_cfg['hif_model']['attributes']),
-            ny1=phy_model.high_freq_model.learnable_param_count1,
+            ny1=phy_model.hif_model.learnable_param_count1,
             hiddeninv1=nn_cfg['hif_model']['lstm_hidden_size'],
             nx2=len(nn_cfg['hif_model']['attributes']),
-            ny2=phy_model.high_freq_model.learnable_param_count2,
+            ny2=phy_model.hif_model.learnable_param_count2,
             hiddeninv2=nn_cfg['hif_model']['mlp_hidden_size'],
             nx3=len(nn_cfg['hif_model']['attributes2']),
-            ny3=phy_model.high_freq_model.learnable_param_count3,
+            ny3=phy_model.hif_model.learnable_param_count3,
             hiddeninv3=nn_cfg['hif_model']['mlp2_hidden_size'],
             dr1=nn_cfg['hif_model']['lstm_dropout'],
             dr2=nn_cfg['hif_model']['mlp_dropout'],
@@ -111,8 +110,8 @@ class MtsModelHandler(torch.nn.Module):
             device=torch.device(device),
         )
         nn_model = StackLstmMlpModel(
-            low_freq_nn_model,
-            high_freq_nn_model,
+            lof_nn_model,
+            hif_nn_model,
             use_transfer=nn_cfg.get('use_transfer', True),
         )
         dpl_model = DplModel(

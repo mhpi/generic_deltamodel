@@ -93,8 +93,7 @@ class MtsDplModel(torch.nn.Module):
 
         model = import_phy_model(model_name)
         return model(
-            low_freq_config=self.config['phy']['lof_model'],
-            high_freq_config=self.config['phy']['hif_model'],
+            config=self.config['phy'],
             device=self.device,
         )
 
@@ -116,16 +115,20 @@ class MtsDplModel(torch.nn.Module):
         self,
         data_dict: dict[str, torch.Tensor],
         batched: bool = False,
+        lof_reset_state: bool = True,
     ) -> torch.Tensor:
         """Forward pass.
 
         Parameters
         ----------
         data_dict
-            Input tensors (xc_nn_norm_low_freq, etc.)
+            Input tensors (xc_nn_norm_lof, etc.)
         batch
             If True, use sequential forward pass (for stepwise prediction).
             If False, use batched forward pass (for warmup).
+        lof_reset_state
+            If False, the low-frequency LSTM continues from its cached hidden
+            state instead of restarting. Only meaningful if `batched=True`.
 
         Returns
         -------
@@ -139,14 +142,19 @@ class MtsDplModel(torch.nn.Module):
             and type(self.nn_model._orig_mod).__name__ == 'StackLstmMlpModel'
         ):
             hif_input = (
-                data_dict['xc_nn_norm_high_freq'],
+                data_dict['xc_nn_norm_hif'],
                 data_dict['c_nn_norm'],
                 data_dict['rc_nn_norm'],
             )
             if batched:
                 # Call full forward (updates caches)
-                lof_input = (data_dict['xc_nn_norm_low_freq'], data_dict['c_nn_norm'])
-                params_lf, params_hf = self.nn_model(lof_input, hif_input, batch=True)
+                lof_input = (data_dict['xc_nn_norm_lof'], data_dict['c_nn_norm'])
+                params_lf, params_hf = self.nn_model(
+                    lof_input,
+                    hif_input,
+                    batch=True,
+                    lof_reset_state=lof_reset_state,
+                )
 
             else:
                 # Call step forward (uses caches)
