@@ -68,7 +68,7 @@ geo = [
     "cartopy",
 ]
 hydrodl2 = [
-    "hydrodl2",
+    "hydrodl2>=1.4.0",
 ]
 logging = [
     "tensorboard",
