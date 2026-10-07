@@ -234,7 +234,8 @@ class Trainer(BaseTrainer):
         log.info(
             f"Loading trainer states --> Resuming training from epoch {self.start_epoch}",
         )
-        checkpoint = torch.load(target)
+        # weights_only=False: checkpoint holds numpy RNG state (self-written, trusted).
+        checkpoint = torch.load(target, map_location='cpu', weights_only=False)
 
         # Restore optimizer / scheduler.
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -243,8 +244,10 @@ class Trainer(BaseTrainer):
 
         # Restore RNG state so minibatch sampling stays reproducible across resume.
         torch.set_rng_state(checkpoint['random_state'])
-        if torch.cuda.is_available() and 'cuda_random_state' in checkpoint:
-            torch.cuda.set_rng_state_all(checkpoint['cuda_random_state'])
+        if torch.cuda.is_available() and checkpoint.get('cuda_state') is not None:
+            torch.cuda.set_rng_state(checkpoint['cuda_state'])
+        if checkpoint.get('numpy_random_state') is not None:
+            np.random.set_state(checkpoint['numpy_random_state'])
 
     def train(self) -> None:
         """Train the model."""
