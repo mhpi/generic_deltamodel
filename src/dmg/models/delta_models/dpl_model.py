@@ -1,8 +1,12 @@
+import logging
+from collections.abc import Mapping
 from typing import Any, Optional
 
 import torch.nn
 
 from dmg.core.utils.factory import import_phy_model, load_nn_model
+
+log = logging.getLogger(__name__)
 
 
 class DplModel(torch.nn.Module):
@@ -104,6 +108,49 @@ class DplModel(torch.nn.Module):
             self.phy_model,
             device=self.device,
         )
+
+    def load_state_dict(
+        self,
+        state_dict: Mapping[str, Any],
+        strict: bool = True,
+        assign: bool = False,
+    ) -> Any:
+        """Load weights, dropping routing outputs if routing is disabled.
+
+        Lets a checkpoint trained with routing run with routing disabled
+        (e.g., when routing is handled externally). Routing parameters are
+        the trailing NN outputs, so they are sliced off before loading.
+
+        Parameters
+        ----------
+        state_dict
+            Checkpoint state dict.
+        strict
+            Whether keys and shapes must match exactly.
+        assign
+            Whether to assign checkpoint tensors in place of copying.
+
+        Returns
+        -------
+        Any
+            Missing and unexpected keys, as returned by PyTorch.
+        """
+        n_routing = len(getattr(self.phy_model, 'routing_parameter_bounds', {}))
+        if n_routing and not getattr(self.phy_model, 'routing', True):
+            state_dict = dict(state_dict)
+            model_state = self.state_dict()
+            for key, value in state_dict.items():
+                target = model_state.get(key)
+                if (
+                    target is not None
+                    and value.dim() > 0
+                    and value.shape[0] == target.shape[0] + n_routing
+                ):
+                    state_dict[key] = value[: target.shape[0]]
+                    log.warning(
+                        f"Routing disabled; dropping routing outputs from '{key}'.",
+                    )
+        return super().load_state_dict(state_dict, strict=strict, assign=assign)
 
     def forward(
         self,

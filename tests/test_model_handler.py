@@ -8,10 +8,13 @@ Coverage:
 - Parameter retrieval
 - ModelHandler vs DplModel output equivalence
 - Model serialization (save/load)
+- Loading a routing-enabled checkpoint with routing disabled
 - Device placement
 
 NOTE: All tests are parametrized over Hbv, Hbv_1_1p, and Hbv_2.
 """
+
+import copy
 
 import torch
 
@@ -170,6 +173,27 @@ def test_model_serialization(model_config, model_dataset, tmp_path):
     assert torch.allclose(output1, output2, rtol=1e-4, atol=1e-7), (
         "Loaded model produces different output"
     )
+
+
+def test_load_routing_checkpoint_with_routing_disabled(config_hbv_2, tmp_path):
+    """Test a routing-enabled checkpoint loads with routing disabled."""
+    model_name = get_phy_model_name(config_hbv_2)
+    dpl_routed = ModelHandler(config_hbv_2).model_dict[model_name]
+    state = dpl_routed.state_dict()
+    torch.save(state, tmp_path / f"{model_name.lower()}_ep1.pt")
+
+    config = copy.deepcopy(config_hbv_2)
+    config['mode'] = 'test'
+    config['model_dir'] = str(tmp_path)
+    config['test']['test_epoch'] = 1
+    config['model']['phy']['routing'] = False
+    dpl = ModelHandler(config).model_dict[model_name]
+
+    n_routing = len(dpl.phy_model.routing_parameter_bounds)
+    for key in ['nn_model.ann.h2o.weight', 'nn_model.ann.h2o.bias']:
+        loaded = dpl.state_dict()[key]
+        assert loaded.shape[0] == state[key].shape[0] - n_routing
+        assert torch.equal(loaded, state[key][: loaded.shape[0]])
 
 
 def test_device_placement(model_config, model_dataset):
