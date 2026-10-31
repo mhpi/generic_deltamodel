@@ -68,6 +68,15 @@ class MtsModelHandler(torch.nn.Module):
 
         self._init_models()
 
+        # Epoch to load
+        if config['mode'] == 'train':
+            load_epoch = config['train']['start_epoch']
+        elif config['mode'] in ['test', 'sim']:
+            load_epoch = config['test']['test_epoch']
+        else:
+            load_epoch = config.get('load_epoch', 0)
+        self.load_model(load_epoch)
+
     def _init_models(self):
         config = self.config
         device = self.device
