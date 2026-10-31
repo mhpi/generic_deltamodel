@@ -151,10 +151,10 @@ class DplModel(torch.nn.Module):
                 ):
                     state_dict[key] = value[: target.shape[0]]
                     dropped_keys.append(key)
-        if dropped_keys:
-            log.info(
-                f" Routing disabled; dropping routing outputs | '{', '.join(dropped_keys)}'.",
-            )
+            if dropped_keys:
+                log.info(
+                    f" Routing disabled; dropping routing outputs | '{', '.join(dropped_keys)}'.",
+                )
         return super().load_state_dict(state_dict, strict=strict, assign=assign)
 
     def forward(
