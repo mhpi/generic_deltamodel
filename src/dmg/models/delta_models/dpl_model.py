@@ -6,7 +6,7 @@ import torch.nn
 
 from dmg.core.utils.factory import import_phy_model, load_nn_model
 
-log = logging.getLogger(__name__)
+log = logging.getLogger('dpl_model')
 
 
 class DplModel(torch.nn.Module):
@@ -139,6 +139,9 @@ class DplModel(torch.nn.Module):
         if n_routing and not getattr(self.phy_model, 'routing', True):
             state_dict = dict(state_dict)
             model_state = self.state_dict()
+
+            dropped_keys = []
+
             for key, value in state_dict.items():
                 target = model_state.get(key)
                 if (
@@ -147,9 +150,11 @@ class DplModel(torch.nn.Module):
                     and value.shape[0] == target.shape[0] + n_routing
                 ):
                     state_dict[key] = value[: target.shape[0]]
-                    log.warning(
-                        f"Routing disabled; dropping routing outputs from '{key}'.",
-                    )
+                    dropped_keys.append(key)
+            if dropped_keys:
+                log.info(
+                    f" Routing disabled; dropping routing outputs | '{', '.join(dropped_keys)}'.",
+                )
         return super().load_state_dict(state_dict, strict=strict, assign=assign)
 
     def forward(
