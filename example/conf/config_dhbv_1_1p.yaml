@@ -58,7 +58,7 @@ train:
 
 ## Evaluation -------------------------------#
 test:
-  start_time: 1989/10/01
+  start_time: 1988/10/01  # First 'model.warmup' days are spin-up; scored from 1989/10/01.
   end_time: 1999/09/30
   batch_size: 25
   test_epoch: 50
@@ -66,7 +66,7 @@ test:
 
 ## Inference -------------------------------#
 sim:
-  start_time: 1989/10/01
+  start_time: 1988/10/01  # First 'model.warmup' days are spin-up; scored from 1989/10/01.
   end_time: 1999/09/30
   batch_size: 25
 
@@ -83,7 +83,7 @@ model:
 
     name: [Hbv_1_1p]
     nmul: 16
-    warmup_states: False
+    warmup_states: True
     dy_drop: 0.0
     dynamic_params:
       Hbv_1_1p: [parBETA, parK0, parBETAET]

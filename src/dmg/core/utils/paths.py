@@ -18,7 +18,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from omegaconf import OmegaConf
 
@@ -124,6 +124,32 @@ def check_experiment_exists(exp_name: Optional[str] = None) -> None:
             f"\n\nExperiment '{exp_name}' already exists @ {run_dir}\n"
             f"Use a different exp_name or delete the existing experiment.\n"
         )
+
+
+def clear_norm_stats(config: dict[str, Any]) -> None:
+    """Delete cached normalization statistics for a training run that overwrites.
+
+    Without this, retraining in an existing experiment reuses the statistics
+    saved by the previous run, even if they are stale.
+
+    The file is kept for test and sim runs, where it belongs to the trained
+    checkpoint and recomputing it would use evaluation data. It is also kept
+    when loading a pretrained model, since those weights depend on it.
+
+    Parameters
+    ----------
+    config
+        The initialized configuration dictionary.
+    """
+    if (not config.get('overwrite', False)) or config.get('pretrained_model_dir'):
+        return
+    if config['mode'] not in ('train', 'train_test'):
+        return
+
+    path = os.path.join(config['model_dir'], 'normalization_statistics.json')
+    if os.path.isfile(path):
+        os.remove(path)
+        log.info(f"Removed cached normalization statistics: {path}")
 
 
 # Register resolvers on module import

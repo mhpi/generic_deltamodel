@@ -10,8 +10,10 @@ Coverage:
 - Model serialization (save/load)
 - Loading a routing-enabled checkpoint with routing disabled
 - Device placement
+- Standalone neural network warmup alignment
 
-NOTE: All tests are parametrized over Hbv, Hbv_1_1p, and Hbv_2.
+NOTE: Tests are parametrized over Hbv, Hbv_1_1p, and Hbv_2 unless they are specific
+to a standalone neural network.
 """
 
 import copy
@@ -208,3 +210,24 @@ def test_device_placement(model_config, model_dataset):
 
     output = model(model_dataset)
     assert output[model_name]['streamflow'].device.type == 'cpu'
+
+
+def test_nn_model_drops_warmup(config_lstm):
+    """A standalone NN drops warmup steps, so its output aligns with the target."""
+    model_config = config_lstm['model']
+    rho, warmup = model_config['rho'], model_config['warmup']
+    n_inputs = len(model_config['nn']['forcings'] + model_config['nn']['attributes'])
+    dataset = {
+        'xc_nn_norm': torch.rand(rho + warmup, 4, n_inputs),
+        'target': torch.rand(rho, 4, 1),
+        'batch_sample': torch.arange(4),
+    }
+
+    handler = ModelHandler(config_lstm, verbose=False)
+    output = handler(dataset)
+    name = handler.models[0]
+    assert output[name]['streamflow'].shape[0] == rho
+
+    # The strict length check in ModelHandler._trim raises on a mismatch.
+    loss = handler.calc_loss(dataset, loss_func=lambda x, y, sample_ids: (x - y).sum())
+    assert torch.isfinite(loss)

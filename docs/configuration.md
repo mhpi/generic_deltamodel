@@ -131,7 +131,7 @@ The settings are broken down as they appear in the YAML configuration files, wit
 - `nn_parallel`: Dynamically weight model outputs using a neural network (NN) trained in parallel with models.
 - `nn_sequential`: Dynamically weight model outputs using a NN trained after pre-training models to be ensembled.
 
-**overwrite**: [bool] If True, allow a named experiment (`exp_name`) to reuse an output directory that already exists, overwriting its contents. If False (the default), 𝛿MG stops with an error rather than clobbering a previous run. Has no effect on timestamped runs, where `exp_name` is unset.
+**overwrite**: [bool] If True, allow a named experiment (`exp_name`) to reuse an output directory that already exists, overwriting its contents. If False (the default), 𝛿MG stops with an error rather than clobbering a previous run. Has no effect on timestamped runs, where `exp_name` is unset. In train and train_test modes this also deletes the cached normalization_statistics.json so statistics are recomputed; it is kept for test and sim runs and when loading a pretrained model.
 
 **seed**: [111111] Seed to fix deterministic behavior in NumPy and PyTorch.
 

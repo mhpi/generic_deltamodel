@@ -175,3 +175,6 @@ docstring-code-format = true
 [tool.ruff.lint.isort]
 known-first-party = ["dmg"]
 combine-as-imports = true
+
+[tool.uv.pip]
+torch-backend = "auto"
