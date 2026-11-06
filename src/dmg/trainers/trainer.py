@@ -102,7 +102,7 @@ class Trainer(BaseTrainer):
 
             # Loss function
             self.loss_func = loss_func or load_criterion(
-                self.train_dataset['target'],
+                self.train_dataset.get('target_f64', self.train_dataset['target']),
                 config['train']['loss_function'],
                 device=config['device'],
             )

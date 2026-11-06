@@ -239,6 +239,10 @@ class HydroLoader(BaseLoader):
             'target': self.to_tensor(target),
         }
 
+        # Loss stats need target before being rounded to tensor dtype.
+        if scope == 'train':
+            dataset['target_f64'] = torch.as_tensor(target, dtype=torch.float64)
+
         # Attach functions to convert predictions and observations to output unit.
         if self.norm_target and scope != 'train':
             dataset['denorm_fn'] = partial(
@@ -561,7 +565,10 @@ class HydroLoader(BaseLoader):
 
         # Target variable stats
         for i, name in enumerate(self.target):
-            if (name in ['flow_sim', 'streamflow', 'runoff']) and (
+            if self.norm_target and (name in self.log_norm_vars):
+                # Stats must be in the same log-sqrt space as to_norm's transform.
+                stat_dict[name] = self._calc_gamma_stats(target[:, :, i])
+            elif (name in ['flow_sim', 'streamflow', 'runoff']) and (
                 not self.norm_target
             ):
                 stat_dict[name] = self._calc_norm_stats(
@@ -708,7 +715,7 @@ class HydroLoader(BaseLoader):
         if not self.norm_target:
             y_nn_norm = None
         else:
-            y_nn_norm = self.to_norm(target, self.target)
+            y_nn_norm = self.to_norm(target, self.target, dtype=np.float64)
 
         # Remove nans
         x_nn_norm[x_nn_norm != x_nn_norm] = 0
@@ -729,6 +736,7 @@ class HydroLoader(BaseLoader):
         self,
         data: NDArray[np.float32],
         vars: list[str],
+        dtype: type = np.float32,
     ) -> NDArray[np.float32]:
         """Normalize data with Gaussian or log-Gaussian norm.
 
@@ -738,6 +746,8 @@ class HydroLoader(BaseLoader):
             Data to normalize.
         vars
             List of variable names in data to normalize.
+        dtype
+            Data type of the returned array.
 
         Returns
         -------
@@ -747,22 +757,24 @@ class HydroLoader(BaseLoader):
         if isinstance(vars, str):
             vars = [vars]
 
-        data = np.asarray(data, dtype=np.float32)
-        data_norm = np.zeros_like(data, dtype=np.float32)
+        data = np.asarray(data)
+        data_norm = np.zeros(data.shape, dtype=dtype)
 
         for k, var in enumerate(vars):
             stat = self.norm_stats[var]
             mean, std = stat[2], stat[3]
 
+            # NOTE: Compute in double precision and round once on storing -- added
+            # to match source codes.
+            transformed = data[..., k].astype(np.float64)
+
             if var in self.log_norm_vars:
                 # Guard against negatives
-                if np.any(data[..., k] < 0):
+                if np.any(transformed < 0):
                     raise ValueError(
                         f"Variable '{var}' contains negative values before log transform.",
                     )
-                transformed = np.log10(np.sqrt(data[..., k]) + 0.1)
-            else:
-                transformed = data[..., k]
+                transformed = np.log10(np.sqrt(transformed) + 0.1)
 
             data_norm[..., k] = (transformed - mean) / std
         return data_norm
@@ -799,8 +811,9 @@ class HydroLoader(BaseLoader):
             denormed = data_scaled[..., k] * std + mean
 
             if var in self.log_norm_vars:
-                # Invert the log-sqrt transform
-                data[..., k] = (np.power(10.0, denormed) - 0.1) ** 2
+                # Invert log-sqrt transform; clamp before squaring, since a
+                # value below the transform's floor has no inverse.
+                data[..., k] = np.maximum(np.power(10.0, denormed) - 0.1, 0.0) ** 2
             else:
                 data[..., k] = denormed
 

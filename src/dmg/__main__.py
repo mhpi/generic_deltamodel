@@ -17,7 +17,7 @@ from omegaconf import DictConfig
 
 from dmg._version import __version__
 from dmg.core.utils.factory import import_data_loader, import_trainer
-from dmg.core.utils.paths import check_experiment_exists
+from dmg.core.utils.paths import check_experiment_exists, clear_norm_stats
 from dmg.core.utils.utils import initialize_config, print_config, set_randomseed
 from dmg.models.model_handler import ModelHandler as dModel
 
@@ -73,6 +73,7 @@ def main(config: DictConfig) -> None:
         if not config.get('overwrite', False):
             check_experiment_exists(config.get('exp_name'))
         config = initialize_config(config)
+        clear_norm_stats(config)
         set_randomseed(config['seed'])
 
         ### Do model tuning ###

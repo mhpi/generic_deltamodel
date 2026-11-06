@@ -204,6 +204,27 @@ def _hbv_2_config_dict():
     }
 
 
+def _lstm_config_dict():
+    """Config dict for a standalone LSTM (no physics model)."""
+    return {
+        **_SHARED_CONFIG,
+        'model': {
+            'rho': 10,
+            'warmup': 2,
+            'flow_regime': 'high',
+            'nn': {
+                'name': 'LstmModel',
+                'dropout': 0.5,
+                'hidden_size': 32,
+                'out_size': 1,
+                'forcings': ['prcp', 'tmean', 'pet'],
+                'attributes': ['area_gages2'],
+                'cache_states': False,
+            },
+        },
+    }
+
+
 def build_mock_dataset(config, n_basins=10):
     """Build a mock dataset matching the given config."""
     np.random.seed(config['seed'])
@@ -278,6 +299,12 @@ def config():
 def mock_dataset(config):
     """A fixture for a mock dataset dictionary, consistent with the config."""
     return build_mock_dataset(config)
+
+
+@pytest.fixture
+def config_lstm():
+    """Config for a standalone LSTM."""
+    return build_config(_lstm_config_dict())
 
 
 @pytest.fixture
