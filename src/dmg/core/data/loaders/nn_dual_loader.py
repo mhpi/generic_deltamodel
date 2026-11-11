@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
@@ -8,7 +8,6 @@ import torch
 
 from dmg.core.data.data import extract_temporal_features, split_dataset_by_basin
 from dmg.core.data.loader_utils import (
-    flow_conversion,
     load_nn_data,
     load_norm_stats,
     normalize_data,
@@ -32,7 +31,7 @@ class NnDualLoader(BaseLoader):
 
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         test_split: Optional[bool] = False,
         overwrite: Optional[bool] = False,
         holdout_index: Optional[int] = None,
@@ -89,6 +88,7 @@ class NnDualLoader(BaseLoader):
         self.load_dataset()
 
     def load_dataset(self) -> None:
+        """Load train and eval datasets, including the pretrained input stream."""
         train_range = {
             "start": self.config["train"]["start_time"],
             "end": self.config["train"]["end_time"],
@@ -120,8 +120,8 @@ class NnDualLoader(BaseLoader):
                 self.dataset = self._preprocess_data("all", full_range)
 
     def _preprocess_data(
-        self, scope: str, t_range: Dict[str, str]
-    ) -> Dict[str, torch.Tensor]:
+        self, scope: str, t_range: dict[str, str]
+    ) -> dict[str, torch.Tensor]:
         # --- task data ---
         nn_data = load_nn_data(
             self._cfg_with_data_path(self.task_nc_path),
@@ -197,11 +197,13 @@ class NnDualLoader(BaseLoader):
                     td = np.maximum(tmax - tmin, 0.0)
                     pet = np.maximum(0.0135 * (tmean + 17.8) * np.sqrt(td) * rs_mm, 0.0)
                 x_phy = np.stack([prcp, tmean, pet], axis=-1).astype(np.float32)
-            except Exception as _e:
+            except Exception as _e:  # noqa: BLE001
                 log.warning(
                     f"[NnDualLoader] Could not build HBV physics forcings: {_e}. Using zeros."
                 )
-                x_phy = np.zeros((target.shape[0], target.shape[1], 0), dtype=np.float32)
+                x_phy = np.zeros(
+                    (target.shape[0], target.shape[1], 0), dtype=np.float32
+                )
         else:
             x_phy = np.zeros((target.shape[0], target.shape[1], 0), dtype=np.float32)
         c_phy = np.zeros((c_nn.shape[0], 0), dtype=np.float32)
@@ -269,7 +271,9 @@ class NnDualLoader(BaseLoader):
                 obs = dict(cfg_pre["observations"])
                 obs.pop("area_name", None)
                 cfg_pre["observations"] = obs
-            dummy_target = np.zeros((x_pre.shape[0], x_pre.shape[1], 1), dtype=np.float32)
+            dummy_target = np.zeros(
+                (x_pre.shape[0], x_pre.shape[1], 1), dtype=np.float32
+            )
             self.pre_norm_stats = load_norm_stats(
                 self.pre_norm_path,
                 self.overwrite,
@@ -322,12 +326,12 @@ class NnDualLoader(BaseLoader):
                 task_dates = pd.DatetimeIndex(task_dates)
                 pre_dates = pd.DatetimeIndex(pre_dates)
 
-                station_match = len(task_ids) == xc_pretrained_norm.shape[1] and np.array_equal(
-                    task_ids, pre_ids
-                )
-                time_match = len(task_dates) == xc_pretrained_norm.shape[0] and pre_dates.equals(
-                    task_dates
-                )
+                station_match = len(task_ids) == xc_pretrained_norm.shape[
+                    1
+                ] and np.array_equal(task_ids, pre_ids)
+                time_match = len(task_dates) == xc_pretrained_norm.shape[
+                    0
+                ] and pre_dates.equals(task_dates)
 
                 if not (station_match and time_match):
                     old_shape = xc_pretrained_norm.shape
@@ -349,7 +353,9 @@ class NnDualLoader(BaseLoader):
                             time_src.append(pre_t)
 
                     n_f = old_shape[2]
-                    aligned = np.zeros((len(task_dates), len(task_ids), n_f), dtype=np.float32)
+                    aligned = np.zeros(
+                        (len(task_dates), len(task_ids), n_f), dtype=np.float32
+                    )
                     if station_src and time_src:
                         aligned[np.ix_(time_dst, station_dst)] = xc_pretrained_norm[
                             np.ix_(time_src, station_src)
@@ -361,7 +367,7 @@ class NnDualLoader(BaseLoader):
                         f"{len(time_src)}/{len(task_dates)} timesteps matched "
                         f"(was {old_shape}); unmatched positions filled with zeros."
                     )
-            except Exception as _e:
+            except Exception as _e:  # noqa: BLE001
                 log.warning(
                     f"[NnDualLoader] Could not align pretrained data to task grid: {_e}. "
                     "xc_pretrained_norm may not match task station/time axes."
@@ -383,7 +389,7 @@ class NnDualLoader(BaseLoader):
             "xc_pretrained_norm": to_tensor(xc_pretrained_norm, "cpu", self.dtype),
         }
 
-    def _cfg_with_data_path(self, data_path: str) -> Dict[str, Any]:
+    def _cfg_with_data_path(self, data_path: str) -> dict[str, Any]:
         cfg = dict(self.config)
         cfg["data_path"] = data_path
         return cfg

@@ -10,6 +10,7 @@ from dmg.core.data.samplers.base import BaseSampler
 
 class ModHydroSampler(BaseSampler):
     """Sampler for hydrology experiments.
+
     Custom additions over the base package sampler:
       - xc_pretrained_norm passthrough (for DirectFinetuneing / NnDualLoader)
       - temporal_features batch construction
@@ -24,9 +25,11 @@ class ModHydroSampler(BaseSampler):
         self.rho = config['model']['rho']
 
     def load_data(self):
+        """Not used; data comes from the loader."""
         raise NotImplementedError
 
     def preprocess_data(self):
+        """Not used; data comes from the loader."""
         raise NotImplementedError
 
     def select_subset(

@@ -3,6 +3,8 @@ import torch.nn as nn
 
 
 class AttentionAdapter(nn.Module):
+    """Self-attention over hidden states, then cross-attention to time features."""
+
     def __init__(self, d_model: int, input_size: int, num_heads: int = 4):
         super().__init__()
         self.d_model = d_model
@@ -33,6 +35,7 @@ class AttentionAdapter(nn.Module):
         time_features: torch.Tensor,
         static_features=None,
     ):
+        """Return adapted hidden states with the same shape as the input."""
         # Project time features to model dimension
         time_proj = self.input_projection(time_features)
 

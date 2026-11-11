@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
@@ -11,7 +11,12 @@ from numpy.typing import NDArray
 from dmg.core.data.data import extract_temporal_features
 
 # Import shared utility functions from your existing system
-from dmg.core.data.loader_utils import *
+from dmg.core.data.loader_utils import (
+    from_norm,
+    load_norm_stats,
+    normalize_data,
+    to_tensor,
+)
 from dmg.core.data.loaders.base import BaseLoader
 
 log = logging.getLogger(__name__)
@@ -28,7 +33,7 @@ class GridDataLoader(BaseLoader):
 
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         test_split: Optional[bool] = False,
         overwrite: Optional[bool] = False,
         holdout_index: Optional[int] = None,
@@ -128,8 +133,8 @@ class GridDataLoader(BaseLoader):
                 self.dataset = self._preprocess_data('all', full_range)
 
     def _preprocess_data(
-        self, scope: str, t_range: Dict[str, str]
-    ) -> Dict[str, torch.Tensor]:
+        self, scope: str, t_range: dict[str, str]
+    ) -> dict[str, torch.Tensor]:
         """
         Read data, preprocess, and return as tensors for models.
 
@@ -202,7 +207,7 @@ class GridDataLoader(BaseLoader):
             raise
 
     def read_netcdf_data(
-        self, scope: str, t_range: Dict[str, str]
+        self, scope: str, t_range: dict[str, str]
     ) -> tuple[NDArray[np.float32]]:
         """
         Read gridded data from NetCDF file.
@@ -239,7 +244,7 @@ class GridDataLoader(BaseLoader):
                         log.info(
                             "Successfully converted time using direct pandas conversion"
                         )
-                    except:
+                    except Exception as err:
                         # If that fails, try to detect the time format
                         if hasattr(time_coord.values[0], 'item'):
                             sample_val = time_coord.values[0].item()
@@ -285,19 +290,21 @@ class GridDataLoader(BaseLoader):
                                                 for t in time_coord.values
                                             ]
                                             break
-                                    except:
+                                    except Exception:  # noqa: BLE001
                                         continue
 
                                 if time_values is None:
                                     raise ValueError(
                                         f"Could not determine time format for values like {sample_val}"
-                                    )
+                                    ) from err
                             else:
                                 raise ValueError(
                                     f"Unrecognized numeric time format: {sample_val}"
-                                )
+                                ) from err
                         else:
-                            raise ValueError("Could not convert time coordinate")
+                            raise ValueError(
+                                "Could not convert time coordinate"
+                            ) from err
 
                     # Convert to datetime list if it's not already
                     if not isinstance(time_values, list):

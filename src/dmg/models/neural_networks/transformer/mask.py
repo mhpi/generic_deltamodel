@@ -213,7 +213,7 @@ def skip_or_mask_all_variables(
 
 def get_batch_mask(num_batch, config):
     mask_time_series_index_list, mask_static_index_list = [], []
-    for i in range(num_batch):
+    for _i in range(num_batch):
         # size [seq_len, num_features]
         mask_time_series_index = MaskGenerator.one_batch_consecutive_with_variables(
             config.seq_len,

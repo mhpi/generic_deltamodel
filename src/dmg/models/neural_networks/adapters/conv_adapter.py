@@ -3,6 +3,8 @@ import torch.nn as nn
 
 
 class ConvAdapter(nn.Module):
+    """Temporal 1D convolution over hidden states and time features, with a residual."""
+
     def __init__(self, d_model: int, input_size: int, kernel_size: int = 3):
         super().__init__()
         self.input_projection = nn.Linear(d_model + input_size, d_model)
@@ -26,6 +28,7 @@ class ConvAdapter(nn.Module):
         time_features: torch.Tensor,
         static_features=None,
     ):
+        """Return adapted hidden states with the same shape as the input."""
         combined = torch.cat([hidden_states, time_features], dim=-1)
         projected = self.input_projection(combined)
 

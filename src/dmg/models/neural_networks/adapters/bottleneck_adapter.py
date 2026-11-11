@@ -3,6 +3,8 @@ import torch.nn as nn
 
 
 class BottleneckAdapter(nn.Module):
+    """Bottleneck MLP over hidden states and time features, with a residual."""
+
     def __init__(self, d_model: int, input_size: int, bottleneck_size: int = 64):
         super().__init__()
 
@@ -24,6 +26,7 @@ class BottleneckAdapter(nn.Module):
         time_features: torch.Tensor,
         static_features=None,
     ):
+        """Return adapted hidden states with the same shape as the input."""
         combined = torch.cat([hidden_states, time_features], dim=-1)
 
         # Bottleneck transformation

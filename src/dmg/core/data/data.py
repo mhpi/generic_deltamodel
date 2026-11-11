@@ -571,7 +571,7 @@ def extract_temporal_features(date_range: list[str]) -> np.ndarray:
             temporal_features[i, 5] = date_obj.year  # year
             temporal_features[i, 6] = 0  # special events (can be customized)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             log.warning(f"Error parsing date {date_str}: {e}, using defaults")
             # Use defaults for problematic dates
             temporal_features[i, :] = [1, 1, 1, 1, 1, 2020, 0]

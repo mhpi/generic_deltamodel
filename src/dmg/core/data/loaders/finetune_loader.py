@@ -2,17 +2,28 @@ import json
 import logging
 import os
 import pickle
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
 import torch
 from numpy.typing import NDArray
 
-from dmg.core.data.data import extract_temporal_features, intersect
+from dmg.core.data.data import (
+    extract_temporal_features,
+    intersect,
+    split_dataset_by_basin,
+)
 
 # Import shared utility functions
-from dmg.core.data.loader_utils import *
+from dmg.core.data.loader_utils import (
+    flow_conversion,
+    from_norm,
+    load_nn_data,
+    load_norm_stats,
+    normalize_data,
+    to_tensor,
+)
 from dmg.core.data.loaders.base import BaseLoader
 from dmg.core.data.loaders.load_nc import NetCDFDataset
 
@@ -39,7 +50,7 @@ class FinetuneLoader(BaseLoader):
 
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         test_split: Optional[bool] = False,
         overwrite: Optional[bool] = False,
         holdout_index: Optional[int] = None,
@@ -111,11 +122,11 @@ class FinetuneLoader(BaseLoader):
             train_data = self._preprocess_data(train_range)
             test_data = self._preprocess_data(test_range)
 
-            self.train_dataset, _ = split_by_basin(
-                train_data, self.config, self.test, self.holdout_index
+            self.train_dataset, _ = split_dataset_by_basin(
+                train_data, self.config, self.holdout_index
             )
-            _, self.eval_dataset = split_by_basin(
-                test_data, self.config, self.test, self.holdout_index
+            _, self.eval_dataset = split_dataset_by_basin(
+                test_data, self.config, self.holdout_index
             )
         else:
             # Standard temporal split
@@ -137,7 +148,7 @@ class FinetuneLoader(BaseLoader):
                 }
                 self.dataset = self._preprocess_data(full_range)
 
-    def _preprocess_data(self, t_range: Dict[str, str]) -> Dict[str, torch.Tensor]:
+    def _preprocess_data(self, t_range: dict[str, str]) -> dict[str, torch.Tensor]:
         """Read data, preprocess, and return as tensors for models.
 
         Parameters
@@ -195,7 +206,7 @@ class FinetuneLoader(BaseLoader):
         }
         return dataset
 
-    def read_data(self, t_range: Dict[str, str]) -> tuple[np.ndarray, ...]:
+    def read_data(self, t_range: dict[str, str]) -> tuple[np.ndarray, ...]:
         """Read data from both NetCDF and pickle sources.
 
         Parameters

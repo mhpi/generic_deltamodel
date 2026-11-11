@@ -1,16 +1,22 @@
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
 import torch
 from numpy.typing import NDArray
 
-from dmg.core.data.data import extract_temporal_features
+from dmg.core.data.data import extract_temporal_features, split_dataset_by_basin
 
 # Import shared utility functions
-from dmg.core.data.loader_utils import *
+from dmg.core.data.loader_utils import (
+    from_norm,
+    load_nn_data,
+    load_norm_stats,
+    normalize_data,
+    to_tensor,
+)
 from dmg.core.data.loaders.base import BaseLoader
 from dmg.core.data.loaders.load_nc import NetCDFDataset
 
@@ -24,7 +30,7 @@ class NnDirectLoader(BaseLoader):
 
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         test_split: Optional[bool] = False,
         overwrite: Optional[bool] = False,
         holdout_index: Optional[int] = None,
@@ -108,11 +114,11 @@ class NnDirectLoader(BaseLoader):
             test_data = self._preprocess_data('test', test_range)
 
             # Split each dataset by basin using shared utilities
-            self.train_dataset, _ = split_by_basin(
-                train_data, self.config, self.test, self.holdout_index
+            self.train_dataset, _ = split_dataset_by_basin(
+                train_data, self.config, self.holdout_index
             )
-            _, self.eval_dataset = split_by_basin(
-                test_data, self.config, self.test, self.holdout_index
+            _, self.eval_dataset = split_dataset_by_basin(
+                test_data, self.config, self.holdout_index
             )
 
             # Log the split dataset sizes for verification
@@ -136,8 +142,8 @@ class NnDirectLoader(BaseLoader):
                 self.dataset = self._preprocess_data('all', full_range)
 
     def _preprocess_data(
-        self, scope: str, t_range: Dict[str, str]
-    ) -> Dict[str, torch.Tensor]:
+        self, scope: str, t_range: dict[str, str]
+    ) -> dict[str, torch.Tensor]:
         """Read data, preprocess, and return as tensors for models.
 
         Parameters
@@ -218,7 +224,7 @@ class NnDirectLoader(BaseLoader):
             raise
 
     def read_data(
-        self, scope: str, t_range: Dict[str, str]
+        self, scope: str, t_range: dict[str, str]
     ) -> tuple[NDArray[np.float32]]:
         """Read data from NetCDF files and extract target variables.
 

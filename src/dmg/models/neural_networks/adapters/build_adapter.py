@@ -6,7 +6,7 @@ decoding; this module is the single place that knows how to build each
 adapter type and how to call it, so the two models don't drift out of sync.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import torch
 import torch.nn as nn
@@ -28,7 +28,7 @@ def build_adapter(
     d_model: int,
     n_time: int,
     n_static: int,
-    params: Dict[str, Any],
+    params: dict[str, Any],
 ) -> nn.Module:
     """Construct an adapter module by name. `d_model` may be any width
     (e.g. 256, 1024, ...); every adapter takes it as a plain constructor arg.

@@ -1,4 +1,6 @@
 import torch
+from torch import nn
+
 from dmg.models.neural_networks.transformer.features_embedding import (
     StaticDecEmbedding,
     StaticEncEmbedding,
@@ -6,9 +8,12 @@ from dmg.models.neural_networks.transformer.features_embedding import (
     TimeSeriesEncEmbedding,
 )
 from dmg.models.neural_networks.transformer.mask import MaskGenerator
-from dmg.models.neural_networks.transformer.positional_encoding import PositionalEncoding
-from dmg.models.neural_networks.transformer.transformer_layers import TransformerBackbone
-from torch import nn
+from dmg.models.neural_networks.transformer.positional_encoding import (
+    PositionalEncoding,
+)
+from dmg.models.neural_networks.transformer.transformer_layers import (
+    TransformerBackbone,
+)
 
 
 class Model(nn.Module):
@@ -56,7 +61,9 @@ class Model(nn.Module):
         )
 
         # Positional encoding
-        self.positional_encoding = PositionalEncoding(embed_dim, dropout=configs.dropout)
+        self.positional_encoding = PositionalEncoding(
+            embed_dim, dropout=configs.dropout
+        )
 
         # Mask generator
         self.mask_generator = MaskGenerator(
@@ -73,7 +80,9 @@ class Model(nn.Module):
 
         # Decoder: single-layer LSTM (not a TransformerBackbone)
         self.enc_2_dec_embedding = nn.Linear(embed_dim, embed_dim, bias=True)
-        self.decoder = nn.LSTM(input_size=embed_dim, hidden_size=embed_dim, batch_first=True)
+        self.decoder = nn.LSTM(
+            input_size=embed_dim, hidden_size=embed_dim, batch_first=True
+        )
 
         # Projection layers
         self.time_series_projection = TimeSeriesDecEmbedding(

@@ -169,7 +169,6 @@ class LocalizedStationAdapter(nn.Module):
 
         # Apply gated combination
         gated_station = gate_weights * station_features
-        combined = hidden_states + gated_station
 
         # Final projection and normalization
         output = self.feature_proj(torch.cat([hidden_states, gated_station], dim=-1))

@@ -1,4 +1,5 @@
 import math
+from typing import Optional
 
 import torch
 from torch import nn
@@ -104,7 +105,7 @@ class TimeSeriesDecEmbedding(nn.Module):
 
     def forward(self, x, feature_order):
         embeds = []
-        for i, name in enumerate(feature_order):
+        for _i, name in enumerate(feature_order):
             embed1 = self.embeddings1[name](x)  # batch_size, seq_length, 64
             embed1 = F.gelu(embed1)
             embed1 = self.dropout(embed1)
@@ -143,7 +144,7 @@ class TimeSeriesDecEmbeddingLSTM(nn.Module):
 
     def forward(self, x, feature_order):
         embeds = []
-        for i, name in enumerate(feature_order):
+        for _i, name in enumerate(feature_order):
             # LSTM's input should be in the form (batch_size, seq_length, feature_dim)
             # LSTM outputs a Tuple, the first element being the output at all time steps, and the second the hidden state at the last time step
             # We are only interested in the output
@@ -168,11 +169,15 @@ class StaticEncEmbedding(nn.Module):
         numerical_features,
         embed_dim,
         max_len=1000,
-        categorical_features=[],
-        categorical_features_num=[],
+        categorical_features=None,
+        categorical_features_num=None,
         dropout=0.1,
     ):
         super().__init__()
+        if categorical_features is None:
+            categorical_features = []
+        if categorical_features_num is None:
+            categorical_features_num = []
         self.numerical_features = numerical_features
         self.embed_dim = embed_dim
         self.categorical_features = categorical_features
@@ -260,12 +265,16 @@ class StaticDecEmbedding(nn.Module):
         self,
         numerical_features,
         embed_dim,
-        categorical_features=[],
-        categorical_features_num=[],
+        categorical_features=None,
+        categorical_features_num=None,
         dropout=0.1,
         add_input_noise=False,
     ):
         super().__init__()
+        if categorical_features is None:
+            categorical_features = []
+        if categorical_features_num is None:
+            categorical_features_num = []
         output_dim = 1
         if add_input_noise:
             output_dim = 2
@@ -328,12 +337,16 @@ class StaticDecEmbeddingLSTM(nn.Module):
         self,
         numerical_features,
         embed_dim,
-        categorical_features=[],
-        categorical_features_num=[],
+        categorical_features=None,
+        categorical_features_num=None,
         dropout=0.4,
         add_input_noise=False,
     ):
         super().__init__()
+        if categorical_features is None:
+            categorical_features = []
+        if categorical_features_num is None:
+            categorical_features_num = []
         output_dim = 1
         if add_input_noise:
             output_dim = 2
@@ -487,7 +500,6 @@ class DataEmbedding(nn.Module):
   booktitle = {International Conference on Learning Representations},
   year      = {2023}
 }'''
-from typing import Optional, Tuple
 
 
 class PatchTokenizer(nn.Module):
@@ -527,7 +539,7 @@ class PatchTokenizer(nn.Module):
             nn.init.trunc_normal_(pos, std=0.02)
             self.pos_table = pos
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, int]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, int]:
         # x: [B, T, F]
         B, T, F = x.shape
         assert F == self.num_channels, "num_channels mismatch"

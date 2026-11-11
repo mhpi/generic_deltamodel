@@ -41,6 +41,7 @@ class _SeriesDecomp(nn.Module):
 class Dlinear(nn.Module):
     """
     Paper-style DLinear (sliding/causal, no dual-forward).
+
     Constructor matches your factory: Dlinear(nx, ny, hidden_size, dr).
     Forward takes a tensor only: x: [T, N, F] -> y: [T, N, ny]
     """
@@ -88,10 +89,7 @@ class Dlinear(nn.Module):
         return torch.cat([left, x_ncT], dim=2)  # [N, C, pad+T]
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        x: [T, N, F] where F == nx
-        y: [T, N, ny]
-        """
+        """Map x [T, N, nx] to y [T, N, ny]."""
         if not torch.is_tensor(x) or x.ndim != 3 or x.shape[2] != self.nx:
             raise ValueError(
                 f"Dlinear expected tensor [T,N,{self.nx}], got {tuple(getattr(x, 'shape', []))}"

@@ -1,18 +1,23 @@
 import logging
-from typing import Dict, Union
+from typing import Union
 
 import torch
 import torch.nn as nn
-from dmg.models.neural_networks.adapters.build_adapter import apply_adapter, build_adapter
-from dmg.models.neural_networks.cudnn_lstm import CudnnLstm
 from omegaconf import DictConfig, OmegaConf
+
+from dmg.models.neural_networks.adapters.build_adapter import (
+    apply_adapter,
+    build_adapter,
+)
+from dmg.models.neural_networks.cudnn_lstm import CudnnLstm
 
 log = logging.getLogger(__name__)
 
 
 class EmbeddingFinetuneing(nn.Module):
-    """
-     this model has no frozen encoder architecture
+    """Fine-tune head on precomputed foundation-model embeddings.
+
+    This model has no frozen encoder architecture
     to match, so it makes no assumption about embedding width. 'embedding_size'
     in config must equal the last dimension of the precomputed embeddings
     (e.g. 256, 1024, ...); every downstream layer is sized from that single
@@ -27,7 +32,7 @@ class EmbeddingFinetuneing(nn.Module):
 
     ACCEPTS_BATCH_DICT = True
 
-    def __init__(self, config: Union[Dict, DictConfig], ny) -> None:
+    def __init__(self, config: Union[dict, DictConfig], ny) -> None:
         super().__init__()
 
         if isinstance(config, DictConfig):
@@ -183,7 +188,7 @@ class EmbeddingFinetuneing(nn.Module):
         embedding = None
         obs = None
         obs_mask = None
-        if isinstance(xc_nn_norm, Dict):
+        if isinstance(xc_nn_norm, dict):
             data_dict = xc_nn_norm
             xc_nn_norm = data_dict['xc_nn_norm']
             embedding = data_dict.get('xc_pretrained_norm', None)

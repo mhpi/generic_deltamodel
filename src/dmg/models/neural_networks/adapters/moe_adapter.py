@@ -4,6 +4,8 @@ import torch.nn.functional as F
 
 
 class MoEAdapter(nn.Module):
+    """Mixture of MLP experts weighted by a softmax gate, with a residual."""
+
     def __init__(
         self,
         d_model: int,
@@ -39,6 +41,7 @@ class MoEAdapter(nn.Module):
         time_features: torch.Tensor,
         static_features=None,
     ):
+        """Return adapted hidden states with the same shape as the input."""
         combined = torch.cat([hidden_states, time_features], dim=-1)
 
         # Compute gating weights

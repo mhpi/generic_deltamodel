@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import numpy as np
 import torch
@@ -15,15 +15,15 @@ log = logging.getLogger(__name__)
 
 
 def load_nn_data(
-    config: Dict[str, Any],
+    config: dict[str, Any],
     scope: str,
-    t_range: Dict[str, str],
-    nn_forcings: List[str],
-    nn_attributes: List[str],
-    target: List[str],
+    t_range: dict[str, str],
+    nn_forcings: list[str],
+    nn_attributes: list[str],
+    target: list[str],
     device: str,
     nc_tool: NetCDFDataset,
-) -> Dict[str, np.ndarray]:
+) -> dict[str, np.ndarray]:
     """Load and process neural network data from NetCDF."""
     time_range = [t_range['start'].replace('/', '-'), t_range['end'].replace('/', '-')]
     warmup_days = config['model']['warmup']
@@ -108,9 +108,9 @@ def load_nn_data(
 def flow_conversion(
     c_nn: np.ndarray,
     target: np.ndarray,
-    target_vars: List[str],
-    nn_attributes: List[str],
-    config: Dict[str, Any],
+    target_vars: list[str],
+    nn_attributes: list[str],
+    config: dict[str, Any],
 ) -> np.ndarray:
     """Convert hydraulic flow from ft3/s to mm/day."""
     target_copy = target.copy()
@@ -144,12 +144,12 @@ def load_norm_stats(
     x_nn: np.ndarray,
     c_nn: np.ndarray,
     target: np.ndarray,
-    nn_forcings: List[str],
-    nn_attributes: List[str],
-    target_vars: List[str],
-    log_norm_vars: List[str],
-    config: Dict[str, Any],
-) -> Dict[str, List[float]]:
+    nn_forcings: list[str],
+    nn_attributes: list[str],
+    target_vars: list[str],
+    log_norm_vars: list[str],
+    config: dict[str, Any],
+) -> dict[str, list[float]]:
     """Load or calculate normalization statistics if necessary."""
     if os.path.isfile(out_path) and not overwrite:
         try:
@@ -175,13 +175,13 @@ def init_norm_stats(
     x_nn: np.ndarray,
     c_nn: np.ndarray,
     target: np.ndarray,
-    nn_forcings: List[str],
-    nn_attributes: List[str],
-    target_vars: List[str],
-    log_norm_vars: List[str],
-    config: Dict[str, Any],
+    nn_forcings: list[str],
+    nn_attributes: list[str],
+    target_vars: list[str],
+    log_norm_vars: list[str],
+    config: dict[str, Any],
     out_path: str,
-) -> Dict[str, List[float]]:
+) -> dict[str, list[float]]:
     """Compile and save calculations of data normalization statistics."""
     stat_dict = {}
 
@@ -194,7 +194,7 @@ def init_norm_stats(
                 stat_dict[var] = calc_gamma_stats(x_nn[:, :, k])
             else:
                 stat_dict[var] = calc_norm_stats(x_nn[:, :, k])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             log.warning(f"Error calculating stats for {var}: {e}")
             stat_dict[var] = [0, 1, 0, 1]
 
@@ -202,7 +202,7 @@ def init_norm_stats(
     for k, var in enumerate(nn_attributes):
         try:
             stat_dict[var] = calc_norm_stats(c_nn[:, k])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             log.warning(f"Error calculating stats for {var}: {e}")
             stat_dict[var] = [0, 1, 0, 1]
 
@@ -218,7 +218,7 @@ def init_norm_stats(
                 stat_dict[name] = calc_norm_stats(
                     np.swapaxes(target[:, :, i : i + 1], 1, 0),
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             log.warning(f"Error calculating stats for {name}: {e}")
             stat_dict[name] = [0, 1, 0, 1]
 
@@ -226,7 +226,7 @@ def init_norm_stats(
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         with open(out_path, 'w') as f:
             json.dump(stat_dict, f, indent=4)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log.warning(f"Could not save norm stats: {e}")
 
     return stat_dict
@@ -235,7 +235,7 @@ def init_norm_stats(
 def calc_norm_stats(
     x: np.ndarray,
     basin_area: np.ndarray = None,
-) -> List[float]:
+) -> list[float]:
     """Calculate statistics for normalization with optional basin area adjustment."""
     x = x.copy()
     x[x == -999] = np.nan
@@ -265,7 +265,7 @@ def calc_norm_stats(
     return [p10, p90, mean, max(std, 0.001)]
 
 
-def calc_gamma_stats(x: np.ndarray) -> List[float]:
+def calc_gamma_stats(x: np.ndarray) -> list[float]:
     """Calculate gamma statistics for streamflow and precipitation data."""
     a = np.swapaxes(x, 1, 0).flatten()
     b = a[~np.isnan(a)]
@@ -283,8 +283,8 @@ def calc_gamma_stats(x: np.ndarray) -> List[float]:
 
 def get_basin_area(
     c_nn: np.ndarray,
-    nn_attributes: List[str],
-    config: Dict[str, Any],
+    nn_attributes: list[str],
+    config: dict[str, Any],
 ) -> Optional[np.ndarray]:
     """Get basin area from attributes."""
     try:
@@ -300,10 +300,10 @@ def get_basin_area(
 def normalize_data(
     x_nn: NDArray[np.float32],
     c_nn: NDArray[np.float32],
-    nn_forcings: List[str],
-    nn_attributes: List[str],
-    norm_stats: Dict[str, List[float]],
-    log_norm_vars: List[str],
+    nn_forcings: list[str],
+    nn_attributes: list[str],
+    norm_stats: dict[str, list[float]],
+    log_norm_vars: list[str],
 ) -> NDArray[np.float32]:
     """Normalize and concatenate dynamic and static inputs for a neural network."""
     x_nn_norm = to_norm(
@@ -334,11 +334,11 @@ def normalize_data(
 def normalize_data_split(
     x_nn: NDArray[np.float32],
     c_nn: NDArray[np.float32],
-    nn_forcings: List[str],
-    nn_attributes: List[str],
-    norm_stats: Dict[str, List[float]],
-    log_norm_vars: List[str],
-) -> Tuple[NDArray[np.float32], NDArray[np.float32]]:
+    nn_forcings: list[str],
+    nn_attributes: list[str],
+    norm_stats: dict[str, list[float]],
+    log_norm_vars: list[str],
+) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
     """
     Normalize dynamic and static inputs separately without concatenating.
 
@@ -377,9 +377,9 @@ def normalize_data_split(
 
 def to_norm(
     data: NDArray[np.float32],
-    vars: List[str],
-    norm_stats: Dict[str, List[float]],
-    log_norm_vars: List[str],
+    vars: list[str],
+    norm_stats: dict[str, list[float]],
+    log_norm_vars: list[str],
 ) -> NDArray[np.float32]:
     """Normalize data using Gaussian or log-Gaussian statistics.
 
@@ -435,9 +435,9 @@ def to_norm(
 
 def from_norm(
     data_scaled: NDArray[np.float32],
-    vars: List[str],
-    norm_stats: Dict[str, List[float]],
-    log_norm_vars: List[str],
+    vars: list[str],
+    norm_stats: dict[str, list[float]],
+    log_norm_vars: list[str],
 ) -> NDArray[np.float32]:
     """De-normalize data.
 

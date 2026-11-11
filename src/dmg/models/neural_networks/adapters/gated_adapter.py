@@ -4,12 +4,15 @@ import torch.nn as nn
 
 
 class GatedAdapter(nn.Module):
+    """Add a sigmoid-gated transform of the inputs to the hidden states."""
+
     def __init__(self, hidden_size: int, input_size: int):
         super().__init__()
         self.gate = nn.Linear(hidden_size + input_size, hidden_size)
         self.transform = nn.Linear(hidden_size + input_size, hidden_size)
 
     def forward(self, h: torch.Tensor, x: torch.Tensor, static_features=None):
+        """Return adapted hidden states with the same shape as the input."""
         combined = torch.cat([h, x], dim=-1)
         gate = torch.sigmoid(self.gate(combined))
         transformed = self.transform(combined)

@@ -142,9 +142,7 @@ class Reformer(nn.Module):
     def forward(
         self, x: torch.Tensor, do_drop_mc: bool = False, dr_false: bool = False
     ):
-        """
-        x: [T, N, nx] -> y: [T, N, ny]
-        """
+        """x: [T, N, nx] -> y: [T, N, ny]"""
         if x.ndim != 3 or x.shape[2] != self.nx:
             raise ValueError(f"Expected input [T, N, {self.nx}], got {tuple(x.shape)}")
 

@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
@@ -51,7 +51,7 @@ class EmbeddingFinetuneLoader(BaseLoader):
 
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         test_split: Optional[bool] = False,
         overwrite: Optional[bool] = False,
         holdout_index: Optional[int] = None,
@@ -102,6 +102,7 @@ class EmbeddingFinetuneLoader(BaseLoader):
         self.load_dataset()
 
     def load_dataset(self) -> None:
+        """Load train and eval datasets, including the embedding stream."""
         train_range = {
             "start": self.config["train"]["start_time"],
             "end": self.config["train"]["end_time"],
@@ -133,8 +134,8 @@ class EmbeddingFinetuneLoader(BaseLoader):
                 self.dataset = self._preprocess_data("all", full_range)
 
     def _preprocess_data(
-        self, scope: str, t_range: Dict[str, str]
-    ) -> Dict[str, torch.Tensor]:
+        self, scope: str, t_range: dict[str, str]
+    ) -> dict[str, torch.Tensor]:
         # --- task data ---
         nn_data = load_nn_data(
             self._cfg_with_data_path(self.task_nc_path),
@@ -208,11 +209,13 @@ class EmbeddingFinetuneLoader(BaseLoader):
                     td = np.maximum(tmax - tmin, 0.0)
                     pet = np.maximum(0.0135 * (tmean + 17.8) * np.sqrt(td) * rs_mm, 0.0)
                 x_phy = np.stack([prcp, tmean, pet], axis=-1).astype(np.float32)
-            except Exception as _e:
+            except Exception as _e:  # noqa: BLE001
                 log.warning(
                     f"[EmbeddingFinetuneLoader] Could not build HBV physics forcings: {_e}. Using zeros."
                 )
-                x_phy = np.zeros((target.shape[0], target.shape[1], 0), dtype=np.float32)
+                x_phy = np.zeros(
+                    (target.shape[0], target.shape[1], 0), dtype=np.float32
+                )
         else:
             x_phy = np.zeros((target.shape[0], target.shape[1], 0), dtype=np.float32)
         c_phy = np.zeros((c_nn.shape[0], 0), dtype=np.float32)
@@ -266,7 +269,7 @@ class EmbeddingFinetuneLoader(BaseLoader):
         }
 
     def _load_embedding_stream(
-        self, nn_data: Dict[str, Any], n_basins: int
+        self, nn_data: dict[str, Any], n_basins: int
     ) -> np.ndarray:
         """Load precomputed embeddings and align them to the task's station
         ordering AND calendar, exactly as NnDualLoader aligns its pretrained
@@ -334,9 +337,7 @@ class EmbeddingFinetuneLoader(BaseLoader):
             time_dst = np.nonzero(valid_time)[0]
             time_src = sort_order[pos[valid_time]]
 
-            aligned = np.zeros(
-                (n_time_task, n_basins, embedding_dim), dtype=np.float32
-            )
+            aligned = np.zeros((n_time_task, n_basins, embedding_dim), dtype=np.float32)
             if station_src and len(time_src):
                 # emb_array is [n_emb_station, n_emb_time, D] -> [time, station, D]
                 emb_tsd = np.transpose(emb_array, (1, 0, 2))
@@ -367,7 +368,7 @@ class EmbeddingFinetuneLoader(BaseLoader):
 
         return aligned
 
-    def _cfg_with_data_path(self, data_path: str) -> Dict[str, Any]:
+    def _cfg_with_data_path(self, data_path: str) -> dict[str, Any]:
         cfg = dict(self.config)
         cfg["data_path"] = data_path
         return cfg

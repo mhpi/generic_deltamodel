@@ -36,7 +36,7 @@ class FlexiblePositionalEmbedding(nn.Module):
 
     def forward(self, x):
         # x: [B, L, C]
-        B, L = x.size(0), x.size(1)
+        L = x.size(1)
         if (
             self.pe.size(1) < L
             or self.pe.device != x.device
@@ -51,9 +51,7 @@ class FlexiblePositionalEmbedding(nn.Module):
 
 
 class LinearEmbedding(nn.Module):
-    """
-    Fixed-width linear embedding (for known input size).
-    """
+    """Fixed-width linear embedding (for known input size)."""
 
     def __init__(self, c_in, d_model, initrange=None, bias=False):
         super().__init__()
@@ -110,9 +108,7 @@ class LazyLinearEmbedding(nn.Module):
 
 
 class DataEmbedding(nn.Module):
-    """
-    Value embedding (fixed c_in) + time embedding (ANY K) + positional encoding.
-    """
+    """Value embedding (fixed c_in) + time embedding (ANY K) + positional encoding."""
 
     def __init__(self, c_in, d_model, dropout=0.05):
         super().__init__()
@@ -135,9 +131,7 @@ class DataEmbedding(nn.Module):
 
 
 class DataEmbedding_wo_pos(nn.Module):
-    """
-    Same as DataEmbedding but without positional encoding.
-    """
+    """Same as DataEmbedding but without positional encoding."""
 
     def __init__(self, c_in, d_model, dropout=0.05):
         super().__init__()

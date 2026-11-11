@@ -60,9 +60,9 @@ class Model(nn.Module):
                     dropout=configs.dropout,
                     activation=configs.activation,
                 )
-                for l in range(configs.num_enc_layers)
+                for _ in range(configs.num_enc_layers)
             ],
-            [ConvLayer(configs.d_model) for l in range(configs.num_enc_layers - 1)]
+            [ConvLayer(configs.d_model) for _ in range(configs.num_enc_layers - 1)]
             if configs.distil and ('forecast' in configs.task_name)
             else None,
             norm_layer=torch.nn.LayerNorm(configs.d_model),
@@ -96,7 +96,7 @@ class Model(nn.Module):
                     dropout=configs.dropout,
                     activation=configs.activation,
                 )
-                for l in range(configs.num_dec_layers)
+                for _ in range(configs.num_dec_layers)
             ],
             norm_layer=torch.nn.LayerNorm(configs.d_model),
             projection=nn.Linear(configs.d_model, configs.c_out, bias=True),

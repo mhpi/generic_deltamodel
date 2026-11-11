@@ -10,6 +10,7 @@ We can use validation data to determine eta '''
 
 
 def gaussian_kernel(dist_km: torch.Tensor, eta_km: float):
+    """Gaussian weight that decays from 1 toward 0 as distance grows."""
     # dist_km: [B] or [B,1] -- station-wise distance to nearest training gage
     return torch.exp(-(dist_km**2) / (2.0 * (eta_km**2)))
 
@@ -38,6 +39,7 @@ class BlendedDischarge(nn.Module):
 
     @torch.no_grad()
     def forward(self, batch_data_dict, is_mask: bool = False):
+        """Blend the two model outputs using the per-station distance weight."""
         # Get predictions from each model (match your exp_pretrain2 usage)
         out_stefa = self.stefa(batch_data_dict, is_mask=is_mask)
         out_sl = self.sl(batch_data_dict, is_mask=is_mask)

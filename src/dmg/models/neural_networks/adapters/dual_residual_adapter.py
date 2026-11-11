@@ -4,6 +4,8 @@ import torch.nn as nn
 
 
 class DualResidualAdapter(nn.Module):
+    """Adapter with separate time and static feature tracks merged into the hidden states."""
+
     def __init__(
         self,
         d_model: int,
@@ -37,6 +39,7 @@ class DualResidualAdapter(nn.Module):
         self.layer_norm2 = nn.LayerNorm(d_model)
 
     def forward(self, hidden_states, time_features, static_features):
+        """Return adapted hidden states with the same shape as the input."""
         batch_size, seq_len, _ = hidden_states.shape
 
         time_proj = self.time_transform(time_features)

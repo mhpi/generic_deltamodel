@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""
+"""NetCDF read and write helpers for station and grid datasets.
+
 File Name: load_nc.py
 Description:
 
@@ -17,7 +18,7 @@ modfied for python 3.13.0
 import json
 import logging
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
@@ -27,6 +28,8 @@ log = logging.getLogger(__name__)
 
 
 class NetCDFDataset:
+    """Convert between numpy arrays and NetCDF (xarray) datasets."""
+
     def __init__(self):
         self.ds = None  # This will store the generated dataset
 
@@ -37,15 +40,16 @@ class NetCDFDataset:
         lon: Optional[np.ndarray] = None,
         time_range: Optional[pd.DatetimeIndex] = None,
         time_series_data: Optional[np.ndarray] = None,
-        time_series_variables: Optional[List[str]] = None,
-        time_series_variables_units: Optional[List[str]] = None,
+        time_series_variables: Optional[list[str]] = None,
+        time_series_variables_units: Optional[list[str]] = None,
         static_data: Optional[np.ndarray] = None,
-        static_variables: Optional[List[str]] = None,
-        static_variables_units: Optional[List[str]] = None,
-        meta_data_dict: Dict[str, Any] = {},
+        static_variables: Optional[list[str]] = None,
+        static_variables_units: Optional[list[str]] = None,
+        meta_data_dict: Optional[dict[str, Any]] = None,
     ) -> xr.Dataset:
         """
         Generate a xarray dataset from the given data.
+
         Input:
             station_ids: list of station ids
             lat: list of latitudes
@@ -143,7 +147,7 @@ class NetCDFDataset:
             static_variables_units if static_variables_units else []
         )
 
-        ds.attrs["metadata"] = json.dumps(meta_data_dict)
+        ds.attrs["metadata"] = json.dumps(meta_data_dict or {})
 
         self.ds = ds
 
@@ -165,10 +169,10 @@ class NetCDFDataset:
     def load_nc(
         self,
         nc_file: str,
-        station_ids: Optional[List[str]] = None,
-        time_range: Optional[List[str]] = None,
-        time_series_variables: Optional[List[str]] = None,
-        static_variables: Optional[List[str]] = None,
+        station_ids: Optional[list[str]] = None,
+        time_range: Optional[list[str]] = None,
+        time_series_variables: Optional[list[str]] = None,
+        static_variables: Optional[list[str]] = None,
     ) -> xr.Dataset:
         """
         Load a netcdf file into a xarray dataset and select specific data based on input.
@@ -236,15 +240,15 @@ class NetCDFDataset:
     def nc2array(
         self,
         nc_file: str,
-        station_ids: Optional[List[str]] = None,
-        time_range: Optional[List[str]] = None,
-        time_series_variables: Optional[List[str]] = None,
-        static_variables: Optional[List[str]] = None,
+        station_ids: Optional[list[str]] = None,
+        time_range: Optional[list[str]] = None,
+        time_series_variables: Optional[list[str]] = None,
+        static_variables: Optional[list[str]] = None,
         warmup_days: int = 0,
         add_coords: bool = False,
         *args,
         **kwargs,
-    ) -> Tuple[
+    ) -> tuple[
         Optional[np.ndarray],
         Optional[np.ndarray],
         Optional[pd.DatetimeIndex],
@@ -252,6 +256,7 @@ class NetCDFDataset:
     ]:
         """
         Load a netcdf file into a xarray dataset and select specific data based on input.
+
         Input:
             nc_file: path to the netcdf file
             station_ids: list of station ids to select
@@ -351,15 +356,15 @@ class NetCDFDataset:
     def nc2array_grid(
         self,
         nc_file: str,
-        station_ids: Optional[List[str]] = None,
-        time_range: Optional[List[str]] = None,
-        time_series_variables: Optional[List[str]] = None,
-        static_variables: Optional[List[str]] = None,
+        station_ids: Optional[list[str]] = None,
+        time_range: Optional[list[str]] = None,
+        time_series_variables: Optional[list[str]] = None,
+        static_variables: Optional[list[str]] = None,
         warmup_days: int = 0,
         add_coords: bool = False,
         sampling_interval: Optional[int] = None,
-    ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray], Optional[pd.DatetimeIndex]]:
-        """ """
+    ) -> tuple[Optional[np.ndarray], Optional[np.ndarray], Optional[pd.DatetimeIndex]]:
+        """Load gridded NetCDF data into time series and static arrays."""
         if station_ids is not None:
             log.error("station_ids is not supported for grid data.")
             raise ValueError("station_ids is not supported for grid data.")

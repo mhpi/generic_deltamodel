@@ -2,17 +2,21 @@ import logging
 import os
 import re
 import warnings
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 import torch
 import torch.nn as nn
-from dmg.models.neural_networks.adapters.build_adapter import apply_adapter, build_adapter
+from omegaconf import DictConfig, OmegaConf
+
+from dmg.models.neural_networks.adapters.build_adapter import (
+    apply_adapter,
+    build_adapter,
+)
 from dmg.models.neural_networks.cudnn_lstm import CudnnLstm
 from dmg.models.neural_networks.transformer.StefaLandDecLSTM import (
     Model as StefaLandDecLSTM,
 )
-from omegaconf import DictConfig, OmegaConf
 
 warnings.filterwarnings(
     "ignore", message=".*weights are not part of single contiguous chunk.*"
@@ -34,8 +38,8 @@ def build_pretrained_encoder(
     dropout: float,
     num_enc_layers: int,
     d_ffd: int,
-    pretrained_ts_vars: List[str],
-    pretrained_static_vars: List[str],
+    pretrained_ts_vars: list[str],
+    pretrained_static_vars: list[str],
     pretrained_model_path: Optional[str],
     freeze: bool = True,
     pretrained_type: str = 'stefaland_dec_lstm',
@@ -131,15 +135,15 @@ def _load_pretrained_weights(
 
         return model
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log.error(f"Error loading pretrained weights: {e}. Using random init.")
         return model
 
 
 def encode_with_pretrained(
     model: nn.Module,
-    pretrained_ts_vars: List[str],
-    pretrained_static_vars: List[str],
+    pretrained_ts_vars: list[str],
+    pretrained_static_vars: list[str],
     xc_pretrained_norm: torch.Tensor,
     temporal_features: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
@@ -216,7 +220,7 @@ class DirectFinetuneing(nn.Module):
 
     ACCEPTS_BATCH_DICT = True
 
-    def __init__(self, config: Union[Dict, DictConfig], ny) -> None:
+    def __init__(self, config: Union[dict, DictConfig], ny) -> None:
         super().__init__()
 
         if isinstance(config, DictConfig):
@@ -383,7 +387,7 @@ class DirectFinetuneing(nn.Module):
         xc_pretrained_norm = None
         obs = None
         obs_mask = None
-        if isinstance(xc_nn_norm, Dict):
+        if isinstance(xc_nn_norm, dict):
             data_dict = xc_nn_norm
             xc_nn_norm = data_dict['xc_nn_norm']
             temporal_features = data_dict.get('temporal_features', temporal_features)
