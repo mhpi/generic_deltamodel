@@ -5,11 +5,10 @@ File Name: load_nc.py
 Description:
 
 @author: Jiangtao Liu
-liujiangtao3@gmail.com
 Anaconda 3 64bit, Python 3.7.0
 ------------------------------------------
 Change Activities:
-@kraabel.nicholas@gmail.com
+@Author: Nicholas Kraabel 
 modfied for python 3.13.0
 
 
