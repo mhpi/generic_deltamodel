@@ -272,6 +272,11 @@ def _load_mts_nn(
     return model.to(device)
 
 
+# Foundation-model fine-tuning NNs. These take the full config and the
+# output size directly, and output streamflow when no physics model is used.
+FINETUNE_NN_MODELS = ['DirectFinetuneing', 'EmbeddingFinetuneing']
+
+
 def load_nn_model(
     config: dict[str, dict[str, Any]],
     phy_model: Optional[torch.nn.Module] = None,
@@ -321,7 +326,14 @@ def load_nn_model(
         n_forcings = len(config['nn']['forcings'])
         n_attributes = len(config['nn']['attributes'])
 
-        if phy_model:
+        if name in FINETUNE_NN_MODELS:
+            if phy_model and hasattr(phy_model, 'learnable_param_count'):
+                # Delta-model mode: NN parameterizes the physics model.
+                ny = phy_model.learnable_param_count
+            else:
+                # Direct-prediction mode: no physics model, output streamflow.
+                ny = config['nn'].get('out_size', 1)
+        elif phy_model:
             ny = phy_model.learnable_param_count
         elif 'out_size' in config['nn']:
             ny = config['nn']['out_size']
@@ -331,7 +343,7 @@ def load_nn_model(
                 " physics model must be provided.",
             )
 
-        if name not in ['LstmMlpModel']:
+        if name not in ['LstmMlpModel', *FINETUNE_NN_MODELS]:
             hidden_size = config['nn']['hidden_size']
             dr = config['nn']['dropout']
 
@@ -383,6 +395,11 @@ def load_nn_model(
             dr2=config['nn']['mlp_dropout'],
             cache_states=config['nn']['cache_states'],
             device=device,
+        )
+    elif name in FINETUNE_NN_MODELS:
+        model = cls(
+            config=config,
+            ny=ny,
         )
     else:
         raise ValueError(f"Model {name} is not supported.")
