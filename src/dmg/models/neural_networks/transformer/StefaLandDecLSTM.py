@@ -1,13 +1,13 @@
 import torch
-from models.neural_networks.transformer.features_embedding import (
+from dmg.models.neural_networks.transformer.features_embedding import (
     StaticDecEmbedding,
     StaticEncEmbedding,
     TimeSeriesDecEmbedding,
     TimeSeriesEncEmbedding,
 )
-from models.neural_networks.transformer.mask import MaskGenerator
-from models.neural_networks.transformer.positional_encoding import PositionalEncoding
-from models.neural_networks.transformer.transformer_layers import TransformerBackbone
+from dmg.models.neural_networks.transformer.mask import MaskGenerator
+from dmg.models.neural_networks.transformer.positional_encoding import PositionalEncoding
+from dmg.models.neural_networks.transformer.transformer_layers import TransformerBackbone
 from torch import nn
 
 

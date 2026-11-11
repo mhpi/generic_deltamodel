@@ -34,7 +34,7 @@ def build_adapter(
     (e.g. 256, 1024, ...); every adapter takes it as a plain constructor arg.
     """
     if adapter_type == 'dual_residual':
-        from models.neural_networks.adapters.dual_residual_adapter import (
+        from dmg.models.neural_networks.adapters.dual_residual_adapter import (
             DualResidualAdapter,
         )
 
@@ -47,33 +47,33 @@ def build_adapter(
             hidden_multiplier=params.get('hidden_multiplier', 2),
         )
     elif adapter_type == 'gated':
-        from models.neural_networks.adapters.gated_adapter import GatedAdapter
+        from dmg.models.neural_networks.adapters.gated_adapter import GatedAdapter
 
         return GatedAdapter(d_model, n_time)
     elif adapter_type == 'feedforward':
-        from models.neural_networks.adapters.feedforward_adapter import (
+        from dmg.models.neural_networks.adapters.feedforward_adapter import (
             FeedforwardAdapter,
         )
 
         return FeedforwardAdapter(d_model, n_time, params.get('hidden_multiplier', 2))
     elif adapter_type == 'conv':
-        from models.neural_networks.adapters.conv_adapter import ConvAdapter
+        from dmg.models.neural_networks.adapters.conv_adapter import ConvAdapter
 
         return ConvAdapter(d_model, n_time, params.get('kernel_size', 3))
     elif adapter_type == 'attention':
-        from models.neural_networks.adapters.attention_adapter import (
+        from dmg.models.neural_networks.adapters.attention_adapter import (
             AttentionAdapter,
         )
 
         return AttentionAdapter(d_model, n_time, params.get('num_heads', 4))
     elif adapter_type == 'bottleneck':
-        from models.neural_networks.adapters.bottleneck_adapter import (
+        from dmg.models.neural_networks.adapters.bottleneck_adapter import (
             BottleneckAdapter,
         )
 
         return BottleneckAdapter(d_model, n_time, params.get('bottleneck_size', 64))
     elif adapter_type == 'moe':
-        from models.neural_networks.adapters.moe_adapter import MoEAdapter
+        from dmg.models.neural_networks.adapters.moe_adapter import MoEAdapter
 
         return MoEAdapter(
             d_model,

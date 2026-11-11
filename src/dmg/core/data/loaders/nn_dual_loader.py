@@ -17,12 +17,6 @@ from dmg.core.data.loader_utils import (
 from dmg.core.data.loaders.base import BaseLoader
 from dmg.core.data.loaders.load_nc import NetCDFDataset
 
-try:
-    from dmg.core.data.loaders.zarr_image_loader import ZarrStationImageLoader
-    _ZARR_AVAILABLE = True
-except ImportError:
-    _ZARR_AVAILABLE = False
-
 log = logging.getLogger(__name__)
 
 
@@ -91,24 +85,6 @@ class NnDualLoader(BaseLoader):
         self.dataset = None
         self.norm_stats = None
         self.pre_norm_stats = None
-
-        # Optional per-station image loader (static images indexed by station row).
-        image_zarr_path = config.get("image_zarr_path", None)
-        if image_zarr_path:
-            if not _ZARR_AVAILABLE:
-                log.warning("[NnDualLoader] image_zarr_path set but ZarrStationImageLoader not available; skipping.")
-                self.image_loader = None
-            else:
-                self.image_loader = ZarrStationImageLoader(
-                    zarr_path=image_zarr_path,
-                    image_array_name=config.get("image_array_name", "images"),
-                    station_id_name=config.get("image_station_id_name", "station_id"),
-                    mode=config.get("image_mode", "concat_inputs"),
-                    scale_uint8=config.get("image_scale_uint8", True),
-                )
-                log.info(f"[NnDualLoader] Image loader ready: {image_zarr_path}")
-        else:
-            self.image_loader = None
 
         self.load_dataset()
 
@@ -405,7 +381,6 @@ class NnDualLoader(BaseLoader):
             "temporal_features": to_tensor(temporal_features, "cpu", self.dtype),
             "target": to_tensor(target, "cpu", self.dtype),
             "xc_pretrained_norm": to_tensor(xc_pretrained_norm, "cpu", self.dtype),
-            "image_loader": self.image_loader,
         }
 
     def _cfg_with_data_path(self, data_path: str) -> Dict[str, Any]:

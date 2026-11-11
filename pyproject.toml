@@ -30,6 +30,7 @@ keywords = [
     "scientific-computing",
 ]
 dependencies = [
+    "einops",
     "geopandas",
     "hydra-core",
     "ipykernel",

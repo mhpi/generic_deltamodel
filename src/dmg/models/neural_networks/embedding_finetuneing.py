@@ -3,8 +3,8 @@ from typing import Dict, Union
 
 import torch
 import torch.nn as nn
-from models.neural_networks.adapters.build_adapter import apply_adapter, build_adapter
-from models.neural_networks.cudnn_lstm import CudnnLstm
+from dmg.models.neural_networks.adapters.build_adapter import apply_adapter, build_adapter
+from dmg.models.neural_networks.cudnn_lstm import CudnnLstm
 from omegaconf import DictConfig, OmegaConf
 
 log = logging.getLogger(__name__)
