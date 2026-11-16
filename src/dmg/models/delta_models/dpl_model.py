@@ -157,6 +157,47 @@ class DplModel(torch.nn.Module):
                 )
         return super().load_state_dict(state_dict, strict=strict, assign=assign)
 
+    def get_runtime_state(self) -> dict[str, Any]:
+        """Snapshot the neural network and physics model runtime states.
+
+        Returns
+        -------
+        dict[str, Any]
+            {'nn': ..., 'phy': ...}, each from the submodel's
+            'get_runtime_state'. Holds references, not copies.
+
+        Raises
+        ------
+        NotImplementedError
+            If either submodel lacks 'get_runtime_state'.
+        """
+        for model in (self.nn_model, self.phy_model):
+            if not hasattr(model, 'get_runtime_state'):
+                raise NotImplementedError(
+                    f"'{type(model).__name__}' does not support runtime state "
+                    "snapshots ('get_runtime_state').",
+                )
+        return {
+            'nn': self.nn_model.get_runtime_state(),
+            'phy': self.phy_model.get_runtime_state(),
+        }
+
+    def load_runtime_state(self, state: dict[str, Any]) -> None:
+        """Restore a snapshot taken by 'get_runtime_state'.
+
+        Parameters
+        ----------
+        state
+            Snapshot returned by 'get_runtime_state'.
+        """
+        if set(state) != {'nn', 'phy'}:
+            raise ValueError(
+                f"Runtime state keys {sorted(state)} do not match the expected "
+                "keys ['nn', 'phy'].",
+            )
+        self.nn_model.load_runtime_state(state['nn'])
+        self.phy_model.load_runtime_state(state['phy'])
+
     def forward(
         self,
         data_dict: dict[str, torch.Tensor],

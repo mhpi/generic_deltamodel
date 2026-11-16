@@ -6,10 +6,14 @@ Coverage:
 - Output validity (finite values, no NaN/Inf)
 - Eval mode determinism
 - Batch size flexibility
+- Runtime state snapshot and restore for stepwise inference
+  (get/load_runtime_state, Hbv_2 with LstmMlpModel)
 
-NOTE: All tests are parametrized over Hbv, Hbv_1_1p, and Hbv_2.
+NOTE: Tests other than the runtime state tests are parametrized over Hbv,
+Hbv_1_1p, and Hbv_2.
 """
 
+import pytest
 import torch
 
 from dmg.core.utils import set_randomseed
@@ -233,3 +237,96 @@ class TestForwardPassOutput:
 
         output = dpl_model(small_batch)
         assert output['streamflow'].shape[1] == 3, "Small batch output shape incorrect"
+
+
+# ---------------------------------------------------------------------------- #
+#  Runtime state
+# ---------------------------------------------------------------------------- #
+
+
+class TestRuntimeState:
+    """Test runtime state snapshot and restore for stepwise inference."""
+
+    TIME_KEYS = ('xc_nn_norm', 'x_phy')
+
+    @staticmethod
+    def _stepwise_model(config, state_dict=None):
+        """Build an Hbv_2 dPL model set up for stepwise inference."""
+        set_randomseed(config['seed'])
+        model = ModelHandler(config).model_dict[get_phy_model_name(config)]
+        if state_dict is not None:
+            model.load_state_dict(state_dict)
+        model.eval()
+        model.phy_model.cache_states = True
+        model.nn_model.cache_states = True
+        model.nn_model.lstminv.cache_states = True
+        return model
+
+    def _slice(self, dataset, start, stop):
+        """Slice the time-dependent inputs of a dataset."""
+        return {
+            k: v[start:stop] if k in self.TIME_KEYS else v for k, v in dataset.items()
+        }
+
+    def test_resume_matches_continuous(self, config_hbv_2, mock_dataset_hbv_2):
+        """A restored model continues stepwise exactly as the original."""
+        source = self._stepwise_model(config_hbv_2)
+        n_steps = mock_dataset_hbv_2['x_phy'].shape[0]
+        split = n_steps // 2
+
+        with torch.no_grad():
+            source(self._slice(mock_dataset_hbv_2, 0, split))
+            snapshot = source.get_runtime_state()
+            expected = [
+                source(self._slice(mock_dataset_hbv_2, t, t + 1))['streamflow']
+                for t in range(split, n_steps)
+            ]
+
+            target = self._stepwise_model(config_hbv_2, source.state_dict())
+            target.load_runtime_state(snapshot)
+            result = [
+                target(self._slice(mock_dataset_hbv_2, t, t + 1))['streamflow']
+                for t in range(split, n_steps)
+            ]
+
+        for r, e in zip(result, expected):
+            assert torch.equal(r, e)
+
+    def test_restore_fills_lstm_caches(self, config_hbv_2):
+        """Restored LSTM states are what 'get_states' reports and the LSTM uses."""
+        model = self._stepwise_model(config_hbv_2)
+        hidden = model.nn_model.hiddeninv1
+        state = {
+            'nn': {'hn': torch.rand(1, 3, hidden), 'cn': torch.rand(1, 3, hidden)},
+            'phy': {'states': None},
+        }
+        model.load_runtime_state(state)
+
+        nn_model = model.nn_model
+        for hn, cn in (
+            (nn_model.lstminv.hn, nn_model.lstminv.cn),
+            nn_model.get_states(),
+            nn_model.lstminv.get_states(),
+        ):
+            assert torch.equal(hn, state['nn']['hn'])
+            assert torch.equal(cn, state['nn']['cn'])
+
+    def test_cold_roundtrip(self, config_hbv_2):
+        """An unused model restores to empty states."""
+        source = self._stepwise_model(config_hbv_2)
+        target = self._stepwise_model(config_hbv_2)
+        target.nn_model.lstminv.hn = torch.rand(1, 3, 4)
+        target.load_runtime_state(source.get_runtime_state())
+        assert target.nn_model.lstminv.hn is None
+        assert target.phy_model.states is None
+
+    def test_rejects_unknown_keys(self, config_hbv_2):
+        """Snapshots with the wrong sections or keys are rejected."""
+        model = self._stepwise_model(config_hbv_2)
+        with pytest.raises(ValueError, match='do not match'):
+            model.load_runtime_state({'nn': {}})
+
+        state = model.get_runtime_state()
+        state['nn'] = {**state['nn'], 'extra': None}
+        with pytest.raises(ValueError, match='do not match'):
+            model.load_runtime_state(state)

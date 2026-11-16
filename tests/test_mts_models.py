@@ -7,6 +7,7 @@ Coverage:
 - Low-frequency and high-frequency parameter paths
 - MtsModelHandler functionality
 - Gradient flow in multi-timescale models
+- Runtime state snapshot and restore (get/load_runtime_state)
 """
 
 import numpy as np
@@ -439,3 +440,76 @@ def test_mts_end_to_end_training_step(mts_config, mts_mock_dataset):
     assert final_loss <= initial_loss * 1.5, (
         "Loss did not decrease or increased too much"
     )
+
+
+# ---------------------------------------------------------------------------- #
+#  Runtime state
+# ---------------------------------------------------------------------------- #
+
+
+@pytest.mark.filterwarnings(
+    "ignore:dropout option adds dropout:UserWarning",
+    "ignore:Initializing zero-element tensors is a no-op:UserWarning",
+)
+class TestMtsRuntimeState:
+    """Test runtime state snapshot and restore for stepwise inference."""
+
+    @staticmethod
+    def _warm_nn(model):
+        """Fill the NN caches the way a batched pass would."""
+        nn_model = model.nn_model
+        n_basins = 3
+        for lstm in (nn_model.lstm_mlp, nn_model.lstm_mlp2):
+            size = lstm.hiddeninv1 or 1
+            lstm.hn = torch.rand(1, n_basins, size)
+            lstm.cn = torch.rand(1, n_basins, size)
+        nn_model.lof_params_cache = [
+            torch.rand(1, n_basins, 4),
+            torch.rand(n_basins, 6),
+        ]
+
+    def test_nn_roundtrip(self, mts_config):
+        """LSTM states and cached daily parameters restore exactly."""
+        set_randomseed(mts_config['seed'])
+        source = MtsDplModel(config=mts_config['model'], device='cpu')
+        target = MtsDplModel(config=mts_config['model'], device='cpu')
+        self._warm_nn(source)
+
+        target.load_runtime_state(source.get_runtime_state())
+
+        src_nn, tgt_nn = source.nn_model, target.nn_model
+        for src, tgt in (
+            (src_nn.lstm_mlp, tgt_nn.lstm_mlp),
+            (src_nn.lstm_mlp2, tgt_nn.lstm_mlp2),
+        ):
+            assert torch.equal(src.hn, tgt.hn)
+            assert torch.equal(src.cn, tgt.cn)
+        for src, tgt in zip(src_nn.lof_params_cache, tgt_nn.lof_params_cache):
+            assert torch.equal(src, tgt)
+
+    def test_snapshot_sections(self, mts_config):
+        """Snapshot holds one section per submodel."""
+        model = MtsDplModel(config=mts_config['model'], device='cpu')
+        state = model.get_runtime_state()
+        assert set(state) == {'nn', 'phy'}
+        assert state['nn']['lof_params_cache'] is None
+
+    def test_cold_roundtrip(self, mts_config):
+        """An unused model restores to empty caches."""
+        source = MtsDplModel(config=mts_config['model'], device='cpu')
+        target = MtsDplModel(config=mts_config['model'], device='cpu')
+        self._warm_nn(target)
+        target.load_runtime_state(source.get_runtime_state())
+        assert target.nn_model.lstm_mlp2.hn is None
+        assert target.nn_model.lof_params_cache is None
+
+    def test_rejects_unknown_keys(self, mts_config):
+        """Snapshots with the wrong sections or keys are rejected."""
+        model = MtsDplModel(config=mts_config['model'], device='cpu')
+        with pytest.raises(ValueError, match='do not match'):
+            model.load_runtime_state({'nn': {}})
+
+        state = model.get_runtime_state()
+        state['nn'] = {**state['nn'], 'extra': None}
+        with pytest.raises(ValueError, match='do not match'):
+            model.load_runtime_state(state)
