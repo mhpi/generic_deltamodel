@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional
+from typing import Any, Optional
 
 import torch
 import torch.nn as nn
@@ -561,6 +561,57 @@ class StackLstmMlpModel(torch.nn.Module):
         """If True, ensables sub-batch mode for CPU forward."""
         self.lstm_mlp.sub_batch_mode = is_simulate
         self.lstm_mlp2.sub_batch_mode = is_simulate
+
+    def get_runtime_state(self) -> dict[str, Any]:
+        """Snapshot everything stepwise inference carries between calls.
+
+        Covers the hidden and cell states of both LSTMs and the cached
+        low-frequency parameters. The cached parameters hold the
+        low-frequency LSTM output at the last step of the most recent batched
+        pass, which stepwise calls reuse until the next one.
+
+        Returns
+        -------
+        dict[str, Any]
+            References to the cached tensors. Serialize or clone
+            them before the model runs again.
+        """
+        return {
+            'lof_hn': self.lstm_mlp.hn,
+            'lof_cn': self.lstm_mlp.cn,
+            'hif_hn': self.lstm_mlp2.hn,
+            'hif_cn': self.lstm_mlp2.cn,
+            'lof_params_cache': self.lof_params_cache,
+        }
+
+    def load_runtime_state(self, state: dict[str, Any]) -> None:
+        """Restore a snapshot taken by 'get_runtime_state'.
+
+        Parameters
+        ----------
+        state
+            Snapshot returned by 'get_runtime_state'.
+        """
+        expected = {'lof_hn', 'lof_cn', 'hif_hn', 'hif_cn', 'lof_params_cache'}
+        if set(state) != expected:
+            raise ValueError(
+                f"Runtime state keys {sorted(state)} do not match the expected "
+                f"keys {sorted(expected)}.",
+            )
+        device = next(self.parameters()).device
+
+        def to_device(value: Optional[torch.Tensor]) -> Optional[torch.Tensor]:
+            return None if value is None else value.detach().to(device)
+
+        self.lstm_mlp.hn = to_device(state['lof_hn'])
+        self.lstm_mlp.cn = to_device(state['lof_cn'])
+        self.lstm_mlp2.hn = to_device(state['hif_hn'])
+        self.lstm_mlp2.cn = to_device(state['hif_cn'])
+
+        params = state['lof_params_cache']
+        self.lof_params_cache = (
+            None if params is None else [to_device(p) for p in params]
+        )
 
     def forward(
         self,

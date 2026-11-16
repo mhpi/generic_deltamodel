@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 import torch
 
@@ -110,6 +110,53 @@ class LstmMlpModel(torch.nn.Module):
         device = next(self.parameters()).device
         self.hn = states[0].detach().to(device)
         self.cn = states[1].detach().to(device)
+
+    def get_runtime_state(self) -> dict[str, Any]:
+        """Snapshot the LSTM state stepwise inference carries between calls.
+
+        With 'cache_states' on, the LSTM starts each forward pass from the
+        hidden and cell states its previous pass ended on. The MLP output
+        depends only on the static inputs, so it carries no state.
+
+        Returns
+        -------
+        dict[str, Any]
+            {'hn': ..., 'cn': ...}, references to the LSTM's
+            cached states, each [1, ngrid, hidden_size], or None before the
+            first forward pass.
+        """
+        return {'hn': self.lstminv.hn, 'cn': self.lstminv.cn}
+
+    def load_runtime_state(self, state: dict[str, Any]) -> None:
+        """Restore a snapshot taken by 'get_runtime_state'.
+
+        Parameters
+        ----------
+        state
+            Snapshot returned by 'get_runtime_state'.
+        """
+        if set(state) != {'hn', 'cn'}:
+            raise ValueError(
+                f"Runtime state keys {sorted(state)} do not match the expected "
+                "keys ['cn', 'hn'].",
+            )
+        if (state['hn'] is None) != (state['cn'] is None):
+            raise ValueError("Runtime states 'hn' and 'cn' must both be set or None.")
+        device = next(self.parameters()).device
+
+        if state['hn'] is None:
+            hn_cache = cn_cache = hn = cn = None
+        else:
+            # Mirror what a forward pass leaves behind: CPU copies in the
+            # caches read by 'get_states', device copies used by the LSTM.
+            hn_cache = state['hn'].detach().cpu()
+            cn_cache = state['cn'].detach().cpu()
+            hn = hn_cache.to(device)
+            cn = cn_cache.to(device)
+
+        for module in (self.lstminv, self):
+            module._hn_cache, module._cn_cache = hn_cache, cn_cache
+            module.hn, module.cn = hn, cn
 
     def forward(
         self,

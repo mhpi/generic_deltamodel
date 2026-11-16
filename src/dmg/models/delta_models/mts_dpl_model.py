@@ -111,6 +111,36 @@ class MtsDplModel(torch.nn.Module):
             device=self.device,
         )
 
+    def get_runtime_state(self) -> dict[str, Any]:
+        """Snapshot the neural network and physics model runtime states.
+
+        Returns
+        -------
+        dict[str, Any]
+            {'nn': ..., 'phy': ...}, each from the submodel's
+            'get_runtime_state'. Holds references, not copies.
+        """
+        return {
+            'nn': self.nn_model.get_runtime_state(),
+            'phy': self.phy_model.get_runtime_state(),
+        }
+
+    def load_runtime_state(self, state: dict[str, Any]) -> None:
+        """Restore a snapshot taken by 'get_runtime_state'.
+
+        Parameters
+        ----------
+        state
+            Snapshot returned by 'get_runtime_state'.
+        """
+        if set(state) != {'nn', 'phy'}:
+            raise ValueError(
+                f"Runtime state keys {sorted(state)} do not match the expected "
+                "keys ['nn', 'phy'].",
+            )
+        self.nn_model.load_runtime_state(state['nn'])
+        self.phy_model.load_runtime_state(state['phy'])
+
     def forward(
         self,
         data_dict: dict[str, torch.Tensor],
